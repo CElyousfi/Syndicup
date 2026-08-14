@@ -48,3 +48,7 @@ Thumbs.db
 
 # Testing
 coverage/
+
+# Supabase local
+supabase/.temp/
+supabase/.branches/
