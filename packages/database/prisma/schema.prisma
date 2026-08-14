@@ -1,0 +1,906 @@
+// Schéma Prisma — traduction directe du Master Engineering Spec Partie 2.
+// Source de vérité métier : docs/domain-reference/*.md (Doc A). Ne pas ajouter de champ/enum
+// sans référence croisée vers l'un des deux documents (voir CLAUDE.md §0).
+//
+// NOTES IMPORTANTES AVANT M1 (voir docs/ROADMAP_BACKLOG.md) :
+// 1. UUID v7 : Prisma n'a pas de générateur natif. `@default(uuid())` ci-dessous est un
+//    placeholder (UUID v4). Décider avant la première migration : extension Postgres uuidv7,
+//    ou génération applicative (ex. package npm `uuidv7`) injectée par le wrapper de client
+//    (Master Spec Partie 1.6 — le wrapper qui impose déjà le scoping tenant est le bon endroit).
+// 2. RLS : Prisma ne génère PAS les policies RLS. Elles doivent être écrites en SQL brut dans
+//    une migration séparée pour CHAQUE table ci-dessous (voir Master Spec Partie 2.3 pour le
+//    patron, et `docs/domain-reference/12-conflits-litiges-confidentialite.md` pour les règles
+//    de confidentialité fines par rôle). Un schéma sans ses policies RLS n'est pas "fini".
+// 3. Append-only (`@@map` tables marquées ci-dessous) : Prisma ne bloque pas UPDATE/DELETE au
+//    niveau applicatif. Le blocage réel doit être fait en `REVOKE UPDATE, DELETE` au niveau du
+//    rôle Postgres applicatif (Master Spec Partie 2.4) — à ajouter dans la même migration que
+//    la création de table, pas après coup.
+// 4. Money : tout champ `Decimal` ci-dessous est `numeric(14,2)` — jamais Float/Int pour un
+//    montant. Toute manipulation applicative passe par apps/api/lib/money/ (CLAUDE.md §1.1).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum TypeResidence {
+  IMMEUBLE_COLLECTIF
+  RESIDENCE_FERMEE
+  RESIDENCE_VILLAS
+  IMMEUBLE_BUREAUX
+  IMMEUBLE_MIXTE
+  RESIDENCE_ETUDIANTE
+}
+
+enum StatutCopropriete {
+  ACTIVE
+  ARCHIVEE
+}
+
+enum TypeLot {
+  APPARTEMENT
+  PARKING
+  CAVE
+  LOCAL
+  TOIT_TERRASSE
+  VILLA
+  COMMERCIAL
+  BUREAU
+  LOGE_GARDIEN
+}
+
+// Statut lot : liste de départ (Master Spec Partie 2.2). Compléter depuis
+// docs/domain-reference/01-lots-taxonomie.md et 04-parkings.md avant de figer (ex. cas parking
+// orphelin / places non titrées peuvent avoir des statuts additionnels — voir Partie 2.5).
+enum StatutLot {
+  OCCUPE
+  VACANT
+  ORPHELIN
+  EN_SUCCESSION
+  SINISTRE
+  TANTIEME_A_REGULARISER // trouvé dans Doc A §3.1 (erreur notariale) — à confirmer comme statut de lot ou flag séparé
+}
+
+enum StatutCompteUtilisateur {
+  INVITE
+  EN_VALIDATION
+  ACTIF
+  SUSPENDU
+  DESACTIVE
+  ANONYMISE
+}
+
+enum LanguePreferee {
+  FR
+  AR
+}
+
+enum RoleType {
+  SUPER_ADMIN
+  SYNDIC
+  CONSEIL_SYNDICAL
+  PROPRIETAIRE
+  LOCATAIRE
+  INDIVISAIRE
+  GARDIEN
+  PRESTATAIRE
+  PERSONNE_MORALE_REPRESENTANT
+}
+
+enum TypePropriete {
+  PLEIN
+  INDIVISION
+  SCI
+}
+
+enum TypeOccupation {
+  PROPRIETAIRE_OCCUPANT
+  LOCATAIRE
+}
+
+enum StatutSuccession {
+  OUVERTE
+  HERITIERS_DESIGNES
+  CLOTUREE
+}
+
+enum CanalInvitation {
+  EMAIL
+  SMS
+  QR_CODE
+  WHATSAPP
+}
+
+enum StatutInvitation {
+  EN_ATTENTE
+  ACCEPTEE
+  EXPIREE
+  REGENEREE
+}
+
+enum StatutBudgetAg {
+  PROPOSE
+  VOTE
+  ACTIF
+}
+
+enum TypeAppelDeFonds {
+  CHARGES_COURANTES
+  TRAVAUX
+  FONDS_RESERVE
+  // Compléter depuis docs/domain-reference/03-charges-finances.md §3.2 :
+  // au moins EXCEPTIONNEL, URGENCE, DEMARRAGE, REGULARISATION apparaissent dans Doc A
+  // et ne sont pas encore repris dans le Master Spec Partie 2.2 — à trancher avant M5.
+}
+
+enum StatutAppelDeFonds {
+  BROUILLON
+  EMIS
+  CLOTURE
+}
+
+enum StatutAppelDeFondsLot {
+  PAYE
+  PARTIEL
+  IMPAYE
+}
+
+enum MethodePaiement {
+  CMI
+  VIREMENT
+  ESPECES
+  CHEQUE
+}
+
+enum StatutPaiement {
+  VALIDE
+  EN_ATTENTE
+  REJETE
+}
+
+enum StatutContestation {
+  OUVERTE
+  REPONDUE
+  MEDIEE
+  TRIBUNAL
+}
+
+enum TypeAg {
+  ORDINAIRE
+  EXTRAORDINAIRE
+  REVOCATION
+}
+
+enum StatutAg {
+  PLANIFIEE
+  CONVOQUEE
+  EN_COURS
+  CLOTUREE
+  ANNULEE
+  // Voir docs/LEGAL_QUESTIONS_BRIEF.md §2 : si le mécanisme "quorum non atteint → 2e convocation"
+  // est confirmé, un état intermédiaire (ex. QUORUM_NON_ATTEINT) sera probablement nécessaire ici.
+}
+
+enum TypeMajorite {
+  SIMPLE
+  DOUBLE
+  UNANIMITE
+}
+
+enum ResultatResolution {
+  EN_ATTENTE
+  ADOPTEE
+  REJETEE
+}
+
+enum ValeurVote {
+  POUR
+  CONTRE
+  ABSTENTION
+}
+
+enum UrgenceIncident {
+  NORMALE
+  URGENTE
+  URGENCE_MAXIMALE
+}
+
+enum PartieIncident {
+  COMMUNE
+  PRIVATIVE
+}
+
+enum StatutIncident {
+  OUVERT
+  EN_COURS
+  RESOLU
+  FERME
+}
+
+enum StatutPersonnel {
+  PRESENT
+  ABSENT
+  REMPLACE
+}
+
+enum StatutVisite {
+  EN_ATTENTE
+  AUTORISE
+  REFUSE
+}
+
+enum StatutReservation {
+  CONFIRMEE
+  ANNULEE
+}
+
+enum TypeGarantie {
+  DECENNALE
+  BIENNALE
+}
+
+enum TypeDocument {
+  REGLEMENT_INTERIEUR
+  PV
+  QUITTANCE
+  CONTRAT
+  RAPPORT
+  AUTRE
+}
+
+enum VisibiliteDocument {
+  PUBLIC_COPROPRIETE
+  SYNDIC_ONLY
+  CONSEIL_SYNDICAL
+}
+
+enum CanalNotification {
+  PUSH
+  SMS
+  EMAIL
+  WHATSAPP
+}
+
+enum StatutEnvoiNotification {
+  EN_FILE
+  ENVOYE
+  ECHOUE
+}
+
+// ============================================================================
+// TENANT & STRUCTURE IMMOBILIÈRE
+// ============================================================================
+
+model Copropriete {
+  id                    String            @id @default(uuid()) @db.Uuid
+  nom                   String
+  adresse               String
+  ville                 String
+  typeResidence         TypeResidence     @map("type_residence")
+  nbLots                Int               @map("nb_lots")
+  dateCreation          DateTime          @default(now()) @map("date_creation") @db.Timestamptz
+  statut                StatutCopropriete @default(ACTIVE)
+  configJson            Json?             @map("config_json")
+  // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
+  // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
+  delaiConvocationJours Int?              @map("delai_convocation_jours")
+  creeLe                DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe             DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+
+  lots                  Lot[]
+  espacesCommuns        EspaceCommun[]
+  rolesUtilisateur      RoleUtilisateur[]
+  budgetsAg             BudgetAg[]
+  appelsDeFonds         AppelDeFonds[]
+  fondsReserve          FondsReserve?
+  assembleesGenerales   AssembleeGenerale[]
+  incidents             Incident[]
+  prestataires          Prestataire[]
+  personnel             Personnel[]
+  conflitLitiges        ConflitLitige[]
+  documents             Document[]
+  invitations           Invitation[]
+
+  @@map("copropriete")
+}
+
+model Lot {
+  id            String    @id @default(uuid()) @db.Uuid
+  coproprieteId String    @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  typeLot       TypeLot   @map("type_lot")
+  numero        String
+  etage         Int?
+  tantiemes     Decimal   @db.Decimal(14, 2)
+  superficie    Decimal?  @db.Decimal(10, 2)
+  statut        StatutLot @default(VACANT)
+  lotParentId   String?   @map("lot_parent_id") @db.Uuid
+  lotParent     Lot?      @relation("LotParentEnfant", fields: [lotParentId], references: [id])
+  lotsEnfants   Lot[]     @relation("LotParentEnfant")
+  creeLe        DateTime  @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime  @updatedAt @map("modifie_le") @db.Timestamptz
+
+  proprietaires        LotProprietaire[]
+  occupants             LotOccupant[]
+  successions           Succession[]
+  appelsDeFondsLot       AppelDeFondsLot[]
+  paiements              Paiement[]
+  agVotes                AgVote[]
+  agProcurationsMandant  AgProcuration[]   @relation("ProcurationMandant")
+  incidents              Incident[]
+  reservations           ReservationEspaceCommun[]
+  garantiesPromoteur     GarantiePromoteur[]
+  visites                Visite[]
+  logementGardienDe      Personnel[]       @relation("LogementGardien")
+
+  @@map("lot")
+  @@index([coproprieteId])
+}
+
+model EspaceCommun {
+  id                  String   @id @default(uuid()) @db.Uuid
+  coproprieteId       String   @map("copropriete_id") @db.Uuid
+  copropriete         Copropriete @relation(fields: [coproprieteId], references: [id])
+  nom                 String
+  type                String
+  capacite            Int?
+  reservable          Boolean  @default(false)
+  reglesReservationJson Json?  @map("regles_reservation_json")
+
+  reservations        ReservationEspaceCommun[]
+
+  @@map("espace_commun")
+  @@index([coproprieteId])
+}
+
+// ============================================================================
+// UTILISATEURS & DROITS SUR LES LOTS
+// ============================================================================
+
+model Utilisateur {
+  id               String                  @id @default(uuid()) @db.Uuid
+  email            String?                 @unique
+  telephone        String?                 @unique
+  nom              String?
+  prenom           String?
+  languePreferee   LanguePreferee          @default(FR) @map("langue_preferee")
+  statutCompte     StatutCompteUtilisateur @default(INVITE) @map("statut_compte")
+  raisonSociale    String?                 @map("raison_sociale")
+  rcNumero         String?                 @map("rc_numero")
+  creeLe           DateTime                @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe        DateTime                @updatedAt @map("modifie_le") @db.Timestamptz
+
+  roles                    RoleUtilisateur[]
+  lotsProprietaire         LotProprietaire[]
+  lotsOccupant              LotOccupant[]
+  paiementsEffectues        Paiement[]        @relation("PaiementPayeur")
+  agVotes                   AgVote[]
+  agProcurationsMandant     AgProcuration[]   @relation("ProcurationMandantUtilisateur")
+  agProcurationsMandataire  AgProcuration[]   @relation("ProcurationMandataire")
+  incidentsCrees             Incident[]        @relation("IncidentCreateur")
+  personnel                  Personnel?
+  invitationsEmises          Invitation[]      @relation("InvitationEmetteur")
+  notifications               Notification[]
+  contestationsCharge          ContestationCharge[]
+  auditLogs                    AuditLog[]
+
+  @@map("utilisateur")
+}
+
+model RoleUtilisateur {
+  id             String      @id @default(uuid()) @db.Uuid
+  utilisateurId  String      @map("utilisateur_id") @db.Uuid
+  utilisateur    Utilisateur @relation(fields: [utilisateurId], references: [id])
+  coproprieteId  String      @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete @relation(fields: [coproprieteId], references: [id])
+  role           RoleType
+  actif          Boolean     @default(true)
+  creeLe         DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@map("role_utilisateur")
+  @@index([coproprieteId])
+  @@index([utilisateurId])
+  // Contrainte Master Spec 2.4 : un seul role='syndic' actif=true par copropriété.
+  // Prisma ne supporte pas les index uniques partiels — à ajouter en SQL brut :
+  // CREATE UNIQUE INDEX role_syndic_unique_actif ON role_utilisateur (copropriete_id)
+  //   WHERE role = 'SYNDIC' AND actif = true;
+}
+
+model LotProprietaire {
+  id                       String        @id @default(uuid()) @db.Uuid
+  lotId                    String        @map("lot_id") @db.Uuid
+  lot                      Lot           @relation(fields: [lotId], references: [id])
+  utilisateurId             String        @map("utilisateur_id") @db.Uuid
+  utilisateur                Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  quotePart                 Decimal       @map("quote_part") @db.Decimal(5, 2) // somme = 100% par lot en indivision — CHECK + trigger, voir M3
+  typePropriete              TypePropriete @map("type_propriete")
+  estReprensentantIndivision Boolean       @default(false) @map("est_representant_indivision")
+  dateDebut                  DateTime      @map("date_debut") @db.Date
+  dateFin                    DateTime?     @map("date_fin") @db.Date
+
+  @@map("lot_proprietaire")
+  @@index([lotId])
+  @@index([utilisateurId])
+}
+
+model LotOccupant {
+  id                    String         @id @default(uuid()) @db.Uuid
+  lotId                 String         @map("lot_id") @db.Uuid
+  lot                   Lot            @relation(fields: [lotId], references: [id])
+  utilisateurId          String         @map("utilisateur_id") @db.Uuid
+  utilisateur             Utilisateur    @relation(fields: [utilisateurId], references: [id])
+  typeOccupation           TypeOccupation @map("type_occupation")
+  dateDebut                 DateTime       @map("date_debut") @db.Date
+  dateFin                    DateTime?      @map("date_fin") @db.Date
+  accesFinancesAccorde        Boolean        @default(false) @map("acces_finances_accorde")
+  recoitConvocations           Boolean        @default(false) @map("recoit_convocations")
+
+  @@map("lot_occupant")
+  @@index([lotId])
+  @@index([utilisateurId])
+}
+
+model Succession {
+  id                    String           @id @default(uuid()) @db.Uuid
+  lotId                 String           @map("lot_id") @db.Uuid
+  lot                   Lot              @relation(fields: [lotId], references: [id])
+  proprietaireDecedeId   String           @map("proprietaire_decede_id") @db.Uuid
+  statut                  StatutSuccession @default(OUVERTE)
+  contactTemporaireId       String?          @map("contact_temporaire_id") @db.Uuid
+  dateOuverture              DateTime         @default(now()) @map("date_ouverture") @db.Timestamptz
+
+  @@map("succession")
+  @@index([lotId])
+}
+
+// Table ajoutée par rapport au Master Spec Partie 2.2 (qui décrit le flux Partie 5.3 mais ne
+// liste pas explicitement de table) — nécessaire pour stocker l'invitation en cours.
+model Invitation {
+  id             String            @id @default(uuid()) @db.Uuid
+  coproprieteId  String            @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete       @relation(fields: [coproprieteId], references: [id])
+  lotId          String?           @map("lot_id") @db.Uuid // nullable : gardien/prestataire/syndic rattachés directement à la copropriété (Partie 5.3)
+  roleCible      RoleType          @map("role_cible")
+  emetteurId     String            @map("emetteur_id") @db.Uuid
+  emetteur       Utilisateur       @relation("InvitationEmetteur", fields: [emetteurId], references: [id])
+  canal          CanalInvitation
+  code           String            @unique
+  statut         StatutInvitation  @default(EN_ATTENTE)
+  expireLe       DateTime          @map("expire_le") @db.Timestamptz
+  creeLe         DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@map("invitation")
+  @@index([coproprieteId])
+}
+
+// ============================================================================
+// FINANCES
+// ============================================================================
+
+model BudgetAg {
+  id            String         @id @default(uuid()) @db.Uuid
+  coproprieteId String         @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
+  agId          String         @map("ag_id") @db.Uuid
+  assembleeGenerale AssembleeGenerale @relation(fields: [agId], references: [id])
+  exercice      String
+  montantTotal  Decimal        @map("montant_total") @db.Decimal(14, 2)
+  statut        StatutBudgetAg @default(PROPOSE)
+
+  appelsDeFonds AppelDeFonds[]
+
+  @@map("budget_ag")
+  @@index([coproprieteId])
+}
+
+model AppelDeFonds {
+  id            String             @id @default(uuid()) @db.Uuid
+  coproprieteId String             @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete        @relation(fields: [coproprieteId], references: [id])
+  budgetAgId    String?            @map("budget_ag_id") @db.Uuid
+  budgetAg      BudgetAg?          @relation(fields: [budgetAgId], references: [id])
+  periode       String             // format "YYYY-MM"
+  type          TypeAppelDeFonds
+  montantTotal  Decimal            @map("montant_total") @db.Decimal(14, 2)
+  dateEcheance  DateTime           @map("date_echeance") @db.Date
+  statut        StatutAppelDeFonds @default(BROUILLON)
+  creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+
+  lignes        AppelDeFondsLot[]
+
+  @@map("appel_de_fonds")
+  @@index([coproprieteId])
+  @@unique([coproprieteId, periode, type]) // idempotence métier — Master Spec Partie 3.3
+}
+
+model AppelDeFondsLot {
+  id               String                @id @default(uuid()) @db.Uuid
+  appelDeFondsId    String                @map("appel_de_fonds_id") @db.Uuid
+  appelDeFonds      AppelDeFonds          @relation(fields: [appelDeFondsId], references: [id])
+  lotId              String                @map("lot_id") @db.Uuid
+  lot                 Lot                   @relation(fields: [lotId], references: [id])
+  montantDu            Decimal               @map("montant_du") @db.Decimal(14, 2)
+  montantPaye           Decimal               @default(0) @map("montant_paye") @db.Decimal(14, 2)
+  statut                 StatutAppelDeFondsLot @default(IMPAYE)
+
+  paiements        Paiement[]
+  quittance        Quittance?
+  contestations    ContestationCharge[]
+
+  @@map("appel_de_fonds_lot")
+  @@index([appelDeFondsId])
+  @@index([lotId])
+}
+
+/// APPEND-ONLY — pas de champ modifie_le, pas d'UPDATE/DELETE autorisé au niveau du rôle
+/// Postgres applicatif (migration SQL séparée requise, voir en-tête de fichier).
+model Paiement {
+  id                  String          @id @default(uuid()) @db.Uuid
+  lotId               String          @map("lot_id") @db.Uuid
+  lot                 Lot             @relation(fields: [lotId], references: [id])
+  appelDeFondsLotId    String          @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot      AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  montant               Decimal         @db.Decimal(14, 2)
+  methode                MethodePaiement
+  referenceCmi            String?         @map("reference_cmi") @unique // idempotence webhook CMI
+  statut                   StatutPaiement  @default(EN_ATTENTE)
+  payeurId                  String?         @map("payeur_id") @db.Uuid // ex. locataire payant pour le propriétaire (Doc A §3.3)
+  payeur                     Utilisateur?    @relation("PaiementPayeur", fields: [payeurId], references: [id])
+  horodatage                  DateTime        @default(now()) @db.Timestamptz
+
+  @@map("paiement")
+  @@index([lotId])
+  @@index([appelDeFondsLotId])
+}
+
+model FondsReserve {
+  id            String      @id @default(uuid()) @db.Uuid
+  coproprieteId String      @unique @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  // Pas de champ `solde` stocké directement — le solde est TOUJOURS calculé comme la somme des
+  // mouvements (Master Spec Partie 6.5), jamais un champ modifiable en direct. Exposer via une
+  // vue SQL ou un calcul applicatif, ne jamais ajouter de colonne `solde` ici.
+
+  mouvements    FondsReserveMouvement[]
+
+  @@map("fonds_reserve")
+}
+
+/// APPEND-ONLY.
+model FondsReserveMouvement {
+  id             String       @id @default(uuid()) @db.Uuid
+  fondsReserveId String       @map("fonds_reserve_id") @db.Uuid
+  fondsReserve   FondsReserve @relation(fields: [fondsReserveId], references: [id])
+  montant        Decimal      @db.Decimal(14, 2) // signé : positif = cotisation, négatif = dépense
+  motif          String
+  reference      String?      // ex. lien vers appel_de_fonds ou décision AG de travaux
+  horodatage     DateTime     @default(now()) @db.Timestamptz
+
+  @@map("fonds_reserve_mouvement")
+  @@index([fondsReserveId])
+}
+
+model Quittance {
+  id                 String          @id @default(uuid()) @db.Uuid
+  appelDeFondsLotId  String          @unique @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot    AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  pdfUrl             String          @map("pdf_url")
+  numero             String          @unique
+  dateEmission       DateTime        @default(now()) @map("date_emission") @db.Timestamptz
+
+  @@map("quittance")
+}
+
+model ContestationCharge {
+  id                String             @id @default(uuid()) @db.Uuid
+  appelDeFondsLotId String             @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot    @relation(fields: [appelDeFondsLotId], references: [id])
+  utilisateurId     String             @map("utilisateur_id") @db.Uuid
+  utilisateur       Utilisateur        @relation(fields: [utilisateurId], references: [id])
+  motif             String
+  statut            StatutContestation @default(OUVERTE)
+  reponseSyndic     String?            @map("reponse_syndic")
+  creeLe            DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@map("contestation_charge")
+  @@index([appelDeFondsLotId])
+}
+
+// ============================================================================
+// ASSEMBLÉES GÉNÉRALES
+// ============================================================================
+
+model AssembleeGenerale {
+  id               String    @id @default(uuid()) @db.Uuid
+  coproprieteId    String    @map("copropriete_id") @db.Uuid
+  copropriete      Copropriete @relation(fields: [coproprieteId], references: [id])
+  type             TypeAg
+  dateConvocation  DateTime? @map("date_convocation") @db.Timestamptz
+  dateAg           DateTime  @map("date_ag") @db.Timestamptz
+  statut           StatutAg  @default(PLANIFIEE)
+  // Voir docs/LEGAL_QUESTIONS_BRIEF.md §2 — ne pas fixer de valeur par défaut avant confirmation.
+  quorumRequis     Decimal?  @map("quorum_requis") @db.Decimal(5, 2)
+  quorumAtteint    Decimal?  @map("quorum_atteint") @db.Decimal(5, 2)
+  motifAnnulation  String?   @map("motif_annulation")
+
+  budgetsAg        BudgetAg[]
+  resolutions      AgResolution[]
+  procurations     AgProcuration[]
+  pv               AgPv?
+  notificationLogs AgNotificationLog[]
+
+  @@map("assemblee_generale")
+  @@index([coproprieteId])
+}
+
+model AgResolution {
+  id           String             @id @default(uuid()) @db.Uuid
+  agId         String             @map("ag_id") @db.Uuid
+  assembleeGenerale AssembleeGenerale @relation(fields: [agId], references: [id])
+  ordre        Int
+  texte        String
+  typeMajorite TypeMajorite       @map("type_majorite")
+  resultat     ResultatResolution @default(EN_ATTENTE)
+
+  votes        AgVote[]
+
+  @@map("ag_resolution")
+  @@index([agId])
+}
+
+/// APPEND-ONLY — anonymisé à l'affichage résident, visible en clair pour le syndic (audit),
+/// voir policy RLS `vote_anonymise_resident` (Master Spec Partie 2.3).
+model AgVote {
+  id                  String       @id @default(uuid()) @db.Uuid
+  resolutionId        String       @map("resolution_id") @db.Uuid
+  resolution          AgResolution @relation(fields: [resolutionId], references: [id])
+  lotId               String       @map("lot_id") @db.Uuid
+  lot                 Lot          @relation(fields: [lotId], references: [id])
+  utilisateurId       String       @map("utilisateur_id") @db.Uuid
+  utilisateur         Utilisateur  @relation(fields: [utilisateurId], references: [id])
+  valeur              ValeurVote
+  tantiemesRepresentes Decimal     @map("tantiemes_representes") @db.Decimal(14, 2)
+  horodatage          DateTime     @default(now()) @db.Timestamptz
+
+  @@map("ag_vote")
+  @@index([resolutionId])
+  @@index([lotId])
+}
+
+model AgProcuration {
+  id           String            @id @default(uuid()) @db.Uuid
+  lotId        String            @map("lot_id") @db.Uuid
+  lot          Lot               @relation("ProcurationMandant", fields: [lotId], references: [id])
+  mandantId    String            @map("mandant_id") @db.Uuid
+  mandant      Utilisateur       @relation("ProcurationMandantUtilisateur", fields: [mandantId], references: [id])
+  mandataireId String            @map("mandataire_id") @db.Uuid
+  mandataire   Utilisateur       @relation("ProcurationMandataire", fields: [mandataireId], references: [id])
+  agId         String            @map("ag_id") @db.Uuid
+  assembleeGenerale AssembleeGenerale @relation(fields: [agId], references: [id])
+
+  @@map("ag_procuration")
+  @@index([agId])
+  // Limite légale (docs/LEGAL_QUESTIONS_BRIEF.md §4) à appliquer en validation applicative,
+  // pas en contrainte DB (le compte dépend d'autres lignes de cette même table).
+}
+
+/// APPEND-ONLY.
+model AgPv {
+  id                 String   @id @default(uuid()) @db.Uuid
+  agId               String   @unique @map("ag_id") @db.Uuid
+  assembleeGenerale  AssembleeGenerale @relation(fields: [agId], references: [id])
+  contenuJson        Json     @map("contenu_json")
+  pdfUrl             String   @map("pdf_url")
+  hashIntegrite      String   @map("hash_integrite") // SHA-256
+  horodatageGeneration DateTime @default(now()) @map("horodatage_generation") @db.Timestamptz
+
+  @@map("ag_pv")
+}
+
+/// APPEND-ONLY — preuve légale d'envoi (Master Spec Partie 7.2).
+model AgNotificationLog {
+  id              String    @id @default(uuid()) @db.Uuid
+  agId            String    @map("ag_id") @db.Uuid
+  assembleeGenerale AssembleeGenerale @relation(fields: [agId], references: [id])
+  utilisateurId   String    @map("utilisateur_id") @db.Uuid
+  canal           CanalNotification
+  horodatageEnvoi DateTime  @default(now()) @map("horodatage_envoi") @db.Timestamptz
+  accuseReception Boolean?  @map("accuse_reception")
+
+  @@map("ag_notification_log")
+  @@index([agId])
+}
+
+// ============================================================================
+// INCIDENTS, PERSONNEL, TIERS
+// ============================================================================
+
+model Incident {
+  id             String          @id @default(uuid()) @db.Uuid
+  coproprieteId  String          @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete     @relation(fields: [coproprieteId], references: [id])
+  lotId          String?         @map("lot_id") @db.Uuid // nullable si partie commune
+  lot            Lot?            @relation(fields: [lotId], references: [id])
+  categorie      String
+  sousCategorie  String?         @map("sous_categorie")
+  partie         PartieIncident
+  urgence        UrgenceIncident @default(NORMALE)
+  statut         StatutIncident  @default(OUVERT)
+  creeParId      String          @map("cree_par") @db.Uuid
+  creeParUtilisateur Utilisateur @relation("IncidentCreateur", fields: [creeParId], references: [id])
+  assigneAId     String?         @map("assigne_a") @db.Uuid
+  prestataire    Prestataire?    @relation(fields: [assigneAId], references: [id])
+  slaDeadline    DateTime?       @map("sla_deadline") @db.Timestamptz
+  creeLe         DateTime        @default(now()) @map("cree_le") @db.Timestamptz
+
+  logs           IncidentLog[]
+
+  @@map("incident")
+  @@index([coproprieteId])
+  @@index([lotId])
+}
+
+/// APPEND-ONLY.
+model IncidentLog {
+  id            String      @id @default(uuid()) @db.Uuid
+  incidentId    String      @map("incident_id") @db.Uuid
+  incident      Incident    @relation(fields: [incidentId], references: [id])
+  statutAvant   StatutIncident @map("statut_avant")
+  statutApres   StatutIncident @map("statut_apres")
+  acteurId      String      @map("acteur_id") @db.Uuid
+  commentaire   String?
+  horodatage    DateTime    @default(now()) @db.Timestamptz
+
+  @@map("incident_log")
+  @@index([incidentId])
+}
+
+model Prestataire {
+  id            String    @id @default(uuid()) @db.Uuid
+  coproprieteId String    @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  nom           String
+  specialite    String?
+  contact       String?
+  actif         Boolean   @default(true)
+
+  incidentsAssignes Incident[]
+
+  @@map("prestataire")
+  @@index([coproprieteId])
+}
+
+model Personnel {
+  utilisateurId  String           @id @map("utilisateur_id") @db.Uuid
+  utilisateur    Utilisateur      @relation(fields: [utilisateurId], references: [id])
+  coproprieteId  String           @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete      @relation(fields: [coproprieteId], references: [id])
+  statut         StatutPersonnel  @default(PRESENT)
+  logementLotId  String?          @map("logement_lot_id") @db.Uuid
+  logementLot    Lot?             @relation("LogementGardien", fields: [logementLotId], references: [id])
+
+  visitesEnregistrees Visite[]
+
+  @@map("personnel")
+  @@index([coproprieteId])
+}
+
+model Visite {
+  id           String       @id @default(uuid()) @db.Uuid
+  gardienId    String       @map("gardien_id") @db.Uuid
+  gardien      Personnel    @relation(fields: [gardienId], references: [utilisateurId])
+  lotId        String       @map("lot_id") @db.Uuid
+  lot          Lot          @relation(fields: [lotId], references: [id])
+  visiteurNom  String       @map("visiteur_nom")
+  statut       StatutVisite @default(EN_ATTENTE)
+  horodatage   DateTime     @default(now()) @db.Timestamptz
+
+  @@map("visite")
+  @@index([lotId])
+  @@index([gardienId])
+  // Table concernée par la sync offline (Master Spec Partie 13.3) — écriture optimiste côté
+  // mobile, résolution "dernière écriture gagne" côté serveur. Ne PAS répliquer ce pattern sur
+  // une table financière ou probante.
+}
+
+model ReservationEspaceCommun {
+  id         String            @id @default(uuid()) @db.Uuid
+  espaceId   String            @map("espace_id") @db.Uuid
+  espace     EspaceCommun      @relation(fields: [espaceId], references: [id])
+  lotId      String            @map("lot_id") @db.Uuid
+  lot        Lot               @relation(fields: [lotId], references: [id])
+  dateDebut  DateTime          @map("date_debut") @db.Timestamptz
+  dateFin    DateTime          @map("date_fin") @db.Timestamptz
+  statut     StatutReservation @default(CONFIRMEE)
+
+  @@map("reservation_espace_commun")
+  @@index([espaceId])
+  @@index([lotId])
+}
+
+model ConflitLitige {
+  id             String    @id @default(uuid()) @db.Uuid
+  coproprieteId  String    @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete @relation(fields: [coproprieteId], references: [id])
+  type           String
+  description    String
+  statut         String
+  escaladeNiveau Int       @default(0) @map("escalade_niveau")
+  creeLe         DateTime  @default(now()) @map("cree_le") @db.Timestamptz
+  // Étape de conciliation préalable potentiellement requise par la Loi 30-24 —
+  // voir docs/LEGAL_QUESTIONS_BRIEF.md §0. Champ à ajouter une fois confirmé, pas avant.
+
+  @@map("conflit_litige")
+  @@index([coproprieteId])
+}
+
+model GarantiePromoteur {
+  id            String       @id @default(uuid()) @db.Uuid
+  lotId         String?      @map("lot_id") @db.Uuid
+  lot           Lot?         @relation(fields: [lotId], references: [id])
+  coproprieteId String?      @map("copropriete_id") @db.Uuid
+  type          TypeGarantie
+  dateDebut     DateTime     @map("date_debut") @db.Date
+  dateFin       DateTime     @map("date_fin") @db.Date
+
+  @@map("garantie_promoteur")
+}
+
+// ============================================================================
+// DOCUMENTS, NOTIFICATIONS, AUDIT
+// ============================================================================
+
+model Document {
+  id            String             @id @default(uuid()) @db.Uuid
+  coproprieteId String             @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete        @relation(fields: [coproprieteId], references: [id])
+  type          TypeDocument
+  url           String
+  visibilite    VisibiliteDocument
+  dateCreation  DateTime           @default(now()) @map("date_creation") @db.Timestamptz
+
+  @@map("document")
+  @@index([coproprieteId])
+}
+
+/// APPEND-ONLY — preuve légale, Doc A §12.2.
+model Notification {
+  id             String                  @id @default(uuid()) @db.Uuid
+  utilisateurId  String                  @map("utilisateur_id") @db.Uuid
+  utilisateur    Utilisateur             @relation(fields: [utilisateurId], references: [id])
+  canal          CanalNotification
+  templateCode   String                  @map("template_code")
+  contenuRendu   String                  @map("contenu_rendu")
+  statutEnvoi    StatutEnvoiNotification @default(EN_FILE) @map("statut_envoi")
+  accuseReception Boolean                @default(false) @map("accuse_reception")
+  horodatage     DateTime                @default(now()) @db.Timestamptz
+
+  @@map("notification")
+  @@index([utilisateurId])
+}
+
+/// APPEND-ONLY — jamais UPDATE/DELETE (Master Spec Partie 2.4).
+model AuditLog {
+  id         String      @id @default(uuid()) @db.Uuid
+  acteurId   String?     @map("acteur_id") @db.Uuid // nullable si système (ex. job Inngest)
+  acteur     Utilisateur? @relation(fields: [acteurId], references: [id])
+  action     String
+  entite     String
+  entiteId   String      @map("entite_id") @db.Uuid
+  avantJson  Json?       @map("avant_json")
+  apresJson  Json?       @map("apres_json")
+  horodatage DateTime    @default(now()) @db.Timestamptz
+  ip         String?
+
+  @@map("audit_log")
+  @@index([entite, entiteId])
+  @@index([acteurId])
+}

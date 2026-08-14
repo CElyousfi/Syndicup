@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Cas d'Usage Exhaustifs — Plateforme Copropriété Maroc v2.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;0,700;1,400&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'IBM Plex Sans',sans-serif;font-size:10.5pt;color:#000;background:#fff;line-height:1.55;}
+  /* COVER */
+  .cover{min-height:100vh;display:flex;flex-direction:column;justify-content:space-between;padding:60px 80px;border-bottom:4px solid #000;page-break-after:always;}
+  .cover-label{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;letter-spacing:.2em;text-transform:uppercase;color:#666;}
+  .cover h1{font-size:38pt;font-weight:700;line-height:1.05;margin-top:20px;letter-spacing:-.02em;}
+  .cover h2{font-size:15pt;font-weight:300;color:#555;margin-top:10px;}
+  .cover-meta{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;border-top:1px solid #000;border-left:1px solid #000;margin-top:36px;}
+  .cover-meta-item{border-right:1px solid #000;border-bottom:1px solid #000;padding:14px 18px;}
+  .cover-meta-item .lb{font-family:'IBM Plex Mono',monospace;font-size:7pt;letter-spacing:.15em;text-transform:uppercase;color:#999;margin-bottom:5px;}
+  .cover-meta-item .vl{font-size:10.5pt;font-weight:700;}
+  .cover-bottom{font-family:'IBM Plex Mono',monospace;font-size:7.5pt;color:#aaa;margin-top:50px;}
+  /* LAYOUT */
+  .page{max-width:1100px;margin:0 auto;padding:50px 80px;}
+  /* TOC */
+  .toc-page{padding:50px 80px;max-width:1100px;margin:0 auto;page-break-after:always;}
+  .toc-h{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;letter-spacing:.2em;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:28px;}
+  .toc-item{display:flex;justify-content:space-between;align-items:baseline;padding:7px 0;border-bottom:1px solid #e8e8e8;text-decoration:none;color:#000;}
+  .toc-item:hover{background:#f5f5f5;}
+  .toc-num{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;color:#aaa;min-width:32px;margin-right:12px;}
+  .toc-name{flex:1;font-weight:600;font-size:10.5pt;}
+  .toc-sub .toc-name{font-weight:400;color:#444;padding-left:24px;font-size:10pt;}
+  /* SECTIONS */
+  section{margin-bottom:64px;}
+  .sec-label{font-family:'IBM Plex Mono',monospace;font-size:7.5pt;letter-spacing:.2em;text-transform:uppercase;color:#aaa;margin-bottom:5px;}
+  h2.sec-title{font-size:20pt;font-weight:700;border-bottom:3px solid #000;padding-bottom:9px;margin-bottom:24px;letter-spacing:-.01em;}
+  h3.sub{font-size:12.5pt;font-weight:700;border-left:4px solid #000;padding-left:11px;margin:26px 0 13px;}
+  h4.subsub{font-family:'IBM Plex Mono',monospace;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin:18px 0 7px;color:#333;}
+  /* TABLES */
+  table{width:100%;border-collapse:collapse;margin-bottom:22px;font-size:9.5pt;}
+  thead tr{background:#000;color:#fff;}
+  thead th{padding:9px 13px;text-align:left;font-family:'IBM Plex Mono',monospace;font-size:7.5pt;letter-spacing:.09em;text-transform:uppercase;font-weight:600;}
+  tbody tr{border-bottom:1px solid #e8e8e8;}
+  tbody tr:nth-child(even){background:#f7f7f7;}
+  tbody td{padding:8px 13px;vertical-align:top;}
+  tbody td:first-child{font-weight:600;}
+  td.mono{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;}
+  /* BADGES */
+  .b{display:inline-block;font-family:'IBM Plex Mono',monospace;font-size:7.5pt;padding:2px 7px;border:1.5px solid #000;white-space:nowrap;font-weight:700;}
+  .bf{background:#000;color:#fff;border-color:#000;}
+  .bo{background:#fff;color:#000;}
+  .bg{background:#e8e8e8;color:#444;border-color:#aaa;}
+  /* CALLOUT */
+  .callout{border-left:4px solid #000;padding:12px 18px;margin:14px 0 22px;background:#f5f5f5;}
+  .callout strong{font-family:'IBM Plex Mono',monospace;font-size:8pt;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:5px;}
+  .callout.warn{border-left-color:#000;background:#f0f0f0;}
+  /* RULE BOX */
+  .rule-box{border:2px solid #000;padding:16px 20px;margin:14px 0 20px;background:#fff;}
+  .rule-box-title{font-family:'IBM Plex Mono',monospace;font-size:8pt;text-transform:uppercase;letter-spacing:.12em;font-weight:700;margin-bottom:10px;border-bottom:1px solid #000;padding-bottom:6px;}
+  /* DECISION TREE */
+  .dtree{font-family:'IBM Plex Mono',monospace;font-size:8.5pt;background:#f5f5f5;border:1.5px solid #000;padding:18px 20px;margin:14px 0 22px;line-height:1.9;}
+  .dtree pre{white-space:pre;}
+  /* DIVIDER */
+  .div{border-top:1px solid #e0e0e0;margin:28px 0;}
+  .div-h{border-top:2px solid #000;margin:36px 0;}
+  /* FLOW */
+  .flow{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0 20px;}
+  .fs{border:2px solid #000;padding:7px 14px;font-size:9pt;font-weight:700;background:#fff;white-space:nowrap;}
+  .fs.f{background:#000;color:#fff;}
+  .fs.g{background:#e8e8e8;}
+  .fa{font-size:13pt;padding:0 5px;font-weight:700;}
+  /* MATRIX */
+  .matrix-y{background:#000;color:#fff;}
+  .matrix-n{background:#e8e8e8;color:#666;}
+  .matrix-p{background:#f5f5f5;}
+  /* PAGE FOOTER */
+  .pfooter{border-top:1px solid #000;padding-top:9px;margin-top:50px;display:flex;justify-content:space-between;font-family:'IBM Plex Mono',monospace;font-size:7.5pt;color:#aaa;}
+  /* case id tag */
+  .cid{font-family:'IBM Plex Mono',monospace;font-size:8pt;background:#000;color:#fff;padding:1px 7px;margin-right:6px;}
+  .cid-ref{font-family:'IBM Plex Mono',monospace;font-size:8pt;border:1px solid #000;padding:1px 7px;}
+  /* scenario block */
+  .scenario{border:1.5px solid #000;margin:14px 0 22px;}
+  .scenario-head{background:#000;color:#fff;padding:8px 16px;font-family:'IBM Plex Mono',monospace;font-size:8.5pt;display:flex;justify-content:space-between;}
+  .scenario-body{padding:14px 16px;}
+  .scenario-row{display:flex;gap:16px;border-bottom:1px solid #e8e8e8;padding:6px 0;}
+  .scenario-row:last-child{border-bottom:none;}
+  .scenario-key{font-family:'IBM Plex Mono',monospace;font-size:8pt;font-weight:700;color:#555;min-width:110px;text-transform:uppercase;}
+  .scenario-val{font-size:9.5pt;flex:1;}
+  ol.steps{padding-left:0;list-style:none;counter-reset:sc;}
+  ol.steps li{counter-increment:sc;display:flex;gap:12px;margin-bottom:5px;padding:6px 10px;background:#f7f7f7;border-left:3px solid #000;}
+  ol.steps li::before{content:counter(sc,decimal-leading-zero);font-family:'IBM Plex Mono',monospace;font-size:8.5pt;font-weight:700;color:#aaa;min-width:22px;}
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<div class="cover">
+  <div>
+    <div class="cover-label">Document d'Analyse Exhaustive — Version 1.0</div>
+    <h1>Cas d'Usage Complets<br>Gestion de Copropriété<br>— Maroc</h1>
+    <h2>Toutes les situations, toutes les règles, tous les edge cases — marché marocain</h2>
+    <div class="cover-meta">
+      <div class="cover-meta-item"><div class="lb">Type</div><div class="vl">Use Case Master Doc</div></div>
+      <div class="cover-meta-item"><div class="lb">Version</div><div class="vl">2.0</div></div>
+      <div class="cover-meta-item"><div class="lb">Marché</div><div class="vl">Maroc 🇲🇦</div></div>
+      <div class="cover-meta-item"><div class="lb">Statut</div><div class="vl"><span class="b bf">FINAL v2</span></div></div>
+      <div class="cover-meta-item"><div class="lb">Réf. légale</div><div class="vl">Loi 18-00 / 106-12</div></div>
+      <div class="cover-meta-item"><div class="lb">Cas couverts</div><div class="vl">200+</div></div>
+      <div class="cover-meta-item"><div class="lb">Domaines</div><div class="vl">12 domaines</div></div>
+      <div class="cover-meta-item"><div class="lb">Date</div><div class="vl">Mai 2026</div></div>
+    </div>
+  </div>
+  <div class="cover-bottom">CONFIDENTIEL — UC_COPRO_MA_v2.0 — Document de référence produit</div>
+</div>
+
+<!-- TOC -->
+<div class="toc-page">
+  <div class="toc-h">Table des Matières</div>
+  <a class="toc-item" href="#s1"><span class="toc-num">01</span><span class="toc-name">Taxonomie des Lots & Types de Propriété</span></a>
+  <a class="toc-item toc-sub" href="#s1a"><span class="toc-num"></span><span class="toc-name">1.1 Appartements — tous les cas</span></a>
+  <a class="toc-item toc-sub" href="#s1b"><span class="toc-num"></span><span class="toc-name">1.2 Parkings — titré vs commun vs sous-terrain</span></a>
+  <a class="toc-item toc-sub" href="#s1c"><span class="toc-num"></span><span class="toc-name">1.3 Caves, locaux, toits-terrasses</span></a>
+  <a class="toc-item toc-sub" href="#s1d"><span class="toc-num"></span><span class="toc-name">1.4 Villas et lots atypiques</span></a>
+  <a class="toc-item toc-sub" href="#s1e"><span class="toc-num"></span><span class="toc-name">1.5 Lots commerciaux & bureaux</span></a>
+  <a class="toc-item" href="#s2"><span class="toc-num">02</span><span class="toc-name">Propriété, Occupation & Statuts des Résidents</span></a>
+  <a class="toc-item toc-sub" href="#s2a"><span class="toc-num"></span><span class="toc-name">2.1 Propriétaire occupant</span></a>
+  <a class="toc-item toc-sub" href="#s2b"><span class="toc-num"></span><span class="toc-name">2.2 Propriétaire bailleur (lot loué)</span></a>
+  <a class="toc-item toc-sub" href="#s2c"><span class="toc-num"></span><span class="toc-name">2.3 Locataire — droits et limites</span></a>
+  <a class="toc-item toc-sub" href="#s2d"><span class="toc-num"></span><span class="toc-name">2.4 Indivision & co-propriétaires multiples d'un lot</span></a>
+  <a class="toc-item toc-sub" href="#s2e"><span class="toc-num"></span><span class="toc-name">2.5 Succession & décès du propriétaire</span></a>
+  <a class="toc-item toc-sub" href="#s2f"><span class="toc-num"></span><span class="toc-name">2.6 Lot vacant / propriétaire absent</span></a>
+  <a class="toc-item toc-sub" href="#s2g"><span class="toc-num"></span><span class="toc-name">2.7 Propriétaire personne morale (société)</span></a>
+  <a class="toc-item" href="#s3"><span class="toc-num">03</span><span class="toc-name">Charges & Finances — Tous les Cas</span></a>
+  <a class="toc-item toc-sub" href="#s3a"><span class="toc-num"></span><span class="toc-name">3.1 Calcul des tantièmes — règles et exceptions</span></a>
+  <a class="toc-item toc-sub" href="#s3b"><span class="toc-num"></span><span class="toc-name">3.2 Appels de fonds — types et situations</span></a>
+  <a class="toc-item toc-sub" href="#s3c"><span class="toc-num"></span><span class="toc-name">3.3 Impayés — escalade et gestion</span></a>
+  <a class="toc-item toc-sub" href="#s3d"><span class="toc-num"></span><span class="toc-name">3.4 Paiements partiels, avances, trop-perçus</span></a>
+  <a class="toc-item toc-sub" href="#s3e"><span class="toc-num"></span><span class="toc-name">3.5 Charges locataire vs propriétaire</span></a>
+  <a class="toc-item toc-sub" href="#s3f"><span class="toc-num"></span><span class="toc-name">3.6 Fonds de réserve / travaux</span></a>
+  <a class="toc-item toc-sub" href="#s3g"><span class="toc-num"></span><span class="toc-name">3.7 Cas spéciaux : lots mixtes, activité commerciale</span></a>
+  <a class="toc-item" href="#s4"><span class="toc-num">04</span><span class="toc-name">Parkings — Règles Complètes Maroc</span></a>
+  <a class="toc-item" href="#s5"><span class="toc-num">05</span><span class="toc-name">Incidents & Interventions — Tous les Scénarios</span></a>
+  <a class="toc-item" href="#s6"><span class="toc-num">06</span><span class="toc-name">Assemblées Générales — Tous les Cas Loi 18-00</span></a>
+  <a class="toc-item" href="#s7"><span class="toc-num">07</span><span class="toc-name">Parties Communes — Gestion & Conflits</span></a>
+  <a class="toc-item" href="#s8"><span class="toc-num">08</span><span class="toc-name">Le Syndic — Mandats, Changements, Conflits</span></a>
+  <a class="toc-item" href="#s9"><span class="toc-num">09</span><span class="toc-name">Personnel de l'Immeuble — Gardien & Concierge</span></a>
+  <a class="toc-item" href="#s10"><span class="toc-num">10</span><span class="toc-name">Types de Résidences — Règles Spécifiques</span></a>
+  <a class="toc-item" href="#s11"><span class="toc-num">11</span><span class="toc-name">Onboarding & Cycle de Vie — Voir document dédié</span></a>
+  <a class="toc-item" href="#s12"><span class="toc-num">12</span><span class="toc-name">Conflits, Litiges & Cas Limites</span></a>
+</div>
+
+<div class="page">
+
+<!-- ═══ S1: TAXONOMIE LOTS ═══ -->
+<section id="s1">
+<div class="sec-label">Section 01</div>
+<h2 class="sec-title">Taxonomie des Lots & Types de Propriété</h2>
+
+<div class="callout">
+  <strong>Principe fondamental</strong>
+  Dans la plateforme, un "lot" est toute fraction de copropriété dotée d'un titre foncier propre (numéro de lot, tantièmes). Certaines fractions n'ont PAS de titre propre et sont considérées "parties communes" gérées collectivement. La distinction est critique pour la gestion des charges et des droits.
+</div>
+
+<div id="s1a">
+<h3 class="sub">1.1 — Appartements</h3>
+<table>
+  <thead><tr><th>Type</th><th>Description</th><th>Tantièmes</th><th>Charges spécifiques</th><th>Cas plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Appartement standard</td><td>Logement dans immeuble collectif. Usage habitation.</td><td>Calculés sur surface + étage + exposition</td><td>Charges communes générales</td><td>Cas de base. Propriétaire ou locataire.</td></tr>
+    <tr><td>Appartement duplex</td><td>S'étend sur 2 étages. Souvent 1 titre foncier.</td><td>Surface totale des 2 niveaux</td><td>Identique à standard. Escalier interne = partie privative.</td><td>1 lot = 2 étages. Numéro lot unique.</td></tr>
+    <tr><td>Appartement avec terrasse privative</td><td>Terrasse attachée au lot (titre inclus)</td><td>Surface habitable + fraction terrasse (50% souvent)</td><td>Entretien terrasse à la charge du propriétaire. Étanchéité = partie commune.</td><td>Terrasse = attribut du lot. Incidents étanchéité = parties communes.</td></tr>
+    <tr><td>Appartement RDC avec jardin privatif</td><td>Jardin attenant au lot, titre inclus</td><td>Surface habitable + fraction jardin</td><td>Entretien jardin privatif = propriétaire. Clôture mitoyenne = commun.</td><td>Jardin = attribut lot. Règles d'usage dans règlement intérieur.</td></tr>
+    <tr><td>Studio / Chambre de service</td><td>Petite surface, parfois anciennement chambre de bonne</td><td>Faibles tantièmes (petite surface)</td><td>Même charges générales mais montant faible</td><td>Peut être lié à un appartement principal ou lot indépendant.</td></tr>
+    <tr><td>Appartement en cours de construction (VEFA)</td><td>Vente en état futur d'achèvement. Propriétaire pas encore résident.</td><td>Définis dans le contrat VEFA</td><td>Charges provisoires jusqu'à livraison réelle</td><td>Lot créé, pas encore d'utilisateur invité. Statut VEFA.</td></tr>
+    <tr><td>Appartement transformé en bureau</td><td>Usage mixte ou changement d'usage (déclaré ou non)</td><td>Tantièmes inchangés (basés sur titre)</td><td>Charges standard. Usage commercial peut générer charges supplémentaires (ascenseur intensif, nettoyage).</td><td>Champ type_usage sur le lot : HABITATION / BUREAU / MIXTE / COMMERCIAL.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s1b">
+<h3 class="sub">1.2 — Parkings : le cas le plus complexe au Maroc</h3>
+
+<div class="callout warn">
+  <strong>Contexte Marocain Critique</strong>
+  Au Maroc, la situation du parking dans un immeuble crée 4 cas distincts avec des règles radicalement différentes. C'est l'une des principales sources de conflits en copropriété. La plateforme doit gérer les 4 cas simultanément dans un même immeuble.
+</div>
+
+<table>
+  <thead><tr><th>Cas</th><th>Description</th><th>Titre foncier</th><th>Tantièmes</th><th>Gestion plateforme</th><th>Règles clés</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><span class="b bf">CAS A</span> Parking titré individuel</td>
+      <td>Place de parking avec son propre titre foncier (TF séparé ou lot dans copropriété). Ex: parking sous-terrain numéroté, vendu séparément.</td>
+      <td>OUI — lot indépendant</td>
+      <td>Tantièmes propres (ex: 50/10000)</td>
+      <td>Lot de type PARKING. Propriétaire = copropriétaire à part entière. Peut être différent du propriétaire de l'appartement.</td>
+      <td>Le propriétaire paie ses charges sur ses tantièmes parking. Vote en AG sur les sujets qui le concernent. Peut vendre/louer sa place indépendamment de l'appartement.</td>
+    </tr>
+    <tr>
+      <td><span class="b bo">CAS B</span> Parking commun non attribué</td>
+      <td>Places de parking dans une zone commune sans attribution nominale. "Premier arrivé premier servi." Pas de titre individuel.</td>
+      <td>NON — partie commune</td>
+      <td>Aucun tantième propre. Géré collectivement.</td>
+      <td>Pas de lot parking individuel. Règlement intérieur définit les règles d'usage. Module réservation / règles d'accès gère la rotation.</td>
+      <td>Tous les copropriétaires ont droit d'usage. Règles définies en AG. Pas de location individuelle possible. Conflits fréquents.</td>
+    </tr>
+    <tr>
+      <td><span class="b bg">CAS C</span> Parking commun avec attribution nominale (sans titre)</td>
+      <td>Places numérotées attribuées à des lots spécifiques par décision d'AG ou règlement intérieur, MAIS sans titre foncier individuel.</td>
+      <td>NON — partie commune à usage exclusif</td>
+      <td>Aucun tantième propre. Mais usage exclusif reconnu.</td>
+      <td>Attribut sur le lot : place_parking_attribuee = "P12". Règle d'usage dans règlement intérieur. Modifiable par AG.</td>
+      <td>L'attribution peut être modifiée par AG. Le propriétaire ne peut pas vendre la place séparément. Il peut être redevable d'une charge d'usage supplémentaire si décidé en AG.</td>
+    </tr>
+    <tr>
+      <td><span class="b bg">CAS D</span> Parking mixte (immeuble avec les 3 cas)</td>
+      <td>Même immeuble: certains parkings titrés (vendus), d'autres communs, d'autres attribués sans titre. Cas le plus fréquent dans les nouvelles résidences marocaines.</td>
+      <td>Mixte</td>
+      <td>Mixte</td>
+      <td>La plateforme gère les 3 types simultanément. Chaque place a un attribut : TITRE / COMMUN / ATTRIBUE_SANS_TITRE.</td>
+      <td>Charges séparées selon type. AG distingue les votes selon droits réels vs usage.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h4 class="subsub">Règles de gestion détaillées — Parking Commun (Cas B & C)</h4>
+<table>
+  <thead><tr><th>Situation</th><th>Règle</th><th>Action plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Résident utilise place d'un autre</td><td>Infraction règlement intérieur. Notification au contrevenant. Escalade au syndic si récidive.</td><td>Module incident catégorie "Parking — occupation illicite". Preuve photo. Notification push au propriétaire de la place et au syndic.</td></tr>
+    <tr><td>Résident absent longue durée veut bloquer sa place</td><td>Interdit pour parking commun (Cas B). Autorisé pour parking titré (Cas A) — il peut fermer à clé ou mettre un véhicule.</td><td>Plateforme vérifie type_parking du lot avant autorisation. Alerte si tentative de blocage illégal.</td></tr>
+    <tr><td>Propriétaire parking titré veut louer sa place à un tiers externe</td><td>Légal si parking titré (Cas A). Doit informer le syndic. Tiers = accès limité au parking uniquement.</td><td>Lot parking avec locataire_parking différent du propriétaire appartement. Accès badge/code pour le locataire de place.</td></tr>
+    <tr><td>Résident sans parking veut louer une place à un autre résident</td><td>Possible si le propriétaire de la place titré accepte. Transaction privée mais le syndic doit être informé pour accès badge.</td><td>Notification syndic. Pas de gestion financière dans le MVP (transaction privée).</td></tr>
+    <tr><td>Nombre de places insuffisant (plus de résidents que de places)</td><td>Règlement intérieur définit les critères d'attribution (ancienneté, taille famille, etc.) votés en AG.</td><td>Module règles d'attribution configurable. File d'attente si nécessaire.</td></tr>
+    <tr><td>Visiteur utilise place résident</td><td>Zone visiteurs définie. Si pas de zone dédiée = règlement intérieur.</td><td>Gardien peut signaler via incident. Notification au propriétaire.</td></tr>
+    <tr><td>Parking sous-terrain : panne électricité / accès barrière</td><td>Incident critique — barrière bloquée = tous les résidents impactés.</td><td>Catégorie incident : URGENT. Notification à tous les résidents du parking. Assignation immédiate prestataire.</td></tr>
+    <tr><td>Parking : fuite d'eau / inondation sous-terrain</td><td>Incident structure = responsabilité copropriété.</td><td>Catégorie : STRUCTURE + URGENCE. Notification à tous propriétaires de places parking.</td></tr>
+    <tr><td>Moto / vélo dans place voiture</td><td>Règlement intérieur. Certaines résidences ont zones dédiées motos.</td><td>Paramètre configurable par résidence : types_vehicules_autorises par zone.</td></tr>
+    <tr><td>Véhicule abandonné dans parking commun</td><td>Procédure légale (PV, mise en demeure, fourrière). Syndic doit agir.</td><td>Incident catégorie "Véhicule abandonné". Workflow avec délais légaux. Notifications escalade.</td></tr>
+  </tbody>
+</table>
+
+<h4 class="subsub">Arbre de décision — Attribution d'une place de parking</h4>
+<div class="dtree"><pre>
+Nouveau résident souhaite une place de parking
+│
+├─► A-t-il acheté/loué un lot PARKING titré ?
+│    ├─ OUI → Lot parking lui est attribué (propriétaire ou locataire)
+│    │         Accès badge/code activé dans la plateforme
+│    │         Charges parking calculées sur ses tantièmes
+│    └─ NON ──► Y a-t-il des places à attribution nominale (Cas C) ?
+│                ├─ OUI → Son appartement a-t-il une place attribuée dans le règlement ?
+│                │         ├─ OUI → Place attribuée. Accès activé.
+│                │         └─ NON → Liste d'attente ou règle d'AG
+│                └─ NON ──► Parking commun (Cas B)
+│                            ├─ Règles d'usage définies en AG
+│                            ├─ Pas d'attribution personnelle dans la plateforme
+│                            └─ Signalement conflits via module incidents
+</pre></div>
+</div>
+
+<div id="s1c">
+<h3 class="sub">1.3 — Caves, Locaux Techniques, Toits-Terrasses</h3>
+<table>
+  <thead><tr><th>Type</th><th>Statut juridique</th><th>Tantièmes</th><th>Charges</th><th>Cas plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Cave titrée</td><td>Lot indépendant avec TF</td><td>Oui — faibles (ex: 20/10000)</td><td>Charge sur tantièmes propres</td><td>Lot type CAVE. Peut être propriétaire différent de l'appart.</td></tr>
+    <tr><td>Cave commune attribuée</td><td>Partie commune à usage exclusif</td><td>Non</td><td>Usage gratuit ou redevance votée AG</td><td>Attribut sur lot : cave_attribuee = "C5"</td></tr>
+    <tr><td>Local vélos / poussettes</td><td>Partie commune collective</td><td>Non</td><td>Entretien inclus charges communes</td><td>Espace commun de type LOCAL. Réservation ou accès libre selon règlement.</td></tr>
+    <tr><td>Local poubelles</td><td>Partie commune — obligation légale</td><td>Non</td><td>Nettoyage = charges communes. Prestataire collecte = budget commun.</td><td>Espace commun non réservable. Incidents liés = catégorie NETTOYAGE.</td></tr>
+    <tr><td>Local technique (électricité, eau)</td><td>Partie commune — accès restreint</td><td>Non</td><td>Maintenance = charges communes</td><td>Espace commun type TECHNIQUE. Accès gardien/syndic uniquement.</td></tr>
+    <tr><td>Toit-terrasse commun</td><td>Partie commune collective</td><td>Non</td><td>Entretien, étanchéité = charges communes majeures</td><td>Espace commun. Réservable si AG a décidé usage privatif partiel. Sinon accès interdit.</td></tr>
+    <tr><td>Toit-terrasse privatif (penthouse)</td><td>Lot ou partie privative du lot supérieur</td><td>Inclus dans lot (fraction surface)</td><td>Entretien surface = propriétaire. Étanchéité structurelle = copropriété.</td><td>Attribut du lot. Incidents étanchéité = distinction charge privative vs commune.</td></tr>
+    <tr><td>Gardiennage / loge gardien</td><td>Partie commune à usage exclusif du gardien</td><td>Non</td><td>Logement gardien = charge de copropriété si prévu au règlement</td><td>Lot type LOGE_GARDIEN. Lié au compte utilisateur gardien.</td></tr>
+    <tr><td>Local commercial RDC (appartenant copropriété)</td><td>Lot partie commune générant des revenus</td><td>Oui — tantièmes propres</td><td>Loyer perçu va au compte copropriété. Charges déduites.</td><td>Lot type COMMERCIAL_COMMUN. Revenus dans module finances.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s1d">
+<h3 class="sub">1.4 — Villas en Résidence Fermée</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Description</th><th>Spécificités</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Villa individuelle avec jardin privatif</td><td>Villa isolée dans résidence. Jardin = partie privative.</td><td>Entretien jardin privatif = propriétaire. Clôture mitoyenne = règlement. Piscine privée = propriétaire.</td><td>Lot type VILLA. Jardin = attribut. Incidents jardin = privatifs sauf clôture.</td></tr>
+    <tr><td>Villa jumelée (semi-détachée)</td><td>2 villas partageant un mur mitoyen</td><td>Mur mitoyen = responsabilité partagée entre les 2 propriétaires ET copropriété selon nature travaux.</td><td>Incident mur mitoyen = assignation aux 2 lots + syndic. Workflow validation double.</td></tr>
+    <tr><td>Villa avec piscine commune à la résidence</td><td>Piscine partagée entre toutes les villas</td><td>Charges piscine = budget commun. Entretien = prestataire choisi en AG.</td><td>Espace commun type PISCINE. Réservation créneaux si règlement le prévoit.</td></tr>
+    <tr><td>Résidence avec voirie interne privée</td><td>Routes internes à la résidence = parties communes</td><td>Entretien voirie, éclairage, signalisation = charges communes. Pas de responsabilité municipale.</td><td>Incidents voirie = catégorie VOIRIE. Prestataire spécialisé.</td></tr>
+    <tr><td>Villa avec espace vert commun devant</td><td>Bande verte devant les villas = partie commune</td><td>Entretien = charge commune. Propriétaire ne peut pas s'approprier l'espace.</td><td>Espace commun type ESPACES_VERTS. Incidents = catégorie JARDINS.</td></tr>
+    <tr><td>Résidence avec poste de sécurité / guérite</td><td>Sécurité 24h/24 = charge commune majeure</td><td>Agents de sécurité = salaire sur budget commun. Prestataire sécurité voté en AG.</td><td>Personnel type SECURITE. Contrat prestataire dans documents. Incidents sécurité = urgence.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s1e">
+<h3 class="sub">1.5 — Lots Commerciaux & Bureaux en Copropriété</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Tantièmes</th><th>Charges spécifiques</th><th>Droits AG</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Local commercial RDC appartenant à un copropriétaire</td><td>Généralement plus élevés que résidentiel (coefficient commercial)</td><td>Usage intensif parties communes (vitrine, accès, livraisons). Peut générer charges supplémentaires votées AG.</td><td>Vote sur sujets communs. Certaines AG spéciales résidentiels uniquement (règlement intérieur).</td><td>Lot type COMMERCIAL. Propriétaire = copropriétaire. Peut avoir employés ≠ résidents pour accès.</td></tr>
+    <tr><td>Bureau en étage (immeuble mixte)</td><td>Selon surface et usage</td><td>Ascenseur intensif, nettoyage parties communes supplémentaire</td><td>Droits complets selon tantièmes</td><td>Lot type BUREAU. Utilisateurs du bureau = non-résidents avec accès limité.</td></tr>
+    <tr><td>Cabinet médical / pharmacie en copropriété</td><td>Standard selon surface</td><td>Déchets médicaux = obligation légale propre. Accès patients = flux important parties communes.</td><td>Droits complets. Obligations supplémentaires règlement sanitaire.</td><td>Type_activite sur lot commercial. Règles d'accès spécifiques (horaires patients).</td></tr>
+    <tr><td>Restaurant / café en RDC</td><td>Standard + coefficient si terrasse commune utilisée</td><td>Nuisances sonores, odeurs, déchets = sources de conflits. Terrasse commune = redevance à la copropriété si utilisée.</td><td>AG peut voter règles spécifiques horaires, terrasse</td><td>Incidents catégorie NUISANCES liée au lot commercial. Redevance terrasse dans module finances.</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- ═══ S2: PROPRIÉTÉ & OCCUPATION ═══ -->
+<section id="s2">
+<div class="sec-label">Section 02</div>
+<h2 class="sec-title">Propriété, Occupation & Statuts des Résidents</h2>
+
+<div id="s2a">
+<h3 class="sub">2.1 — Propriétaire Occupant</h3>
+<table>
+  <thead><tr><th>Sous-cas</th><th>Règles</th><th>Droits plateforme</th><th>Obligations</th></tr></thead>
+  <tbody>
+    <tr><td>Propriétaire occupant seul</td><td>Cas standard. Titre foncier à son nom. Il réside dans le lot.</td><td>Accès complet résident + droits copropriétaire. Vote AG avec ses tantièmes.</td><td>Paiement charges. Respect règlement intérieur.</td></tr>
+    <tr><td>Propriétaire occupant avec famille</td><td>Seul le propriétaire est "copropriétaire". Les membres de famille = occupants sans droits propres.</td><td>1 compte propriétaire. Les autres membres de famille peuvent être ajoutés comme "occupants" avec accès limité (incidents, notifications).</td><td>Propriétaire responsable de tous les membres de son foyer.</td></tr>
+    <tr><td>Propriétaire résidant partiellement (résidence secondaire)</td><td>Propriétaire présent périodiquement. Lot souvent vide.</td><td>Notifications importantes envoyées même en son absence. Peut déléguer un contact de confiance.</td><td>Même charges qu'occupant permanent. Doit désigner un représentant local si possible.</td></tr>
+    <tr><td>Propriétaire MRE (Marocain Résidant à l'Étranger)</td><td>Très fréquent au Maroc. Propriétaire à Casablanca/Rabat mais réside en Europe.</td><td>Notifications multicanal (email prioritaire). Procuration AG à un représentant local. Interface obligatoirement en français (parfois arabe).</td><td>Doit désigner mandataire pour AG si absent. Charges domiciliées sur compte bancaire marocain.</td></tr>
+    <tr><td>Propriétaire âgé / peu digital</td><td>Difficulté d'utilisation de l'app</td><td>Syndic peut agir en son nom pour certaines actions (avec accord). Notifications SMS prioritaires. Interface simplifiée.</td><td>Droit à l'accès à l'information même sans smartphone.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2b">
+<h3 class="sub">2.2 — Propriétaire Bailleur (Lot Loué)</h3>
+<div class="callout">
+  <strong>Cas très fréquent au Maroc</strong>
+  Un propriétaire peut posséder l'appartement mais ne pas y résider — il le loue. La plateforme doit gérer simultanément le propriétaire (droits copropriété) et le locataire (droits résidence). Leurs droits sont distincts et leurs obligations de paiement aussi.
+</div>
+<table>
+  <thead><tr><th>Situation</th><th>Propriétaire reçoit</th><th>Locataire reçoit</th><th>Règle charges</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Appartement loué, propriétaire non-résident</td><td>Convocations AG, PV, appels de fonds, documents importants</td><td>Incidents parties communes, notifications maintenance, réservations espaces communs</td><td>Charges copropriété = dues par propriétaire. Il peut les répercuter dans le loyer (légal).</td><td>Lot avec propriétaire_id ET locataire_id. 2 comptes actifs. Droits différents.</td></tr>
+    <tr><td>Locataire signale un incident</td><td>Propriétaire notifié si incident concerne parties communes (sa responsabilité financière)</td><td>Locataire suit l'avancement de son ticket</td><td>Réparation parties communes = charge copropriété. Intérieur appartement = propriétaire ou locataire selon contrat bail.</td><td>À la création du ticket, choix : PARTIE_COMMUNE ou PARTIE_PRIVATIVE. Workflow différent selon choix.</td></tr>
+    <tr><td>Locataire veut voter en AG</td><td>Vote = droit exclusif du propriétaire</td><td>Locataire peut assister à l'AG sans vote (sauf si propriétaire lui donne procuration = rare et encadré)</td><td>Loi 18-00 : seul le copropriétaire vote</td><td>Locataire n'a pas accès au module AG / vote. Il reçoit les PV uniquement si le propriétaire active l'option.</td></tr>
+    <tr><td>Propriétaire veut que locataire paie les charges directement</td><td>Propriétaire reste juridiquement redevable des charges copropriété</td><td>Locataire peut payer "pour le compte du propriétaire" mais le syndic doit reconnaître qui paie légalement</td><td>Dans la plateforme, paiement enregistré sur le lot (propriétaire reste débiteur légal). Note interne possible.</td><td>Champ paye_par = PROPRIETAIRE / LOCATAIRE_POUR_COMPTE. Quittance toujours au nom du propriétaire.</td></tr>
+    <tr><td>Changement de locataire</td><td>Propriétaire notifié. Doit mettre à jour la plateforme.</td><td>Ancien locataire désinscrit. Nouveau locataire invité.</td><td>Charges courantes soldées avant changement. Nouveau locataire repart de zéro.</td><td>Workflow "changement occupant" : désactivation ancien compte, génération invitation nouveau locataire, historique conservé.</td></tr>
+    <tr><td>Locataire part sans payer les dernières charges</td><td>Propriétaire reste redevable envers la copropriété</td><td>Locataire désinscrit de la plateforme</td><td>Le syndic se retourne contre le propriétaire, pas le locataire (qui n'est pas copropriétaire)</td><td>Impayé reste sur le lot (propriétaire). Alerte propriétaire à la désinscription locataire si solde ouvert.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2c">
+<h3 class="sub">2.3 — Locataire — Droits et Limites sur la Plateforme</h3>
+<table>
+  <thead><tr><th>Action</th><th>Locataire peut</th><th>Locataire ne peut PAS</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>Signaler un incident</td><td>✓ Oui — parties communes et privatif</td><td>—</td><td>Pour privatif : ticket interne au syndic qui arbitre propriétaire vs locataire</td></tr>
+    <tr><td>Réserver un espace commun</td><td>✓ Oui — si règlement l'autorise</td><td>✗ Certaines résidences limitent aux propriétaires</td><td>Configurable par copropriété dans paramètres</td></tr>
+    <tr><td>Télécharger le règlement intérieur</td><td>✓ Oui — document public de la copropriété</td><td>—</td><td>Obligation légale de le mettre à disposition</td></tr>
+    <tr><td>Voter en AG</td><td>✗ Non</td><td>✗ Non — sauf procuration explicite du propriétaire</td><td>Loi 18-00 stricte sur ce point</td></tr>
+    <tr><td>Consulter les finances de la copropriété</td><td>✗ Non — par défaut</td><td>✗ Accès aux bilans financiers limité aux copropriétaires</td><td>Option : propriétaire peut accorder accès lecture à son locataire</td></tr>
+    <tr><td>Recevoir convocation AG</td><td>✗ Non — pas par défaut</td><td>—</td><td>Option activable par propriétaire pour informer son locataire des décisions</td></tr>
+    <tr><td>Signaler une nuisance d'un autre résident</td><td>✓ Oui via module incidents</td><td>—</td><td>Ticket type NUISANCE. Syndic médiateur.</td></tr>
+    <tr><td>Demander des travaux dans son appartement</td><td>✗ Non directement — doit passer par propriétaire</td><td>—</td><td>Travaux privatifs = accord propriétaire requis. Locataire peut signaler besoin via messagerie interne.</td></tr>
+    <tr><td>Recevoir notifications urgences immeuble</td><td>✓ Oui — panne eau, ascenseur, urgences</td><td>—</td><td>Notifications urgences = tous les résidents (propriétaires + locataires)</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2d">
+<h3 class="sub">2.4 — Indivision & Co-propriétaires Multiples d'un Même Lot</h3>
+<div class="callout warn">
+  <strong>Cas Fréquent au Maroc</strong>
+  L'indivision (succession non partagée, achat en couple, SCI familiale) est très répandue. Un lot peut avoir 2, 3, 5 propriétaires en indivision. La plateforme doit gérer qui paie, qui vote, et comment.
+</div>
+<table>
+  <thead><tr><th>Cas</th><th>Règle légale (Loi 18-00)</th><th>Gestion votes</th><th>Gestion charges</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>2 époux co-propriétaires d'un lot</td><td>Indivision légale. Les 2 sont copropriétaires.</td><td>Les 2 ont un droit de vote mais le lot ne dispose que d'1 voix (tantièmes du lot). Ils doivent se mettre d'accord ou désigner un représentant.</td><td>Charges dues par le lot. Solidairement responsables.</td><td>Lot avec 2 propriétaires. Représentant désigné pour le vote AG. Les 2 ont accès à l'app (comptes séparés). Les 2 reçoivent notifications.</td></tr>
+    <tr><td>Héritage en indivision (3+ héritiers)</td><td>Fréquent au Maroc. Lot pas encore partagé après décès.</td><td>1 représentant désigné par les indivisaires pour voter. Sans désignation, le syndic peut solliciter le tribunal.</td><td>Charges dues solidairement par tous les indivisaires.</td><td>Lot avec statut INDIVISION. Liste des indivisaires. Représentant désigné dans la plateforme. Tous reçoivent les docs importants.</td></tr>
+    <tr><td>SCI (Société Civile Immobilière) propriétaire</td><td>La SCI est personne morale = elle est "le propriétaire"</td><td>Représentant légal de la SCI vote (gérant)</td><td>Charges au nom de la SCI</td><td>Propriétaire type PERSONNE_MORALE. Champ raison_sociale, RC, représentant légal.</td></tr>
+    <tr><td>Indivisaire veut sortir de l'indivision</td><td>Procédure judiciaire ou accord amiable. Hors périmètre plateforme.</td><td>Jusqu'à la sortie, règles indivision s'appliquent.</td><td>Charges continuent selon règles indivision.</td><td>Alerte syndic si demande de modification lot en cours de procédure judiciaire.</td></tr>
+    <tr><td>Désaccord entre indivisaires sur paiement charges</td><td>Solidarité : le syndic peut réclamer à n'importe quel indivisaire la totalité.</td><td>Bloquer vote possible si impayé, même si 1 seul des 2 refuse de payer.</td><td>Impayé sur le lot (pas sur une personne). Tous les indivisaires relancés.</td><td>Impayé sur lot, notifications à TOUS les indivisaires enregistrés.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2e">
+<h3 class="sub">2.5 — Succession & Décès du Propriétaire</h3>
+<table>
+  <thead><tr><th>Étape</th><th>Situation</th><th>Action requise</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Décès constaté</td><td>Propriétaire décédé. Lot appartient à la succession.</td><td>Famille prévient le syndic. Syndic bloque les modifications.</td><td>Statut lot : EN_SUCCESSION. Compte propriétaire désactivé (pas supprimé — historique conservé). Notification figée.</td></tr>
+    <tr><td>Période de succession ouverte</td><td>Héritiers non encore désignés officiellement. Succession ouverte.</td><td>Syndic désigne un contact temporaire dans la famille. Charges continuent d'être dues.</td><td>Contact temporaire peut recevoir notifications urgences. Pas de droits de vote. Impayés tracés sur le lot.</td></tr>
+    <tr><td>Héritiers désignés (acte notarié)</td><td>Héritier(s) identifié(s) avec document officiel</td><td>Syndic met à jour la plateforme avec nouveaux propriétaires (indivision ou lot partagé si possible).</td><td>Nouveau(x) propriétaire(s) invités. Ancien compte archivé. Historique transféré au lot (pas au compte).</td></tr>
+    <tr><td>Lot vendu pendant succession</td><td>Vente nécessite accord de tous les héritiers</td><td>Syndic reçoit notification du notaire. Met à jour nouveau propriétaire.</td><td>Workflow "transfert de propriété" : désactivation anciens comptes, invitation nouveau propriétaire, solde charges vérifié avant transfert.</td></tr>
+    <tr><td>Héritier refuse la succession</td><td>Lot retombe en déshérence ou autres héritiers</td><td>Complexe juridiquement. Syndic doit suivre avec notaire.</td><td>Lot en statut SITUATION_COMPLEXE. Alerte syndic. Pas de modification automatique.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2f">
+<h3 class="sub">2.6 — Lot Vacant & Propriétaire Absent</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle</th><th>Charges</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Lot vacant (non loué, non occupé)</td><td>Propriétaire toujours redevable de 100% des charges copropriété</td><td>Charges pleines dues. Pas de réduction pour vacance.</td><td>Statut lot : VACANT. Charges calculées normalement. Propriétaire notifié par email (pas de push si app non utilisée).</td></tr>
+    <tr><td>Propriétaire MRE injoignable</td><td>Syndic doit tenter par tous moyens (courrier recommandé, email, contact famille)</td><td>Impayés s'accumulent. Intérêts légaux possibles.</td><td>Statut impayé avec tentatives de contact tracées. Escalade après X tentatives.</td></tr>
+    <tr><td>Lot en travaux (renovation longue durée)</td><td>Propriétaire présent ponctuellement. Lot inutilisable.</td><td>Charges pleines dues. Mais peut demander exonération charges eau si compteur coupé — à voter en AG.</td><td>Statut lot : EN_TRAVAUX. Incidents travaux tracés. Nuisances voisins = incidents liés.</td></tr>
+    <tr><td>Lot saisi judiciairement</td><td>Propriétaire perd temporairement la libre disposition du lot suite à une décision judiciaire</td><td>Charges restent dues pendant toute la durée de la saisie. La prise en charge (propriétaire ou administrateur judiciaire) est tranchée par résolution AG extraordinaire convoquée dès notification de la saisie. L'AG peut voter la suspension des services non vitaux et délibère sur la stratégie de recouvrement des charges courantes.</td><td>Statut lot : SAISI. Alerte syndic immédiate. Convocation AG extraordinaire déclenchée automatiquement. Résolution AG obligatoire pour toute décision de gestion du lot saisi. Correspondance formelle avec administrateur judiciaire tracée dans la plateforme.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s2g">
+<h3 class="sub">2.7 — Propriétaire Personne Morale</h3>
+<table>
+  <thead><tr><th>Type entité</th><th>Représentation</th><th>Droits AG</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>SCI (Société Civile Immobilière)</td><td>Gérant de la SCI</td><td>Gérant vote au nom de la SCI avec les tantièmes du lot</td><td>Compte type PERSONNE_MORALE. Champ représentant_legaux (plusieurs possibles). Procuration interne à la SCI.</td></tr>
+    <tr><td>Promoteur immobilier (lots invendus)</td><td>Directeur commercial ou gérant</td><td>Vote pour tous ses lots invendus. Peut avoir majorité sur certains sujets si beaucoup de lots invendus.</td><td>Propriétaire multi-lots. Lots marqués INVENDU. Promoteur = compte type PROMOTEUR avec droits spéciaux initial.</td></tr>
+    <tr><td>Société d'investissement (fonds immobilier)</td><td>Représentant désigné</td><td>Idem SCI</td><td>Idem SCI</td></tr>
+
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- ═══ S3: CHARGES & FINANCES ═══ -->
+<section id="s3">
+<div class="sec-label">Section 03</div>
+<h2 class="sec-title">Charges & Finances — Tous les Cas</h2>
+
+<div id="s3a">
+<h3 class="sub">3.1 — Calcul des Tantièmes — Règles et Exceptions</h3>
+<div class="callout">
+  <strong>Fondement légal</strong>
+  Les tantièmes définissent la quote-part de chaque copropriétaire dans les parties communes et leur participation aux charges. Ils sont fixés dans le règlement de copropriété homologué par le tribunal (Loi 18-00, Art. 3). Toute modification nécessite une AG extraordinaire à l'unanimité ou double majorité selon l'objet.
+</div>
+<table>
+  <thead><tr><th>Situation</th><th>Règle de calcul</th><th>Exception</th><th>Impact plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Base standard</td><td>Surface habitable + pondération étage + pondération exposition + pondération équipements</td><td>Chaque règlement de copropriété définit sa propre formule</td><td>La plateforme stocke les tantièmes finaux (pas la formule). Validation : somme = total défini.</td></tr>
+    <tr><td>Lot commercial vs résidentiel</td><td>Coefficient commercial (1.2 à 2x) souvent appliqué sur parties communes intensivement utilisées</td><td>Peut avoir des tantièmes séparés pour charges générales et charges spéciales</td><td>Champ tantiemes_generaux + tantiemes_speciaux par lot.</td></tr>
+    <tr><td>Parking titré dans même règlement</td><td>Tantièmes parking = faibles (ex: 30-80/10000). Calculés sur valeur vénale relative.</td><td>Parking sous-terrain peut avoir tantièmes dans "grille parking" séparée</td><td>Lot parking avec tantièmes propres. Contribue aux charges communes au prorata.</td></tr>
+    <tr><td>Cave titrée</td><td>Très faibles tantièmes (15-40/10000)</td><td>Si règlement prévoit charges cave séparées</td><td>Lot cave avec tantièmes propres.</td></tr>
+    <tr><td>Modification des tantièmes</td><td>Nécessite AG extraordinaire + accord très qualifié (souvent unanimité)</td><td>Si erreur dans le règlement initial = procédure judiciaire de rectification</td><td>Modification tantièmes = action réservée SUPER_ADMIN avec log d'audit obligatoire + justification.</td></tr>
+    <tr><td>Tantièmes et charges : les 2 grilles</td><td>Grille 1 : tantièmes pour répartition charges courantes. Grille 2 : tantièmes pour votes AG (peuvent être différents dans certains règlements).</td><td>Rare mais possible — certains règlements distinguent "parts dans les charges" et "parts dans les décisions"</td><td>2 champs distincts si nécessaire : tantiemes_charges et tantiemes_votes.</td></tr>
+    <tr><td>Lot avec tantièmes 0 (erreur notariale)</td><td>Erreur de transcription. Existe malheureusement au Maroc.</td><td>Régularisation notariale nécessaire</td><td>Validation bloque tantièmes = 0 sur lot actif. Alerte syndic. Statut : TANTIEME_A_REGULARISER.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3b">
+<h3 class="sub">3.2 — Appels de Fonds — Tous les Types</h3>
+<table>
+  <thead><tr><th>Type</th><th>Déclencheur</th><th>Base calcul</th><th>Fréquence</th><th>Règles spéciales</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Appel mensuel ordinaire</td><td>Budget annuel voté en AG</td><td>Budget annuel / 12 × tantièmes lot</td><td>Mensuelle</td><td>Date d'échéance fixe (ex: 5 du mois)</td><td>Génération auto programmée. Notification J-5 avant échéance.</td></tr>
+    <tr><td>Appel trimestriel</td><td>Budget annuel voté en AG</td><td>Budget annuel / 4 × tantièmes</td><td>Trimestrielle</td><td>Plus courant dans les petits immeubles</td><td>Configurable : fréquence_appel_fonds = MENSUEL / TRIMESTRIEL / SEMESTRIEL.</td></tr>
+    <tr><td>Appel exceptionnel (travaux)</td><td>Travaux votés en AG (ravalement, ascenseur, toiture)</td><td>Devis travaux × tantièmes lot</td><td>Ponctuel</td><td>Peut être payé en plusieurs fois si AG l'a décidé. Délai de paiement spécifique.</td><td>Appel type EXCEPTIONNEL. Peut être échelonné (plan de paiement sur X mois). Chaque échéance = ligne appel fonds.</td></tr>
+    <tr><td>Appel fonds de réserve</td><td>Décision AG de constituer une réserve</td><td>Montant fixe ou % du budget voté</td><td>Annuelle ou mensuelle</td><td>Fonds bloqué — ne peut pas être utilisé sans vote AG</td><td>Compte séparé dans module finances : FONDS_RESERVE. Pas de décaissement sans décision AG tracée.</td></tr>
+    <tr><td>Régularisation de charges</td><td>Fin d'année — dépenses réelles vs budget prévisionnel</td><td>Dépenses réelles − provisions versées = solde par lot</td><td>Annuelle</td><td>Si dépenses < prévisions = remboursement ou déduction. Si > = complément à payer.</td><td>Module régularisation annuelle. Calcul différentiel. Peut générer avoir ou complément. Notifications individuelles par lot.</td></tr>
+    <tr><td>Appel d'urgence (sinistre)</td><td>Dégât des eaux majeur, incendie, effondrement partiel</td><td>Devis d'urgence / tantièmes</td><td>Exceptionnel</td><td>Avance immédiate puis régularisation avec assurance</td><td>Appel type URGENCE. Délai court. Assurance copropriété peut couvrir — lien avec documents assurance.</td></tr>
+    <tr><td>Appel premier emménagement (fonds de démarrage)</td><td>Nouvelle résidence — constitution trésorerie initiale</td><td>Fixé par promoteur ou première AG constitutive</td><td>Unique</td><td>Montant = 2-3 mois de charges souvent</td><td>Appel type DEMARRAGE. Généré lors de la création de la copropriété.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3c">
+<h3 class="sub">3.3 — Impayés : Escalade et Gestion Complète</h3>
+<div class="callout warn">
+  <strong>Réalité Marocaine</strong>
+  Le taux d'impayés en copropriété au Maroc est estimé à 30-40% selon les résidences. C'est LE problème numéro 1 des syndics. La plateforme doit gérer tout le cycle d'escalade avec des workflows précis.
+</div>
+<table>
+  <thead><tr><th>Niveau</th><th>Délai</th><th>Action automatique</th><th>Action manuelle syndic</th><th>Résultat attendu</th></tr></thead>
+  <tbody>
+    <tr><td><span class="b bg">N1</span> Rappel simple</td><td>J+3 après échéance</td><td>Notification push + email automatique au copropriétaire</td><td>Aucune</td><td>Paiement dans les 7 jours suivants</td></tr>
+    <tr><td><span class="b bo">N2</span> Relance formelle</td><td>J+15</td><td>Email de relance formelle (template PDF joint)</td><td>Syndic peut personnaliser le message</td><td>Promesse de paiement ou contact</td></tr>
+    <tr><td><span class="b bo">N3</span> Mise en demeure</td><td>J+30</td><td>Génération courrier mise en demeure PDF (avec mention intérêts légaux)</td><td>Syndic envoie par courrier recommandé (tracé dans plateforme)</td><td>Paiement ou plan d'apurement</td></tr>
+    <tr><td><span class="b bf">N4</span> Plan d'apurement</td><td>J+45</td><td>Proposition automatique plan paiement échelonné</td><td>Syndic négocie et valide le plan. Échéancier créé dans plateforme.</td><td>Plan d'apurement accepté et suivi</td></tr>
+    <tr><td><span class="b bf">N5</span> Suspension services (si légal)</td><td>J+60</td><td>Alerte syndic pour décision</td><td>Syndic peut suspendre accès piscine, salle de sport selon règlement. NB: ne peut pas couper eau/électricité.</td><td>Pression psychologique</td></tr>
+    <tr><td><span class="b bf">N6</span> Injonction à payer</td><td>J+90</td><td>Génération dossier injonction à payer (pièces pour tribunal)</td><td>Syndic saisit le tribunal de première instance (Art. 39 Loi 18-00)</td><td>Ordonnance judiciaire</td></tr>
+  </tbody>
+</table>
+
+<h4 class="subsub">Cas Particuliers d'Impayés</h4>
+<table>
+  <thead><tr><th>Cas spécial</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Propriétaire conteste le montant</td><td>Droit de contester via lettre au syndic. Le montant reste dû pendant la contestation sauf décision AG.</td><td>Flag CONTESTE sur la ligne d'appel fonds. Syndic peut annoter. Solde dû reste affiché.</td></tr>
+    <tr><td>Copropriétaire avec plusieurs lots dont certains soldés</td><td>Les impayés d'un lot n'affectent pas les droits sur les autres lots (sauf règlement contraire)</td><td>Impayé géré par lot, pas par personne. Vue consolidée par propriétaire possible pour syndic.</td></tr>
+    <tr><td>Vente du lot avec impayés</td><td>Le notaire doit obtenir attestation de situation financière du syndic. Le vendeur doit solder avant vente ou l'acheteur reprend le passif.</td><td>Module "attestation de situation financière" : génération PDF attestant le solde du lot. Signé numériquement par syndic.</td></tr>
+    <tr><td>Locataire paie à la place du propriétaire</td><td>Le paiement est accepté mais la quittance est au nom du propriétaire</td><td>Paiement enregistré avec champ payeur = locataire. Quittance au propriétaire. Note interne.</td></tr>
+    <tr><td>Décès du débiteur</td><td>La dette passe aux héritiers (solidairement si indivision)</td><td>Impayé reste sur le lot. Notifications aux contacts héritiers désignés.</td></tr>
+    <tr><td>Copropriétaire en faillite personnelle</td><td>Créance copropriété = créance privilégiée (rang prioritaire)</td><td>Statut PROCEDURE_COLLECTIVE sur le lot. Syndic notifié. Déclaration de créance à faire.</td></tr>
+    <tr><td>Impayé historique (avant la plateforme)</td><td>Le syndic peut importer les soldes d'ouverture</td><td>Champ solde_ouverture sur lot lors de l'initialisation. Tracé séparément des nouvelles charges.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3d">
+<h3 class="sub">3.4 — Paiements Partiels, Avances, Trop-Perçus</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle comptable</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Paiement partiel</td><td>Le syndic impute le paiement sur les charges les plus anciennes (règle du droit commun)</td><td>Imputation automatique FIFO (first in, first out) sur les lignes les plus anciennes. Reste dû recalculé.</td></tr>
+    <tr><td>Paiement en avance (avant appel émis)</td><td>Enregistrable comme avance. Sera déduit du prochain appel.</td><td>Paiement type AVANCE. Solde positif sur le lot. Déduit automatiquement du prochain appel.</td></tr>
+    <tr><td>Trop-perçu (erreur de saisie ou régularisation favorable)</td><td>Montant doit être remboursé ou porté en avoir pour prochain appel</td><td>Solde positif sur lot. Syndic choisit : REMBOURSER ou REPORTER sur prochain appel.</td></tr>
+    <tr><td>Chèque sans provision</td><td>Paiement revient impayé. Le lot redevient débiteur + frais bancaires possibles.</td><td>Workflow "paiement rejeté" : annulation du paiement enregistré, impayé recréé, notification syndic + propriétaire. Frais bancaires = dépense sur compte copropriété.</td></tr>
+    <tr><td>Virement mal référencé</td><td>Paiement reçu mais non identifiable</td><td>Paiement en statut NON_AFFECTE. Syndic doit l'affecter manuellement. Alerte dans tableau de bord.</td></tr>
+    <tr><td>Paiement groupé (propriétaire multi-lots)</td><td>Propriétaire paie en un virement pour ses 2 lots</td><td>Paiement avec répartition manuelle par le syndic. Ou automatique si montant = somme exacte des 2 lots.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3e">
+<h3 class="sub">3.5 — Charges Locataire vs Propriétaire (Loi 6-79 Baux)</h3>
+<div class="callout">
+  <strong>Distinction importante</strong>
+  En droit marocain, certaines charges sont "récupérables" sur le locataire (il les paie à son propriétaire), d'autres restent à la charge exclusive du propriétaire. La plateforme ne gère pas directement la relation bailleur-locataire, mais doit permettre au syndic de distinguer clairement pour chaque poste.
+</div>
+<table>
+  <thead><tr><th>Poste de charge</th><th>À la charge de</th><th>Récupérable sur locataire ?</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Entretien courant parties communes (nettoyage, jardins)</td><td>Copropriété (payé par tous)</td><td>OUI — proportionnellement à l'usage</td><td>Catégorie charge : ENTRETIEN_COURANT. Tag récupérable = OUI.</td></tr>
+    <tr><td>Eau froide parties communes</td><td>Copropriété</td><td>OUI</td><td>Tag récupérable = OUI</td></tr>
+    <tr><td>Électricité parties communes (éclairage, ascenseur)</td><td>Copropriété</td><td>OUI (ascenseur : quote-part selon étage)</td><td>Tag récupérable = OUI. Ascenseur = coefficient étage.</td></tr>
+    <tr><td>Salaire gardien / concierge</td><td>Copropriété</td><td>OUI — jusqu'à 75% récupérable (usage)</td><td>Tag récupérable = OUI (75%)</td></tr>
+    <tr><td>Travaux de ravalement façade</td><td>Copropriété / Propriétaire</td><td>NON — charge propriétaire exclusive</td><td>Tag récupérable = NON. Catégorie : TRAVAUX_GROS_OEUVRE</td></tr>
+    <tr><td>Remplacement ascenseur (gros travaux)</td><td>Copropriété / Propriétaires</td><td>NON</td><td>Tag récupérable = NON</td></tr>
+    <tr><td>Assurance immeuble</td><td>Copropriété</td><td>NON</td><td>Tag récupérable = NON. Catégorie : ASSURANCE</td></tr>
+    <tr><td>Taxe de services communaux</td><td>Propriétaire</td><td>NON (hors locaux)</td><td>Hors périmètre copropriété — information seulement</td></tr>
+    <tr><td>Entretien chaudière collective</td><td>Copropriété</td><td>OUI (usage courant) — NON (remplacement)</td><td>Distinction entretien courant vs remplacement dans catégories.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3f">
+<h3 class="sub">3.6 — Fonds de Réserve & Travaux Importants</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Constitution fonds de réserve</td><td>Voté en AG. Montant et fréquence définis. Argent bloqué pour travaux futurs.</td><td>Compte séparé FONDS_RESERVE dans trésorerie. Alimentation = appels fonds dédiés. Décaissement = décision AG uniquement.</td></tr>
+    <tr><td>Utilisation fonds de réserve</td><td>Décision AG requise sauf urgence (définie dans règlement)</td><td>Décaissement lie à une décision AG (résolution référencée). Traçabilité complète.</td></tr>
+    <tr><td>Travaux votés payables en plusieurs fois</td><td>AG peut décider un échéancier de paiement (ex: 3 tranches sur 6 mois)</td><td>Appel fonds exceptionnel avec N lignes (une par tranche). Dates d'échéance distinctes.</td></tr>
+    <tr><td>Avance du syndic pour urgence</td><td>Syndic peut avancer sur fonds propres si urgence vitale</td><td>Dépense enregistrée avec type AVANCE_SYNDIC. Remboursement via appel fonds exceptionnel ensuite.</td></tr>
+    <tr><td>Devis travaux (comparatif)</td><td>Loi 18-00 suggère 3 devis minimum pour travaux importants</td><td>Module documents : type DEVIS. Lien avec résolution AG correspondante. Comparatif visible par conseil syndical.</td></tr>
+    <tr><td>Travaux partiellement couverts par assurance</td><td>Assurance paie sa part. Reste à charge = copropriété.</td><td>Dépense travaux = montant total. Recette assurance = entrée dans trésorerie. Reste = appel fonds si insuffisant.</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div id="s3g">
+<h3 class="sub">3.7 — Cas Spéciaux de Charges</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Description</th><th>Règle de répartition</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+
+    <tr><td>Piscine commune : tous ne l'utilisent pas</td><td>Certains résidents ne veulent pas payer la piscine</td><td>La piscine = partie commune = tous paient selon tantièmes. Pas d'opt-out légal sauf si règlement de copropriété l'exclut.</td><td>Charges piscine = catégorie séparée si le règlement a une grille spéciale. Sinon = charges générales.</td></tr>
+    <tr><td>Immeuble mixte résidentiel/commercial : clés de répartition différentes</td><td>Les commerces utilisent plus les parties communes (livraisons, clients)</td><td>Double grille : tantièmes résidentiels pour charges résidentielles, tantièmes commerciaux pour charges communes intensifiées</td><td>Champ tantiemes_speciaux_commercial. Appel fonds avec 2 grilles de calcul.</td></tr>
+    <tr><td>Lot en construction / VEFA : charges pendant travaux</td><td>Le promoteur paie les charges pour les lots invendus</td><td>Promoteur = copropriétaire temporaire. Charges calculées normalement.</td><td>Lot avec proprietaire_type = PROMOTEUR jusqu'à la vente. Charges envoyées au promoteur.</td></tr>
+    <tr><td>Charges spéciales antenne / fibre collective</td><td>Antenne collective ou réseau fibre immeuble = investissement + maintenance</td><td>Réparti sur tous les lots selon tantièmes ou forfait égalitaire selon AG</td><td>Catégorie charge : TELECOM_COLLECTIF. Mode répartition : TANTIEMES ou EGALITAIRE (configurable).</td></tr>
+    <tr><td>Dépassement budget en cours d'année</td><td>Si dépenses imprévues dépassent le budget voté</td><td>Syndic doit convoquer AG extraordinaire pour voter budget rectificatif sauf si règlement lui donne une marge (ex: ±10%)</td><td>Alerte automatique si dépenses dépassent X% du budget. Marge configurable. Suggestion de convocation AG extraordinaire.</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- ═══ S4: PARKINGS DÉTAILLÉ ═══ -->
+<section id="s4">
+<div class="sec-label">Section 04</div>
+<h2 class="sec-title">Parkings — Règles Complètes & Tous les Scénarios Maroc</h2>
+
+<h3 class="sub">4.1 — Modèle de données complet pour les parkings</h3>
+<table>
+  <thead><tr><th>Attribut</th><th>Valeurs possibles</th><th>Impact fonctionnel</th></tr></thead>
+  <tbody>
+    <tr><td>type_parking</td><td>TITRE / COMMUN / ATTRIBUE_SANS_TITRE / MOTO / VELO / VISITEUR</td><td>Détermine toutes les règles de gestion</td></tr>
+    <tr><td>localisation</td><td>SOUS_TERRAIN / RDC / EXTERIEUR / TOIT</td><td>Incidents spécifiques selon localisation</td></tr>
+    <tr><td>numero_place</td><td>Ex: "P12", "SS1-A3"</td><td>Identification unique dans l'immeuble</td></tr>
+    <tr><td>proprietaire_id</td><td>User ID ou null (commun)</td><td>Null = commun. Renseigné = titré ou attribué</td></tr>
+    <tr><td>lot_appartement_associe</td><td>Lot ID ou null</td><td>Si associé, les 2 changent ensemble à la vente</td></tr>
+    <tr><td>acces_badge</td><td>Numéro badge ou code</td><td>Lié au compte utilisateur pour activation/désactivation</td></tr>
+    <tr><td>vehicule_autorise</td><td>VOITURE / MOTO / SUV / CARAVANE / AUCUNE_RESTRICTION</td><td>Règlement intérieur paramétrable</td></tr>
+    <tr><td>hauteur_max_cm</td><td>Ex: 190, 210, 250</td><td>Certains sous-terrains limitent la hauteur — champ informatif</td></tr>
+    <tr><td>statut</td><td>ACTIF / LIBRE / RESERVE / LITIGE / TRAVAUX</td><td>Gestion dynamique</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">4.2 — Scénarios Conflictuels Parkings (les plus fréquents au Maroc)</h3>
+<table>
+  <thead><tr><th>Scénario</th><th>Déclencheur</th><th>Workflow complet</th><th>Résolution</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Résident occupe place titrée d'un autre</td>
+      <td>Propriétaire de la place arrive et trouve son parking occupé</td>
+      <td>1. Propriétaire signale via app (photo + numéro place) → 2. Notification au gardien (URGENT) → 3. Gardien vérifie sur place → 4. Identification du véhicule contrevenant → 5. Notification au contrevenant identifié → 6. Si pas de réponse sous 1h → Syndic décide (fourrière, blocage sortie)</td>
+      <td>Contrevenant déplace son véhicule. Incident archivé. 3ème récidive = mise en demeure.</td>
+    </tr>
+    <tr>
+      <td>Visiteur externe occupe parking résident</td>
+      <td>Véhicule sans badge/sticker résident</td>
+      <td>1. Gardien ou résident signale → 2. Ticket incident VISITEUR_PARKING → 3. Gardien tente d'identifier via interphone → 4. Si injoignable → Mise en fourrière selon règlement</td>
+      <td>Procédure fourrière si règlement l'autorise. Affichage rules à l'entrée requis.</td>
+    </tr>
+    <tr>
+      <td>Propriétaire parking titré veut le vendre séparément de l'appartement</td>
+      <td>Propriétaire décide de vendre sa place à un voisin ou externe</td>
+      <td>1. Notification au syndic de la vente imminente → 2. Vérification : lot parking a-t-il un TF propre ? → 3. Si OUI : syndic prépare attestation de situation financière → 4. Après vente : mise à jour nouveau propriétaire dans plateforme → 5. Accès badge transféré</td>
+      <td>Lot parking avec nouveau propriétaire distinct de l'appartement. 2 comptes propriétaires différents possibles sur un même étage.</td>
+    </tr>
+    <tr>
+      <td>Parking commun : dispute sur place "non officielle" mais habituellement occupée</td>
+      <td>Résident A occupe toujours la place P5 depuis 3 ans "par habitude". Résident B s'y gare. Conflit.</td>
+      <td>1. Résident A signale "occupation de ma place" → 2. Syndic vérifie : place P5 est-elle titrée ou attribuée ? → 3. Si COMMUN : pas de droit exclusif → 4. Médiation syndic → 5. Si récurrent → Proposition à l'AG d'un système d'attribution formelle</td>
+      <td>Rappel règlement : parking commun = pas de droit exclusif. Proposition évolution règlement en AG.</td>
+    </tr>
+    <tr>
+      <td>Barrière du parking sous-terrain en panne</td>
+      <td>Barrière bloquée (ouverte ou fermée)</td>
+      <td>1. Gardien ou résident signale → 2. Ticket URGENT catégorie ACCES_PARKING → 3. Notification à TOUS les propriétaires de places parking → 4. Prestataire ascensoriste/barrière contacté en urgence → 5. Mise à jour statut toutes les 30 min</td>
+      <td>Intervention sous 4h maximum. Si nuit : procédure gardien pour accès manuel.</td>
+    </tr>
+    <tr>
+      <td>Parking sous-terrain : inondation lors de pluies</td>
+      <td>Infiltration eau lors d'orages (fréquent à Casablanca, Rabat)</td>
+      <td>1. Détection par gardien ou résident → 2. Ticket URGENCE STRUCTURE → 3. Notification immédiate TOUS copropriétaires parking → 4. Sortie des véhicules recommandée → 5. Coupure électricité si eau atteint niveau critique → 6. Expertise étanchéité convoquée</td>
+      <td>Travaux étanchéité = charge commune. Assurance copropriété activée. Expertise contradictoire si réclamations.</td>
+    </tr>
+    <tr>
+      <td>Charge parking : propriétaire parking titré conteste payer autant que les appartements</td>
+      <td>Propriétaire de 2 places parking (sans appartement) reçoit appel de fonds</td>
+      <td>Calcul sur tantièmes parking uniquement. Tableau de calcul affiché dans l'app. Si contestation → Syndic explique règlement de copropriété.</td>
+      <td>Transparence du calcul dans l'app = résout la majorité des contestations.</td>
+    </tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S5: INCIDENTS ═══ -->
+<section id="s5">
+<div class="sec-label">Section 05</div>
+<h2 class="sec-title">Incidents & Interventions — Tous les Scénarios</h2>
+
+<h3 class="sub">5.1 — Catégories Complètes d'Incidents</h3>
+<table>
+  <thead><tr><th>Catégorie</th><th>Sous-catégories</th><th>Niveau urgence par défaut</th><th>Délai intervention cible</th><th>Responsabilité financière</th></tr></thead>
+  <tbody>
+    <tr><td>Plomberie</td><td>Fuite eau, canalisation bouchée, robinetterie, chauffe-eau collectif, pompe surpresseur, compteur eau</td><td>URGENT (fuite active) / NORMAL (bouchon)</td><td>4h (urgent) / 48h (normal)</td><td>Parties communes = copropriété. Intérieur lot = propriétaire (sauf colonne montante)</td></tr>
+    <tr><td>Électricité</td><td>Panne générale, court-circuit parties communes, éclairage escalier, tableau électrique commun, groupe électrogène</td><td>URGENT (panne totale) / NORMAL (ampoule)</td><td>2h (urgent) / 72h (normal)</td><td>Tableau commun = copropriété. Compteur individuel = ONEE / propriétaire</td></tr>
+    <tr><td>Ascenseur</td><td>Panne ascenseur, ascenseur bloqué (avec personne), bruit, porte défectueuse, maintenance annuelle</td><td>TRÈS URGENT (personne bloquée) / URGENT (panne) / NORMAL (maintenance)</td><td>30min (personne bloquée) / 2h (panne)</td><td>Copropriété entière</td></tr>
+    <tr><td>Nettoyage</td><td>Parties communes sales, poubelles débordantes, graffiti, déchets sauvages, nuisibles (rats, cafards)</td><td>NORMAL / URGENT (nuisibles)</td><td>24h (courant) / 4h (nuisibles)</td><td>Copropriété (prestataire nettoyage)</td></tr>
+    <tr><td>Sécurité</td><td>Intrusion, porte d'entrée cassée, interphone défaillant, éclairage sécurité absent, badge perdu, véhicule suspect</td><td>URGENT (intrusion/porte) / NORMAL (interphone)</td><td>1h (intrusion) / 24h (interphone)</td><td>Copropriété. Si négligence gardien = engagement responsabilité</td></tr>
+    <tr><td>Structure</td><td>Fissures façade/plafond/murs, infiltration eau toiture, affaissement sol, problème fondations</td><td>URGENT (fissure active) / TRÈS URGENT (risque effondrement)</td><td>Expert 48h (urgent) / immédiat (risque effondrement)</td><td>Copropriété. Assurance si sinistre.</td></tr>
+    <tr><td>Jardins & Espaces verts</td><td>Arrosage en panne, arbre dangereux, clôture abîmée, éclairage extérieur, allées</td><td>URGENT (arbre dangereux) / NORMAL (reste)</td><td>24h (urgent) / 1 semaine (normal)</td><td>Copropriété</td></tr>
+    <tr><td>Nuisances</td><td>Bruit (fêtes, travaux), odeurs, animaux non tenus en laisse, fumée, comportement antisocial</td><td>NORMAL / URGENT (si récurrent nocturne)</td><td>Médiation 24h / Mise en demeure 72h</td><td>Résident contrevenant responsable. Syndic médiateur.</td></tr>
+    <tr><td>Parking</td><td>Occupation illicite, barrière panne, inondation, véhicule abandonné, éclairage parking</td><td>URGENT (barrière / inondation) / NORMAL (reste)</td><td>2h (urgent) / 48h (normal)</td><td>Copropriété (infrastructures) / Résident contrevenant (occupation)</td></tr>
+    <tr><td>Équipements collectifs</td><td>Piscine (pompe, traitement eau, carrelage), salle de sport (équipement cassé), interphone, vidéosurveillance</td><td>NORMAL en général</td><td>48h-1 semaine</td><td>Copropriété</td></tr>
+    <tr><td>Administratif</td><td>Document manquant, erreur facturation, demande information, conflit de voisinage</td><td>NORMAL</td><td>48-72h pour réponse</td><td>N/A</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">5.2 — Incidents Complexes : Frontière Parties Communes / Privatives</h3>
+<div class="callout warn">
+  <strong>Le Cas le Plus Litigieux</strong>
+  La frontière entre ce qui est "partie commune" (charge copropriété) et "partie privative" (charge propriétaire) est source de la majorité des conflits. La plateforme doit guider l'utilisateur dans cette distinction.
+</div>
+<table>
+  <thead><tr><th>Incident</th><th>Partie commune (copropriété paie)</th><th>Partie privative (propriétaire paie)</th><th>Cas ambigu</th><th>Règle arbitrage</th></tr></thead>
+  <tbody>
+    <tr><td>Fuite d'eau</td><td>Colonne montante principale, canalisation encastrée dans murs porteurs, compteur général</td><td>Robinetterie intérieure, douche, canalisation après compteur individuel</td><td>Fuite entre compteur individuel et premier robinet</td><td>Syndicat mandate plombier pour expertise. Résultat détermine la prise en charge.</td></tr>
+    <tr><td>Infiltration toiture</td><td>Toiture = partie commune. Tout ce qui vient du dessus.</td><td>Finitions intérieures (peinture, plâtre) si dégâts dus à la négligence du propriétaire du lot supérieur</td><td>Terrasse du propriétaire du dernier étage : étanchéité = commun, carrelage = privatif</td><td>Expertise contradictoire. Assurance copropriété activée en priorité.</td></tr>
+    <tr><td>Fissures dans l'appartement</td><td>Fissure traversante mur porteur = structure commune</td><td>Fissure superficielle enduit = privatif (normale en vieillissement)</td><td>Fissure dans cloison entre 2 appartements</td><td>Expert structure mandaté. Si mur porteur = copropriété. Si cloison = propriétaire.</td></tr>
+    <tr><td>Peinture escalier vs appartement</td><td>Escalier, couloirs, hall d'entrée = parties communes</td><td>Intérieur appartement = privatif</td><td>Porte palière de l'appartement : face extérieure = commune, face intérieure = privative</td><td>Porte palière : la face vue depuis la partie commune est peinte par la copropriété.</td></tr>
+    <tr><td>Dégât des eaux voisin du dessus</td><td>Si la cause est dans les parties communes</td><td>Si la cause est dans l'appartement du voisin</td><td>Origine incertaine</td><td>Expertise assurance. Assurance copropriété (dégât des eaux) en attente d'arbitrage.</td></tr>
+    <tr><td>Fenêtres et volets</td><td>Façade (aspect extérieur, couleur) = partie commune</td><td>Mécanisme intérieur, vitrage = privatif selon règlement</td><td>Remplacement double vitrage : esthétique vs performance</td><td>Règlement intérieur doit spécifier. Si silence = AG décide.</td></tr>
+    <tr><td>Interphone / Visiophone</td><td>Boîtier d'entrée principal, câblage principal</td><td>Combiné intérieur appartement</td><td>Câblage entre tableau et appartement</td><td>Câblage encastré dans parties communes = copropriété.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">5.3 — Workflows Incidents Spéciaux</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Workflow détaillé</th><th>Escalade</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Personne bloquée dans ascenseur</td>
+      <td>1. Résident ou gardien signale (app ou appel d'urgence) → 2. Ticket TRÈS URGENT créé → 3. Notification immédiate au gardien + syndic → 4. Gardien contacte prestataire ascenseur (numéro d'urgence 24h/24) → 5. Mise à jour statut toutes les 15 min → 6. Si > 30 min → Appel Pompiers (15)</td>
+      <td>Pompiers si bloquée > 30 min. Rapport incident post-intervention. Vérification contrat maintenance.</td>
+    </tr>
+    <tr>
+      <td>Incendie dans parties communes</td>
+      <td>1. Signalement → 2. Ticket URGENCE MAXIMALE → 3. Notification TOUS les résidents "Évacuation" → 4. Appel automatique (via app) au gardien → 5. Pompiers = 15 (hors app) → 6. Après → Rapport sinistre, activation assurance</td>
+      <td>Notifications mass-push à tous. Convocation AG extraordinaire post-sinistre.</td>
+    </tr>
+    <tr>
+      <td>Coupure eau générale immeuble</td>
+      <td>1. Signalement → 2. Ticket URGENT → 3. Notification TOUS résidents → 4. Vérification : coupure ONEE ou panne pompe ? → 5a. Si ONEE : contact ONEE et notification avec délai estimé → 5b. Si pompe : prestataire urgence</td>
+      <td>Mise à jour toutes les heures jusqu'à résolution. Notification de clôture envoyée à tous les résidents dès le rétablissement.</td>
+    </tr>
+    <tr>
+      <td>Infestation nuisibles (rats, cafards)</td>
+      <td>1. Signalement → 2. Ticket URGENT (santé publique) → 3. Syndic mandate société de dératisation → 4. Notification TOUS résidents avec consignes (préparer logement) → 5. Intervention planifiée → 6. Suivi 2 semaines</td>
+      <td>Si récurrent : analyse cause (poubelles, sous-sol humide). Plan d'action long terme.</td>
+    </tr>
+    <tr>
+      <td>Dégât des eaux chez plusieurs résidents</td>
+      <td>1. Chaque résident sinistré ouvre son ticket → 2. Syndic regroupe les tickets en "sinistre groupé" → 3. Assurance copropriété déclarée → 4. Expert assurance mandaté → 5. Chaque résident documenté individuellement → 6. Rapport consolidé</td>
+      <td>Assurance copropriété + assurance individuelle de chaque résident. Les 2 peuvent contribuer.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 class="sub">5.4 — Nuisances entre Résidents</h3>
+<table>
+  <thead><tr><th>Type nuisance</th><th>Procédure</th><th>Niveaux d'escalade</th></tr></thead>
+  <tbody>
+    <tr><td>Bruit nocturne (fête, musique)</td><td>Signalement → Notification au résident contrevenant (anonymisée) → Si récidive → Mise en demeure formelle du syndic → Si persistance → Constat huissier → Tribunal</td><td>N1: notification app anonyme → N2: lettre syndic → N3: constat huissier → N4: tribunal</td></tr>
+    <tr><td>Travaux bruyants hors horaires</td><td>Signalement → Syndic vérifie autorisations → Notification au résident avec rappel horaires légaux (8h-20h en semaine, 9h-13h samedi, interdit dimanche au Maroc)</td><td>N1: rappel horaires → N2: mise en demeure → N3: tribunal si persistance</td></tr>
+    <tr><td>Animaux domestiques (aboiements, malpropreté)</td><td>Règlement intérieur peut interdire ou encadrer les animaux. Signalement syndic → Notification → Conciliation</td><td>Dépend du règlement intérieur. Certains interdisent les animaux = procédure stricte.</td></tr>
+    <tr><td>Odeurs (cuisine, cigarette)</td><td>Difficile à prouver. Médiation syndic. Si parties communes impactées (couloir) = incident parties communes.</td><td>Médiation prioritaire. Constat difficile.</td></tr>
+    <tr><td>Dépôt objets dans parties communes (couloirs, escaliers)</td><td>Parties communes doivent rester libres (sécurité incendie). Mise en demeure immédiate si blocage issue de secours.</td><td>N1: notification → N2: enlèvement par syndic aux frais du résident → N3: si issue secours = urgence immédiate</td></tr>
+    <tr><td>Travaux non déclarés modifiant l'aspect de l'immeuble</td><td>Toute modification façade ou structure nécessite accord AG. Travaux illicites = mise en demeure de remise en état.</td><td>N1: constat → N2: mise en demeure remise en état → N3: assignation en justice</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S6: AG ═══ -->
+<section id="s6">
+<div class="sec-label">Section 06</div>
+<h2 class="sec-title">Assemblées Générales — Tous les Cas Loi 18-00</h2>
+
+<h3 class="sub">6.1 — Types d'AG et Déclencheurs</h3>
+<table>
+  <thead><tr><th>Type</th><th>Fréquence</th><th>Déclencheur</th><th>Convocation (délai légal)</th><th>Quorum légal</th></tr></thead>
+  <tbody>
+    <tr><td>AG Ordinaire Annuelle</td><td>1 fois / an minimum</td><td>Obligation légale (Art. 25 Loi 18-00)</td><td>15 jours minimum avant la date</td><td>1re convocation : ≥ 1/2 tantièmes. 2e convocation : sans quorum.</td></tr>
+    <tr><td>AG Extraordinaire (travaux urgents)</td><td>À la demande</td><td>Travaux urgents, sinistre, décision urgente</td><td>8 jours minimum (urgence reconnue)</td><td>Selon objet (voir grille majorités)</td></tr>
+    <tr><td>AG Extraordinaire (modification règlement)</td><td>À la demande</td><td>Changement règlement de copropriété</td><td>15 jours minimum</td><td>Unanimité ou double majorité selon l'objet</td></tr>
+    <tr><td>AG Constitutive</td><td>Unique (création)</td><td>Première AG de la copropriété</td><td>Promoteur convoque tous les premiers acquéreurs</td><td>Majorité simple des présents si quorum 2/3</td></tr>
+    <tr><td>AG à la demande des copropriétaires</td><td>À la demande</td><td>Pétition d'1/4 des copropriétaires représentant 1/4 des tantièmes (Art. 26 Loi 18-00)</td><td>15 jours minimum</td><td>Selon ordre du jour</td></tr>
+    <tr><td>AG de désignation / révocation syndic</td><td>À la demande</td><td>Fin de mandat, révocation pour faute</td><td>15 jours minimum</td><td>Majorité simple (désignation) / Double majorité (révocation)</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">6.2 — Grille Complète des Majorités (Loi 18-00)</h3>
+<table>
+  <thead><tr><th>Objet de la résolution</th><th>Type de majorité</th><th>Définition</th><th>Exemple</th></tr></thead>
+  <tbody>
+    <tr><td>Décisions de gestion courante (budget, prestataires courants)</td><td>Majorité simple</td><td>Plus de 50% des voix des copropriétaires présents ou représentés</td><td>Approbation budget annuel</td></tr>
+    <tr><td>Travaux d'amélioration ou d'entretien importants</td><td>Double majorité</td><td>Majorité en nombre ET majorité des tantièmes</td><td>Ravalement de façade, installation ascenseur</td></tr>
+    <tr><td>Modification du règlement de copropriété</td><td>Double majorité renforcée ou unanimité</td><td>2/3 des copropriétaires ET 2/3 des tantièmes (Art. 30)</td><td>Changement clés de répartition</td></tr>
+    <tr><td>Aliénation d'une partie commune</td><td>Unanimité</td><td>100% des copropriétaires et tantièmes</td><td>Vente d'une partie commune</td></tr>
+    <tr><td>Désignation du syndic</td><td>Majorité simple</td><td>Plus de 50% des présents/représentés</td><td>Élection nouveau syndic</td></tr>
+    <tr><td>Révocation du syndic pour faute</td><td>Double majorité</td><td>Majorité en nombre ET tantièmes</td><td>Révocation syndic défaillant</td></tr>
+    <tr><td>Travaux d'urgence (nécessaires immédiats)</td><td>Majorité simple (AG extraordinaire)</td><td>Ou décision seule du syndic en cas d'urgence absolue (avec ratification AG suivante)</td><td>Réparation toiture après tempête</td></tr>
+    <tr><td>Approbation des comptes</td><td>Majorité simple</td><td>50% + 1 des présents/représentés</td><td>Approbation bilan annuel</td></tr>
+    <tr><td>Constitution fonds de réserve</td><td>Double majorité</td><td>Majorité en nombre ET tantièmes</td><td>Création fonds travaux</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">6.3 — Tous les Cas de Quorum</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>1re convocation — quorum atteint</td><td>Votes exprimés ≥ 50% des tantièmes totaux</td><td>AG ouverte automatiquement à l'heure prévue si quorum atteint. Votes validés.</td></tr>
+    <tr><td>1re convocation — quorum non atteint</td><td>AG ne peut pas délibérer. Doit être reconvoquée (2e convocation).</td><td>Alerte automatique si quorum non atteint à l'heure d'ouverture. Syndic choisit date 2e convocation (minimum 8 jours après). Notifications envoyées.</td></tr>
+    <tr><td>2e convocation — sans quorum</td><td>La 2e convocation délibère valablement quel que soit le nombre de présents (Art. 31)</td><td>Mention claire "2e convocation — aucun quorum requis". AG ouvre automatiquement.</td></tr>
+    <tr><td>Copropriétaire présent en retard</td><td>Si l'AG a commencé, il peut participer aux votes restants. Les votes déjà exprimés ne sont pas invalidés.</td><td>Retard admis jusqu'à la clôture. Les votes déjà clôturés restent valides. Quorum recalculé avec le retardataire pour les votes suivants.</td></tr>
+    <tr><td>Copropriétaire voulant voter par anticipation</td><td>Pas prévu par Loi 18-00. Procuration = mécanisme légal pour voter à distance.</td><td>Vote anticipé en ligne = assimilé à vote électronique (acceptable si règlement le prévoit). Ou procuration obligatoire.</td></tr>
+    <tr><td>Procuration</td><td>Un copropriétaire peut déléguer son vote à un autre. Limite : 3 procurations max par mandataire (Art. 35).</td><td>Module procuration : upload PDF ou acceptation in-app. Vérification limite 3 pouvoirs. Tantièmes du mandant ajoutés au mandataire pour ce vote.</td></tr>
+    <tr><td>Propriétaire de plusieurs lots</td><td>Votes pondérés par tantièmes totaux de tous ses lots.</td><td>Cumul automatique des tantièmes de tous les lots du propriétaire pour le calcul de ses voix.</td></tr>
+    <tr><td>Lot en indivision</td><td>1 seul vote pour le lot (par le représentant désigné)</td><td>Représentant d'indivision = seul compte avec droit de vote pour ce lot.</td></tr>
+    <tr><td>Promoteur avec nombreux lots invendus</td><td>Vote pour chaque lot invendu. Peut avoir une majorité de fait sur certaines AG.</td><td>Alerte si un seul copropriétaire contrôle > 50% des tantièmes (monopole potentiel). Information visible.</td></tr>
+    <tr><td>Copropriétaire débiteur — peut-il voter ?</td><td>La Loi 18-00 ne prévoit pas explicitement de suspension du droit de vote pour impayés. Certains règlements le prévoient.</td><td>Configurable dans le règlement intérieur. Si règlement prévoit suspension vote = flag sur compte si impayé > X DH.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">6.4 — Déroulement de l'AG Physique — Tous les Scénarios</h3>
+<div class="callout warn">
+  <strong>Contexte légal Maroc</strong>
+  La Loi 18-00 ne prévoit pas l'AG entièrement en ligne. L'AG doit se tenir physiquement. La plateforme supporte la gestion numérique du déroulement (quorum, votes, PV) mais l'AG reste un événement en présentiel. Le vote électronique à distance est admis uniquement s'il est prévu par le règlement de copropriété (procuration numérique assimilée à procuration papier).
+</div>
+<table>
+  <thead><tr><th>Étape</th><th>Acteur</th><th>Cas normaux</th><th>Cas problématiques</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Ouverture</td><td>Syndic</td><td>Syndic déclare l'AG ouverte, annonce le quorum calculé</td><td>Quorum non atteint → report ou 2e convocation</td><td>Bouton "Ouvrir l'AG". Affichage quorum temps réel (présents + procurations). Blocage si 1re convocation + quorum insuffisant.</td></tr>
+    <tr><td>Élection du bureau</td><td>Copropriétaires présents</td><td>Président de séance + secrétaire élus parmi les présents</td><td>Personne ne veut présider → le syndic peut assurer la présidence par défaut</td><td>Champs président_seance et secretaire_seance saisis par syndic dans le PV. Obligatoires pour valider l'AG.</td></tr>
+    <tr><td>Vote par résolution</td><td>Tous copropriétaires présents ou représentés</td><td>Chaque résolution soumise séparément. Syndic saisit les résultats en temps réel.</td><td>Résolution retirée de l'OJ en cours d'AG ou amendement proposé en séance</td><td>Résolution modifiable avant ouverture du vote. Une fois le vote ouvert, la résolution est figée. Syndic peut reporter une résolution.</td></tr>
+    <tr><td>Amendement en séance</td><td>Copropriétaire propose modification en direct</td><td>Vote sur l'amendement avant vote de la résolution principale</td><td>Débat prolongé → Syndic peut mettre la clôture des débats aux voix</td><td>Sous-résolution "amendement" créable en cours d'AG. Vote en 2 temps tracé dans le PV.</td></tr>
+    <tr><td>Vote à bulletin secret</td><td>Si demandé par un copropriétaire ou prévu par règlement</td><td>Résolutions sensibles (révocation syndic, litiges personnels)</td><td>Comptage long, contestations</td><td>Mode BULLETIN_SECRET disponible : syndic saisit les totaux sans détail nominatif. PV mentionne "vote à bulletin secret — résultat : X pour, Y contre, Z abstentions".</td></tr>
+    <tr><td>Résolution rejetée</td><td>Majorité vote NON</td><td>Résolution archivée REJETÉE dans le PV</td><td>Rejet budget vital → AG doit voter un budget de reconduction minimal</td><td>Résolution avec statut REJETEE. PV mentionne résultat complet. Syndic peut soumettre résolution alternative immédiatement.</td></tr>
+    <tr><td>Clôture AG</td><td>Syndic</td><td>Syndic clôt après épuisement de l'OJ. PV généré automatiquement.</td><td>Résolutions en suspens → reporter à la prochaine AG avec mention explicite</td><td>Clôture bloquée si des résolutions sont en statut "en attente de vote", sauf forçage syndic (justification tracée).</td></tr>
+    <tr><td>Approbation et distribution du PV</td><td>Participants AG + tous copropriétaires</td><td>PV présenté, validé, envoyé à tous dans les 48h</td><td>Contestation d'un point du PV → annotation de contestation enregistrée comme note annexe</td><td>PV généré automatiquement horodaté. Envoi groupé (email + notification push). Délai de contestation 15 jours. Toute contestation enregistrée dans le dossier AG.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">6.5 — Vote Électronique par Procuration Numérique</h3>
+<div class="callout">
+  <strong>Seule modalité de vote à distance autorisée au Maroc</strong>
+  La loi 18-00 prévoit la procuration comme unique mécanisme de vote à distance. La plateforme permet de dématérialiser la procuration tout en respectant le cadre légal. Le mandataire est présent physiquement à l'AG et vote au nom du mandant.
+</div>
+<table>
+  <thead><tr><th>Cas</th><th>Règle légale</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Copropriétaire absent donne procuration à un voisin</td><td>Procuration écrite obligatoire (Art. 35 Loi 18-00). Limite : 3 procurations max par mandataire.</td><td>Module procuration : génération d'un document PDF de procuration pré-rempli (mandant, mandataire, AG concernée, tous les pouvoirs ou résolutions spécifiques). Signature manuscrite ou cachet suffisant.</td></tr>
+    <tr><td>Vérification des procurations à l'ouverture</td><td>Le syndic vérifie chaque procuration avant d'ouvrir l'AG. Procuration invalide = vote refusé.</td><td>Checklist procurations dans le tableau de bord AG. Chaque procuration cochée "validée" par le syndic. Tantièmes du mandant ajoutés au mandataire pour le calcul du quorum.</td></tr>
+    <tr><td>Mandataire dépasse la limite de 3 procurations</td><td>Interdit par la loi. La 4e procuration est nulle.</td><td>Alerte automatique si un compte mandataire atteint 3 procurations pour cette AG. Blocage de la 4e avec message explicite.</td></tr>
+    <tr><td>Procuration générale (tous les votes)</td><td>Légale — le mandant délègue tous ses votes à son mandataire</td><td>Procuration type GENERALE : le mandataire vote pour toutes les résolutions avec les tantièmes du mandant.</td></tr>
+    <tr><td>Procuration spéciale (résolution précise)</td><td>Légale — le mandant instruit son mandataire sur un vote précis</td><td>Procuration type SPECIFIQUE : chaque résolution concernée listée avec instruction (POUR / CONTRE / ABSTENTION). Le mandataire ne peut pas déroger à l'instruction pour les résolutions concernées.</td></tr>
+    <tr><td>Retrait de procuration avant l'AG</td><td>Le mandant peut retirer sa procuration jusqu'à l'ouverture de l'AG</td><td>Annulation de procuration avec notification au mandataire. Si le mandant arrive en personne = sa procuration est automatiquement annulée.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S7: PARTIES COMMUNES ═══ -->
+<section id="s7">
+<div class="sec-label">Section 07</div>
+<h2 class="sec-title">Parties Communes — Gestion & Conflits</h2>
+
+<h3 class="sub">7.1 — Inventaire des Parties Communes par Type de Résidence</h3>
+<table>
+  <thead><tr><th>Partie commune</th><th>Immeuble</th><th>Résidence fermée</th><th>Villas</th><th>Bureaux</th><th>Règles spécifiques</th></tr></thead>
+  <tbody>
+    <tr><td>Hall d'entrée / Lobby</td><td>✓</td><td>✓</td><td>✓ (guérite)</td><td>✓</td><td>Propreté obligatoire. Décoration = décision AG.</td></tr>
+    <tr><td>Escaliers et couloirs</td><td>✓</td><td>—</td><td>—</td><td>✓</td><td>Aucun dépôt autorisé (sécurité incendie).</td></tr>
+    <tr><td>Ascenseur(s)</td><td>✓</td><td>—</td><td>—</td><td>✓</td><td>Contrat de maintenance obligatoire. Vérification annuelle.</td></tr>
+    <tr><td>Terrasse toit commune</td><td>✓</td><td>—</td><td>—</td><td>✓</td><td>Accès selon règlement. Peut être privatisée partiellement en AG.</td></tr>
+    <tr><td>Piscine collective</td><td>Rare</td><td>✓</td><td>✓</td><td>—</td><td>Règles d'hygiène strictes. Heures d'accès. Prestataire traitement eau.</td></tr>
+    <tr><td>Salle de sport / Gym</td><td>Rare</td><td>✓</td><td>✓</td><td>✓</td><td>Règles d'usage, horaires, équipements listés et inventoriés.</td></tr>
+    <tr><td>Salle polyvalente / Réunion</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Réservable. Caution possible. Remise en état après usage.</td></tr>
+    <tr><td>Local gardien / loge</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Logement de service. Règles usage définies dans contrat gardien.</td></tr>
+    <tr><td>Local poubelles / déchets</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Séparation tri si règlement. Nettoyage = charge copropriété.</td></tr>
+    <tr><td>Parking commun / visiteurs</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Règles d'usage votées AG. Horaires éventuels.</td></tr>
+    <tr><td>Voirie interne</td><td>—</td><td>✓</td><td>✓</td><td>—</td><td>Entretien, signalisation = charge copropriété. Vitesse limitée.</td></tr>
+    <tr><td>Espaces verts collectifs</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>Prestataire jardinage. Règles (pas de vélos sur pelouse, etc.).</td></tr>
+    <tr><td>Réseau eau/électricité commun</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Entretien = charge copropriété. Compteurs individuels = propriétaire + ONEE/REDAL.</td></tr>
+    <tr><td>Antenne / Fibre collective</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>Déployée par opérateur ou copropriété. Entretien = copropriété si infrastructure commune.</td></tr>
+    <tr><td>Guérite de sécurité / Portail</td><td>—</td><td>✓</td><td>✓</td><td>—</td><td>Personnel sécurité = charge copropriété. Portail électrique = maintenance.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">7.2 — Réservations d'Espaces Communs — Tous les Cas</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Réservation simple salle polyvalente</td><td>Réservation + validation syndic + remise en état</td><td>Formulaire : espace, date/heure début-fin, objet (réunion famille, AG...), nombre de personnes. Validation manuelle ou auto selon paramètre.</td></tr>
+    <tr><td>2 résidents veulent le même créneau</td><td>Premier arrivé premier servi si mode auto. Arbitrage syndic si mode manuel.</td><td>Détection conflit en temps réel. Si conflit : mise en file d'attente. Notification si créneau devient disponible.</td></tr>
+    <tr><td>Caution pour espace (salle fête)</td><td>Règlement peut prévoir caution (ex: 500 DH) en cas de dégâts</td><td>Caution = engagement moral dans le MVP (pas de paiement en ligne). Syndic peut enregistrer réception caution espèces. Libération caution après inspection.</td></tr>
+    <tr><td>Réservation récurrente (cours de yoga hebdomadaire)</td><td>Autorisée si AG ou règlement le prévoit. Durée limitée.</td><td>Réservation type RECURRENTE : fréquence (hebdo/mensuel), date de fin. Vérification disponibilité sur toute la période.</td></tr>
+    <tr><td>Annulation tardive</td><td>Règlement peut prévoir pénalité ou blocage futur si annulation < Xh avant</td><td>Paramètre délai_annulation_libre par espace. Si annulation après délai → notification syndic. Compteur annulations tardives par résident.</td></tr>
+    <tr><td>Non-remise en état après usage</td><td>Propriétaire de la réservation responsable de la remise en état</td><td>Gardien peut signaler via ticket lié à la réservation. Coût remise en état = charge au résident (enregistrée manuellement).</td></tr>
+    <tr><td>Réservation piscine — créneaux</td><td>Si AG a décidé des créneaux (familles le matin, adultes le soir)</td><td>Créneaux configurables par espace. Chaque créneau = slot réservable. Règles d'âge ou de catégorie configurable.</td></tr>
+    <tr><td>Invités extérieurs dans espaces communs</td><td>Règlement peut limiter l'accès aux résidents seulement</td><td>Champ nombre_invites sur réservation. Règle max_invites configurable par espace. Au-delà = validation manuelle obligatoire.</td></tr>
+    <tr><td>Espace commun en travaux — réservations annulées</td><td>Syndic met l'espace hors service</td><td>Espace commun statut HORS_SERVICE. Toutes les réservations futures annulées automatiquement avec notification.</td></tr>
+    <tr><td>Utilisation espace sans réservation</td><td>Infraction règlement. Signalable au gardien.</td><td>Gardien peut signaler via incident. Notification au résident identifié. Compteur infractions.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S8: LE SYNDIC ═══ -->
+<section id="s8">
+<div class="sec-label">Section 08</div>
+<h2 class="sec-title">Le Syndic — Mandats, Changements & Conflits</h2>
+
+<h3 class="sub">8.1 — Types de Syndics au Maroc</h3>
+<table>
+  <thead><tr><th>Type</th><th>Description</th><th>Fréquence Maroc</th><th>Spécificités plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Syndic professionnel (société)</td><td>Société agréée gérant plusieurs copropriétés en même temps</td><td>Très fréquent dans résidences de standing</td><td>Compte syndic peut gérer N copropriétés. Dashboard multi-copropriétés. Facturation honoraires.</td></tr>
+    <tr><td>Syndic bénévole (copropriétaire élu)</td><td>Un copropriétaire élu par ses pairs gère la résidence</td><td>Très fréquent dans petites résidences et vieilles résidences</td><td>Compte syndic = aussi compte résident. Droit de vote en AG sauf sur sa propre désignation/révocation.</td></tr>
+    <tr><td>Syndic provisoire (promoteur)</td><td>Promoteur assure la gestion jusqu'à la première AG constitutive</td><td>Toutes les nouvelles résidences</td><td>Compte type PROMOTEUR_SYNDIC. Droits limités dans le temps (durée mandat provisoire configurable).</td></tr>
+    <tr><td>Administrateur judiciaire</td><td>Nommé par tribunal en cas de syndic défaillant ou absent</td><td>Rare mais existe</td><td>Compte type ADMIN_JUDICIAIRE. Droits équivalents syndic mais avec log renforcé.</td></tr>
+    <tr><td>Syndic de fait (sans mandat officiel)</td><td>Copropriétaire qui gère sans être officiellement élu</td><td>Malheureusement fréquent au Maroc</td><td>Plateforme impose la désignation formelle via AG pour accès admin. Pas de syndic sans résolution AG.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">8.2 — Changement de Syndic — Workflow Complet</h3>
+<table>
+  <thead><tr><th>Étape</th><th>Action</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>1. Convocation AG révocation/désignation</td><td>AG convoquée avec OJ "désignation nouveau syndic"</td><td>AG créée type DÉSIGNATION_SYNDIC. Résolution vote avec candidats.</td></tr>
+    <tr><td>2. Vote en AG</td><td>Résolution de désignation votée (majorité simple)</td><td>Vote enregistré. Résultat archivé dans PV.</td></tr>
+    <tr><td>3. Transmission des archives</td><td>Ancien syndic doit transmettre TOUS les documents dans les 3 mois (Loi 18-00 Art. 27)</td><td>Checklist de transmission dans plateforme. Documents à transférer : comptabilité, contrats, correspondances, clés maîtresses. Chaque transfert confirmé.</td></tr>
+    <tr><td>4. Transmission de la trésorerie</td><td>Ancien syndic vire le solde de trésorerie au nouveau compte</td><td>Solde trésorerie "transmis" = validation des 2 parties. Historique transactions conservé.</td></tr>
+    <tr><td>5. Transfert des accès plateforme</td><td>Ancien syndic perd ses droits SYNDIC. Nouveau les obtient.</td><td>Désactivation ancien compte SYNDIC. Invitation nouveau syndic. Période de chevauchement possible (lecture seule pour l'ancien).</td></tr>
+    <tr><td>6. Information des résidents</td><td>Notification à tous les copropriétaires du changement</td><td>Notification automatique "Nouveau syndic désigné : [Nom]. Contact : [infos]".</td></tr>
+    <tr><td>7. Mise à jour contrats prestataires</td><td>Prestataires notifiés du changement de contact syndic</td><td>Notification aux prestataires actifs dans la plateforme.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">8.3 — Conflits Syndic-Copropriétaires</h3>
+<table>
+  <thead><tr><th>Cas de conflit</th><th>Droits des copropriétaires</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Syndic ne convoque pas l'AG annuelle</td><td>Pétition d'1/4 des copropriétaires pour forcer la convocation. Si refus → tribunal.</td><td>Alerte automatique si AG ordinaire non convoquée dans les 12 mois suivant la dernière. Outil de pétition en ligne (N signatures électroniques avec traçabilité).</td></tr>
+    <tr><td>Syndic refuse de fournir les comptes</td><td>Tout copropriétaire a droit aux comptes (Art. 23 Loi 18-00)</td><td>Module "Demande de documents" : traçable avec date de demande et réponse. Si non-réponse > 30j = alerte.</td></tr>
+    <tr><td>Syndic engage des dépenses non votées</td><td>Copropriétaires peuvent contester en AG. Syndic peut être tenu personnellement responsable.</td><td>Toute dépense > seuil configurable (ex: 5000 DH) doit être liée à une résolution AG ou classée comme urgence. Dépenses non liées = alerte conseil syndical.</td></tr>
+    <tr><td>Syndic favorise certains prestataires</td><td>Transparence : 3 devis obligatoires au-delà d'un seuil</td><td>Module devis : pour tout montant > X DH, 3 devis requis. Comparatif visible par conseil syndical.</td></tr>
+    <tr><td>Syndic ne répond pas aux incidents urgents</td><td>Copropriétaire peut mandater un prestataire en urgence et se faire rembourser</td><td>Si ticket URGENT non pris en charge en X heures → escalade automatique au conseil syndical + email de rappel au syndic.</td></tr>
+    <tr><td>Révocation du syndic pour faute</td><td>AG extraordinaire. Double majorité requise.</td><td>AG type RÉVOCATION. Résolution avec motifs documentés. Vote double majorité calculé automatiquement.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S9: PERSONNEL ═══ -->
+<section id="s9">
+<div class="sec-label">Section 09</div>
+<h2 class="sec-title">Personnel de l'Immeuble — Gardien & Concierge</h2>
+
+<h3 class="sub">9.1 — Profils du Personnel</h3>
+<table>
+  <thead><tr><th>Profil</th><th>Rôle</th><th>Logement dans résidence ?</th><th>Accès plateforme</th><th>Cas Maroc</th></tr></thead>
+  <tbody>
+    <tr><td>Gardien résident (concierge logé)</td><td>Surveillance 24h/24, entretien courant, accueil livraisons, gestion incidents</td><td>OUI — loge de service (partie commune)</td><td>App mobile dédiée. Tickets, planning, messagerie. Pas d'accès finances.</td><td>Très fréquent dans immeubles de 20+ logements</td></tr>
+    <tr><td>Gardien non-résident (à la journée)</td><td>Présent sur plage horaire définie. Pas de permanence la nuit.</td><td>NON</td><td>Idem gardien résident mais notifications limitées aux heures de travail.</td><td>Fréquent dans petits immeubles</td></tr>
+    <tr><td>Agent de sécurité (société externe)</td><td>Surveillance, contrôle accès, rondes. Employé d'une société de sécurité.</td><td>NON (généralement)</td><td>Accès limité : incidents sécurité uniquement. Pas de planning dans l'app (géré par leur société).</td><td>Résidences fermées de standing</td></tr>
+    <tr><td>Femme de ménage (parties communes)</td><td>Nettoyage parties communes uniquement</td><td>NON</td><td>Pas de compte app nécessaire dans MVP. Gérée via planning gardien ou prestataire.</td><td>Très fréquent — souvent employée directement par la copropriété</td></tr>
+    <tr><td>Technicien de maintenance</td><td>Petits travaux courants (ampoules, serrures, robinetterie légère)</td><td>NON</td><td>Compte prestataire si externe. Planning géré par syndic.</td><td>Certaines grandes résidences ont un technicien interne</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">9.2 — Gestion du Gardien — Tous les Cas</h3>
+<table>
+  <thead><tr><th>Cas</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Embauche gardien</td><td>Contrat CDI ou CDD. CNSS obligatoire. Décision AG (budget inclut salaire).</td><td>Fiche gardien créée. Compte invité. Lié à la copropriété. Logement attribué (lot type LOGE_GARDIEN).</td></tr>
+    <tr><td>Gardien absent (maladie, congé)</td><td>Remplacement à organiser par syndic. Continuité de service requise.</td><td>Statut gardien : ABSENT. Alerte syndic. Résidents notifiés si impact sur services (pas de gardiennage cette nuit).</td></tr>
+    <tr><td>Gardien utilise son logement comme commerce</td><td>La loge est un logement de service. Usage commercial = interdit.</td><td>Règlement intérieur. Si signalement = incident catégorie INFRACTION_USAGE.</td></tr>
+    <tr><td>Gardien fait rentrer des personnes non autorisées</td><td>Faute professionnelle. Peut justifier licenciement.</td><td>Incident catégorie SÉCURITÉ - FAUTE GARDIEN. Log avec preuves. Notification syndic.</td></tr>
+    <tr><td>Départ gardien — restitution logement</td><td>Logement de service doit être rendu à la fin du contrat. Délai légal de restitution.</td><td>Workflow "départ gardien" : désactivation compte, vérification état loge, nouveau gardien invité. Lot loge repassé en statut DISPONIBLE.</td></tr>
+    <tr><td>Gardien multi-immeubles</td><td>Dans certaines petites copropriétés, un gardien gère 2-3 petits immeubles proches</td><td>Compte gardien lié à plusieurs copropriétés. Tableau de bord avec vue multi-résidences. Planning centralisé.</td></tr>
+    <tr><td>Réception colis / livraisons</td><td>Gardien réceptionne et notifie le résident</td><td>Module livraisons : Gardien enregistre (destinataire + description) → notification push au résident. Résident confirme réception.</td></tr>
+    <tr><td>Visiteurs et contrôle d'accès</td><td>Gardien vérifie identité visiteur et prévient le résident</td><td>Module visites : Gardien peut envoyer notification "Visiteur pour Apt 4B — M. Dupont" → Résident autorise ou refuse → Gardien reçoit la réponse.</td></tr>
+    <tr><td>Gardien absent la nuit — incident nocturne</td><td>Résidents doivent savoir qui contacter en urgence</td><td>Fiche d'urgence configurable : contacts en l'absence du gardien (syndic, prestataire urgence, Pompiers). Visible dans l'app en permanence.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S10: TYPES RÉSIDENCES ═══ -->
+<section id="s10">
+<div class="sec-label">Section 10</div>
+<h2 class="sec-title">Types de Résidences — Règles Spécifiques Complètes</h2>
+
+<h3 class="sub">10.1 — Matrice de Configuration par Type de Résidence</h3>
+<table>
+  <thead>
+    <tr><th>Module / Feature</th><th>Immeuble collectif</th><th>Résidence fermée</th><th>Résidence villas</th><th>Immeuble bureaux</th><th>Immeuble mixte</th><th>Résidence étudiante</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Gestion lots appartements</td><td class="matrix-y">✓ Core</td><td class="matrix-y">✓</td><td class="matrix-n">— (villas)</td><td class="matrix-y">✓ bureaux</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td></tr>
+    <tr><td>Gestion lots villas</td><td class="matrix-n">—</td><td class="matrix-y">✓</td><td class="matrix-y">✓ Core</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td></tr>
+    <tr><td>Parkings sous-terrain</td><td class="matrix-y">✓ fréquent</td><td class="matrix-y">✓</td><td class="matrix-n">— (extérieur)</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-n">—</td></tr>
+    <tr><td>Ascenseur</td><td class="matrix-y">✓ si > R+2</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td></tr>
+    <tr><td>Piscine collective</td><td class="matrix-n">rare</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td></tr>
+    <tr><td>Voirie interne</td><td class="matrix-n">—</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td></tr>
+    <tr><td>Sécurité 24h/24</td><td class="matrix-n">rare</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-n">partiel</td><td class="matrix-n">—</td></tr>
+    <tr><td>Portail / Contrôle accès</td><td class="matrix-n">interphone</td><td class="matrix-y">✓ portail</td><td class="matrix-y">✓ portail</td><td class="matrix-y">badge</td><td class="matrix-n">partiel</td><td class="matrix-n">interphone</td></tr>
+    <tr><td>Rotation locataires élevée</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-y">✓ Core</td></tr>
+    <tr><td>AG fréquentes (+ 1/an)</td><td class="matrix-n">standard</td><td class="matrix-y">✓</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td></tr>
+    <tr><td>Charges commerciales distinctes</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-y">✓</td><td class="matrix-y">✓ Core</td><td class="matrix-n">—</td></tr>
+    <tr><td>Espaces verts importants</td><td class="matrix-n">minimal</td><td class="matrix-y">✓</td><td class="matrix-y">✓</td><td class="matrix-n">—</td><td class="matrix-n">—</td><td class="matrix-n">—</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">10.2 — Cas Spéciaux par Type de Résidence</h3>
+<table>
+  <thead><tr><th>Type résidence</th><th>Cas spécial</th><th>Règle</th><th>Gestion plateforme</th></tr></thead>
+  <tbody>
+    <tr><td rowspan="4">Résidence fermée / Gated community</td><td>Accès visiteurs avec badge temporaire</td><td>Visiteur reçoit badge temporaire valable X heures</td><td>Module contrôle accès (post-MVP hardware). Dans MVP : gardien gère accès + enregistre visiteur dans app.</td></tr>
+    <tr><td>Résident loue sa villa via Airbnb</td><td>Règlement intérieur peut interdire la location courte durée (nuisances). À voter en AG.</td><td>Paramètre règlement : location_courte_duree = AUTORISEE / INTERDITE / ENCADREE. Si incident Airbnb = signalement facilité.</td></tr>
+    <tr><td>Charges sécurité très élevées (50% du budget)</td><td>Résidents peuvent contester si sécurité inefficace</td><td>Détail budget par poste visible dans app. Résidents voient que 50% va à la sécurité → discussion en AG.</td></tr>
+    <tr><td>Panne portail principal bloquant toute la résidence</td><td>Incident critique — tous les résidents impactés</td><td>Ticket URGENT + notification mass push à tous. Accès piéton alternatif activé par gardien.</td></tr>
+    <tr><td rowspan="3">Résidence étudiante / locative</td><td>Rotation locataires mensuelle</td><td>Codes d'invitation renouvelés fréquemment. Comptes désactivés rapidement.</td><td>Workflow rapide désactivation/invitation. Durée d'invitation configurable (7j, 24h, 48h). Mode "rotation rapide" sur la copropriété.</td></tr>
+    <tr><td>Locataire étudiant mineur (moins de 18 ans)</td><td>Le tuteur légal est responsable. L'étudiant peut utiliser l'app.</td><td>Compte étudiant lié à un compte tuteur. Notifications importantes envoyées au tuteur.</td></tr>
+    <tr><td>Fin d'année universitaire — départs massifs</td><td>Tous les étudiants partent en même temps</td><td>Outil de désactivation groupée + invitation groupée pour nouveaux locataires. Workflow "changement saisonnier".</td></tr>
+    <tr><td rowspan="3">Immeuble mixte résidentiel/commercial</td><td>Commerce fait des livraisons à 6h du matin</td><td>Conflit avec résidents. Horaires livraisons peuvent être réglementés en AG.</td><td>Règlement intérieur : horaires_livraisons configurable. Incidents nuisances liés au lot commercial tracés.</td></tr>
+    <tr><td>Restaurant veut installer une terrasse sur partie commune</td><td>Nécessite accord AG et éventuellement redevance à la copropriété</td><td>Résolution AG spécifique. Si accordée : redevance = entrée finances copropriété. Durée de l'autorisation limitée.</td></tr>
+    <tr><td>Commerce génère des odeurs dans les parties communes</td><td>Nuisance caractérisée. Mise en demeure possible.</td><td>Incident catégorie NUISANCES lié au lot commercial. Escalade si récurrent.</td></tr>
+    <tr><td rowspan="2">Immeuble neuf (promoteur)</td><td>Vice caché découvert après livraison</td><td>Garantie décennale (10 ans structure) et biennale (2 ans équipements) du promoteur.</td><td>Module garanties : suivi des réclamations sous garantie. Incidents liés au promoteur (responsable) vs copropriété. Dates de garantie saisies à la création.</td></tr>
+    <tr><td>Promoteur tarde à remettre les documents (règlement, plans)</td><td>Obligation légale de transmission dans les 3 mois après livraison</td><td>Checklist documents à recevoir du promoteur. Alerte si non reçus dans les délais.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ═══ S11: ONBOARDING ═══ -->
+<section id="s11">
+<div class="sec-label">Section 11</div>
+<h2 class="sec-title">Onboarding & Cycle de Vie Utilisateur</h2>
+
+<div class="callout warn">
+  <strong>Document dédié à venir</strong>
+  Les scénarios d'inscription, d'onboarding et le cycle de vie complet des comptes utilisateurs font l'objet d'un document séparé et exhaustif — <em>Lifecycle &amp; Onboarding Master Doc</em> — actuellement en préparation. Ce document couvrira en détail : tous les canaux d'invitation (email, SMS, QR code, WhatsApp), la validation des comptes, la gestion des rôles, les transferts de propriété, la désactivation, l'anonymisation CNDP et tous les edge cases du cycle de vie utilisateur dans le contexte marocain.
+</div>
+
+<div class="rule-box">
+  <div class="rule-box-title">Périmètre couvert dans ce document (rappel des règles de référence)</div>
+  <p style="font-size:9.5pt;line-height:1.7;">Les règles liées à l'identité et aux droits des différents types de résidents (propriétaire occupant, propriétaire bailleur, locataire, indivisaire, personne morale) sont documentées en <strong>Section 02</strong>. Les règles de confidentialité et de rétention des données sont documentées en <strong>Section 12.3</strong>. Le présent document traite exclusivement des cas d'usage métier de la copropriété.</p>
+</div>
+
+</section>
+
+<!-- ═══ S12: CONFLITS & CAS LIMITES ═══ -->
+<section id="s12">
+<div class="sec-label">Section 12</div>
+<h2 class="sec-title">Conflits, Litiges & Cas Limites</h2>
+
+<h3 class="sub">12.1 — Conflits Majeurs en Copropriété Marocaine</h3>
+<table>
+  <thead><tr><th>Conflit</th><th>Fréquence</th><th>Règle légale</th><th>Workflow plateforme</th><th>Issue possible</th></tr></thead>
+  <tbody>
+    <tr><td>Contestation du montant des charges</td><td>Très fréquent</td><td>Droit de contester par lettre recommandée. Restent dus pendant la contestation.</td><td>Module contestation : résident soumet contestation avec motif → Syndic répond → Si non résolu → Médiation AG → Tribunal</td><td>Explication syndic suffit souvent. Erreur de calcul corrigée. Tribunal si persistance.</td></tr>
+    <tr><td>Travaux privatifs qui endommagent parties communes</td><td>Fréquent</td><td>Propriétaire responsable des dommages causés par ses travaux (Art. 18 Loi 18-00)</td><td>Incident ouvert avec photos avant/après. Expertise si nécessaire. Mise en demeure. Déduction sur remboursement ou action judiciaire.</td><td>Remise en état aux frais du propriétaire fautif.</td></tr>
+    <tr><td>Modification de façade non autorisée</td><td>Fréquent (climatiseurs, antennes, percement)</td><td>Toute modification façade = accord AG ou règlement. Remise en état possible si non autorisée.</td><td>Incident catégorie MODIFICATION_FAÇADE. Photo. Mise en demeure. Vote en AG si régularisation demandée.</td><td>Régularisation par vote AG ou remise en état.</td></tr>
+    <tr><td>Occupation irrégulière d'une partie commune (débarras dans couloir)</td><td>Très fréquent</td><td>Parties communes ne peuvent pas être appropriées. Obligation d'enlèvement.</td><td>Incident → Notification au résident → Délai 7 jours → Si non respect → Enlèvement par syndic aux frais du résident (décision AG).</td><td>Enlèvement. Facturation si récidive.</td></tr>
+    <tr><td>Conflit sur les tantièmes (mal calculés à l'origine)</td><td>Rare mais grave</td><td>Erreur dans le règlement = procédure judiciaire pour rectification. Complexe et long.</td><td>Signalement dans plateforme. Documentation de l'erreur. Génération dossier pour notaire/tribunal. Tantièmes figés jusqu'à décision judiciaire.</td><td>Rectification judiciaire. Régularisation des charges passées.</td></tr>
+    <tr><td>Syndic qui disparaît avec la trésorerie</td><td>Rare mais existe au Maroc</td><td>Délit pénal. Plainte au tribunal. Désignation administrateur judiciaire.</td><td>Conseil syndical a accès lecture trésorerie → Détection rapide. Alerte si solde anormalement bas. Traçabilité de toutes les sorties financières.</td><td>Plainte pénale. Administrateur judiciaire. Recouvrement difficile.</td></tr>
+    <tr><td>AG sans procès-verbal (ou PV falsifié)</td><td>Fréquent dans résidences mal gérées</td><td>PV = preuve légale des décisions AG. Sans PV = décisions contestables.</td><td>Plateforme génère PV automatiquement. Horodatage. Log immuable. Résidents reçoivent PV signé dans 48h.</td><td>PV numérique difficile à falsifier avec la plateforme.</td></tr>
+    <tr><td>Propriétaire refuse d'accéder à son appartement pour réparation commune</td><td>Rare mais problématique</td><td>Art. 20 Loi 18-00 : copropriétaire doit permettre l'accès pour travaux communs urgents.</td><td>Incident tracé. Notifications formelles. Si refus persistant → Tribunal peut ordonner l'accès.</td><td>Ordonnance judiciaire d'accès forcé.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">12.2 — Edge Cases Techniques & Situations Rares</h3>
+<table>
+  <thead><tr><th>Cas limite</th><th>Situation</th><th>Comportement attendu de la plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Copropriété avec 1 seul copropriétaire</td><td>Tous les lots appartiennent à une seule personne (ex: promoteur avant 1ère vente)</td><td>AG = 1 personne. Quorum toujours atteint. PV généré normalement. Alerte si situation dure > 1 an (copropriété fictive).</td></tr>
+    <tr><td>Lot sans propriétaire désigné (orphelin)</td><td>Lot créé mais aucun propriétaire associé (erreur import ou succession ouverte)</td><td>Lot en statut ORPHELIN. Charges calculées mais aucun débiteur. Alerte syndic. Pas de vote AG pour ce lot.</td></tr>
+    <tr><td>Doublon d'email lors de l'inscription</td><td>2 résidents différents essaient de s'inscrire avec le même email</td><td>2e inscription bloquée. Message "cet email est déjà utilisé". Syndic peut forcer si erreur.</td></tr>
+    <tr><td>Code d'invitation déjà utilisé re-soumis</td><td>Résident essaie de re-soumettre son ancien code</td><td>Message clair "Code déjà utilisé. Vous êtes déjà inscrit. Connectez-vous."</td></tr>
+    <tr><td>Annulation AG après envoi des convocations</td><td>Syndic doit annuler l'AG (décès, urgence)</td><td>Bouton "Annuler AG" avec motif obligatoire. Notification à tous les destinataires de la convocation. AG archivée comme ANNULEE.</td></tr>
+    <tr><td>Vote AG avec égalité parfaite (50/50 en tantièmes)</td><td>Résolution à majorité simple avec partage exact</td><td>Résolution = REJETÉE (la majorité n'est pas atteinte si ex aequo). Mention dans PV. Peut être soumise à nouveau à la prochaine AG.</td></tr>
+    <tr><td>Immeuble partiellement détruit (incendie, séisme)</td><td>Certains lots inutilisables, copropriété doit décider reconstruction</td><td>Lots en statut SINISTRÉ. Charges suspendues pour lots sinistrés (configurable). AG extraordinaire obligatoire. Module assurance activé.</td></tr>
+    <tr><td>Résidence vendue à un nouveau promoteur (restructuration)</td><td>Le propriétaire de la résidence change à 100%</td><td>Transfert total : nouveau compte SUPER_ADMIN. Historique intégralement conservé. Tous les résidents notifiés.</td></tr>
+    <tr><td>Panne de la plateforme pendant une AG en cours</td><td>Coupure internet pendant un vote</td><td>Votes déjà enregistrés = conservés (sauvegarde temps réel). Reprise de session. Si panne totale : vote papier de secours recommandé dans le règlement intérieur.</td></tr>
+    <tr><td>Résident conteste un vote qui l'a lésé</td><td>Résident affirme ne pas avoir reçu la convocation</td><td>Log d'envoi de notification conservé (horodatage, canal, accusé de réception). Preuve de l'envoi.</td></tr>
+    <tr><td>2 syndics revendiquent la même copropriété</td><td>Conflit entre ancien et nouveau syndic</td><td>Seul 1 compte SYNDIC actif par copropriété. Super admin arbitre. PV de désignation obligatoire pour chaque changement.</td></tr>
+    <tr><td>Copropriété fusionnée (2 immeubles gérés ensemble)</td><td>Décision AG de fusionner la gestion de 2 immeubles contigus</td><td>Multi-copropriétés sous même syndic. Finances séparées mais reporting consolidé possible. Charges = toujours par copropriété distincte.</td></tr>
+  </tbody>
+</table>
+
+<h3 class="sub">12.3 — Règles de Confidentialité & Accès aux Données</h3>
+<table>
+  <thead><tr><th>Question</th><th>Réponse légale & règle plateforme</th></tr></thead>
+  <tbody>
+    <tr><td>Un résident peut-il voir le nom de ses voisins ?</td><td>Les noms des copropriétaires sont accessibles sur demande (liste copropriétaires = document de la copropriété). Dans l'app : seul le syndic voit les noms complets. Résidents voient "Lot 4B" mais pas forcément le nom du propriétaire. Configurable.</td></tr>
+    <tr><td>Un résident peut-il voir les dettes des autres ?</td><td>NON. Impayés d'un résident = confidentiel. Seuls le syndic et le conseil syndical voient le détail. Résidents voient seulement le taux global de recouvrement de la copropriété.</td></tr>
+    <tr><td>Les PV d'AG sont-ils publics au sein de la copropriété ?</td><td>OUI. Les PV sont accessibles à tous les copropriétaires. Les locataires y ont accès si le propriétaire l'autorise.</td></tr>
+    <tr><td>Un prestataire peut-il voir les finances de la copropriété ?</td><td>NON. Prestataire accède uniquement à son ticket d'intervention.</td></tr>
+    <tr><td>Le syndic peut-il voir les votes individuels en AG ?</td><td>OUI pour le syndic (audit). Les résidents voient le résultat global uniquement (vote anonymisé dans l'affichage, mais tracé pour contestation judiciaire).</td></tr>
+    <tr><td>Combien de temps les données sont conservées ?</td><td>Conformité Loi 09-08 : données personnelles = durée nécessaire + 2 ans. Données financières = 10 ans (obligations fiscales). PV AG = durée de vie de la copropriété.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- FOOTER -->
+<div class="pfooter">
+  <span>UC_COPRO_MA_v2.0 — CONFIDENTIEL</span>
+  <span>Cas d'Usage Exhaustifs — Gestion Copropriété Maroc</span>
+  <span>Mai 2026</span>
+</div>
+
+</div><!-- .page -->
+</body>
+</html>

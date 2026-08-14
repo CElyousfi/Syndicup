@@ -1,0 +1,63 @@
+# CI — Master Spec Partie 15.1. Ce fichier est un point de départ fonctionnel pour les étapes
+# 1-4 (lint, tests, build, contrat OpenAPI). Les étapes 5-11 (déploiement preview/staging/prod,
+# migrations, smoke tests) dépendent des projets Vercel/Supabase réels — à compléter une fois
+# ceux-ci provisionnés (voir ROADMAP_BACKLOG.md, M0).
+
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [staging, main]
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Tests
+        run: npm run test
+
+  validate-openapi-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install openapi-spec-validator
+      - name: Validate OpenAPI 3.1 syntax
+        run: python -m openapi_spec_validator packages/api-contract/openapi.yaml
+      # TODO une fois le contrat plus mature : ajouter une détection de breaking change
+      # (ex. openapi-diff contre la version sur `main`) — Master Spec Partie 15.1 étape 4.
+
+  # Master Spec Partie 10.5 — audit hebdomadaire ; ce job tourne sur chaque PR en attendant un
+  # déclencheur cron dédié (`on.schedule`) une fois le repo actif.
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm audit --audit-level=high || true
+        # `|| true` volontaire au démarrage du projet pour ne pas bloquer les premières PR sur
+        # des vulnérabilités transitives non critiques — retirer ce filet dès que le projet a
+        # une baseline stable (Master Spec Partie 10.5).

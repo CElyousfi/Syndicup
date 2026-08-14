@@ -1,0 +1,21 @@
+{
+  "name": "@copropriete-maroc/database",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Schéma Prisma unique, migrations, seed — Master Spec Partie 2.",
+  "scripts": {
+    "generate": "prisma generate --schema=prisma/schema.prisma",
+    "migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
+    "migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
+    "seed": "tsx seed/seed.ts",
+    "studio": "prisma studio --schema=prisma/schema.prisma"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.0.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.6.0"
+  }
+}
