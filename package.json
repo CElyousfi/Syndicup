@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Plateforme de gestion de copropriété — Maroc. Web + iOS + Android depuis une seule API.",
+  "packageManager": "npm@9.2.0",
   "workspaces": [
     "apps/*",
     "packages/*"
