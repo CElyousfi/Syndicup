@@ -23,12 +23,12 @@ Definition of Done (`CLAUDE.md` §4) est entièrement cochée pour tous ses endp
 
 *Réf. Master Spec Partie 2, 2.3. Aucun Doc A spécifique — c'est la fondation multi-tenant.*
 
-- [ ] `packages/database/prisma/schema.prisma` : tables `copropriete`, `utilisateur`, `role_utilisateur` (voir version de départ déjà dans ce scaffold)
-- [ ] Migration initiale appliquée en local + staging
-- [ ] Policy RLS `tenant_isolation` sur chaque table dès sa création (pas après coup)
-- [ ] Middleware `apps/api/lib/tenant/` : injection `copropriete_id`/`role`/`utilisateur_id` via `SET LOCAL` depuis le JWT vérifié
-- [ ] Wrapper client Prisma qui rend une requête sans scope tenant impossible à exécuter par erreur
-- [ ] Test de sécurité : un rôle `proprietaire` ne peut lire aucune ligne hors de sa copropriété même en modifiant un ID dans la requête
+- [x] `packages/database/prisma/schema.prisma` : tables `copropriete`, `utilisateur`, `role_utilisateur` (voir version de départ déjà dans ce scaffold)
+- [ ] Migration initiale appliquée en local + staging *(local ✔ — staging en attente du projet Supabase, M0(b))*
+- [x] Policy RLS `tenant_isolation` sur chaque table dès sa création (pas après coup)
+- [x] Middleware `apps/api/lib/tenant/` : injection `copropriete_id`/`role`/`utilisateur_id` via `SET LOCAL` depuis le JWT vérifié
+- [x] Wrapper client Prisma qui rend une requête sans scope tenant impossible à exécuter par erreur
+- [x] Test de sécurité : un rôle `proprietaire` ne peut lire aucune ligne hors de sa copropriété même en modifiant un ID dans la requête
 
 ## M2 — Auth & onboarding
 

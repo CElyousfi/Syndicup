@@ -13,6 +13,24 @@ on:
 jobs:
   lint-typecheck-test:
     runs-on: ubuntu-latest
+    # Postgres jetable pour les tests d'intégration RLS (M1) — mêmes migrations que le local.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 54322:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Valeurs de CI uniquement — aucun secret réel (Master Spec Partie 10.3).
+      DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+      DATABASE_URL: postgresql://app_local:app_local@127.0.0.1:54322/postgres
+      JWT_SECRET: ci-only-jwt-secret-with-at-least-32-characters
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +40,12 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      - name: Client Prisma + migrations + rôle applicatif (RLS, sans BYPASSRLS)
+        run: |
+          npm run db:generate
+          npm run migrate:deploy --workspace=@copropriete-maroc/database
+          npm run setup:local-role --workspace=@copropriete-maroc/database
 
       - name: Lint
         run: npm run lint
