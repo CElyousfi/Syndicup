@@ -17,6 +17,9 @@ apps/*/.next/
 # Turborepo
 .turbo/
 
+# TypeScript incremental build cache
+*.tsbuildinfo
+
 # Prisma
 packages/database/prisma/*.db
 

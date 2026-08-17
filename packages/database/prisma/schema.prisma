@@ -56,6 +56,20 @@ enum LanguePreferee {
   AR
 }
 
+enum CanalInvitation {
+  EMAIL
+  SMS
+  QR_CODE
+  WHATSAPP
+}
+
+enum StatutInvitation {
+  EN_ATTENTE
+  ACCEPTEE
+  EXPIREE
+  REGENEREE
+}
+
 enum RoleType {
   SUPER_ADMIN
   SYNDIC
@@ -89,6 +103,7 @@ model Copropriete {
   modifieLe             DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
 
   rolesUtilisateur RoleUtilisateur[]
+  invitations      Invitation[]
 
   @@map("copropriete")
 }
@@ -108,7 +123,8 @@ model Utilisateur {
   creeLe         DateTime                @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe      DateTime                @updatedAt @map("modifie_le") @db.Timestamptz
 
-  roles RoleUtilisateur[]
+  roles             RoleUtilisateur[]
+  invitationsEmises Invitation[]      @relation("InvitationEmetteur")
 
   @@map("utilisateur")
 }
@@ -128,4 +144,28 @@ model RoleUtilisateur {
   @@map("role_utilisateur")
   // Contrainte Master Spec 2.4 : un seul role='SYNDIC' actif=true par copropriété —
   // index unique partiel en SQL brut dans la migration M1 (non supporté par Prisma).
+}
+
+// ============================================================================
+// M2 — ONBOARDING (Master Spec Partie 5.1, 5.3, 5.5)
+// ============================================================================
+
+model Invitation {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String           @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete      @relation(fields: [coproprieteId], references: [id])
+  // Nullable : gardien/prestataire/syndic sont rattachés directement à la copropriété
+  // (Partie 5.3). FK vers `lot` ajoutée en M3 quand la table lot sera créée — UUID brut d'ici là.
+  lotId         String?          @map("lot_id") @db.Uuid
+  roleCible     RoleType         @map("role_cible")
+  emetteurId    String           @map("emetteur_id") @db.Uuid
+  emetteur      Utilisateur      @relation("InvitationEmetteur", fields: [emetteurId], references: [id])
+  canal         CanalInvitation
+  code          String           @unique
+  statut        StatutInvitation @default(EN_ATTENTE)
+  expireLe      DateTime         @map("expire_le") @db.Timestamptz
+  creeLe        DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@map("invitation")
 }

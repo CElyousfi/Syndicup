@@ -120,6 +120,37 @@ components:
           enum: [OCCUPE, VACANT, ORPHELIN, EN_SUCCESSION, SINISTRE, TANTIEME_A_REGULARISER]
         lot_parent_id: { type: string, format: uuid, nullable: true }
 
+    # ── Domaine : Onboarding / Invitations (Master Spec Partie 5.1, 5.3) ─────
+    Invitation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid, nullable: true }
+        role_cible:
+          type: string
+          enum: [SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
+        canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
+        code: { type: string }
+        statut: { type: string, enum: [EN_ATTENTE, ACCEPTEE, EXPIREE, REGENEREE] }
+        expire_le: { type: string, format: date-time }
+
+    InvitationCreate:
+      type: object
+      required: [role_cible, canal]
+      properties:
+        lot_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: >
+            Obligatoire sauf rôles rattachés directement à la copropriété (GARDIEN, PRESTATAIRE,
+            SYNDIC — Master Spec Partie 5.3). SUPER_ADMIN n'est jamais un rôle invitable.
+        role_cible:
+          type: string
+          enum: [SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
+        canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
+
     # ── Domaine : Finances ────────────────────────────────────────────────
     AppelDeFonds:
       type: object
@@ -306,6 +337,66 @@ paths:
         "200": { description: "Compte lié, statut → EN_VALIDATION." }
         "404": { description: Code invalide ou expiré. }
         "409": { description: "Code déjà utilisé — déjà inscrit, connectez-vous (Doc A, Partie 5.5)." }
+
+  # ══════════════════════════════════════════════════════════════════════
+  # INVITATIONS — syndic (Master Spec Partie 5.1, 5.3, 5.5)
+  # ══════════════════════════════════════════════════════════════════════
+  /invitations:
+    get:
+      tags: [Auth]
+      summary: Liste les invitations de la copropriété. Rôle autorisé — syndic.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Invitation" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Auth]
+      summary: Émet une invitation liée à un lot + rôle (jamais de sélection de rôle libre par l'invité — Master Spec Partie 5.3). Rôle autorisé — syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/InvitationCreate" }
+      responses:
+        "201":
+          description: Créée — code à transmettre via le canal choisi (envoi réel = M9).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Invitation" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /invitations/{id}/regenerer:
+    post:
+      tags: [Auth]
+      summary: Régénère un code pour une invitation expirée sans recréer le lot (Master Spec Partie 5.5). Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "201":
+          description: Nouvelle invitation créée, l'ancienne passe à REGENEREE.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Invitation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Invitation déjà acceptée — rien à régénérer." }
 
   # ══════════════════════════════════════════════════════════════════════
   # COPROPRIÉTÉS — super_admin (create), syndic (manage own)

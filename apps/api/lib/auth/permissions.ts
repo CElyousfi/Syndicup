@@ -128,6 +128,29 @@ export const PERMISSIONS: PermissionMatrix = {
     LOCATAIRE: false,
   },
 
+  // ── Onboarding / Invitations (Master Spec Partie 5.3 — M2) ──────────────
+  // L'invitation porte lot_id + role cible fixés par l'émetteur ; jamais de sélection de rôle
+  // libre par l'invité (anti auto-élévation de privilège). Émission réservée au syndic
+  // (Partie 5.3 : "Syndic crée l'invitation liée à un lot/rôle", tableau 5.2 état INVITE).
+  "onboarding.inviter": {
+    SUPER_ADMIN: true, // création de la 1re invitation syndic d'une copropriété
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  "onboarding.lister_invitations": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+
   // ────────────────────────────────────────────────────────────────────────
   // TODO (voir ROADMAP_BACKLOG.md) — modules pas encore repris de Doc A dans cette matrice :
   //   - Lots : création, modification, transfert de propriété (Doc A §1, §2.5, §5.4)
@@ -135,7 +158,6 @@ export const PERMISSIONS: PermissionMatrix = {
   //   - Documents : lecture par visibilite (public_copropriete / syndic_only / conseil_syndical)
   //   - Litiges : création, escalade, et l'éventuelle étape de conciliation (Doc A §12.1, voir
   //     LEGAL_QUESTIONS_BRIEF.md §0)
-  //   - Onboarding : qui peut émettre une invitation pour quel rôle (Doc A §11 / Partie 5.3)
   // Chacune de ces lignes doit être ajoutée en relisant le fichier docs/domain-reference/
   // correspondant, pas en devinant — Doc A a souvent des exceptions par type de résidence
   // (Partie 10) qui ne sont pas visibles depuis le seul Master Spec Partie 4.2.

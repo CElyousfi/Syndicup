@@ -34,12 +34,13 @@ Definition of Done (`CLAUDE.md` §4) est entièrement cochée pour tous ses endp
 
 *Réf. Master Spec Partie 4, Partie 5. Doc A : `docs/domain-reference/11-onboarding-cycle-vie.md`.*
 
-- [ ] Supabase Auth configuré : OTP téléphone + email/mot de passe
-- [ ] `POST /auth/otp/request`, `POST /auth/otp/verify`, `POST /auth/login`, `POST /auth/refresh`
-- [ ] Table `invitation` (email/SMS/QR) + `POST /auth/invite/accept`
-- [ ] Machine à états compte utilisateur (`INVITE → EN_VALIDATION → ACTIF → SUSPENDU/DESACTIVE/ANONYMISE`)
-- [ ] `apps/api/lib/auth/permissions.ts` rempli pour les modules livrés jusqu'ici (voir squelette fourni)
-- [ ] Edge cases Partie 5.5 testés : email déjà utilisé, code expiré, doublon de compte
+- [x] Supabase Auth configuré (local) : OTP téléphone (`test_otp` + provider Twilio factice requis par GoTrue) + email/mot de passe ; `custom_access_token_hook` injecte `roles`
+- [x] `POST /auth/otp/request`, `POST /auth/otp/verify`, `POST /auth/login`, `POST /auth/refresh`
+- [x] Table `invitation` (email/SMS/QR/WhatsApp) + `POST /auth/invite/accept` + `POST/GET /invitations`, `POST /invitations/:id/regenerer`
+- [x] Machine à états compte utilisateur (`INVITE → EN_VALIDATION → ACTIF → SUSPENDU/DESACTIVE/ANONYMISE`) — `lib/auth/account-state.ts`
+- [x] `apps/api/lib/auth/permissions.ts` : entrées onboarding ajoutées (`onboarding.inviter`, `onboarding.lister_invitations`)
+- [x] Edge cases Partie 5.5 testés manuellement contre Supabase local : code déjà utilisé (409), code invalide/expiré (404), régénération bloquée si déjà acceptée (409) ; email/téléphone dupliqué implémenté dans `invitation_accepter` (SQL) mais pas encore couvert par un test automatisé
+- [ ] Automatiser le test HTTP bout-en-bout (actuellement manuel) — nécessite soit un mock GoTrue, soit un job CI dédié avec conteneur `supabase/gotrue`
 
 ## M3 — Lots, propriété, occupation (cœur du domaine, pas encore de finances)
 

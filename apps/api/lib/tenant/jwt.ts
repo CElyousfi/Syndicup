@@ -9,7 +9,7 @@
  * enum Postgres RoleType). Ce repo standardise les claims ET le contexte RLS en
  * SCREAMING_SNAKE_CASE — divergence de forme signalée, pas résolue silencieusement.
  */
-import { jwtVerify } from "jose";
+import { jwtVerify, createRemoteJWKSet, type JWTPayload } from "jose";
 import type { Role } from "../auth/permissions";
 import { assertValidTenantContext, type TenantContext } from "./context";
 
@@ -21,12 +21,55 @@ interface RoleClaim {
   role: Role;
 }
 
-function getJwtSecret(): Uint8Array {
+function getJwtSecret(): Uint8Array | null {
   const secret = process.env.JWT_SECRET;
-  if (!secret || secret.length < 32) {
-    throw new Error("JWT_SECRET manquant ou trop court (>= 32 caractères requis).");
-  }
+  if (!secret || secret.length < 32) return null;
   return new TextEncoder().encode(secret);
+}
+
+// Mémoïsé au niveau module — createRemoteJWKSet gère lui-même le cache/refresh des clés.
+let jwks: ReturnType<typeof createRemoteJWKSet> | null = null;
+function getJwks() {
+  if (!jwks) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    if (!supabaseUrl) return null;
+    jwks = createRemoteJWKSet(new URL(`${supabaseUrl}/auth/v1/.well-known/jwks.json`));
+  }
+  return jwks;
+}
+
+/**
+ * Vérifie la signature d'un JWT Supabase et retourne ses claims.
+ *
+ * Deux modes de signature coexistent selon la configuration du projet Supabase :
+ *  - clé asymétrique (ES256, projets récents / défaut CLI) → vérifiée via JWKS
+ *    (`/auth/v1/.well-known/jwks.json`) — c'est le mode réel utilisé par Supabase Auth local
+ *    et en production.
+ *  - secret partagé HS256 (legacy, ou jetons synthétiques des tests d'intégration RLS qui ne
+ *    passent pas par un vrai flux GoTrue) → vérifié avec JWT_SECRET.
+ * On tente HS256 d'abord (rapide, pas d'appel réseau) puis JWKS en repli — jamais l'inverse ne
+ * doit être supposé silencieusement, d'où l'échec explicite si aucun des deux n'est configurable.
+ */
+export async function verifyJwt(token: string): Promise<JWTPayload> {
+  const secret = getJwtSecret();
+  if (secret) {
+    try {
+      const { payload } = await jwtVerify(token, secret);
+      return payload;
+    } catch {
+      // repli JWKS ci-dessous
+    }
+  }
+  const remoteJwks = getJwks();
+  if (!remoteJwks) {
+    throw new UnauthenticatedError("JWT invalide ou expiré.");
+  }
+  try {
+    const { payload } = await jwtVerify(token, remoteJwks);
+    return payload;
+  } catch {
+    throw new UnauthenticatedError("JWT invalide ou expiré.");
+  }
 }
 
 /**
@@ -41,12 +84,7 @@ export async function resolveTenantContext(
   token: string,
   requestedCoproprieteId?: string
 ): Promise<TenantContext> {
-  let payload: Record<string, unknown>;
-  try {
-    ({ payload } = await jwtVerify(token, getJwtSecret()));
-  } catch {
-    throw new UnauthenticatedError("JWT invalide ou expiré.");
-  }
+  const payload = await verifyJwt(token);
 
   const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
   const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];

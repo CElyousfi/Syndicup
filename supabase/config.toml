@@ -256,7 +256,9 @@ otp_expiry = 3600
 
 [auth.sms]
 # Allow/disallow new user signups via SMS to your project.
-enable_signup = false
+# M2 : OTP téléphone = flux par défaut résidents/gardiens (Master Spec Partie 4.3). Agrégateur SMS
+# marocain pas encore choisi (ROADMAP notes) — en local on utilise test_otp ci-dessous (mock).
+enable_signup = true
 # If enabled, users need to confirm their phone number before signing in.
 enable_confirmations = false
 # Template for sending OTP to users
@@ -265,8 +267,12 @@ template = "Your code is {{ .Code }}"
 max_frequency = "5s"
 
 # Use pre-defined map of phone number to OTP for testing.
-# [auth.sms.test_otp]
-# 4152127777 = "123456"
+# Numéros de test locaux (mock SMS en attendant l'agrégateur — ROADMAP « notes de dépendance
+# externe »). Jamais utilisé en staging/production.
+[auth.sms.test_otp]
+212600000001 = "123456"
+212600000002 = "123456"
+212600000003 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]
@@ -281,17 +287,24 @@ max_frequency = "5s"
 # uri = "pg-functions://postgres/auth/before-user-created-hook"
 
 # This hook runs before a token is issued and allows you to add additional claims based on the authentication method used.
-# [auth.hook.custom_access_token]
-# enabled = true
-# uri = "pg-functions://<database>/<schema>/<hook_name>"
+# M2 : injecte la claim `roles: [{copropriete_id, role}]` (Master Spec Partie 4.4) depuis
+# role_utilisateur — fonction créée par la migration m2 (voir packages/database).
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"
 
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+# GoTrue exige un provider "enabled" même pour les numéros couverts par test_otp ci-dessus
+# (l'envoi réel est court-circuité pour ces numéros, seule la validation de config est faite).
+# Identifiants factices, LOCAL UNIQUEMENT — jamais utilisés en staging/production (agrégateur SMS
+# marocain réel à choisir, voir ROADMAP notes de dépendance externe).
 [auth.sms.twilio]
-enabled = false
-account_sid = ""
-message_service_sid = ""
-# DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-auth_token = "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+enabled = true
+account_sid = "ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+message_service_sid = "MGxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# Placeholder en dur (pas de secret réel) — le vrai agrégateur SMS utilisera env(...) en
+# staging/production, jamais commit en clair (voir .env.example à ce moment-là).
+auth_token = "dummy-local-token"
 
 # Multi-factor-authentication is available to Supabase Pro plan.
 [auth.mfa]
