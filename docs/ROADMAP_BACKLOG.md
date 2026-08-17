@@ -41,6 +41,7 @@ Definition of Done (`CLAUDE.md` §4) est entièrement cochée pour tous ses endp
 - [x] `apps/api/lib/auth/permissions.ts` : entrées onboarding ajoutées (`onboarding.inviter`, `onboarding.lister_invitations`)
 - [x] Edge cases Partie 5.5 testés manuellement contre Supabase local : code déjà utilisé (409), code invalide/expiré (404), régénération bloquée si déjà acceptée (409) ; email/téléphone dupliqué implémenté dans `invitation_accepter` (SQL) mais pas encore couvert par un test automatisé
 - [ ] Automatiser le test HTTP bout-en-bout (actuellement manuel) — nécessite soit un mock GoTrue, soit un job CI dédié avec conteneur `supabase/gotrue`
+- [ ] **Écrans M2 non livrés** (écart au non-négociable n°4, signalé — pas résolu en silence) : login/OTP/acceptation d'invitation web (`apps/web`) + mobile (`apps/mobile`, FR/AR + RTL). `apps/web` et `apps/mobile` sont encore des placeholders — à rattraper au plus tard avec la première UI de M3, sinon consigner l'exception dans `docs/PARITE_WEB_MOBILE.md`
 
 ## M3 — Lots, propriété, occupation (cœur du domaine, pas encore de finances)
 

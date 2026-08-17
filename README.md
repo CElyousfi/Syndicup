@@ -62,13 +62,27 @@ copropriete-maroc/
 - Les comptes tiers réels (Supabase, Vercel, CMI, SMS, Apple/Google) — à provisionner (M0 du
   roadmap), ce scaffold ne peut pas le faire à ta place.
 
-## Démarrage local (une fois M0 fait)
+## Démarrage local (séquence vérifiée)
 
 ```bash
 npm install
-cp .env.example apps/api/.env.local   # puis remplir depuis Supabase/Vercel
+npx supabase start                       # stack locale (Postgres 54322, Auth/API 54321, Studio 54323)
+
+# apps/api/.env.local — valeurs locales (aucun secret réel) :
+#   NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+#   NEXT_PUBLIC_SUPABASE_ANON_KEY=<« Publishable » affichée par supabase start>
+#   DATABASE_URL=postgresql://app_local:app_local@127.0.0.1:54322/postgres
+#   DIRECT_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
+#   JWT_SECRET=super-secret-jwt-token-with-at-least-32-characters-long
+# packages/database/.env — DATABASE_URL + DIRECT_URL identiques (Prisma CLI ne lit pas .env.local)
+
 npm run db:generate
 npm run db:migrate
-npm run db:seed
-npm run dev
+npm run setup:local-role --workspace=@copropriete-maroc/database   # rôle app_local (RLS, sans BYPASSRLS)
+npm run db:seed                          # optionnel — Résidence Al Amal + invitation GARDIEN "SEED0001"
+npm run dev                              # API sur http://localhost:3001
 ```
+
+OTP en local : numéros de test dans `supabase/config.toml` (`test_otp`) — ex. `+212600000001`,
+code `123456`. Aucun SMS réel n'est envoyé (provider Twilio factice, exigé par GoTrue même
+pour les numéros de test).
