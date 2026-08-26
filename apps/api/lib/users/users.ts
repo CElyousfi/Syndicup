@@ -92,9 +92,19 @@ export async function obtenirFicheUtilisateur(ctx: TenantContext, utilisateurId:
  * tenant à la fois). Audit EXPORT_DONNEES_CNDP par copropriété.
  */
 export async function exporterMesDonnees(utilisateurId: string, roles: RoleClaim[]) {
-  let profil: ReturnType<typeof profilPublic> | null = null;
-  const coproprietes = [];
+  if (roles.length === 0) throw new UtilisateurIntrouvableError("Utilisateur sans rôle.");
+  const premierCtx: TenantContext = {
+    utilisateurId,
+    coproprieteId: roles[0]!.copropriete_id,
+    role: roles[0]!.role,
+  };
+  const profil = await withTenant(premierCtx, async (db) => {
+    const u = await db.utilisateur.findUnique({ where: { id: utilisateurId } });
+    return u ? profilPublic(u) : null;
+  });
+  if (!profil) throw new UtilisateurIntrouvableError("Utilisateur introuvable.");
 
+  const coproprietes = [];
   for (const claim of roles) {
     const ctx: TenantContext = {
       utilisateurId,
@@ -102,10 +112,6 @@ export async function exporterMesDonnees(utilisateurId: string, roles: RoleClaim
       role: claim.role,
     };
     const bloc = await withTenant(ctx, async (db) => {
-      if (!profil) {
-        const u = await db.utilisateur.findUnique({ where: { id: utilisateurId } });
-        if (u) profil = profilPublic(u);
-      }
       const [lotsProprietaire, lotsOccupant, paiements, votes, notifications] = await Promise.all([
         db.lotProprietaire.findMany({
           where: { utilisateurId },
@@ -148,6 +154,5 @@ export async function exporterMesDonnees(utilisateurId: string, roles: RoleClaim
     coproprietes.push(bloc);
   }
 
-  if (!profil) throw new UtilisateurIntrouvableError("Utilisateur introuvable.");
   return { profil, genere_le: new Date().toISOString(), coproprietes };
 }

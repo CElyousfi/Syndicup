@@ -155,7 +155,7 @@ describe("Passe d'escalade (job système)", () => {
     const notifSyndic = await admin.notification.findFirst({
       where: { utilisateurId: syndicA, templateCode: "IMPAYE_N4_SYNDIC", contenuJson: { path: ["appel_de_fonds_lot_id"], equals: ligne.id } },
     });
-    expect(notifSyndic?.statutEnvoi).toBe("ENVOYE");
+    expect(notifSyndic?.statutEnvoi).toBe("EN_ATTENTE");
   });
 
   it("une ligne contestée n'est pas escaladée (Doc A §3.3 Cas Particuliers — contestation en cours)", async () => {

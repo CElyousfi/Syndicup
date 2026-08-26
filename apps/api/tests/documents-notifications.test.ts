@@ -135,7 +135,7 @@ describe("Notifications — boîte de réception personnelle (Partie 7.2)", () =
     );
     const rowsAlice = await listerMesNotifications(ctxAlice());
     expect(rowsAlice.length).toBe(1);
-    expect(rowsAlice[0]?.statutEnvoi).toBe("ENVOYE");
+    expect(rowsAlice[0]?.statutEnvoi).toBe("EN_ATTENTE");
     const rowsBob = await listerMesNotifications(ctxBob());
     expect(rowsBob.length).toBe(0);
   });

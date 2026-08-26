@@ -155,7 +155,7 @@ describe("Visites — workflow Doc A §9.2", () => {
       where: { utilisateurId: alice, templateCode: "VISITE_NOUVELLE", contenuJson: { path: ["visite_id"], equals: visite.id } },
     });
     expect(notif?.canal).toBe("PUSH");
-    expect(notif?.statutEnvoi).toBe("ENVOYE");
+    expect(notif?.statutEnvoi).toBe("EN_ATTENTE");
   });
 
   it("un résident ne voit que les visites de ses propres lots (RLS Doc A §12.3)", async () => {
@@ -173,7 +173,7 @@ describe("Visites — workflow Doc A §9.2", () => {
     const notifGardien = await admin.notification.findFirst({
       where: { utilisateurId: gardienA, templateCode: "VISITE_REPONSE", contenuJson: { path: ["visite_id"], equals: visite.id } },
     });
-    expect(notifGardien?.statutEnvoi).toBe("ENVOYE");
+    expect(notifGardien?.statutEnvoi).toBe("EN_ATTENTE");
     await expect(
       changerStatutVisite(ctxAlice(), visite.id, { statut: "REFUSE" })
     ).rejects.toBeInstanceOf(ContrainteMetierError);

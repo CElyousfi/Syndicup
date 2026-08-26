@@ -195,8 +195,8 @@ describe("Création d'incident et calcul du SLA (Doc A §5)", () => {
         where: { utilisateurId: gardienA, templateCode: "INCIDENT_URGENCE_MAXIMALE" },
       }),
     ]);
-    expect(notifSyndic?.statutEnvoi).toBe("ENVOYE");
-    expect(notifGardien?.statutEnvoi).toBe("ENVOYE");
+    expect(notifSyndic?.statutEnvoi).toBe("EN_ATTENTE");
+    expect(notifGardien?.statutEnvoi).toBe("EN_ATTENTE");
     const deltaMinutes =
       (incident.slaDeadline!.getTime() - incident.creeLe.getTime()) / (1000 * 60);
     expect(deltaMinutes).toBeCloseTo(30, 0);

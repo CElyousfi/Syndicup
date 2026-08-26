@@ -179,7 +179,7 @@ describe("Convocation (Master Spec Partie 8.2)", () => {
     const notifAlice = await admin.notification.findFirst({
       where: { utilisateurId: alice, templateCode: "AG_CONVOCATION", contenuJson: { path: ["ag_id"], equals: ag.id } },
     });
-    expect(notifAlice?.statutEnvoi).toBe("ENVOYE");
+    expect(notifAlice?.statutEnvoi).toBe("EN_ATTENTE");
     expect(notifAlice?.canal).toBe("EMAIL");
   });
 

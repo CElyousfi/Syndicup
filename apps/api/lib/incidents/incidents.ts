@@ -166,6 +166,21 @@ export async function changerStatutIncident(
         },
       }),
     ]);
+    // Matrice Master Spec 7.1 : "Changement de statut ticket incident → Push → Créateur du
+    // ticket" (pas d'auto-notification si le créateur change lui-même le statut).
+    if (statutAvant !== input.statut && incident.creePar !== ctx.utilisateurId) {
+      await envoyerNotification(db, {
+        coproprieteId: ctx.coproprieteId,
+        utilisateurId: incident.creePar,
+        templateCode: "INCIDENT_STATUT_CHANGE",
+        canal: "PUSH",
+        contenuJson: {
+          incident_id: incidentId,
+          categorie: incident.categorie,
+          statut: input.statut,
+        },
+      });
+    }
     return log;
   });
 }

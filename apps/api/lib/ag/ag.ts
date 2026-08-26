@@ -586,6 +586,35 @@ export async function cloturerAg(ctx: TenantContext, agId: string) {
         ...(pdfErreur ? { pdf_erreur: pdfErreur } : {}),
       },
     });
+
+    // Matrice Master Spec 7.1 : "PV d'AG disponible → Email + push → Copropriétaires
+    // (+ locataires si option activée)" — option = copropriete.config_json.locataire_voit_pv.
+    const rolesPv: ("PROPRIETAIRE" | "INDIVISAIRE" | "PERSONNE_MORALE_REPRESENTANT" | "LOCATAIRE")[] =
+      ["PROPRIETAIRE", "INDIVISAIRE", "PERSONNE_MORALE_REPRESENTANT"];
+    const locataireVoitPv =
+      typeof copropriete?.configJson === "object" &&
+      copropriete?.configJson !== null &&
+      (copropriete.configJson as Record<string, unknown>).locataire_voit_pv === true;
+    if (locataireVoitPv) rolesPv.push("LOCATAIRE");
+    const destinatairesPv = await db.roleUtilisateur.findMany({
+      where: { coproprieteId: ctx.coproprieteId, actif: true, role: { in: rolesPv } },
+      select: { utilisateurId: true },
+      distinct: ["utilisateurId"],
+    });
+    await Promise.all(
+      destinatairesPv.flatMap((d) =>
+        (["EMAIL", "PUSH"] as const).map((canal) =>
+          envoyerNotification(db, {
+            coproprieteId: ctx.coproprieteId,
+            utilisateurId: d.utilisateurId,
+            templateCode: "PV_DISPONIBLE",
+            canal,
+            contenuJson: { ag_id: agId, date_ag: ag.dateAg.toISOString() },
+          })
+        )
+      )
+    );
+
     return { ag: updated, pv };
   });
 }

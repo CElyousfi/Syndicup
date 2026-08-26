@@ -1,17 +1,22 @@
 /**
  * Service notifications — M9 (Master Spec Partie 7).
  *
- * Aucun agrégateur SMS/FCM/email réel n'est branché dans cet environnement (⚠️ même limitation
- * que le sandbox CMI, voir M5/ROADMAP_BACKLOG.md) : `envoyerNotification` simule l'envoi en
- * écrivant directement la ligne `notification` avec `statut_envoi = ENVOYE`. Le point d'intégration
- * réel (Resend/FCM/agrégateur SMS marocain) reste à brancher ici sans changer la signature ni les
- * appelants (ag.ts, incidents.ts, etc.), conformément à Doc A §12.2 "Preuve de l'envoi".
+ * L'envoi réel passe par les adaptateurs de ./transports (env-gated — noop par défaut tant que
+ * M0 n'a pas provisionné Resend/FCM/agrégateur SMS). Le statut écrit dans la ligne
+ * `notification` est CELUI RETOURNÉ par le transport (Doc A §12.2 "Preuve de l'envoi") :
+ * EN_ATTENTE en dev (noop), ENVOYE seulement quand un fournisseur a réellement accepté le
+ * message, ECHOUE sinon. Le rendu FR/AR suit `utilisateur.langue_preferee` (Partie 7.3) via
+ * le registre ./templates ; un template_code hors registre est envoyé sans rendu (contenu_json
+ * brut) — les codes émis par le code applicatif doivent tous exister dans le registre.
  */
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import type { Prisma, Notification } from "@prisma/client";
 import { uuidv7 } from "uuidv7";
+import { render, templateExiste } from "./templates";
+import { transportPour } from "./transports";
+import { logger } from "../logging/logger";
 
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
@@ -42,6 +47,51 @@ export async function envoyerNotification(
   db: TenantDb,
   params: EnvoyerNotificationParams
 ): Promise<Notification> {
+  // Destinataire (langue + coordonnées) — visible via la policy utilisateur_visibilite quand
+  // l'expéditeur est syndic/gardien du même tenant ; repli FR/coordonnées nulles sinon.
+  const destinataire = await db.utilisateur
+    .findUnique({
+      where: { id: params.utilisateurId },
+      select: { email: true, telephone: true, languePreferee: true },
+    })
+    .catch(() => null);
+  const langue = (destinataire?.languePreferee ?? "FR") as "FR" | "AR";
+
+  let statutEnvoi: "EN_ATTENTE" | "ENVOYE" | "ECHOUE" = "EN_ATTENTE";
+  try {
+    const rendu = templateExiste(params.templateCode)
+      ? render(
+          params.templateCode,
+          langue,
+          (params.contenuJson ?? {}) as Record<string, unknown>
+        )
+      : {
+          titre: params.templateCode,
+          corps: JSON.stringify(params.contenuJson ?? {}),
+          langue,
+        };
+    const resultat = await transportPour(params.canal).envoyer({
+      destinataire: {
+        utilisateurId: params.utilisateurId,
+        email: destinataire?.email ?? null,
+        telephone: destinataire?.telephone ?? null,
+      },
+      titre: rendu.titre,
+      corps: rendu.corps,
+      langue,
+    });
+    statutEnvoi = resultat.statut;
+  } catch (e) {
+    // Un transport défaillant ne doit jamais faire échouer l'écriture métier appelante —
+    // la ligne notification trace l'échec (ECHOUE) pour reprise.
+    logger.error("Transport de notification en erreur", {
+      canal: params.canal,
+      template_code: params.templateCode,
+      erreur: e instanceof Error ? e.message : String(e),
+    });
+    statutEnvoi = "ECHOUE";
+  }
+
   const id = uuidv7();
   const horodatageEnvoi = new Date();
   await db.$executeRaw`
@@ -49,7 +99,7 @@ export async function envoyerNotification(
       (id, copropriete_id, utilisateur_id, template_code, canal, statut_envoi, contenu_json, horodatage_envoi)
     VALUES
       (${id}::uuid, ${params.coproprieteId}::uuid, ${params.utilisateurId}::uuid, ${params.templateCode},
-       ${params.canal}::"CanalNotification", 'ENVOYE'::"StatutEnvoiNotification",
+       ${params.canal}::"CanalNotification", ${statutEnvoi}::"StatutEnvoiNotification",
        ${params.contenuJson === undefined ? null : (params.contenuJson as Prisma.InputJsonObject)}::jsonb,
        ${horodatageEnvoi})
   `;
@@ -59,7 +109,7 @@ export async function envoyerNotification(
     utilisateurId: params.utilisateurId,
     templateCode: params.templateCode,
     canal: params.canal,
-    statutEnvoi: "ENVOYE",
+    statutEnvoi,
     contenuJson: params.contenuJson ?? null,
     accuseReception: null,
     lu: false,
