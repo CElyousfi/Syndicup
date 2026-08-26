@@ -2,6 +2,7 @@
  * POST /v1/finances/paiements/cmi/initier — création d'une session de paiement CMI
  * (Master Spec Partie 6.4, étape 1 — M5).
  */
+import { readIdempotencyKey } from "../../../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../../../lib/http/handler";
 import { paiementCmiInitierSchema } from "../../../../../../lib/finances/schemas";
 import {
@@ -19,7 +20,7 @@ async function handlePOST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = paiementCmiInitierSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const session = await initierPaiementCmi(ctx, parsed.data);
+    const session = await initierPaiementCmi(ctx, parsed.data, readIdempotencyKey(req));
     return ok(session, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

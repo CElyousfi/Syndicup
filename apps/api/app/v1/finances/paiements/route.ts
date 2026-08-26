@@ -2,6 +2,7 @@
  * POST /v1/finances/paiements — enregistrement d'un paiement manuel (virement/espèces/chèque)
  * (Master Spec Partie 4.2/6.4, Doc A §3.4 — M5).
  */
+import { readIdempotencyKey } from "../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../lib/http/handler";
 import { paiementManuelCreateSchema } from "../../../../lib/finances/schemas";
 import {
@@ -19,7 +20,7 @@ async function handlePOST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = paiementManuelCreateSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const resultat = await enregistrerPaiementManuel(ctx, parsed.data);
+    const resultat = await enregistrerPaiementManuel(ctx, parsed.data, readIdempotencyKey(req));
     return ok(resultat, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

@@ -8,6 +8,7 @@
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
 import { money, toApiString } from "../money";
 import { genererCode, expiration } from "../auth/invitations";
@@ -222,12 +223,16 @@ export async function ajouterOccupant(
 export async function transfererPropriete(
   ctx: TenantContext,
   lotId: string,
-  input: LotTransfertProprieteInput
+  input: LotTransfertProprieteInput,
+  idempotencyKey?: string
 ) {
   if (can("lots.transferer_propriete", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut initier un transfert de propriété (Partie 5.4).");
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /lots/:id/transfert-propriete", payload: { lotId, ...input } },
+    async (db) => {
     const lot = await db.lot.findUnique({ where: { id: lotId } });
     if (!lot) throw new LotIntrouvableError("Lot introuvable.");
 

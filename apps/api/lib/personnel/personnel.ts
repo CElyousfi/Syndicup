@@ -7,6 +7,7 @@
  */
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
@@ -140,11 +141,20 @@ async function assertLotLogeGardien(db: TenantDb, lotId: string) {
  * Doc A §9.2 : "Gardien enregistre → notification push au résident". Les destinataires notifiés
  * sont les propriétaires et occupants actifs du lot visité.
  */
-export async function creerVisite(ctx: TenantContext, input: VisiteCreateInput) {
+export async function creerVisite(
+  ctx: TenantContext,
+  input: VisiteCreateInput,
+  idempotencyKey?: string
+) {
   if (can("visites.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le gardien (ou le syndic) peut enregistrer une visite.");
   }
-  return withTenant(ctx, async (db) => {
+  // Idempotence de la sync_queue offline mobile (Master Spec Partie 13.3) : l'app génère une
+  // Idempotency-Key par visite ; un retry réseau ne crée jamais deux visites.
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /visites", payload: input },
+    async (db) => {
     const lot = await db.lot.findUnique({ where: { id: input.lot_id } });
     if (!lot) throw new IntrouvableError("Lot introuvable.");
     const visite = await db.visite.create({

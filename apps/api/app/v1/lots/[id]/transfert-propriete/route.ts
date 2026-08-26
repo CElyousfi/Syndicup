@@ -3,6 +3,7 @@
  * ⚠️ Vérification automatique du solde de charges non disponible (dépend du moteur financier
  * M5, pas encore livré) — voir apps/api/lib/lots/lots.ts::transfererPropriete.
  */
+import { readIdempotencyKey } from "../../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../../lib/http/handler";
 import { lotTransfertProprieteSchema } from "../../../../../lib/lots/schemas";
 import {
@@ -21,7 +22,7 @@ async function handlePOST(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json().catch(() => null);
     const parsed = lotTransfertProprieteSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const invitation = await transfererPropriete(ctx, id, parsed.data);
+    const invitation = await transfererPropriete(ctx, id, parsed.data, readIdempotencyKey(req));
     return ok(invitation);
   } catch (e) {
     const mapped = mapAuthError(e);

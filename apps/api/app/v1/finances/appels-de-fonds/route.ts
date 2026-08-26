@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/finances/appels-de-fonds — génération batch et liste (Master Spec Partie 6.2 — M5).
  */
+import { readIdempotencyKey } from "../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../lib/http/handler";
 import { appelDeFondsGenererSchema } from "../../../../lib/finances/schemas";
 import {
@@ -35,7 +36,7 @@ async function handlePOST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = appelDeFondsGenererSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const appel = await genererAppelDeFonds(ctx, parsed.data);
+    const appel = await genererAppelDeFonds(ctx, parsed.data, readIdempotencyKey(req));
     return ok(appel, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

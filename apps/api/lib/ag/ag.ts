@@ -22,6 +22,7 @@ import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
 import { money } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
@@ -268,12 +269,20 @@ async function assertIndivisaireLotSolde(db: TenantDb, lotId: string) {
   }
 }
 
-export async function voter(ctx: TenantContext, agId: string, input: AgVoteCreateInput) {
+export async function voter(
+  ctx: TenantContext,
+  agId: string,
+  input: AgVoteCreateInput,
+  idempotencyKey?: string
+) {
   const permission = can("ag.voter", ctx.role);
   if (permission === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à voter en AG.");
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /ag/:id/votes", payload: { agId, ...input } },
+    async (db) => {
     const ag = await db.assembleeGenerale.findUnique({ where: { id: agId } });
     if (!ag) throw new AgIntrouvableError("AG introuvable.");
     if (ag.statut !== "EN_COURS") {

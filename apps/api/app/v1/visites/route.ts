@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/visites — contrôle d'accès visiteurs (Master Spec Partie 13.3, Doc A §9.2 — M10).
  */
+import { readIdempotencyKey } from "../../../lib/http/idempotency";
 import { withApiHandler } from "../../../lib/http/handler";
 import { visiteCreateSchema } from "../../../lib/personnel/schemas";
 import {
@@ -33,7 +34,7 @@ async function handlePOST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = visiteCreateSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const visite = await creerVisite(ctx, parsed.data);
+    const visite = await creerVisite(ctx, parsed.data, readIdempotencyKey(req));
     return ok(visite, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

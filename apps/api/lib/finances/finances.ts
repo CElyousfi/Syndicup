@@ -7,6 +7,7 @@ import { createHmac, randomUUID } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
 import { money, repartirAuProrata, toApiString, isEqual, isGreaterThan } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
@@ -53,13 +54,20 @@ function estContrainteCheck(e: unknown): boolean {
  * (statut EMIS) puisque l'algorithme décrit la génération des lignes comme faite en une passe ;
  * à revoir si le produit veut un vrai brouillon éditable avant émission.
  */
-export async function genererAppelDeFonds(ctx: TenantContext, input: AppelDeFondsGenererInput) {
+export async function genererAppelDeFonds(
+  ctx: TenantContext,
+  input: AppelDeFondsGenererInput,
+  idempotencyKey?: string
+) {
   if (can("finances.creer_appel_de_fonds", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut générer un appel de fonds (Partie 6.2).");
   }
   const exercice = input.periode.slice(0, 4);
 
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /finances/appels-de-fonds", payload: input },
+    async (db) => {
     const budgetActif = await db.budgetAg.findFirst({
       where: { coproprieteId: ctx.coproprieteId, exercice, statut: "ACTIF" },
     });
@@ -82,8 +90,9 @@ export async function genererAppelDeFonds(ctx: TenantContext, input: AppelDeFond
       lots.map((l) => ({ lotId: l.id, tantiemes: l.tantiemes.toString() }))
     );
 
+    let appel;
     try {
-      return await db.appelDeFonds.create({
+      appel = await db.appelDeFonds.create({
         data: {
           coproprieteId: ctx.coproprieteId,
           periode: input.periode,
@@ -108,17 +117,16 @@ export async function genererAppelDeFonds(ctx: TenantContext, input: AppelDeFond
       }
       throw e;
     }
-  }).then(async (appel) => {
-    await withTenant(ctx, (db) =>
-      ecrireAuditLog(db, {
-        coproprieteId: ctx.coproprieteId,
-        acteurId: ctx.utilisateurId,
-        action: "APPEL_DE_FONDS_EMIS",
-        entite: "appel_de_fonds",
-        entiteId: appel.id,
-        apres: { periode: appel.periode, type: appel.type, montant_total: appel.montantTotal.toString() },
-      })
-    );
+    // Audit dans la MÊME transaction que l'écriture (et que le claim d'idempotence) : un rejeu
+    // Idempotency-Key renvoie la réponse stockée sans ré-écrire de ligne d'audit.
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "APPEL_DE_FONDS_EMIS",
+      entite: "appel_de_fonds",
+      entiteId: appel.id,
+      apres: { periode: appel.periode, type: appel.type, montant_total: appel.montantTotal.toString() },
+    });
     return appel;
   });
 }
@@ -300,18 +308,25 @@ async function appliquerPaiement(
   }
 }
 
-export async function enregistrerPaiementManuel(ctx: TenantContext, input: PaiementManuelCreateInput) {
+export async function enregistrerPaiementManuel(
+  ctx: TenantContext,
+  input: PaiementManuelCreateInput,
+  idempotencyKey?: string
+) {
   if (can("finances.enregistrer_paiement_manuel", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut enregistrer un paiement manuel.");
   }
-  return withTenant(ctx, (db) =>
-    appliquerPaiement(db, ctx, {
-      appelDeFondsLotId: input.appel_de_fonds_lot_id,
-      montant: input.montant,
-      methode: input.methode,
-      payeurUtilisateurId: input.payeur_utilisateur_id ?? null,
-      accepterTropPercu: input.accepter_trop_percu,
-    })
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /finances/paiements", payload: input },
+    (db) =>
+      appliquerPaiement(db, ctx, {
+        appelDeFondsLotId: input.appel_de_fonds_lot_id,
+        montant: input.montant,
+        methode: input.methode,
+        payeurUtilisateurId: input.payeur_utilisateur_id ?? null,
+        accepterTropPercu: input.accepter_trop_percu,
+      })
   );
 }
 
@@ -339,11 +354,18 @@ function signerCmi(oid: string, montant: string): string {
   return createHmac("sha256", cmiSecret()).update(`${oid}.${montant}`).digest("hex");
 }
 
-export async function initierPaiementCmi(ctx: TenantContext, input: PaiementCmiInitierInput) {
+export async function initierPaiementCmi(
+  ctx: TenantContext,
+  input: PaiementCmiInitierInput,
+  idempotencyKey?: string
+) {
   if (can("finances.paiement_cmi_initier", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à initier un paiement CMI.");
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: "POST /finances/paiements/cmi/initier", payload: input },
+    async (db) => {
     const ligne = await db.appelDeFondsLot.findUnique({ where: { id: input.appel_de_fonds_lot_id } });
     if (!ligne) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
     if (ligne.statut === "PAYE") {

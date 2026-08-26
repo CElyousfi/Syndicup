@@ -19,20 +19,24 @@ import { PrismaClient, Prisma } from "@prisma/client";
 import { uuidv7 } from "uuidv7";
 import { assertValidTenantContext, type TenantContext } from "./context";
 
+// Modèles SANS colonne `id` (clé primaire composite) — le hook uuidv7 ne doit pas leur en
+// injecter une (Prisma rejetterait l'argument inconnu).
+const MODELES_SANS_ID = new Set(["IdempotencyKey"]);
+
 // Module-privé — volontairement non exporté.
 const basePrisma = new PrismaClient().$extends({
   query: {
     $allModels: {
-      async create({ args, query }) {
+      async create({ model, args, query }) {
         const data = args.data as Record<string, unknown> | undefined;
-        if (data && data.id === undefined) {
+        if (data && data.id === undefined && !MODELES_SANS_ID.has(model)) {
           data.id = uuidv7();
         }
         return query(args);
       },
-      async createMany({ args, query }) {
+      async createMany({ model, args, query }) {
         const data = args.data;
-        if (Array.isArray(data)) {
+        if (Array.isArray(data) && !MODELES_SANS_ID.has(model)) {
           for (const row of data as Record<string, unknown>[]) {
             if (row.id === undefined) row.id = uuidv7();
           }

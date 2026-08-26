@@ -193,6 +193,7 @@ model Copropriete {
   personnel        Personnel[]
   visites          Visite[]
   litiges          ConflitLitige[]
+  idempotencyKeys  IdempotencyKey[]
 
   @@map("copropriete")
 }
@@ -1166,4 +1167,25 @@ model AgNotificationLog {
 
   @@index([agId])
   @@map("ag_notification_log")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// M12 — Idempotence générique (Master Spec Partie 3.1). Table technique de
+// transport (pas de valeur probante) : UPDATE autorisé pour stocker la réponse.
+// ────────────────────────────────────────────────────────────────────────────
+model IdempotencyKey {
+  cle           String   @db.Uuid
+  endpoint      String
+  coproprieteId String   @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  utilisateurId String?  @map("utilisateur_id") @db.Uuid
+  payloadHash   String   @map("payload_hash")
+  statut        String   @default("EN_COURS")
+  reponseStatus Int?     @map("reponse_status")
+  reponseJson   Json?    @map("reponse_json")
+  creeLe        DateTime @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@id([cle, endpoint])
+  @@index([coproprieteId])
+  @@map("idempotency_key")
 }

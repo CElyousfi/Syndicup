@@ -1,6 +1,7 @@
 /**
  * POST /v1/ag/:id/votes — enregistre un vote, écriture synchrone (Master Spec Partie 8.7 — M6).
  */
+import { readIdempotencyKey } from "../../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../../lib/http/handler";
 import { agVoteCreateSchema } from "../../../../../lib/ag/schemas";
 import {
@@ -19,7 +20,7 @@ async function handlePOST(req: Request, { params }: { params: Promise<{ id: stri
     const body = await req.json().catch(() => null);
     const parsed = agVoteCreateSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const vote = await voter(ctx, id, parsed.data);
+    const vote = await voter(ctx, id, parsed.data, readIdempotencyKey(req));
     return ok(vote, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

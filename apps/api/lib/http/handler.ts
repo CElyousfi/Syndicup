@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { runWithRequestContext } from "./request-context-storage";
 import { mapAuthError } from "./request-context";
+import { IdempotencyKeyManquanteError, IdempotencyConflitError } from "./idempotency";
 import { fail } from "./respond";
 import { logger } from "../logging/logger";
 import { captureException } from "../observability/sentry";
@@ -31,6 +32,10 @@ export function withApiHandler<C = unknown>(handler: RouteHandler<C>): RouteHand
         const mapped = mapAuthError(e);
         if (mapped) {
           res = mapped;
+        } else if (e instanceof IdempotencyKeyManquanteError) {
+          res = fail("VALIDATION_ERROR", e.message);
+        } else if (e instanceof IdempotencyConflitError) {
+          res = fail("CONFLICT", e.message);
         } else {
           logger.error("Erreur non gérée dans un handler API", {
             methode: req.method,

@@ -1126,7 +1126,9 @@ paths:
         supportée par cet endpoint (422 explicite) ; la ligne `lot_proprietaire` du nouveau
         propriétaire n'est PAS créée automatiquement à l'acceptation de l'invitation — le syndic
         doit appeler `POST /lots/:id/proprietaires` une fois l'invitation acceptée.
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1224,6 +1226,8 @@ paths:
       tags: [Finances]
       summary: Génération batch d'un appel de fonds (algorithme — Master Spec Partie 6.2).
       description: Rôle autorisé — syndic. copropriete_id dérivé du contexte tenant, jamais du payload.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1271,6 +1275,8 @@ paths:
     post:
       tags: [Finances]
       summary: Enregistre un paiement hors CMI (virement, espèces, chèque) — rôle autorisé syndic.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1309,6 +1315,8 @@ paths:
         ⚠️ Pas de table de session CMI dans le schéma (absente du Master Spec Partie 2.2) — la
         cible du paiement est encodée dans `oid`, signée par HMAC, vérifiée au webhook. Non testé
         contre un vrai bac à sable CMI (credentials commerçant absents de ce repo).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
@@ -1936,8 +1944,10 @@ paths:
       summary: >
         Enregistre une visite (Doc A §9.2) — chaque propriétaire/occupant actif du lot reçoit
         une notification PUSH (template VISITE_NOUVELLE, M9). Rôles autorisés — gardien, syndic.
-        Peut être soumis via la sync_queue offline mobile (Master Spec Partie 13.3) — idempotent
-        sur un identifiant client généré côté app.
+        Peut être soumis via la sync_queue offline mobile (Master Spec Partie 13.3) — idempotence
+        via le header Idempotency-Key généré côté app (une clé par visite dans la sync_queue).
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:
         required: true
         content:
