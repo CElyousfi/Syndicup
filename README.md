@@ -81,6 +81,9 @@ npm run db:migrate
 npm run setup:local-role --workspace=@copropriete-maroc/database   # rôle app_local (RLS, sans BYPASSRLS)
 npm run db:seed                          # optionnel — Résidence Al Amal + invitation GARDIEN "SEED0001"
 npm run dev                              # API sur http://localhost:3001
+npx inngest-cli@latest dev -u http://localhost:3001/api/inngest   # optionnel — jobs (escalade,
+                                         # anonymisation CNDP, rappels AG, fan-out appels de fonds),
+                                         # UI sur http://localhost:8288, aucun compte cloud requis
 ```
 
 OTP en local : numéros de test dans `supabase/config.toml` (`test_otp`) — ex. `+212600000001`,

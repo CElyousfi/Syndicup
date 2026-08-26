@@ -8,6 +8,7 @@ import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
+import { emitEvent } from "../events/emit";
 import type { TenantContext } from "../tenant/context";
 import { money, repartirAuProrata, subtract, toApiString, isEqual, isGreaterThan } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
@@ -64,7 +65,7 @@ export async function genererAppelDeFonds(
   }
   const exercice = input.periode.slice(0, 4);
 
-  return withTenantIdempotent(
+  const appel = await withTenantIdempotent(
     ctx,
     { cle: idempotencyKey, endpoint: "POST /finances/appels-de-fonds", payload: input },
     async (db) => {
@@ -129,6 +130,15 @@ export async function genererAppelDeFonds(
     });
     return appel;
   });
+
+  // Étape 5 du Master Spec Partie 6.2 : notification asynchrone (fan-out Inngest). Émis APRÈS
+  // le commit ; le fan-out est idempotent côté lib (un rejeu Idempotency-Key ou un retry Inngest
+  // ne double jamais les notifications). L'émission n'échoue jamais la requête (emitEvent).
+  await emitEvent("finances/appel_de_fonds.emis", {
+    copropriete_id: ctx.coproprieteId,
+    appel_de_fonds_id: appel.id,
+  });
+  return appel;
 }
 
 export async function listerAppelsDeFonds(ctx: TenantContext, page: number, limit: number) {
