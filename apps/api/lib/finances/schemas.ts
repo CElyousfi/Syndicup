@@ -1,0 +1,73 @@
+/**
+ * Schémas Zod des payloads finances — M5 (Master Spec Partie 2.2/6, Doc A §3). Tout champ
+ * monétaire est validé comme chaîne décimale (jamais un float JSON — CLAUDE.md §1.1 / Partie
+ * 1.7.1) puis converti via apps/api/lib/money avant écriture.
+ */
+import { z } from "zod";
+
+const decimalStringSchema = (opts: { maxDigitsAvantVirgule: number }) =>
+  z
+    .string()
+    .regex(
+      new RegExp(`^\\d{1,${opts.maxDigitsAvantVirgule}}(\\.\\d{1,2})?$`),
+      "Montant décimal invalide (ex. \"12.50\")."
+    );
+
+export const TYPES_APPEL_DE_FONDS = [
+  "CHARGES_COURANTES",
+  "EXCEPTIONNEL",
+  "FONDS_RESERVE",
+  "REGULARISATION",
+  "URGENCE",
+  "DEMARRAGE",
+] as const;
+
+// Format "YYYY-MM" (Master Spec Partie 6.2) — clé d'idempotence avec type.
+const periodeSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, 'Période invalide (format "YYYY-MM").');
+
+export const appelDeFondsGenererSchema = z.object({
+  periode: periodeSchema,
+  type: z.enum(TYPES_APPEL_DE_FONDS),
+  montant_total: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+  date_echeance: z.string().date(),
+});
+export type AppelDeFondsGenererInput = z.infer<typeof appelDeFondsGenererSchema>;
+
+export const MODES_PAIEMENT_MANUEL = ["VIREMENT", "ESPECES", "CHEQUE"] as const;
+
+export const paiementManuelCreateSchema = z.object({
+  appel_de_fonds_lot_id: z.string().uuid(),
+  montant: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+  methode: z.enum(MODES_PAIEMENT_MANUEL),
+  payeur_utilisateur_id: z.string().uuid().nullish(),
+  accepter_trop_percu: z.boolean().optional().default(false),
+});
+export type PaiementManuelCreateInput = z.infer<typeof paiementManuelCreateSchema>;
+
+export const paiementCmiInitierSchema = z.object({
+  appel_de_fonds_lot_id: z.string().uuid(),
+  montant: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+});
+export type PaiementCmiInitierInput = z.infer<typeof paiementCmiInitierSchema>;
+
+// Payload webhook CMI — champs génériques (oid/montant/hash), à ajuster à la nomenclature exacte
+// du contrat commerçant CMI une fois les credentials réels disponibles (voir finances.ts).
+export const paiementCmiWebhookSchema = z.object({
+  oid: z.string().min(1),
+  montant: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+  hash: z.string().min(1),
+  procreturncode: z.string().optional(),
+});
+export type PaiementCmiWebhookInput = z.infer<typeof paiementCmiWebhookSchema>;
+
+export const contestationChargeCreateSchema = z.object({
+  appel_de_fonds_lot_id: z.string().uuid(),
+  motif: z.string().min(1),
+});
+export type ContestationChargeCreateInput = z.infer<typeof contestationChargeCreateSchema>;
+
+export const contestationChargeRepondreSchema = z.object({
+  statut: z.enum(["REPONDUE", "MEDIEE", "TRIBUNAL"]),
+  reponse_syndic: z.string().min(1),
+});
+export type ContestationChargeRepondreInput = z.infer<typeof contestationChargeRepondreSchema>;

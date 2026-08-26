@@ -1,0 +1,459 @@
+/**
+ * Service moteur financier — M5 (Master Spec Partie 2.2/6, Doc A §3). Toute écriture passe par
+ * withTenant (RLS + contexte tenant, CLAUDE.md §1.8). Toute arithmétique financière passe par
+ * apps/api/lib/money (CLAUDE.md §1.1) — jamais de `number` natif sur un montant.
+ */
+import { createHmac, randomUUID } from "node:crypto";
+import { Prisma } from "@prisma/client";
+import { can } from "../auth/permissions";
+import { withTenant, type TenantDb } from "../tenant/db";
+import type { TenantContext } from "../tenant/context";
+import { money, repartirAuProrata, toApiString, isEqual, isGreaterThan } from "../money";
+import { ecrireAuditLog } from "../audit/audit";
+import type {
+  AppelDeFondsGenererInput,
+  PaiementManuelCreateInput,
+  PaiementCmiInitierInput,
+  PaiementCmiWebhookInput,
+  ContestationChargeCreateInput,
+  ContestationChargeRepondreInput,
+} from "./schemas";
+
+export class PermissionRefuseeError extends Error {}
+export class RessourceIntrouvableError extends Error {}
+export class ContrainteMetierError extends Error {}
+export class ConflitIdempotenceError extends Error {}
+
+function estContrainteUnique(e: unknown): boolean {
+  return e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002";
+}
+
+function estContrainteCheck(e: unknown): boolean {
+  return (
+    (e instanceof Prisma.PrismaClientUnknownRequestError ||
+      e instanceof Prisma.PrismaClientKnownRequestError) &&
+    e.message.includes("appel_de_fonds_lot_montant_paye_check")
+  );
+}
+
+/**
+ * Génération batch d'un appel de fonds — Master Spec Partie 6.2, algorithme repris tel quel :
+ *   1. budget_ag ACTIF doit couvrir l'exercice (année de la période) → sinon 422
+ *   2. idempotence stricte sur (copropriete_id, periode, type) → sinon 409
+ *   3. répartition au prorata des tantièmes sur les lots actifs (hors SINISTRE)
+ *   4. lignes appel_de_fonds_lot créées, statut IMPAYE
+ *   5. notification async (Inngest) — DIFFÉRÉ : aucune infra Inngest encore câblée dans ce repo
+ *      (apps/api/inngest/ n'est qu'un README, voir ROADMAP_BACKLOG.md) ; pas de notification
+ *      envoyée pour l'instant, à ajouter quand le job cron existera.
+ *   6. audit_log APPEL_DE_FONDS_EMIS
+ *
+ * ⚠️ ÉCART SIGNALÉ : le Master Spec ne précise pas explicitement le statut de l'appel_de_fonds
+ * créé par CET endpoint (brouillon vs émis) — la table `budget_ag` a un cycle propose→vote→actif
+ * mais l'algorithme 6.2 ne mentionne aucune étape "émettre" séparée. On émet directement
+ * (statut EMIS) puisque l'algorithme décrit la génération des lignes comme faite en une passe ;
+ * à revoir si le produit veut un vrai brouillon éditable avant émission.
+ */
+export async function genererAppelDeFonds(ctx: TenantContext, input: AppelDeFondsGenererInput) {
+  if (can("finances.creer_appel_de_fonds", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut générer un appel de fonds (Partie 6.2).");
+  }
+  const exercice = input.periode.slice(0, 4);
+
+  return withTenant(ctx, async (db) => {
+    const budgetActif = await db.budgetAg.findFirst({
+      where: { coproprieteId: ctx.coproprieteId, exercice, statut: "ACTIF" },
+    });
+    if (!budgetActif) {
+      throw new ContrainteMetierError(
+        `Aucun budget_ag ACTIF pour l'exercice ${exercice} — impossible de générer l'appel de fonds (Partie 6.2, étape 1).`
+      );
+    }
+
+    const lots = await db.lot.findMany({
+      where: { coproprieteId: ctx.coproprieteId, statut: { not: "SINISTRE" } },
+      select: { id: true, tantiemes: true },
+    });
+    if (lots.length === 0) {
+      throw new ContrainteMetierError("Aucun lot éligible dans cette copropriété.");
+    }
+
+    const lignes = repartirAuProrata(
+      input.montant_total,
+      lots.map((l) => ({ lotId: l.id, tantiemes: l.tantiemes.toString() }))
+    );
+
+    try {
+      return await db.appelDeFonds.create({
+        data: {
+          coproprieteId: ctx.coproprieteId,
+          periode: input.periode,
+          type: input.type,
+          montantTotal: money(input.montant_total).toString(),
+          dateEcheance: new Date(input.date_echeance),
+          statut: "EMIS",
+          lignes: {
+            create: lignes.map((l) => ({
+              lotId: l.lotId,
+              montantDu: l.montant.toString(),
+            })),
+          },
+        },
+        include: { lignes: true },
+      });
+    } catch (e) {
+      if (estContrainteUnique(e)) {
+        throw new ConflitIdempotenceError(
+          `Un appel de fonds existe déjà pour (période=${input.periode}, type=${input.type}).`
+        );
+      }
+      throw e;
+    }
+  }).then(async (appel) => {
+    await withTenant(ctx, (db) =>
+      ecrireAuditLog(db, {
+        coproprieteId: ctx.coproprieteId,
+        acteurId: ctx.utilisateurId,
+        action: "APPEL_DE_FONDS_EMIS",
+        entite: "appel_de_fonds",
+        entiteId: appel.id,
+        apres: { periode: appel.periode, type: appel.type, montant_total: appel.montantTotal.toString() },
+      })
+    );
+    return appel;
+  });
+}
+
+export async function listerAppelsDeFonds(ctx: TenantContext, page: number, limit: number) {
+  if (can("finances.lister_appels_de_fonds", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à lister les appels de fonds.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [total, rows] = await Promise.all([
+      db.appelDeFonds.count({ where: { coproprieteId: ctx.coproprieteId } }),
+      db.appelDeFonds.findMany({
+        where: { coproprieteId: ctx.coproprieteId },
+        orderBy: { periode: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+    return { total, rows };
+  });
+}
+
+/**
+ * Solde d'un lot — GET /finances/lots/:id/solde (Master Spec Partie 4.2). Somme des
+ * (montant_du - montant_paye) sur toutes les lignes non closes du lot. La confidentialité
+ * (un résident ne voit que son propre lot) est appliquée par la policy RLS sur
+ * `appel_de_fonds_lot` (défense en profondeur, Partie 1.6) — ce service ne fait que vérifier
+ * l'action au niveau applicatif.
+ */
+export async function obtenirSoldeLot(ctx: TenantContext, lotId: string) {
+  if (can("finances.voir_solde_lot", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter un solde de lot.");
+  }
+  return withTenant(ctx, async (db) => {
+    const lot = await db.lot.findUnique({ where: { id: lotId } });
+    if (!lot) throw new RessourceIntrouvableError("Lot introuvable.");
+
+    const lignes = await db.appelDeFondsLot.findMany({
+      where: { lotId },
+      select: { id: true, montantDu: true, montantPaye: true, statut: true, conteste: true },
+    });
+
+    const solde = lignes.reduce(
+      (acc, l) => acc.plus(money(l.montantDu).minus(money(l.montantPaye))),
+      money(0)
+    );
+
+    return {
+      lot_id: lotId,
+      solde_du: toApiString(solde),
+      lignes: lignes.map((l) => ({
+        appel_de_fonds_lot_id: l.id,
+        montant_du: toApiString(l.montantDu),
+        montant_paye: toApiString(l.montantPaye),
+        statut: l.statut,
+        conteste: l.conteste,
+      })),
+    };
+  });
+}
+
+/**
+ * Applique un paiement (quel que soit le canal) sur une ligne appel_de_fonds_lot :
+ *   - crée la ligne `paiement` (append-only)
+ *   - met à jour montant_paye / statut
+ *   - génère la quittance si montant_paye == montant_du (Partie 6.4 étape 4 / Partie 9)
+ *   - audit_log PAIEMENT_RECU
+ *
+ * ⚠️ LIMITE CONNUE (Doc A §3.4) : l'imputation FIFO multi-lignes ("paiement partiel imputé sur
+ * les charges les plus anciennes") N'EST PAS implémentée — chaque paiement cible EXPLICITEMENT
+ * une seule `appel_de_fonds_lot_id` (le modèle `paiement` a une FK non-nullable vers une seule
+ * ligne, cohérent avec le flux CMI de la Partie 6.4 qui prend `appel_de_fonds_lot_id` en entrée).
+ * Un vrai FIFO multi-lignes nécessiterait soit une FK nullable + table de répartition, soit un
+ * champ dédié — à construire explicitement si le produit le demande, pas deviné ici.
+ */
+async function appliquerPaiement(
+  db: TenantDb,
+  ctx: TenantContext,
+  params: {
+    appelDeFondsLotId: string;
+    montant: Prisma.Decimal | string;
+    methode: "CMI" | "VIREMENT" | "ESPECES" | "CHEQUE";
+    referenceCmi?: string | null;
+    payeurUtilisateurId?: string | null;
+    accepterTropPercu?: boolean;
+    // null explicite pour l'acteur système (webhook CMI — pas d'utilisateur réel, et le nil UUID
+    // conventionnel de ctxSysteme ne correspond à aucune ligne `utilisateur`, ce qui violerait la
+    // FK audit_log_acteur_id_fkey si on le passait tel quel). Master Spec Partie 2.2 : acteur_id
+    // "nullable si système" — exactement ce cas.
+    acteurId?: string | null;
+  }
+) {
+  // Idempotence AVANT toute autre vérification métier (Partie 6.4 étape 5) : un callback CMI
+  // rejoué doit être un no-op idempotent, jamais réévalué contre l'état déjà mis à jour par le
+  // premier appel (qui rejetterait à tort pour "dépassement du montant dû").
+  if (params.referenceCmi) {
+    const existant = await db.paiement.findUnique({ where: { referenceCmi: params.referenceCmi } });
+    if (existant) {
+      throw new ConflitIdempotenceError("Paiement déjà enregistré pour cette référence CMI.");
+    }
+  }
+
+  const ligne = await db.appelDeFondsLot.findUnique({ where: { id: params.appelDeFondsLotId } });
+  if (!ligne) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+
+  const montantPaieMaj = money(ligne.montantPaye).plus(money(params.montant));
+  const depasse = isGreaterThan(montantPaieMaj, ligne.montantDu.toString());
+
+  if (depasse && !ligne.tropPercuAutorise && !params.accepterTropPercu) {
+    throw new ContrainteMetierError(
+      `Paiement de ${toApiString(params.montant)} dépasserait le montant dû (${toApiString(
+        ligne.montantDu
+      )}) — trop-perçu non autorisé sur cette ligne (Doc A §3.4). Passer accepter_trop_percu=true pour l'autoriser explicitement.`
+    );
+  }
+
+  try {
+    const paiement = await db.paiement.create({
+      data: {
+        lotId: ligne.lotId,
+        appelDeFondsLotId: ligne.id,
+        montant: money(params.montant).toString(),
+        methode: params.methode,
+        referenceCmi: params.referenceCmi ?? null,
+        statut: "VALIDE",
+        payeurUtilisateurId: params.payeurUtilisateurId ?? null,
+      },
+    });
+
+    const nouveauStatut = isEqual(montantPaieMaj, ligne.montantDu.toString())
+      ? "PAYE"
+      : montantPaieMaj.isZero()
+        ? "IMPAYE"
+        : "PARTIEL";
+
+    await db.appelDeFondsLot.update({
+      where: { id: ligne.id },
+      data: {
+        montantPaye: montantPaieMaj.toString(),
+        statut: nouveauStatut,
+        tropPercuAutorise: depasse ? true : undefined,
+      },
+    });
+
+    let quittance = null;
+    if (nouveauStatut === "PAYE") {
+      quittance = await db.quittance.upsert({
+        where: { appelDeFondsLotId: ligne.id },
+        create: {
+          appelDeFondsLotId: ligne.id,
+          numero: `QT-${ligne.id.slice(0, 8).toUpperCase()}-${Date.now()}`,
+        },
+        update: {},
+      });
+    }
+
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: params.acteurId !== undefined ? params.acteurId : ctx.utilisateurId,
+      action: "PAIEMENT_RECU",
+      entite: "appel_de_fonds_lot",
+      entiteId: ligne.id,
+      avant: { montant_paye: ligne.montantPaye.toString(), statut: ligne.statut },
+      apres: { montant_paye: montantPaieMaj.toString(), statut: nouveauStatut, paiement_id: paiement.id },
+    });
+
+    return { paiement, statut: nouveauStatut, quittance };
+  } catch (e) {
+    if (estContrainteUnique(e)) {
+      // reference_cmi déjà utilisée — idempotence webhook CMI (Partie 6.4 étape 5).
+      throw new ConflitIdempotenceError("Paiement déjà enregistré pour cette référence CMI.");
+    }
+    if (estContrainteCheck(e)) {
+      throw new ContrainteMetierError(
+        "Montant payé dépasserait le montant dû et le trop-perçu n'est pas autorisé sur cette ligne."
+      );
+    }
+    throw e;
+  }
+}
+
+export async function enregistrerPaiementManuel(ctx: TenantContext, input: PaiementManuelCreateInput) {
+  if (can("finances.enregistrer_paiement_manuel", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut enregistrer un paiement manuel.");
+  }
+  return withTenant(ctx, (db) =>
+    appliquerPaiement(db, ctx, {
+      appelDeFondsLotId: input.appel_de_fonds_lot_id,
+      montant: input.montant,
+      methode: input.methode,
+      payeurUtilisateurId: input.payeur_utilisateur_id ?? null,
+      accepterTropPercu: input.accepter_trop_percu,
+    })
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// CMI — Master Spec Partie 6.4.
+//
+// ⚠️ ÉCART SIGNALÉ : aucune table de session CMI n'existe dans le schéma (Partie 2.2 ne liste
+// que budget_ag/appel_de_fonds/appel_de_fonds_lot/paiement/fonds_reserve/quittance/
+// contestation_charge — pas de table "session paiement"). Plutôt que d'inventer une table
+// absente du Master Spec sans le signaler, l'implémentation encode la cible du paiement
+// (appel_de_fonds_lot_id) directement dans l'`oid` (order id) transmis à CMI, signé par un HMAC
+// que CMI nous retournera inchangé dans son webhook — c'est le webhook (§6.4 étape 3) qui vérifie
+// la signature avant toute écriture, pas une table de session. Cette approche est fonctionnelle
+// mais n'a jamais été testée contre un vrai bac à sable CMI (credentials commerçant absents de
+// ce repo) — à valider dès que les credentials CMI seront fournis.
+// ────────────────────────────────────────────────────────────────────────────
+
+function cmiSecret(): string {
+  const secret = process.env.CMI_HMAC_SECRET;
+  if (!secret) throw new Error("CMI_HMAC_SECRET manquant (voir .env.local).");
+  return secret;
+}
+
+function signerCmi(oid: string, montant: string): string {
+  return createHmac("sha256", cmiSecret()).update(`${oid}.${montant}`).digest("hex");
+}
+
+export async function initierPaiementCmi(ctx: TenantContext, input: PaiementCmiInitierInput) {
+  if (can("finances.paiement_cmi_initier", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Rôle non autorisé à initier un paiement CMI.");
+  }
+  return withTenant(ctx, async (db) => {
+    const ligne = await db.appelDeFondsLot.findUnique({ where: { id: input.appel_de_fonds_lot_id } });
+    if (!ligne) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+    if (ligne.statut === "PAYE") {
+      throw new ContrainteMetierError("Cette ligne d'appel de fonds est déjà payée.");
+    }
+
+    const montant = money(input.montant).toString();
+    const oid = `${ligne.id}.${randomUUID()}`;
+    const hash = signerCmi(oid, montant);
+
+    return { oid, montant, hash, appel_de_fonds_lot_id: ligne.id };
+  });
+}
+
+/**
+ * Webhook CMI — Master Spec Partie 6.4 étapes 3-5. Pas de JWT tenant (appel machine-à-machine
+ * depuis les serveurs CMI) : le contexte tenant est dérivé du lot associé à la ligne encodée
+ * dans `oid`, avec un acteur système (rôle SUPER_ADMIN pour franchir la policy RLS, utilisateurId
+ * nil UUID conventionnel — voir apps/api/app/v1/finances/paiements/cmi/webhook/route.ts).
+ */
+export async function traiterWebhookCmi(input: PaiementCmiWebhookInput) {
+  const [appelDeFondsLotId] = input.oid.split(".");
+  if (!appelDeFondsLotId) {
+    throw new ContrainteMetierError("oid CMI malformé.");
+  }
+  const attendu = signerCmi(input.oid, money(input.montant).toString());
+  if (attendu !== input.hash) {
+    throw new PermissionRefuseeError("Signature CMI invalide.");
+  }
+
+  const { PrismaClient } = await import("@prisma/client");
+  const raw = new PrismaClient();
+  try {
+    // Le client Prisma "brut" ci-dessus est SOUMIS à la policy RLS (rôle app_local, pas de
+    // BYPASSRLS) — sans contexte tenant encore posé (poule/œuf : il faut le coproprieteId pour
+    // ouvrir la transaction withTenant), un SELECT direct sur appel_de_fonds_lot renverrait 0
+    // ligne. On utilise donc les fonctions SECURITY DEFINER existantes (migration M3/M5) qui,
+    // elles, s'exécutent avec les privilèges du propriétaire de la fonction et traversent la RLS
+    // — exactement leur rôle voulu (casser la récursion RLS, ici pour bootstrap le contexte).
+    const rows = await raw.$queryRaw<{ copropriete_id: string | null }[]>`
+      SELECT public.lot_copropriete_id(public.appel_de_fonds_lot_lot_id(${appelDeFondsLotId}::uuid)) AS copropriete_id
+    `;
+    const coproprieteId = rows[0]?.copropriete_id;
+    if (!coproprieteId) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+
+    const ctxSysteme: TenantContext = {
+      utilisateurId: "00000000-0000-0000-0000-000000000000",
+      coproprieteId,
+      role: "SUPER_ADMIN",
+    };
+
+    return await withTenant(ctxSysteme, (db) =>
+      appliquerPaiement(db, ctxSysteme, {
+        appelDeFondsLotId,
+        montant: input.montant,
+        methode: "CMI",
+        referenceCmi: input.oid,
+        acteurId: null,
+      })
+    );
+  } finally {
+    await raw.$disconnect();
+  }
+}
+
+export async function obtenirQuittance(ctx: TenantContext, quittanceId: string) {
+  if (can("finances.voir_quittance", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter une quittance.");
+  }
+  const quittance = await withTenant(ctx, (db) => db.quittance.findUnique({ where: { id: quittanceId } }));
+  if (!quittance) throw new RessourceIntrouvableError("Quittance introuvable.");
+  return quittance;
+}
+
+export async function creerContestation(ctx: TenantContext, input: ContestationChargeCreateInput) {
+  if (can("finances.contester_charge", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à contester une charge.");
+  }
+  return withTenant(ctx, async (db) => {
+    const ligne = await db.appelDeFondsLot.findUnique({ where: { id: input.appel_de_fonds_lot_id } });
+    if (!ligne) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+
+    // withTenant ouvre déjà une transaction (voir lib/tenant/db.ts) — pas de $transaction imbriqué
+    // ici, les deux écritures suivantes s'exécutent dans la même transaction tenant.
+    const contestation = await db.contestationCharge.create({
+      data: {
+        appelDeFondsLotId: input.appel_de_fonds_lot_id,
+        utilisateurId: ctx.utilisateurId,
+        motif: input.motif,
+      },
+    });
+    await db.appelDeFondsLot.update({ where: { id: input.appel_de_fonds_lot_id }, data: { conteste: true } });
+    return contestation;
+  });
+}
+
+export async function repondreContestation(
+  ctx: TenantContext,
+  contestationId: string,
+  input: ContestationChargeRepondreInput
+) {
+  if (can("finances.repondre_contestation", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut répondre à une contestation.");
+  }
+  return withTenant(ctx, async (db) => {
+    const existante = await db.contestationCharge.findUnique({ where: { id: contestationId } });
+    if (!existante) throw new RessourceIntrouvableError("Contestation introuvable.");
+    return db.contestationCharge.update({
+      where: { id: contestationId },
+      data: { statut: input.statut, reponseSyndic: input.reponse_syndic },
+    });
+  });
+}
