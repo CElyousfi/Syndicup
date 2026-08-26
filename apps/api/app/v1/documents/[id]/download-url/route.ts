@@ -1,5 +1,5 @@
 /**
- * GET /v1/documents/:id/telecharger — génère une URL signée à durée de vie courte (Master Spec
+ * GET /v1/documents/:id/download-url — génère une URL signée à durée de vie courte (Master Spec
  * Partie 9.3 — M9). Ajout nécessaire : le tableau littéral d'endpoints ne détaille pas de route
  * de téléchargement dédiée, mais Partie 9.3 exige explicitement de ne jamais exposer d'URL
  * Supabase Storage publique — un endpoint qui vérifie permission/RLS avant de signer est requis.
