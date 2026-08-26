@@ -41,6 +41,44 @@ export type PermissionMatrix = Record<string, Partial<Record<Role, PermissionVal
  * qu'on puisse relier une entrée de matrice à un endpoint sans ambiguïté.
  */
 export const PERMISSIONS: PermissionMatrix = {
+  // ── Copropriétés (M12 — Master Spec Partie 3.2 : super_admin create, syndic manage own) ──
+  "coproprietes.creer": {
+    SUPER_ADMIN: true,
+    SYNDIC: false,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  // Détail de SA copropriété : tout membre du tenant (les données sensibles — params légaux,
+  // politique de recouvrement — ne sont pas nominatives ; la fiche copro est le contexte commun).
+  "coproprietes.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+  },
+  "coproprietes.modifier": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  "coproprietes.lire_config": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+  },
+
   // ── Finances (Master Spec Partie 4.2) ────────────────────────────────────
   "finances.voir_agrege_copropriete": {
     SUPER_ADMIN: true,

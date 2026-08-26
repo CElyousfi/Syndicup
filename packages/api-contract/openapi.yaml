@@ -256,6 +256,54 @@ components:
           enum: [SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
         canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
 
+    # ── Domaine : Copropriétés (M12 — Master Spec Partie 2.2, tenant racine) ─
+    TypeResidence:
+      type: string
+      enum: [IMMEUBLE_COLLECTIF, RESIDENCE_FERMEE, RESIDENCE_VILLAS, IMMEUBLE_BUREAUX, IMMEUBLE_MIXTE, RESIDENCE_ETUDIANTE]
+
+    Copropriete:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nom: { type: string }
+        adresse: { type: string }
+        ville: { type: string }
+        type_residence: { $ref: "#/components/schemas/TypeResidence" }
+        nb_lots: { type: integer }
+        statut: { type: string, enum: [ACTIVE, ARCHIVEE] }
+        config_json: { type: object, nullable: true }
+        total_tantiemes: { $ref: "#/components/schemas/Money" }
+        politique_recouvrement_json: { type: object, nullable: true }
+        # Paramètres légaux — nullable tant que non confirmés juridiquement (LEGAL_QUESTIONS_BRIEF).
+        delai_convocation_jours: { type: integer, nullable: true }
+        quorum_premiere_convocation: { type: string, nullable: true, example: "0.500" }
+        limite_procurations_mandataire: { type: integer, nullable: true }
+
+    CoproprieteCreate:
+      type: object
+      required: [nom, adresse, ville, type_residence, nb_lots]
+      properties:
+        nom: { type: string, minLength: 1 }
+        adresse: { type: string, minLength: 1 }
+        ville: { type: string, minLength: 1 }
+        type_residence: { $ref: "#/components/schemas/TypeResidence" }
+        nb_lots: { type: integer, minimum: 1 }
+        config_json: { type: object, nullable: true }
+
+    CoproprieteUpdate:
+      type: object
+      properties:
+        nom: { type: string, minLength: 1 }
+        adresse: { type: string, minLength: 1 }
+        ville: { type: string, minLength: 1 }
+        nb_lots: { type: integer, minimum: 1 }
+        config_json: { type: object, nullable: true }
+        total_tantiemes: { $ref: "#/components/schemas/Money" }
+        politique_recouvrement_json: { type: object, nullable: true }
+        delai_convocation_jours: { type: integer, nullable: true, minimum: 1 }
+        quorum_premiere_convocation: { type: string, nullable: true, pattern: '^0\.\d{1,3}$|^1(\.0{1,3})?$' }
+        limite_procurations_mandataire: { type: integer, nullable: true, minimum: 1 }
+
     # ── Domaine : Finances (M5 — Master Spec Partie 2.2/6, Doc A §3) ────────
     BudgetAg:
       type: object
@@ -965,41 +1013,97 @@ paths:
   /coproprietes:
     get:
       tags: [Copropriétés]
-      summary: Liste les copropriétés visibles par l'appelant (toutes si super_admin, la sienne si syndic).
-      parameters:
-        - $ref: "#/components/parameters/Page"
-        - $ref: "#/components/parameters/Limit"
+      summary: >
+        Liste les copropriétés où l'appelant a un rôle actif (issues des claims JWT vérifiés) ;
+        toutes pour super_admin.
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Copropriete" }
     post:
       tags: [Copropriétés]
-      summary: Crée une copropriété. Rôle autorisé — super_admin uniquement.
+      summary: Crée une copropriété (le tenant racine). Rôle autorisé — super_admin uniquement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CoproprieteCreate" }
       responses:
-        "201": { description: Créée }
+        "201":
+          description: Créée (statut ACTIVE).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Copropriete" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /coproprietes/{id}:
     get:
       tags: [Copropriétés]
+      summary: Détail de la copropriété (id = celle du contexte tenant vérifié).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Copropriete" }
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Copropriétés]
-      summary: Rôle autorisé — syndic (sa copropriété).
+      summary: >
+        Rôle autorisé — syndic (sa copropriété). Les paramètres légaux
+        (delai_convocation_jours, quorum_premiere_convocation, limite_procurations_mandataire)
+        sont saisis ici avec leur valeur JURIDIQUEMENT CONFIRMÉE (LEGAL_QUESTIONS_BRIEF) —
+        nullable tant que non confirmés, jamais de défaut deviné.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CoproprieteUpdate" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: Modifiée (audit COPROPRIETE_MODIFIEE avec avant/après).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Copropriete" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /coproprietes/{id}/config:
     get:
       tags: [Copropriétés]
-      summary: Retourne config_json (flags activables — Master Spec Partie 2.2).
+      summary: Retourne config_json (flags activables — Master Spec Partie 2.2, Doc A §10).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      config_json: { type: object, nullable: true }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ══════════════════════════════════════════════════════════════════════
   # LOTS — syndic (write), tous (read scopé)

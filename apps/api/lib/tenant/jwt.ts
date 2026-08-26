@@ -16,9 +16,26 @@ import { assertValidTenantContext, type TenantContext } from "./context";
 export class UnauthenticatedError extends Error {}
 export class ForbiddenTenantError extends Error {}
 
-interface RoleClaim {
+export interface RoleClaim {
   copropriete_id: string;
   role: Role;
+}
+
+/**
+ * Extrait les claims de rôles d'un JWT vérifié SANS résoudre un tenant unique — pour les
+ * endpoints multi-copropriétés (ex. GET /coproprietes : lister celles où l'appelant a un rôle).
+ * Le copropriete_id de chaque claim vient du JWT vérifié, jamais du client.
+ */
+export async function resolveRoleClaims(
+  token: string
+): Promise<{ utilisateurId: string; roles: RoleClaim[] }> {
+  const payload = await verifyJwt(token);
+  const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
+  const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];
+  if (!utilisateurId || roles.length === 0) {
+    throw new UnauthenticatedError("JWT sans sub ou sans rôle.");
+  }
+  return { utilisateurId, roles };
 }
 
 function getJwtSecret(): Uint8Array | null {
