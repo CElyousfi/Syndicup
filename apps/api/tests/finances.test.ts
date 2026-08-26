@@ -5,7 +5,7 @@
  *
  * Prérequis : Supabase local démarré + migration `20260819100000_m5_moteur_financier` appliquée.
  */
-process.env.CMI_HMAC_SECRET ??= "test-secret-cmi";
+process.env.CMI_WEBHOOK_HMAC_SECRET ??= "test-secret-cmi";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
@@ -99,6 +99,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await admin.contestationCharge.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: coproA } } } });
   await admin.quittance.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: coproA } } } });
+  await admin.paiementCmiSession.deleteMany({ where: { coproprieteId: coproA } });
   await admin.paiement.deleteMany({ where: { lot: { coproprieteId: coproA } } });
   await admin.appelDeFondsLot.deleteMany({ where: { appelDeFonds: { coproprieteId: coproA } } });
   await admin.appelDeFonds.deleteMany({ where: { coproprieteId: coproA } });
@@ -270,6 +271,28 @@ describe("Webhook CMI — idempotence (Master Spec Partie 6.4 étape 5)", () => 
     await expect(
       traiterWebhookCmi({ oid: `${lotA1}.fake`, montant: "10.00", hash: "invalide" })
     ).rejects.toBeInstanceOf(PermissionRefuseeError);
+  });
+
+  it("initier persiste une session (M12) et le webhook la passe CONFIRMEE", async () => {
+    const sessions = await admin.paiementCmiSession.findMany({
+      where: { coproprieteId: coproA },
+    });
+    expect(sessions.length).toBeGreaterThanOrEqual(1);
+    expect(sessions.some((s) => s.statut === "CONFIRMEE")).toBe(true);
+  });
+
+  it("rejette un webhook signé mais sans session correspondante (oid inconnu)", async () => {
+    // Signature VALIDE (secret connu en test) mais aucun paiement_cmi_session pour cet oid :
+    // preuve que la cible n'est plus résolue par décodage de l'oid.
+    const { createHmac } = await import("node:crypto");
+    const oid = `${lotA1}.00000000-0000-4000-8000-000000000000`;
+    // signerCmi normalise via money().toString() : "10.00" → "10" — signer la forme normalisée.
+    const hash = createHmac("sha256", process.env.CMI_WEBHOOK_HMAC_SECRET!)
+      .update(`${oid}.10`)
+      .digest("hex");
+    await expect(traiterWebhookCmi({ oid, montant: "10.00", hash })).rejects.toThrowError(
+      /Session CMI introuvable/
+    );
   });
 });
 

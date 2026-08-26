@@ -194,6 +194,7 @@ model Copropriete {
   visites          Visite[]
   litiges          ConflitLitige[]
   idempotencyKeys  IdempotencyKey[]
+  sessionsCmi      PaiementCmiSession[]
 
   @@map("copropriete")
 }
@@ -635,6 +636,9 @@ enum StatutBudgetAg {
   PROPOSE
   VOTE
   ACTIF
+  // Budget rectificatif (Doc A §3.2) : l'ancien ACTIF passe REMPLACE quand un rectificatif
+  // est activé pour le même exercice.
+  REMPLACE
 }
 
 // Master Spec Partie 2.2 liste seulement CHARGES_COURANTES/TRAVAUX/FONDS_RESERVE. Doc A §3.2
@@ -775,10 +779,32 @@ model AppelDeFondsLot {
   paiements     Paiement[]
   quittance     Quittance?
   contestations ContestationCharge[]
+  sessionsCmi   PaiementCmiSession[]
 
   @@unique([appelDeFondsId, lotId])
   @@index([lotId])
   @@map("appel_de_fonds_lot")
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// M12 — Session de paiement CMI (Master Spec Partie 6.4 étape 1). Lève l'ÉCART SIGNALÉ M5 :
+// le webhook résout la cible via la session (oid unique), plus par décodage de l'oid.
+// UPDATE autorisé (INITIEE → CONFIRMEE/ECHOUEE) — la preuve probante est la ligne `paiement`.
+// ────────────────────────────────────────────────────────────────────────────
+model PaiementCmiSession {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId     String          @map("copropriete_id") @db.Uuid
+  copropriete       Copropriete     @relation(fields: [coproprieteId], references: [id])
+  appelDeFondsLotId String          @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  oid               String          @unique
+  montant           Decimal         @db.Decimal(14, 2)
+  statut            String          @default("INITIEE")
+  creeLe            DateTime        @default(now()) @map("cree_le") @db.Timestamptz
+  confirmeeLe       DateTime?       @map("confirmee_le") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@map("paiement_cmi_session")
 }
 
 // Append-only strict (Master Spec Partie 2.4 : "Pas de DELETE/UPDATE sur ... paiement" —
@@ -860,7 +886,7 @@ model ContestationCharge {
   statut            StatutContestationCharge @default(OUVERTE)
   reponseSyndic     String?                  @map("reponse_syndic")
   creeLe            DateTime                 @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe         DateTime                 @updatedAt @map("modifie_le")
+  modifieLe         DateTime                 @updatedAt @map("modifie_le") @db.Timestamptz
 
   @@index([appelDeFondsLotId])
   @@map("contestation_charge")

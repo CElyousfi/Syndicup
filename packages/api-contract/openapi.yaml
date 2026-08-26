@@ -1312,9 +1312,10 @@ paths:
       tags: [Finances]
       summary: Crée une session de paiement CMI signée (Master Spec Partie 6.4, étape 1).
       description: >
-        ⚠️ Pas de table de session CMI dans le schéma (absente du Master Spec Partie 2.2) — la
-        cible du paiement est encodée dans `oid`, signée par HMAC, vérifiée au webhook. Non testé
-        contre un vrai bac à sable CMI (credentials commerçant absents de ce repo).
+        La session est persistée dans `paiement_cmi_session` (M12) — le webhook résout la cible
+        du paiement via la session (oid unique), signature HMAC vérifiée en temps constant.
+        ⚠️ Payload webhook non testé contre un vrai bac à sable CMI (credentials commerçant
+        absents de ce repo) — nomenclature à ajuster au contrat commerçant réel.
       parameters:
         - $ref: "#/components/parameters/IdempotencyKey"
       requestBody:

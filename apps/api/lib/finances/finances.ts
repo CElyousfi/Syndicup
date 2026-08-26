@@ -3,7 +3,7 @@
  * withTenant (RLS + contexte tenant, CLAUDE.md §1.8). Toute arithmétique financière passe par
  * apps/api/lib/money (CLAUDE.md §1.1) — jamais de `number` natif sur un montant.
  */
-import { createHmac, randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
@@ -333,25 +333,29 @@ export async function enregistrerPaiementManuel(
 // ────────────────────────────────────────────────────────────────────────────
 // CMI — Master Spec Partie 6.4.
 //
-// ⚠️ ÉCART SIGNALÉ : aucune table de session CMI n'existe dans le schéma (Partie 2.2 ne liste
-// que budget_ag/appel_de_fonds/appel_de_fonds_lot/paiement/fonds_reserve/quittance/
-// contestation_charge — pas de table "session paiement"). Plutôt que d'inventer une table
-// absente du Master Spec sans le signaler, l'implémentation encode la cible du paiement
-// (appel_de_fonds_lot_id) directement dans l'`oid` (order id) transmis à CMI, signé par un HMAC
-// que CMI nous retournera inchangé dans son webhook — c'est le webhook (§6.4 étape 3) qui vérifie
-// la signature avant toute écriture, pas une table de session. Cette approche est fonctionnelle
-// mais n'a jamais été testée contre un vrai bac à sable CMI (credentials commerçant absents de
-// ce repo) — à valider dès que les credentials CMI seront fournis.
+// La cible du paiement est persistée dans `paiement_cmi_session` (migration M12) : le webhook
+// résout la ligne d'appel de fonds via la session (oid UNIQUE), plus par décodage de l'oid.
+// ⚠️ Le payload webhook (oid/montant/hash) reste une hypothèse : jamais testé contre un vrai
+// bac à sable CMI (credentials commerçant absents de ce repo) — à ajuster à la nomenclature
+// exacte du contrat commerçant dès que les credentials CMI seront fournis.
 // ────────────────────────────────────────────────────────────────────────────
 
 function cmiSecret(): string {
-  const secret = process.env.CMI_HMAC_SECRET;
-  if (!secret) throw new Error("CMI_HMAC_SECRET manquant (voir .env.local).");
+  const secret = process.env.CMI_WEBHOOK_HMAC_SECRET;
+  if (!secret) throw new Error("CMI_WEBHOOK_HMAC_SECRET manquant (voir .env.example).");
   return secret;
 }
 
 function signerCmi(oid: string, montant: string): string {
   return createHmac("sha256", cmiSecret()).update(`${oid}.${montant}`).digest("hex");
+}
+
+/** Comparaison HMAC en temps constant (jamais de `!==` sur une signature). */
+function signatureValide(attendu: string, recu: string): boolean {
+  const a = Buffer.from(attendu, "hex");
+  const b = Buffer.from(recu ?? "", "hex");
+  if (a.length === 0 || a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 export async function initierPaiementCmi(
@@ -376,6 +380,15 @@ export async function initierPaiementCmi(
     const oid = `${ligne.id}.${randomUUID()}`;
     const hash = signerCmi(oid, montant);
 
+    await db.paiementCmiSession.create({
+      data: {
+        coproprieteId: ctx.coproprieteId,
+        appelDeFondsLotId: ligne.id,
+        oid,
+        montant,
+      },
+    });
+
     return { oid, montant, hash, appel_de_fonds_lot_id: ligne.id };
   });
 }
@@ -387,12 +400,8 @@ export async function initierPaiementCmi(
  * nil UUID conventionnel — voir apps/api/app/v1/finances/paiements/cmi/webhook/route.ts).
  */
 export async function traiterWebhookCmi(input: PaiementCmiWebhookInput) {
-  const [appelDeFondsLotId] = input.oid.split(".");
-  if (!appelDeFondsLotId) {
-    throw new ContrainteMetierError("oid CMI malformé.");
-  }
   const attendu = signerCmi(input.oid, money(input.montant).toString());
-  if (attendu !== input.hash) {
+  if (!signatureValide(attendu, input.hash)) {
     throw new PermissionRefuseeError("Signature CMI invalide.");
   }
 
@@ -401,15 +410,14 @@ export async function traiterWebhookCmi(input: PaiementCmiWebhookInput) {
   try {
     // Le client Prisma "brut" ci-dessus est SOUMIS à la policy RLS (rôle app_local, pas de
     // BYPASSRLS) — sans contexte tenant encore posé (poule/œuf : il faut le coproprieteId pour
-    // ouvrir la transaction withTenant), un SELECT direct sur appel_de_fonds_lot renverrait 0
-    // ligne. On utilise donc les fonctions SECURITY DEFINER existantes (migration M3/M5) qui,
-    // elles, s'exécutent avec les privilèges du propriétaire de la fonction et traversent la RLS
-    // — exactement leur rôle voulu (casser la récursion RLS, ici pour bootstrap le contexte).
+    // ouvrir la transaction withTenant), un SELECT direct renverrait 0 ligne. La fonction
+    // SECURITY DEFINER cmi_session_copropriete_id (migration M12) bootstrappe le contexte
+    // depuis la session persistée — même pattern que lot_copropriete_id (M3).
     const rows = await raw.$queryRaw<{ copropriete_id: string | null }[]>`
-      SELECT public.lot_copropriete_id(public.appel_de_fonds_lot_lot_id(${appelDeFondsLotId}::uuid)) AS copropriete_id
+      SELECT public.cmi_session_copropriete_id(${input.oid}) AS copropriete_id
     `;
     const coproprieteId = rows[0]?.copropriete_id;
-    if (!coproprieteId) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+    if (!coproprieteId) throw new RessourceIntrouvableError("Session CMI introuvable pour cet oid.");
 
     const ctxSysteme: TenantContext = {
       utilisateurId: "00000000-0000-0000-0000-000000000000",
@@ -417,15 +425,27 @@ export async function traiterWebhookCmi(input: PaiementCmiWebhookInput) {
       role: "SUPER_ADMIN",
     };
 
-    return await withTenant(ctxSysteme, (db) =>
-      appliquerPaiement(db, ctxSysteme, {
-        appelDeFondsLotId,
+    return await withTenant(ctxSysteme, async (db) => {
+      const session = await db.paiementCmiSession.findUnique({ where: { oid: input.oid } });
+      if (!session) throw new RessourceIntrouvableError("Session CMI introuvable pour cet oid.");
+      // Défense en profondeur : le montant confirmé doit être celui de la session initiée
+      // (le HMAC couvre déjà oid+montant, ceci bloque une session rejouée avec un autre oid).
+      if (!isEqual(session.montant.toString(), input.montant)) {
+        throw new PermissionRefuseeError("Montant du webhook différent du montant de la session CMI.");
+      }
+      const paiement = await appliquerPaiement(db, ctxSysteme, {
+        appelDeFondsLotId: session.appelDeFondsLotId,
         montant: input.montant,
         methode: "CMI",
         referenceCmi: input.oid,
         acteurId: null,
-      })
-    );
+      });
+      await db.paiementCmiSession.update({
+        where: { oid: input.oid },
+        data: { statut: "CONFIRMEE", confirmeeLe: new Date() },
+      });
+      return paiement;
+    });
   } finally {
     await raw.$disconnect();
   }
