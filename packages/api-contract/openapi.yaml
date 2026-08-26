@@ -256,6 +256,57 @@ components:
           enum: [SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
         canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
 
+    # ── Domaine : Utilisateurs (M13 — Master Spec Partie 5/10.1, CNDP) ──────
+    RoleType:
+      type: string
+      enum: [SUPER_ADMIN, SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
+
+    UtilisateurProfil:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email, nullable: true }
+        telephone: { type: string, nullable: true }
+        nom: { type: string, nullable: true }
+        prenom: { type: string, nullable: true }
+        langue_preferee: { type: string, enum: [FR, AR] }
+        statut_compte: { type: string, enum: [INVITE, EN_VALIDATION, ACTIF, SUSPENDU, DESACTIVE, ANONYMISE] }
+        raison_sociale: { type: string, nullable: true }
+        roles:
+          type: array
+          items:
+            type: object
+            properties:
+              copropriete_id: { type: string, format: uuid }
+              role: { $ref: "#/components/schemas/RoleType" }
+              actif: { type: boolean }
+
+    UtilisateurProfilUpdate:
+      type: object
+      properties:
+        nom: { type: string, minLength: 1, maxLength: 100 }
+        prenom: { type: string, minLength: 1, maxLength: 100 }
+        langue_preferee: { type: string, enum: [FR, AR] }
+
+    UtilisateurExport:
+      type: object
+      description: Export CNDP — une entrée par copropriété où l'appelant a un rôle.
+      properties:
+        profil: { $ref: "#/components/schemas/UtilisateurProfil" }
+        genere_le: { type: string, format: date-time }
+        coproprietes:
+          type: array
+          items:
+            type: object
+            properties:
+              copropriete_id: { type: string, format: uuid }
+              role: { $ref: "#/components/schemas/RoleType" }
+              lots_proprietaire: { type: array, items: { type: object } }
+              lots_occupant: { type: array, items: { type: object } }
+              paiements: { type: array, items: { type: object } }
+              votes: { type: array, items: { type: object } }
+              notifications: { type: array, items: { type: object } }
+
     # ── Domaine : Copropriétés (M12 — Master Spec Partie 2.2, tenant racine) ─
     TypeResidence:
       type: string
@@ -1306,36 +1357,105 @@ paths:
   /users/me:
     get:
       tags: [Utilisateurs]
+      summary: Profil de l'appelant + ses rôles actifs (droit d'accès CNDP — Partie 10.1).
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/UtilisateurProfil" }
     patch:
       tags: [Utilisateurs]
+      summary: >
+        Rectification du profil (droit CNDP — Partie 10.1). Champs modifiables : nom, prenom,
+        langue_preferee. email/telephone sont des identifiants d'authentification — ils se
+        changent via Supabase Auth, jamais ici.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UtilisateurProfilUpdate" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: Profil mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/UtilisateurProfil" }
 
   /users/{id}:
     get:
       tags: [Utilisateurs]
-      summary: Rôle autorisé — syndic uniquement.
+      summary: Fiche d'un utilisateur membre de la copropriété — rôle autorisé syndic uniquement.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/UtilisateurProfil" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /users/{id}/anonymize:
     post:
       tags: [Utilisateurs]
-      summary: Déclenche manuellement l'anonymisation CNDP (le job Inngest mensuel le fait automatiquement — Master Spec Partie 5.6).
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: >
+        Anonymisation CNDP manuelle (Loi 09-08, Master Spec Partie 5.6) — syndic/super_admin, à
+        la demande explicite de la personne concernée. Exige statut_compte = DESACTIVE (422
+        sinon). Efface nom/prenom/email/telephone/raison_sociale/rc_numero, statut → ANONYMISE ;
+        CONSERVE toutes les lignes financières, votes et PV (intégrité comptable/légale 10 ans,
+        Doc A §12.3). Le job Inngest mensuel fait la même chose automatiquement selon
+        retention_desactivation_mois (valeur légalement gatée — job saute si non configurée).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - $ref: "#/components/parameters/IdempotencyKey"
       responses:
-        "200": { description: "Compte anonymisé, audit_log ANONYMISATION_CNDP écrit." }
+        "200":
+          description: "Compte anonymisé, audit_log ANONYMISATION_CNDP écrit."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      utilisateur_id: { type: string, format: uuid }
+                      statut_compte: { type: string, enum: [ANONYMISE] }
+                      anonymise_le: { type: string, format: date-time }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Le compte n'est pas DESACTIVE — anonymisation refusée.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /users/me/export:
     get:
       tags: [Utilisateurs]
-      summary: Export des données personnelles (droit d'accès CNDP — Master Spec Partie 10.1).
+      summary: >
+        Export des données personnelles (droit d'accès CNDP — Master Spec Partie 10.1).
+        JSON structuré : profil, rôles, lots (propriété/occupation), paiements, votes,
+        notifications. Audit EXPORT_DONNEES_CNDP écrit. (Variante PDF différée.)
       responses:
-        "200": { description: Export JSON/PDF des données de l'appelant. }
+        "200":
+          description: Export JSON des données de l'appelant.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/UtilisateurExport" }
 
   # ══════════════════════════════════════════════════════════════════════
   # FINANCES — syndic (write), résident (read scopé à son lot)

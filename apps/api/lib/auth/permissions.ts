@@ -79,6 +79,24 @@ export const PERMISSIONS: PermissionMatrix = {
     PRESTATAIRE: false,
   },
 
+  // ── Utilisateurs (M13 — Master Spec Partie 3.2 : /users/:id "syndic only") ──
+  "users.lire_fiche": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  // Anonymisation CNDP manuelle (Partie 5.6) — à la demande explicite de la personne concernée.
+  "users.anonymiser": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+
   // ── Finances (Master Spec Partie 4.2) ────────────────────────────────────
   "finances.voir_agrege_copropriete": {
     SUPER_ADMIN: true,
