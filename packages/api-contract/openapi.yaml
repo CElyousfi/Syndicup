@@ -102,7 +102,7 @@ components:
       pattern: '^-?\d+\.\d{2}$'
       example: "1800.00"
 
-    # ── Domaine : Lots ────────────────────────────────────────────────────
+    # ── Domaine : Lots (Master Spec Partie 2.2, Doc A §1, §2 — M3) ───────────
     Lot:
       type: object
       properties:
@@ -111,6 +111,11 @@ components:
         type_lot:
           type: string
           enum: [APPARTEMENT, PARKING, CAVE, LOCAL, TOIT_TERRASSE, VILLA, COMMERCIAL, BUREAU, LOGE_GARDIEN]
+        type_usage:
+          type: string
+          nullable: true
+          enum: [HABITATION, BUREAU, MIXTE, COMMERCIAL]
+          description: Doc A §1.1 (ex. appartement transformé en bureau) — non renseigné par défaut.
         numero: { type: string }
         etage: { type: integer, nullable: true }
         tantiemes: { $ref: "#/components/schemas/Money" }
@@ -119,6 +124,98 @@ components:
           type: string
           enum: [OCCUPE, VACANT, ORPHELIN, EN_SUCCESSION, SINISTRE, TANTIEME_A_REGULARISER]
         lot_parent_id: { type: string, format: uuid, nullable: true }
+
+    LotCreate:
+      type: object
+      required: [type_lot, numero, tantiemes]
+      properties:
+        type_lot:
+          type: string
+          enum: [APPARTEMENT, PARKING, CAVE, LOCAL, TOIT_TERRASSE, VILLA, COMMERCIAL, BUREAU, LOGE_GARDIEN]
+        type_usage:
+          type: string
+          nullable: true
+          enum: [HABITATION, BUREAU, MIXTE, COMMERCIAL]
+        numero: { type: string }
+        etage: { type: integer, nullable: true }
+        tantiemes: { $ref: "#/components/schemas/Money" }
+        superficie: { type: string, nullable: true }
+        lot_parent_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Rattachement parking/cave à un lot principal (Doc A §1.2/§1.3).
+
+    LotUpdate:
+      type: object
+      properties:
+        type_lot:
+          type: string
+          enum: [APPARTEMENT, PARKING, CAVE, LOCAL, TOIT_TERRASSE, VILLA, COMMERCIAL, BUREAU, LOGE_GARDIEN]
+        type_usage:
+          type: string
+          nullable: true
+          enum: [HABITATION, BUREAU, MIXTE, COMMERCIAL]
+        numero: { type: string }
+        etage: { type: integer, nullable: true }
+        tantiemes: { $ref: "#/components/schemas/Money" }
+        superficie: { type: string, nullable: true }
+        statut:
+          type: string
+          enum: [OCCUPE, VACANT, ORPHELIN, EN_SUCCESSION, SINISTRE, TANTIEME_A_REGULARISER]
+        lot_parent_id: { type: string, format: uuid, nullable: true }
+
+    LotProprietaire:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        utilisateur_id: { type: string, format: uuid }
+        quote_part: { $ref: "#/components/schemas/Money" }
+        type_propriete: { type: string, enum: [PLEIN, INDIVISION, SCI] }
+        est_representant_indivision: { type: boolean }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+
+    LotProprietaireCreate:
+      type: object
+      required: [utilisateur_id, quote_part, type_propriete, date_debut]
+      properties:
+        utilisateur_id: { type: string, format: uuid }
+        quote_part:
+          type: string
+          description: >
+            Pourcentage de propriété du lot (ex. "50.00" pour une indivision à deux). La somme des
+            quote_part actives (sans date_fin) d'un même lot doit être 100% (Doc A §2.4) —
+            contrainte vérifiée en base à la fin de la transaction (voir migration M3).
+          example: "100.00"
+        type_propriete: { type: string, enum: [PLEIN, INDIVISION, SCI] }
+        est_representant_indivision: { type: boolean, default: false }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+
+    LotOccupant:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        utilisateur_id: { type: string, format: uuid }
+        type_occupation: { type: string, enum: [PROPRIETAIRE_OCCUPANT, LOCATAIRE] }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+        acces_finances_accorde: { type: boolean }
+        recoit_convocations: { type: boolean }
+
+    LotOccupantCreate:
+      type: object
+      required: [utilisateur_id, type_occupation, date_debut]
+      properties:
+        utilisateur_id: { type: string, format: uuid }
+        type_occupation: { type: string, enum: [PROPRIETAIRE_OCCUPANT, LOCATAIRE] }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+        acces_finances_accorde: { type: boolean, default: false }
+        recoit_convocations: { type: boolean, default: false }
 
     # ── Domaine : Onboarding / Invitations (Master Spec Partie 5.1, 5.3) ─────
     Invitation:
@@ -151,33 +248,150 @@ components:
           enum: [SYNDIC, CONSEIL_SYNDICAL, PROPRIETAIRE, LOCATAIRE, INDIVISAIRE, GARDIEN, PRESTATAIRE, PERSONNE_MORALE_REPRESENTANT]
         canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
 
-    # ── Domaine : Finances ────────────────────────────────────────────────
+    # ── Domaine : Finances (M5 — Master Spec Partie 2.2/6, Doc A §3) ────────
+    TypeAppelDeFonds:
+      type: string
+      # Doc A §3.2 fait autorité sur le métier (CLAUDE.md) — remplace la liste littérale du
+      # Master Spec (charges_courantes/travaux/fonds_reserve) par la liste plus fine de Doc A.
+      enum: [CHARGES_COURANTES, EXCEPTIONNEL, FONDS_RESERVE, REGULARISATION, URGENCE, DEMARRAGE]
+
+    AppelDeFondsLot:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        appel_de_fonds_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        montant_du: { $ref: "#/components/schemas/Money" }
+        montant_paye: { $ref: "#/components/schemas/Money" }
+        statut: { type: string, enum: [PAYE, PARTIEL, IMPAYE] }
+        conteste: { type: boolean }
+        niveau_escalade: { type: string, enum: [N0, N1, N2, N3, N4, N5, N6] }
+
     AppelDeFonds:
       type: object
       properties:
         id: { type: string, format: uuid }
-        statut: { type: string, enum: [BROUILLON, EMIS, CLOTURE] }
+        periode: { type: string, pattern: '^\d{4}-\d{2}$', example: "2026-08" }
+        type: { $ref: "#/components/schemas/TypeAppelDeFonds" }
         montant_total: { $ref: "#/components/schemas/Money" }
-        nb_lots: { type: integer }
-        lignes_generees: { type: integer }
+        date_echeance: { type: string, format: date }
+        statut: { type: string, enum: [BROUILLON, EMIS, CLOTURE] }
+        lignes:
+          type: array
+          items: { $ref: "#/components/schemas/AppelDeFondsLot" }
 
-    AppelDeFondsCreate:
+    AppelDeFondsGenererCreate:
       type: object
-      required: [copropriete_id, periode, type, date_echeance]
+      required: [periode, type, montant_total, date_echeance]
+      description: >
+        Génération batch (Master Spec Partie 6.2) — copropriete_id vient du contexte tenant
+        (header X-Copropriete-Id), jamais du payload (Partie 1.6). Idempotence stricte sur
+        (copropriete_id, periode, type) → 409 si déjà généré. Nécessite un budget_ag ACTIF pour
+        l'exercice (= 4 premiers caractères de periode) → 422 sinon.
       properties:
-        copropriete_id: { type: string, format: uuid }
         periode:
           type: string
           pattern: '^\d{4}-\d{2}$'
           example: "2026-08"
-        type:
-          type: string
-          enum: [CHARGES_COURANTES, TRAVAUX, FONDS_RESERVE]
-          description: >
-            Liste de départ (Master Spec Partie 2.2). Doc A §3.2 (docs/domain-reference/03-charges-finances.md)
-            mentionne aussi EXCEPTIONNEL, URGENCE, DEMARRAGE, REGULARISATION — à confirmer et
-            ajouter avant que M5 (ROADMAP_BACKLOG) ne soit considéré terminé.
+        type: { $ref: "#/components/schemas/TypeAppelDeFonds" }
+        montant_total: { $ref: "#/components/schemas/Money" }
         date_echeance: { type: string, format: date }
+
+    SoldeLot:
+      type: object
+      properties:
+        lot_id: { type: string, format: uuid }
+        solde_du: { $ref: "#/components/schemas/Money" }
+        lignes:
+          type: array
+          items:
+            type: object
+            properties:
+              appel_de_fonds_lot_id: { type: string, format: uuid }
+              montant_du: { $ref: "#/components/schemas/Money" }
+              montant_paye: { $ref: "#/components/schemas/Money" }
+              statut: { type: string, enum: [PAYE, PARTIEL, IMPAYE] }
+              conteste: { type: boolean }
+
+    PaiementManuelCreate:
+      type: object
+      required: [appel_de_fonds_lot_id, montant, methode]
+      description: >
+        Paiement hors CMI (virement, espèces, chèque) — Master Spec Partie 6.4/Doc A §3.4. Cible
+        UNE seule ligne appel_de_fonds_lot (pas d'imputation FIFO multi-lignes automatique — voir
+        apps/api/lib/finances/finances.ts::appliquerPaiement, limite connue documentée).
+      properties:
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        montant: { $ref: "#/components/schemas/Money" }
+        methode: { type: string, enum: [VIREMENT, ESPECES, CHEQUE] }
+        payeur_utilisateur_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Doc A §3.4 "Locataire paie à la place du propriétaire".
+        accepter_trop_percu:
+          type: boolean
+          default: false
+          description: >
+            Doit être explicitement true pour autoriser un paiement qui dépasserait montant_du
+            (sinon 422 — Doc A §3.4 "Trop-perçu").
+
+    Paiement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        montant: { $ref: "#/components/schemas/Money" }
+        methode: { type: string, enum: [CMI, VIREMENT, ESPECES, CHEQUE] }
+        statut: { type: string, enum: [VALIDE, EN_ATTENTE, REJETE] }
+        horodatage: { type: string, format: date-time }
+
+    PaiementCmiInitierCreate:
+      type: object
+      required: [appel_de_fonds_lot_id, montant]
+      properties:
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        montant: { $ref: "#/components/schemas/Money" }
+
+    Quittance:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        numero: { type: string }
+        pdf_url:
+          type: string
+          format: uri
+          nullable: true
+          description: >
+            Nullable — génération du PDF hors scope M5 (module Documents, Master Spec Partie 9,
+            pas encore livré). La quittance prouve le paiement complet même sans PDF.
+        date_emission: { type: string, format: date-time }
+
+    ContestationChargeCreate:
+      type: object
+      required: [appel_de_fonds_lot_id, motif]
+      properties:
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        motif: { type: string, minLength: 1 }
+
+    ContestationChargeRepondre:
+      type: object
+      required: [statut, reponse_syndic]
+      properties:
+        statut: { type: string, enum: [REPONDUE, MEDIEE, TRIBUNAL] }
+        reponse_syndic: { type: string, minLength: 1 }
+
+    ContestationCharge:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        utilisateur_id: { type: string, format: uuid }
+        motif: { type: string }
+        statut: { type: string, enum: [OUVERTE, REPONDUE, MEDIEE, TRIBUNAL] }
+        reponse_syndic: { type: string, nullable: true }
 
     # ── Domaine : Assemblées Générales ────────────────────────────────────
     AgVoteCreate:
@@ -202,6 +416,313 @@ components:
         valeur: { type: string, enum: [POUR, CONTRE, ABSTENTION] }
         tantiemes_representes: { $ref: "#/components/schemas/Money" }
         horodatage: { type: string, format: date-time }
+
+    AssembleeGenerale:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        type: { type: string, enum: [ORDINAIRE, EXTRAORDINAIRE, REVOCATION] }
+        date_convocation: { type: string, format: date-time, nullable: true }
+        date_ag: { type: string, format: date-time }
+        statut: { type: string, enum: [PLANIFIEE, CONVOQUEE, EN_COURS, CLOTUREE, ANNULEE] }
+        quorum_requis:
+          type: string
+          nullable: true
+          description: >
+            Fraction (0-1) — snapshot de copropriete.quorum_premiere_convocation pris à
+            l'ouverture. NULL tant que non ouverte ou tant que le paramètre légal n'est pas
+            confirmé (docs/LEGAL_QUESTIONS_BRIEF.md §2).
+        quorum_atteint: { type: string, nullable: true, description: "Calculé à la clôture." }
+        motif_annulation: { type: string, nullable: true }
+
+    AgCreate:
+      type: object
+      required: [type, date_ag]
+      properties:
+        type: { type: string, enum: [ORDINAIRE, EXTRAORDINAIRE, REVOCATION] }
+        date_ag: { type: string, format: date-time }
+
+    AgAnnuler:
+      type: object
+      required: [motif]
+      properties:
+        motif: { type: string, minLength: 1 }
+
+    AgResolution:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ag_id: { type: string, format: uuid }
+        ordre: { type: integer }
+        texte: { type: string }
+        type_majorite: { type: string, enum: [SIMPLE, DOUBLE, UNANIMITE] }
+        resultat: { type: string, enum: [EN_ATTENTE, ADOPTEE, REJETEE] }
+
+    AgResolutionCreate:
+      type: object
+      required: [ordre, texte, type_majorite]
+      properties:
+        ordre: { type: integer, minimum: 1 }
+        texte: { type: string, minLength: 1 }
+        type_majorite:
+          type: string
+          enum: [SIMPLE, DOUBLE, UNANIMITE]
+          description: >
+            Choisi explicitement par le syndic par résolution — la grille "quelle résolution
+            nécessite quelle majorité" (LEGAL_QUESTIONS_BRIEF.md §3) n'est PAS appliquée
+            automatiquement, elle reste disputée.
+
+    AgResultatResolution:
+      type: object
+      properties:
+        valeur: { type: string, enum: [POUR, CONTRE, ABSTENTION] }
+        nb_votants: { type: integer }
+        tantiemes_total: { $ref: "#/components/schemas/Money" }
+
+    AgProcuration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ag_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        mandant_id: { type: string, format: uuid }
+        mandataire_id: { type: string, format: uuid }
+        revoquee_le: { type: string, format: date-time, nullable: true }
+
+    AgProcurationCreate:
+      type: object
+      required: [lot_id, mandataire_id]
+      properties:
+        lot_id: { type: string, format: uuid }
+        mandataire_id: { type: string, format: uuid }
+        mandant_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Réservé au syndic (procuration papier reçue pour un tiers, Doc A §6.5).
+
+    AgPv:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ag_id: { type: string, format: uuid }
+        contenu_json: { type: object }
+        pdf_url: { type: string, format: uri, nullable: true, description: "Génération PDF hors scope M6, voir Documents/M9." }
+        hash_integrite: { type: string, description: "SHA-256 hexadécimal du contenu_json." }
+        horodatage_generation: { type: string, format: date-time }
+
+    # ── Domaine : Parties communes (M8 — Master Spec Partie 2.2/9.4, Doc A §7) ──
+    EspaceCommun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        nom: { type: string }
+        type: { type: string }
+        capacite: { type: integer, nullable: true }
+        reservable: { type: boolean }
+        validation_automatique:
+          type: boolean
+          description: Doc A §7.2 "Validation manuelle ou auto selon paramètre" — ajout nécessaire.
+        regles_reservation_json: { type: object, nullable: true }
+
+    EspaceCommunCreate:
+      type: object
+      required: [nom, type]
+      properties:
+        nom: { type: string, minLength: 1 }
+        type: { type: string, minLength: 1 }
+        capacite: { type: integer, nullable: true }
+        reservable: { type: boolean, default: false }
+        validation_automatique: { type: boolean, default: false }
+        regles_reservation_json: { type: object, nullable: true }
+
+    ReservationEspaceCommun:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        espace_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        utilisateur_id: { type: string, format: uuid }
+        date_debut: { type: string, format: date-time }
+        date_fin: { type: string, format: date-time }
+        statut: { type: string, enum: [EN_ATTENTE, CONFIRMEE, REJETEE, ANNULEE] }
+        nombre_invites: { type: integer, nullable: true }
+        motif_rejet: { type: string, nullable: true }
+
+    ReservationCreate:
+      type: object
+      required: [espace_id, lot_id, date_debut, date_fin]
+      properties:
+        espace_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        date_debut: { type: string, format: date-time }
+        date_fin: { type: string, format: date-time }
+        nombre_invites: { type: integer, nullable: true }
+
+    # ── Domaine : Personnel / gardien & visites (M10 — Master Spec Partie 13.3, Doc A §9) ──
+    Personnel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        utilisateur_id: { type: string, format: uuid, description: "Doit avoir un rôle GARDIEN actif dans la copropriété (Doc A §9.2)." }
+        copropriete_id: { type: string, format: uuid }
+        statut: { type: string, enum: [PRESENT, ABSENT, REMPLACE] }
+        logement_lot_id: { type: string, format: uuid, nullable: true, description: "Lot de type LOGE_GARDIEN uniquement (Doc A §9.2)." }
+        cree_le: { type: string, format: date-time }
+
+    PersonnelCreate:
+      type: object
+      required: [utilisateur_id]
+      properties:
+        utilisateur_id: { type: string, format: uuid }
+        statut: { type: string, enum: [PRESENT, ABSENT, REMPLACE], default: PRESENT }
+        logement_lot_id: { type: string, format: uuid, nullable: true }
+
+    Visite:
+      type: object
+      description: >
+        Workflow Doc A §9.2 — le gardien enregistre, le résident du lot est notifié (PUSH,
+        template VISITE_NOUVELLE), il autorise ou refuse, le gardien reçoit la réponse
+        (VISITE_REPONSE). ⚠️ Le tableau Master Spec Partie 2.2 référence "Doc A §7" pour cette
+        table, mais seul §9.2 traite du contrôle d'accès visiteurs — écart de renumérotation
+        signalé, §9 fait autorité.
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        gardien_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        visiteur_nom: { type: string }
+        statut: { type: string, enum: [EN_ATTENTE, AUTORISE, REFUSE] }
+        horodatage: { type: string, format: date-time }
+
+    VisiteCreate:
+      type: object
+      required: [lot_id, visiteur_nom]
+      properties:
+        lot_id: { type: string, format: uuid }
+        visiteur_nom: { type: string, minLength: 1, maxLength: 200 }
+
+    # ── Domaine : Litiges (M11 — Master Spec Partie 2.2, Doc A §12.1) ───────
+    ConflitLitige:
+      type: object
+      description: >
+        Workflow Doc A §12.1 — escalade_niveau : 0 = traitement syndic, 1 = médiation AG,
+        2 = tribunal (monotone). ⚠️ Une étape de conciliation préalable (Loi 30-24, voir
+        docs/LEGAL_QUESTIONS_BRIEF.md §0) pourrait devoir s'insérer avant le tribunal — non
+        modélisée tant que non confirmée par l'avocat.
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        type: { type: string, description: "Texte libre — Doc A §12.1 liste 8 familles de conflits sans nomenclature fermée." }
+        description: { type: string }
+        statut: { type: string, enum: [OUVERT, RESOLU, CLOS] }
+        escalade_niveau: { type: integer, minimum: 0, maximum: 2 }
+        cree_par: { type: string, format: uuid }
+        cree_le: { type: string, format: date-time }
+        modifie_le: { type: string, format: date-time }
+
+    # ── Domaine : Incidents (M7 — Master Spec Partie 2.2, Doc A §5) ─────────
+    CategorieIncident:
+      type: string
+      description: Doc A §5.1 fait autorité sur le métier (CLAUDE.md) — remplace le champ texte libre du Master Spec littéral.
+      enum: [PLOMBERIE, ELECTRICITE, ASCENSEUR, NETTOYAGE, SECURITE, STRUCTURE, JARDINS_ESPACES_VERTS, NUISANCES, PARKING, EQUIPEMENTS_COLLECTIFS, ADMINISTRATIF]
+
+    Incident:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid, nullable: true }
+        categorie: { $ref: "#/components/schemas/CategorieIncident" }
+        sous_categorie: { type: string }
+        description: { type: string, nullable: true }
+        partie: { type: string, enum: [COMMUNE, PRIVATIVE] }
+        urgence:
+          type: string
+          enum: [NORMALE, URGENTE, URGENCE_MAXIMALE]
+          description: >
+            ⚠️ Doc A §5.1 distingue en réalité 4 paliers (un "TRÈS URGENT" intermédiaire) — le
+            Master Spec littéral n'en a que 3, retenus ici comme source de vérité technique (voir
+            schema.prisma UrgenceIncident).
+        statut: { type: string, enum: [OUVERT, EN_COURS, RESOLU, FERME] }
+        cree_par: { type: string, format: uuid }
+        assigne_a: { type: string, format: uuid, nullable: true, description: prestataire_id }
+        sla_deadline:
+          type: string
+          format: date-time
+          nullable: true
+          description: >
+            Calculé à la création à partir du seul palier d'urgence (48h/4h/30min) — simplification
+            signalée, pas la grille fine par catégorie de Doc A §5.1 (voir
+            apps/api/lib/incidents/incidents.ts).
+        cree_le: { type: string, format: date-time }
+
+    IncidentCreate:
+      type: object
+      required: [categorie, sous_categorie, partie, urgence]
+      properties:
+        lot_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Absent si l'incident concerne une partie commune non rattachée à un lot précis.
+        categorie: { $ref: "#/components/schemas/CategorieIncident" }
+        sous_categorie: { type: string, minLength: 1, example: "Fuite eau" }
+        description: { type: string, nullable: true }
+        partie: { type: string, enum: [COMMUNE, PRIVATIVE] }
+        urgence: { type: string, enum: [NORMALE, URGENTE, URGENCE_MAXIMALE] }
+
+    IncidentChangerStatut:
+      type: object
+      required: [statut]
+      properties:
+        statut: { type: string, enum: [OUVERT, EN_COURS, RESOLU, FERME] }
+        commentaire: { type: string, nullable: true }
+
+    IncidentLog:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        incident_id: { type: string, format: uuid }
+        statut_avant: { type: string, enum: [OUVERT, EN_COURS, RESOLU, FERME], nullable: true }
+        statut_apres: { type: string, enum: [OUVERT, EN_COURS, RESOLU, FERME] }
+        acteur_id: { type: string, format: uuid, nullable: true }
+        commentaire: { type: string, nullable: true }
+        horodatage: { type: string, format: date-time }
+
+    IncidentAssigner:
+      type: object
+      required: [prestataire_id]
+      properties:
+        prestataire_id: { type: string, format: uuid }
+
+    Prestataire:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        nom: { type: string }
+        specialite: { type: string }
+        contact: { type: string }
+        actif: { type: boolean }
+        utilisateur_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: >
+            Absent du tableau Master Spec littéral, ajouté pour permettre la confidentialité RLS
+            "un prestataire ne voit que son propre ticket" (Doc A §12.3) — voir schema.prisma.
+
+    PrestataireCreate:
+      type: object
+      required: [nom, specialite, contact]
+      properties:
+        nom: { type: string, minLength: 1 }
+        specialite: { type: string, minLength: 1 }
+        contact: { type: string, minLength: 1 }
+        utilisateur_id: { type: string, format: uuid, nullable: true }
 
   responses:
     ValidationError:
@@ -468,10 +989,23 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/Lot" }
+            schema: { $ref: "#/components/schemas/LotCreate" }
       responses:
-        "201": { description: Créé }
+        "201":
+          description: Créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Lot" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Somme des tantièmes de la copropriété dépasserait le total défini au règlement (Master Spec Partie 2.4).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /lots/{id}:
     get:
@@ -486,50 +1020,139 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/Lot" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Lots]
       summary: Rôle autorisé — syndic.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LotUpdate" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Lot" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Somme des tantièmes dépasserait le total défini au règlement (Master Spec Partie 2.4).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /lots/{id}/proprietaires:
     post:
       tags: [Lots]
-      summary: Ajoute un copropriétaire (gère l'indivision — quote_part doit sommer à 100%, Doc A §2.4).
+      summary: Ajoute un copropriétaire (gère l'indivision — quote_part doit sommer à 100%, Doc A §2.4). Rôle autorisé — syndic.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LotProprietaireCreate" }
       responses:
-        "201": { description: Créé }
-        "422": { description: Somme des quote_part ≠ 100%. }
+        "201":
+          description: Créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/LotProprietaire" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Somme des quote_part actives du lot ≠ 100% (Doc A §2.4).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /lots/{id}/occupants:
     post:
       tags: [Lots]
-      summary: Ajoute un occupant (locataire ou propriétaire occupant, Doc A §2.2/§2.3).
+      summary: Ajoute un occupant (locataire ou propriétaire occupant, Doc A §2.2/§2.3). Rôle autorisé — syndic.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LotOccupantCreate" }
       responses:
-        "201": { description: Créé }
+        "201":
+          description: Créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/LotOccupant" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /lots/{id}/transfert-propriete:
     post:
       tags: [Lots]
-      summary: Vente d'un lot — Master Spec Partie 5.4. Désactive l'ancien compte, invite le nouveau.
+      summary: >
+        Vente d'un lot — Master Spec Partie 5.4 (M4). Rôle autorisé — syndic. Ferme la ligne
+        `lot_proprietaire` active, désactive le rattachement PROPRIETAIRE de l'ancien
+        copropriétaire (`role_utilisateur.actif = false` — pas le compte global, voir
+        apps/api/lib/lots/lots.ts pour la justification), crée une invitation pour le nouveau
+        propriétaire, écrit `audit_log: LOT_TRANSFERT_PROPRIETE`.
+      description: >
+        ⚠️ La vérification automatique du solde de charges (étape 2 du Master Spec Partie 5.4)
+        n'est PAS encore implémentée — dépend du moteur financier (M5, `appel_de_fonds`/`paiement`,
+        pas encore livré). `dette_reprise_acquereur` est donc un champ obligatoire : le syndic
+        atteste explicitement l'arrangement en attendant que ce flag soit croisé avec le solde
+        réel une fois M5 livré. Limite connue : l'indivision (>1 copropriétaire actif) n'est pas
+        supportée par cet endpoint (422 explicite) ; la ligne `lot_proprietaire` du nouveau
+        propriétaire n'est PAS créée automatiquement à l'acceptation de l'invitation — le syndic
+        doit appeler `POST /lots/:id/proprietaires` une fois l'invitation acceptée.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       requestBody:
+        required: true
         content:
           application/json:
             schema:
               type: object
+              required: [nouveau_proprietaire, dette_reprise_acquereur]
               properties:
                 nouveau_proprietaire:
                   type: object
+                  description: Un des deux champs (email ou telephone) est requis.
                   properties:
-                    email: { type: string }
-                    telephone: { type: string }
-                dette_reprise_acquereur: { type: boolean }
+                    email: { type: string, format: email, nullable: true }
+                    telephone: { type: string, nullable: true }
+                dette_reprise_acquereur:
+                  type: boolean
+                  description: Attestation manuelle du syndic tant que M5 n'automatise pas la vérification.
       responses:
-        "200": { description: "Transfert effectué, audit_log LOT_TRANSFERT_PROPRIETE écrit." }
+        "200":
+          description: Transfert effectué — retourne l'invitation créée pour le nouveau propriétaire.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Invitation" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Aucun copropriétaire actif à transférer, ou lot en indivision (non supporté par cet endpoint).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   # ══════════════════════════════════════════════════════════════════════
   # UTILISATEURS
@@ -574,38 +1197,47 @@ paths:
   /finances/appels-de-fonds:
     get:
       tags: [Finances]
+      summary: Liste des appels de fonds de la copropriété (lecture large — Partie 4.2).
       parameters:
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AppelDeFonds" }
     post:
       tags: [Finances]
-      summary: Génération batch d'un appel de fonds (patron de détail — Master Spec Partie 3.3).
-      description: Rôle autorisé — syndic.
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+      summary: Génération batch d'un appel de fonds (algorithme — Master Spec Partie 6.2).
+      description: Rôle autorisé — syndic. copropriete_id dérivé du contexte tenant, jamais du payload.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/AppelDeFondsCreate" }
+            schema: { $ref: "#/components/schemas/AppelDeFondsGenererCreate" }
       responses:
         "201":
-          description: Créé
+          description: Créé — lignes appel_de_fonds_lot générées au prorata des tantièmes.
           content:
             application/json:
               schema:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/AppelDeFonds" }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "409":
-          description: Un appel de fonds existe déjà pour cette période+type (idempotence métier).
+          description: Un appel de fonds existe déjà pour cette (période, type) — idempotence métier.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "422":
-          description: Aucun budget AG actif ne couvre la période.
+          description: Aucun budget_ag ACTIF ne couvre l'exercice de cette période.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -616,33 +1248,66 @@ paths:
       summary: Solde d'un lot. Confidentialité stricte — un résident ne voit que son propre lot (Doc A §12.3).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/SoldeLot" }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /finances/paiements:
     post:
       tags: [Finances]
-      summary: Enregistre un paiement hors CMI (virement, espèces, chèque).
-      parameters:
-        - $ref: "#/components/parameters/IdempotencyKey"
+      summary: Enregistre un paiement hors CMI (virement, espèces, chèque) — rôle autorisé syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaiementManuelCreate" }
       responses:
-        "201": { description: "Créé, ligne paiement immuable." }
+        "201":
+          description: Créé, ligne paiement immuable. Statut/quittance mis à jour si montant_paye == montant_du.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      paiement: { $ref: "#/components/schemas/Paiement" }
+                      statut: { type: string, enum: [PAYE, PARTIEL, IMPAYE] }
+                      quittance:
+                        allOf: [{ $ref: "#/components/schemas/Quittance" }]
+                        nullable: true
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: >
+            Dépasserait montant_du sans accepter_trop_percu=true (Doc A §3.4).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /finances/paiements/cmi/initier:
     post:
       tags: [Finances]
-      summary: Crée une session CMI, retourne l'URL de paiement hébergée (Master Spec Partie 6.4).
+      summary: Crée une session de paiement CMI signée (Master Spec Partie 6.4, étape 1).
+      description: >
+        ⚠️ Pas de table de session CMI dans le schéma (absente du Master Spec Partie 2.2) — la
+        cible du paiement est encodée dans `oid`, signée par HMAC, vérifiée au webhook. Non testé
+        contre un vrai bac à sable CMI (credentials commerçant absents de ce repo).
       requestBody:
+        required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [appel_de_fonds_lot_id, montant]
-              properties:
-                appel_de_fonds_lot_id: { type: string, format: uuid }
-                montant: { $ref: "#/components/schemas/Money" }
+            schema: { $ref: "#/components/schemas/PaiementCmiInitierCreate" }
       responses:
-        "200":
+        "201":
           description: Session créée.
           content:
             application/json:
@@ -652,23 +1317,99 @@ paths:
                   data:
                     type: object
                     properties:
-                      url_paiement: { type: string, format: uri }
+                      oid: { type: string, description: "Identifiant de commande signé, à transmettre à CMI." }
+                      montant: { $ref: "#/components/schemas/Money" }
+                      hash: { type: string, description: "HMAC-SHA256(oid.montant) — vérifié au webhook." }
+                      appel_de_fonds_lot_id: { type: string, format: uuid }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /finances/paiements/cmi/webhook:
     post:
       tags: [Finances]
-      summary: Callback CMI. Signature HMAC vérifiée obligatoire. Pas de rate limit utilisateur (Master Spec Partie 3.4).
+      summary: Callback CMI (Master Spec Partie 6.4, étapes 3-5). Signature HMAC vérifiée obligatoire.
+      description: >
+        Endpoint machine-à-machine — PAS de JWT Supabase (CMI n'en fournit pas). Authenticité
+        garantie exclusivement par la signature HMAC du payload. Idempotence stricte sur `oid`
+        (mappé à `paiement.reference_cmi`, unique) : un rejeu exact renvoie 200 sans dupliquer.
       security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oid, montant, hash]
+              properties:
+                oid: { type: string }
+                montant: { $ref: "#/components/schemas/Money" }
+                hash: { type: string }
       responses:
-        "200": { description: Traité. Idempotent sur reference_cmi. }
-        "401": { description: Signature HMAC invalide. }
+        "200": { description: Traité (ou rejeu idempotent — voir champ `idempotent` dans la réponse). }
+        "403": { description: Signature HMAC invalide. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
 
   /finances/quittances/{id}:
     get:
       tags: [Finances]
+      summary: Consultation d'une quittance. Confidentialité stricte (comme appel_de_fonds_lot).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: URL signée du PDF de quittance (15 min — Master Spec Partie 9.3). }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Quittance" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /finances/contestations:
+    post:
+      tags: [Finances]
+      summary: Contestation d'une ligne de charge par un résident concerné (Doc A §3.3 "Cas Particuliers").
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContestationChargeCreate" }
+      responses:
+        "201":
+          description: Créé — flag `conteste=true` posé sur la ligne appel_de_fonds_lot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ContestationCharge" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /finances/contestations/{id}/reponse:
+    post:
+      tags: [Finances]
+      summary: Réponse du syndic à une contestation de charge.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContestationChargeRepondre" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ContestationCharge" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ══════════════════════════════════════════════════════════════════════
   # ASSEMBLÉES GÉNÉRALES — syndic (write), copropriétaire (vote)
@@ -676,11 +1417,52 @@ paths:
   # à convoquer eux-mêmes une AG — si confirmé, POST /ag ne devra plus être syndic-only.
   # ══════════════════════════════════════════════════════════════════════
   /ag:
+    get:
+      tags: [Assemblées Générales]
+      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/AssembleeGenerale" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
     post:
       tags: [Assemblées Générales]
       summary: Crée une AG. Rôle autorisé — syndic (à réévaluer, voir avertissement ci-dessus).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgCreate" }
       responses:
-        "201": { description: "Créée, statut PLANIFIEE." }
+        "201":
+          description: "Créée, statut PLANIFIEE."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssembleeGenerale" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /ag/{id}:
+    get:
+      tags: [Assemblées Générales]
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssembleeGenerale" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /ag/{id}/convoquer:
     post:
@@ -688,15 +1470,177 @@ paths:
       summary: Envoie la convocation. Génère une ligne ag_notification_log par destinataire (Master Spec Partie 8.2).
       parameters: [{ $ref: "#/components/parameters/AgId" }]
       responses:
-        "200": { description: "Convoquée, statut → CONVOQUEE." }
-        "422": { description: delai_convocation_jours non configuré sur la copropriété — voir LEGAL_QUESTIONS_BRIEF.md §1. }
+        "200":
+          description: "Convoquée, statut → CONVOQUEE."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssembleeGenerale" }
+        "422": { description: delai_convocation_jours non configuré, ou délai insuffisant — voir LEGAL_QUESTIONS_BRIEF.md §1. }
+
+  /ag/{id}/ouvrir:
+    post:
+      tags: [Assemblées Générales]
+      summary: >
+        Ajout nécessaire (Doc A §6.4) : bascule CONVOQUEE→EN_COURS après la date prévue. Rôle
+        autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      responses:
+        "200":
+          description: "Ouverte, statut → EN_COURS, quorum_requis fixé (snapshot copropriete)."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssembleeGenerale" }
+        "422": { description: Avant la date prévue, ou quorum_premiere_convocation non configuré — LEGAL_QUESTIONS_BRIEF.md §2. }
+
+  /ag/{id}/annuler:
+    post:
+      tags: [Assemblées Générales]
+      summary: Ajout nécessaire (Doc A §12.2) — annulation avec motif obligatoire. Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgAnnuler" }
+      responses:
+        "200":
+          description: "Statut → ANNULEE."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssembleeGenerale" }
 
   /ag/{id}/resolutions:
     post:
       tags: [Assemblées Générales]
+      summary: Rôle autorisé — syndic.
       parameters: [{ $ref: "#/components/parameters/AgId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgResolutionCreate" }
       responses:
-        "201": { description: Créée. }
+        "201":
+          description: Créée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AgResolution" }
+
+  /ag/{id}/resolutions/{resolutionId}/finaliser:
+    post:
+      tags: [Assemblées Générales]
+      summary: >
+        Ajout nécessaire — calcule ADOPTEE/REJETEE (Master Spec Partie 8.4, égalité 50/50 →
+        REJETEE). Rôle autorisé — syndic.
+      parameters:
+        - { $ref: "#/components/parameters/AgId" }
+        - name: resolutionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AgResolution" }
+
+  /ag/{id}/resolutions/{resolutionId}/resultats:
+    get:
+      tags: [Assemblées Générales]
+      summary: Résultats agrégés/anonymisés (Doc A §12.3) — accessible à tous les rôles autorisés à lire l'AG.
+      parameters:
+        - { $ref: "#/components/parameters/AgId" }
+        - name: resolutionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/AgResultatResolution" } }
+
+  /ag/{id}/resolutions/{resolutionId}/votes:
+    get:
+      tags: [Assemblées Générales]
+      summary: Détail nominatif des votes (Doc A §12.3) — rôle autorisé syndic uniquement.
+      parameters:
+        - { $ref: "#/components/parameters/AgId" }
+        - name: resolutionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/AgVote" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /ag/{id}/procurations:
+    post:
+      tags: [Assemblées Générales]
+      summary: Ajout nécessaire (Doc A §6.5). Rôle autorisé — syndic, ou le mandant pour sa propre procuration.
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgProcurationCreate" }
+      responses:
+        "201":
+          description: Créée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AgProcuration" }
+        "422": { description: Limite légale de procurations atteinte (si configurée) — LEGAL_QUESTIONS_BRIEF.md §4. }
+
+  /ag/{id}/procurations/{procurationId}/revoquer:
+    post:
+      tags: [Assemblées Générales]
+      summary: Retrait de procuration (Doc A §6.5) — rôle autorisé syndic ou le mandant lui-même.
+      parameters:
+        - { $ref: "#/components/parameters/AgId" }
+        - name: procurationId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AgProcuration" }
 
   /ag/{id}/votes:
     post:
@@ -743,34 +1687,146 @@ paths:
         "200": { description: URL signée du PDF + hash_integrite. }
 
   # ══════════════════════════════════════════════════════════════════════
-  # INCIDENTS — tous (create), syndic/prestataire (update scopé)
+  # INCIDENTS — tous (create), syndic/gardien/prestataire assigné (update scopé) — M7
   # ══════════════════════════════════════════════════════════════════════
   /incidents:
     get:
       tags: [Incidents]
+      summary: >
+        Liste des incidents. Confidentialité RLS (Doc A §12.3) : syndic/conseil syndical/gardien
+        voient tout ; un résident ne voit que les incidents qu'il a créés ; un prestataire ne voit
+        que les incidents qui lui sont assignés.
       parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Incident" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Incidents]
+      summary: >
+        Signale un incident (Doc A §5). Rôle autorisé — tous sauf prestataire ("reçoit
+        l'assignation, ne crée pas" — Master Spec Partie 4.2). sla_deadline calculé à la création
+        (voir schéma Incident).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentCreate" }
       responses:
-        "201": { description: Créé. }
+        "201":
+          description: Créé, statut OUVERT.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Incident" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /incidents/{id}/statut:
     patch:
       tags: [Incidents]
-      summary: Rôle autorisé — syndic/prestataire assigné. Écrit une ligne incident_log.
+      summary: >
+        Rôle autorisé — syndic, gardien (Doc A §5.3), prestataire assigné uniquement (vérifié en
+        plus de la RLS, Partie 1.6). Écrit une ligne incident_log (append-only).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentChangerStatut" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/IncidentLog" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /incidents/{id}/assign:
     post:
       tags: [Incidents]
-      summary: Rôle autorisé — syndic.
+      summary: >
+        Assigne l'incident à un prestataire. Rôle autorisé — syndic. Un ticket OUVERT passe
+        automatiquement en EN_COURS (décision produit, voir apps/api/lib/incidents/incidents.ts).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentAssigner" }
       responses:
-        "200": { description: Assigné à un prestataire. }
+        "200":
+          description: Assigné à un prestataire.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Incident" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Prestataire inactif.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /prestataires:
+    get:
+      tags: [Incidents]
+      summary: >
+        Annuaire prestataires — ajout nécessaire au-delà du tableau Master Spec littéral (aucun
+        endpoint dédié n'y figure), requis pour choisir la cible de POST /incidents/:id/assign.
+        Rôle autorisé — syndic, conseil syndical, gardien.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Prestataire" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Incidents]
+      summary: Rôle autorisé — syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PrestataireCreate" }
+      responses:
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Prestataire" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   # ══════════════════════════════════════════════════════════════════════
   # PERSONNEL / GARDIEN — syndic (write personnel), gardien (visites)
@@ -778,51 +1834,285 @@ paths:
   /personnel:
     get:
       tags: [Personnel]
+      summary: Registre du personnel gardien — lecture ouverte à tout membre du tenant (Doc A §9, fiche visible des résidents).
       responses:
-        "200": { description: OK }
-    post:
-      tags: [Personnel]
-      summary: Rôle autorisé — syndic.
-      responses:
-        "201": { description: Créé. }
-
-  /visites:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Personnel" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel]
       summary: >
-        Enregistre une visite. Peut être soumis via la sync_queue offline mobile
-        (Master Spec Partie 13.3) — idempotent sur un identifiant client généré côté app.
+        Crée la fiche personnel d'un gardien. Rôle autorisé — syndic. 422 si l'utilisateur n'a
+        pas de rôle GARDIEN actif dans la copropriété (la fiche suit l'invitation M2, pas
+        l'inverse — Doc A §9.2), si la fiche existe déjà, ou si logement_lot_id n'est pas un lot
+        de type LOGE_GARDIEN.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonnelCreate" }
       responses:
-        "201": { description: Créée. }
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Personnel" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422":
+          description: Pas de rôle GARDIEN actif, fiche déjà existante, ou lot logement ≠ LOGE_GARDIEN.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /personnel/{id}/statut:
+    patch:
+      tags: [Personnel]
+      summary: Présence/logement du gardien (Doc A §9.2 "Gardien absent / remplacé"). Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut: { type: string, enum: [PRESENT, ABSENT, REMPLACE] }
+                logement_lot_id: { type: string, format: uuid, nullable: true }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Lot logement ≠ LOGE_GARDIEN (Doc A §9.2).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /visites:
+    get:
+      tags: [Personnel]
+      summary: >
+        Liste les visites visibles par l'appelant — résident : ses lots uniquement ; gardien :
+        celles qu'il a enregistrées ; syndic/conseil syndical : toutes (RLS, Doc A §12.3).
+      parameters:
+        - name: lot_id
+          in: query
+          required: false
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Visite" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel]
+      summary: >
+        Enregistre une visite (Doc A §9.2) — chaque propriétaire/occupant actif du lot reçoit
+        une notification PUSH (template VISITE_NOUVELLE, M9). Rôles autorisés — gardien, syndic.
+        Peut être soumis via la sync_queue offline mobile (Master Spec Partie 13.3) — idempotent
+        sur un identifiant client généré côté app.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/VisiteCreate" }
+      responses:
+        "201":
+          description: Créée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Visite" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   /visites/{id}/statut:
     patch:
       tags: [Personnel]
+      summary: >
+        Le résident du lot autorise ou refuse la visite (transition unique EN_ATTENTE →
+        AUTORISE|REFUSE) ; le gardien peut clôturer en relai ses propres enregistrements. Le
+        gardien reçoit la réponse en notification (VISITE_REPONSE). 404 (et non 403) si la
+        visite appartient à un autre lot — la RLS cache la ligne (anti-énumération).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut]
+              properties:
+                statut: { type: string, enum: [AUTORISE, REFUSE] }
       responses:
         "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: La visite n'est plus EN_ATTENTE (réponse déjà donnée).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   # ══════════════════════════════════════════════════════════════════════
-  # ESPACES COMMUNS — résident (create réservation), syndic (manage config)
+  # ESPACES COMMUNS — résident (create réservation), syndic (manage config) — M8
   # ══════════════════════════════════════════════════════════════════════
   /espaces-communs:
     get:
       tags: [Espaces communs]
       responses:
-        "200": { description: OK }
-
-  /reservations:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/EspaceCommun" } }
     post:
       tags: [Espaces communs]
+      summary: Rôle autorisé — syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EspaceCommunCreate" }
       responses:
-        "201": { description: Créée. }
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EspaceCommun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /reservations:
+    get:
+      tags: [Espaces communs]
+      parameters:
+        - name: espace_id
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ReservationEspaceCommun" } }
+    post:
+      tags: [Espaces communs]
+      summary: >
+        Rôle autorisé — résident (scoped à un lot dont il est propriétaire/occupant actif),
+        syndic. Détection de conflit de créneau (Doc A §7.2).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReservationCreate" }
+      responses:
+        "201":
+          description: "Créée — statut EN_ATTENTE ou CONFIRMEE selon espace_commun.validation_automatique."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ReservationEspaceCommun" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Créneau déjà réservé/en attente, ou espace non réservable.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /reservations/{id}:
     patch:
       tags: [Espaces communs]
+      summary: Annulation. Rôle autorisé — l'auteur de la réservation, ou le syndic.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ReservationEspaceCommun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { description: Déjà annulée ou rejetée. }
+
+  /reservations/{id}/valider:
+    post:
+      tags: [Espaces communs]
+      summary: Ajout nécessaire (Doc A §7.2, validation manuelle) — rôle autorisé syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: "Statut → CONFIRMEE."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ReservationEspaceCommun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /reservations/{id}/rejeter:
+    post:
+      tags: [Espaces communs]
+      summary: Ajout nécessaire (Doc A §7.2) — rôle autorisé syndic, motif obligatoire.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motif]
+              properties:
+                motif: { type: string, minLength: 1 }
+      responses:
+        "200":
+          description: "Statut → REJETEE."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ReservationEspaceCommun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ══════════════════════════════════════════════════════════════════════
   # DOCUMENTS — selon visibilite + RLS
@@ -871,17 +2161,96 @@ paths:
   /litiges:
     get:
       tags: [Litiges]
+      summary: >
+        Liste les litiges visibles par l'appelant — résident : ceux qu'il a déclarés uniquement ;
+        syndic/conseil syndical : tous (RLS sur cree_par, Doc A §12.3).
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ConflitLitige" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Litiges]
+      summary: Déclare un litige (Doc A §12.1 "résident soumet contestation avec motif"). Rôles — résidents, syndic, conseil syndical.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, description]
+              properties:
+                type: { type: string, minLength: 1, maxLength: 120 }
+                description: { type: string, minLength: 1, maxLength: 5000 }
       responses:
-        "201": { description: Créé. }
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ConflitLitige" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /litiges/{id}/escalade:
     patch:
       tags: [Litiges]
-      summary: Rôle autorisé — syndic, conseil_syndical.
+      summary: >
+        Escalade monotone niveau + 1 (0 traitement syndic → 1 médiation AG → 2 tribunal, Doc A
+        §12.1) avec motif obligatoire, tracée en audit_log ; le porteur du litige est notifié.
+        Rôles autorisés — syndic, conseil_syndical. 422 si le litige n'est plus OUVERT ou déjà au
+        niveau tribunal.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motif]
+              properties:
+                motif: { type: string, minLength: 1, maxLength: 2000 }
       responses:
         "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Litige non OUVERT ou déjà au niveau TRIBUNAL.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /litiges/{id}/statut:
+    patch:
+      tags: [Litiges]
+      summary: >
+        Clôture RESOLU/CLOS avec motif — ajout nécessaire au-delà de la liste littérale
+        d'endpoints (Doc A §12.1 "Explication syndic suffit souvent"). Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [statut, motif]
+              properties:
+                statut: { type: string, enum: [RESOLU, CLOS] }
+                motif: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Litige déjà RESOLU/CLOS.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }

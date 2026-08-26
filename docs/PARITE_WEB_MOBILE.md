@@ -17,6 +17,7 @@ justification — jamais implicite. Une ligne absente de ce registre = parité t
 
 | Module | Fonctionnalité | Web | Mobile | Statut | Justification |
 |---|---|---|---|---|---|
+| M2, M3… | Tous les écrans (login/OTP/invite, lots, etc.) | ✗ | ✗ | confirmé | Décision explicite du propriétaire du projet (17/08/2026) : construire le backend complet (schéma, RLS, API, tests) module par module avant d'attaquer l'UI, plutôt que livrer écran par écran au fil de l'eau. Rattrapage prévu en bloc une fois le backend jugé complet — voir `docs/ROADMAP_BACKLOG.md`. Ne dispense pas de tenir ce registre à jour ensuite. |
 | M10 | Sync offline des visites (queue Drift/SQLite, écriture optimiste) | ✗ | ✓ | proposé | Cas d'usage gardien sur le terrain sans connexion ; Master Spec 13.3 ne prévoit l'offline que côté mobile, et jamais pour les finances. |
 | M12 | Résolution du rôle côté serveur dans le layout `(dashboard)` | ✓ | ✗ (équivalent : guard Riverpod côté client + API qui refuse) | proposé | Mécanisme structurel propre au rendu serveur Next.js ; la sécurité réelle reste l'API + RLS, identique pour les deux clients. |
 | M2 | OTP par SMS comme canal principal de connexion | ✓ (aussi email/mot de passe) | ✓ | proposé | Pas un écart fonctionnel — noté pour mémoire : les deux clients passent par Supabase Auth, aucun accès direct base. |

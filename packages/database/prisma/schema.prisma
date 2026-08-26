@@ -83,6 +83,62 @@ enum RoleType {
 }
 
 // ============================================================================
+// ENUMS — M3 (Master Spec Partie 2.2, Doc A §1, §2)
+// ============================================================================
+
+enum TypeLot {
+  APPARTEMENT
+  PARKING
+  CAVE
+  LOCAL
+  TOIT_TERRASSE
+  VILLA
+  COMMERCIAL
+  BUREAU
+  LOGE_GARDIEN
+}
+
+// Liste de départ (Master Spec Partie 2.2). TANTIEME_A_REGULARISER : cas Doc A §3.1 (erreur
+// notariale) — conservé comme statut de lot tel que noté dans le schéma de référence, à
+// confirmer produit si un flag séparé serait préférable.
+enum StatutLot {
+  OCCUPE
+  VACANT
+  ORPHELIN
+  EN_SUCCESSION
+  SINISTRE
+  TANTIEME_A_REGULARISER
+}
+
+// Doc A §1.1 : "Champ type_usage sur le lot : HABITATION / BUREAU / MIXTE / COMMERCIAL" — absent
+// du tableau Master Spec Partie 2.2 mais explicitement demandé par Doc A (qui fait autorité sur
+// le métier). Nullable : seul un sous-ensemble de lots (ex. appartement transformé en bureau) a
+// besoin de cette distinction.
+enum TypeUsageLot {
+  HABITATION
+  BUREAU
+  MIXTE
+  COMMERCIAL
+}
+
+enum TypePropriete {
+  PLEIN
+  INDIVISION
+  SCI
+}
+
+enum TypeOccupation {
+  PROPRIETAIRE_OCCUPANT
+  LOCATAIRE
+}
+
+enum StatutSuccession {
+  OUVERTE
+  HERITIERS_DESIGNES
+  CLOTUREE
+}
+
+// ============================================================================
 // M1 — TENANT & UTILISATEURS (Master Spec Partie 2.2)
 // ============================================================================
 
@@ -99,11 +155,44 @@ model Copropriete {
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
   delaiConvocationJours Int?              @map("delai_convocation_jours")
+  // Total des tantièmes défini au règlement de copropriété (ex. 1000, 10000) — champ absent du
+  // tableau Master Spec Partie 2.2 mais nécessaire pour appliquer la contrainte Partie 2.4 "somme
+  // des tantièmes d'une copropriété = total défini au règlement" (trigger M3, voir migration).
+  // Nullable : saisi par le syndic à la configuration ; tant que non renseigné, le trigger de
+  // blocage sur `lot` ne s'applique pas (pas une valeur légale au sens LEGAL_QUESTIONS_BRIEF.md,
+  // simple donnée opérationnelle propre à chaque copropriété — pas de valeur par défaut devinée).
+  totalTantiemes        Decimal?          @map("total_tantiemes") @db.Decimal(14, 2)
+  // Surcharge des délais d'escalade impayés par défaut (Master Spec Partie 6.3 : "les délais
+  // exacts doivent être calés sur la politique de recouvrement propre à chaque copropriété").
+  // Nullable : les délais de Doc A §3.3 (voir apps/api/lib/finances/escalade.ts) s'appliquent
+  // par défaut tant que non surchargé.
+  politiqueRecouvrementJson Json?         @map("politique_recouvrement_json")
+  // Paramètres légaux AG (M6, Master Spec Partie 8.3/8.5) — NE JAMAIS mettre de valeur par défaut
+  // avant confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §2, §4). Nullable : tant que non
+  // renseigné, `POST /ag/:id/ouvrir` et `POST /ag/:id/procurations` refusent explicitement (422)
+  // plutôt que d'appliquer un chiffre deviné (ex. les "50%"/"3 procurations" trouvés en sources
+  // secondaires dans le brief, PAS confirmés par un avocat).
+  quorumPremiereConvocation      Decimal? @map("quorum_premiere_convocation") @db.Decimal(4, 3)
+  limiteProcurationsMandataire   Int?     @map("limite_procurations_mandataire")
   creeLe                DateTime          @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe             DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
 
   rolesUtilisateur RoleUtilisateur[]
   invitations      Invitation[]
+  lots             Lot[]
+  espacesCommuns   EspaceCommun[]
+  auditLogs        AuditLog[]
+  budgetsAg        BudgetAg[]
+  appelsDeFonds    AppelDeFonds[]
+  fondsReserve     FondsReserve?
+  prestataires     Prestataire[]
+  incidents        Incident[]
+  assembleesGenerales AssembleeGenerale[]
+  documents        Document[]
+  notifications    Notification[]
+  personnel        Personnel[]
+  visites          Visite[]
+  litiges          ConflitLitige[]
 
   @@map("copropriete")
 }
@@ -125,6 +214,21 @@ model Utilisateur {
 
   roles             RoleUtilisateur[]
   invitationsEmises Invitation[]      @relation("InvitationEmetteur")
+  lotsProprietaire  LotProprietaire[]
+  lotsOccupant      LotOccupant[]
+  auditLogsActeur   AuditLog[]
+  incidentsCrees    Incident[]        @relation("IncidentCreateur")
+  incidentLogsActeur IncidentLog[]    @relation("IncidentLogActeur")
+  agVotes                  AgVote[]              @relation("AgVoteVotant")
+  agProcurationsMandant    AgProcuration[]       @relation("AgProcurationMandant")
+  agProcurationsMandataire AgProcuration[]       @relation("AgProcurationMandataire")
+  agNotificationsRecues    AgNotificationLog[]   @relation("AgNotificationLogDestinataire")
+  reservationsEspaceCommun ReservationEspaceCommun[]
+  documentsCrees           Document[]
+  notifications            Notification[]
+  fichesPersonnel          Personnel[]
+  visitesGardien           Visite[]              @relation("VisiteGardien")
+  litigesCrees             ConflitLitige[]       @relation("LitigeCreateur")
 
   @@map("utilisateur")
 }
@@ -154,9 +258,10 @@ model Invitation {
   id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   coproprieteId String           @map("copropriete_id") @db.Uuid
   copropriete   Copropriete      @relation(fields: [coproprieteId], references: [id])
-  // Nullable : gardien/prestataire/syndic sont rattachés directement à la copropriété
-  // (Partie 5.3). FK vers `lot` ajoutée en M3 quand la table lot sera créée — UUID brut d'ici là.
+  // Nullable : gardien/prestataire/syndic sont rattachés directement à la copropriété (Partie
+  // 5.3). FK vers `lot` ajoutée ici (M3 — la table lot existe désormais, voir migration M3).
   lotId         String?          @map("lot_id") @db.Uuid
+  lot           Lot?             @relation(fields: [lotId], references: [id])
   roleCible     RoleType         @map("role_cible")
   emetteurId    String           @map("emetteur_id") @db.Uuid
   emetteur      Utilisateur      @relation("InvitationEmetteur", fields: [emetteurId], references: [id])
@@ -168,4 +273,897 @@ model Invitation {
 
   @@index([coproprieteId])
   @@map("invitation")
+}
+
+// ============================================================================
+// M3 — LOTS, PROPRIÉTÉ, OCCUPATION (Master Spec Partie 2.2, Doc A §1, §2)
+// ============================================================================
+
+model Lot {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String         @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
+  typeLot       TypeLot        @map("type_lot")
+  // Doc A §1.1 — voir commentaire de l'enum TypeUsageLot. Nullable, non renseigné par défaut.
+  typeUsage     TypeUsageLot?  @map("type_usage")
+  numero        String
+  etage         Int?
+  tantiemes     Decimal        @db.Decimal(14, 2)
+  superficie    Decimal?       @db.Decimal(10, 2)
+  statut        StatutLot      @default(VACANT)
+  lotParentId   String?        @map("lot_parent_id") @db.Uuid
+  lotParent     Lot?           @relation("LotParentEnfant", fields: [lotParentId], references: [id])
+  lotsEnfants   Lot[]          @relation("LotParentEnfant")
+  creeLe        DateTime       @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime       @updatedAt @map("modifie_le") @db.Timestamptz
+
+  proprietaires    LotProprietaire[]
+  occupants        LotOccupant[]
+  successions      Succession[]
+  invitations      Invitation[]
+  appelsDeFondsLot AppelDeFondsLot[]
+  paiements        Paiement[]
+  incidents        Incident[]
+  agVotes          AgVote[]
+  agProcurations   AgProcuration[]
+  reservations     ReservationEspaceCommun[]
+  personnelLoges   Personnel[]
+  visites          Visite[]
+
+  @@index([coproprieteId])
+  @@map("lot")
+}
+
+model EspaceCommun {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId         String   @map("copropriete_id") @db.Uuid
+  copropriete           Copropriete @relation(fields: [coproprieteId], references: [id])
+  nom                   String
+  type                  String
+  capacite              Int?
+  reservable            Boolean  @default(false)
+  reglesReservationJson Json?    @map("regles_reservation_json")
+  // Doc A §7.2 : "Validation manuelle ou auto selon paramètre" — absent du tableau Master Spec
+  // littéral (qui ne liste que espace_commun/reservation_espace_commun sans détail de workflow),
+  // ajouté par nécessité pour distinguer les deux modes explicitement demandés par Doc A.
+  validationAutomatique Boolean  @default(false) @map("validation_automatique")
+
+  reservations ReservationEspaceCommun[]
+
+  @@index([coproprieteId])
+  @@map("espace_commun")
+}
+
+enum StatutReservationEspaceCommun {
+  EN_ATTENTE
+  CONFIRMEE
+  REJETEE
+  ANNULEE
+}
+
+// Doc A §7.2. utilisateur_id (auteur de la réservation) absent du tableau Master Spec littéral
+// (id, espace_id, lot_id, date_debut, date_fin, statut) — ajouté par nécessité : Doc A parle
+// systématiquement du "résident" qui réserve, pas seulement du lot, et l'auteur peut différer du
+// propriétaire du lot (locataire réservant pour son lot, par exemple).
+model ReservationEspaceCommun {
+  id            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  espaceId      String                         @map("espace_id") @db.Uuid
+  espace        EspaceCommun                   @relation(fields: [espaceId], references: [id])
+  lotId         String                         @map("lot_id") @db.Uuid
+  lot           Lot                            @relation(fields: [lotId], references: [id])
+  utilisateurId String                         @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur                    @relation(fields: [utilisateurId], references: [id])
+  dateDebut     DateTime                       @map("date_debut") @db.Timestamptz
+  dateFin       DateTime                       @map("date_fin") @db.Timestamptz
+  statut        StatutReservationEspaceCommun  @default(EN_ATTENTE)
+  // Doc A §7.2 "Champ nombre_invites sur réservation" — extension explicitement nommée par Doc A.
+  nombreInvites Int?                           @map("nombre_invites")
+  motifRejet    String?                        @map("motif_rejet")
+  creeLe        DateTime                       @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime                       @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([espaceId])
+  @@index([lotId])
+  @@map("reservation_espace_commun")
+}
+
+// ============================================================================
+// ENUMS — M9 (Master Spec Partie 7, 9)
+// ============================================================================
+
+// Master Spec Partie 9.4 : reprend directement Doc A §12.3.
+enum VisibiliteDocument {
+  PUBLIC_COPROPRIETE
+  SYNDIC_ONLY
+  CONSEIL_SYNDICAL
+}
+
+// Master Spec Partie 7.1 : canaux effectivement utilisés (email, SMS, push, WhatsApp phase 2) —
+// distinct de CanalInvitation (M1/M2) qui inclut QR_CODE, non pertinent pour une notification.
+enum CanalNotification {
+  EMAIL
+  SMS
+  PUSH
+  WHATSAPP
+}
+
+enum StatutEnvoiNotification {
+  EN_ATTENTE
+  ENVOYE
+  ECHOUE
+}
+
+// ============================================================================
+// M9 — NOTIFICATIONS & DOCUMENTS (Master Spec Partie 7, 9)
+// ============================================================================
+
+// Doc A §12.3 / Master Spec Partie 9.4. `cree_par` nullable : un document peut être généré par un
+// job système (PV, quittance) sans acteur humain.
+model Document {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String             @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete        @relation(fields: [coproprieteId], references: [id])
+  type          String
+  nom           String
+  visibilite    VisibiliteDocument
+  // Chemin dans Supabase Storage (Master Spec Partie 9.3) — jamais une URL publique stockée ici,
+  // l'URL signée à durée de vie courte est générée à la demande par l'API.
+  storagePath   String             @map("storage_path")
+  creePar       String?            @map("cree_par") @db.Uuid
+  createur      Utilisateur?       @relation(fields: [creePar], references: [id])
+  creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@map("document")
+}
+
+// Append-only (Master Spec Partie 7.2 : "ligne notification immuable" — preuve légale d'envoi).
+// coproprieteId absent du tableau Master Spec littéral (Partie 7.2 ne liste que
+// canal/horodatage/statut_envoi/accuse_reception) — ajouté par nécessité, même logique que
+// `audit_log.copropriete_id` en M4 : une policy RLS de tenant isolation est non négociable et il
+// n'existe aucune autre colonne fixe pour la dériver.
+// `lu`/`lu_le` absents du tableau littéral, ajoutés par nécessité pour `PATCH
+// /notifications/:id/read` (Master Spec Partie 3.2) qui n'aurait sinon aucun état à modifier.
+model Notification {
+  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId   String                   @map("copropriete_id") @db.Uuid
+  copropriete     Copropriete              @relation(fields: [coproprieteId], references: [id])
+  utilisateurId   String                   @map("utilisateur_id") @db.Uuid
+  utilisateur     Utilisateur              @relation(fields: [utilisateurId], references: [id])
+  templateCode    String                   @map("template_code")
+  canal           CanalNotification
+  statutEnvoi     StatutEnvoiNotification  @default(EN_ATTENTE) @map("statut_envoi")
+  contenuJson     Json?                    @map("contenu_json")
+  accuseReception DateTime?                @map("accuse_reception") @db.Timestamptz
+  lu              Boolean                  @default(false)
+  luLe            DateTime?                @map("lu_le") @db.Timestamptz
+  horodatageEnvoi DateTime                 @default(now()) @map("horodatage_envoi") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@index([utilisateurId])
+  @@map("notification")
+}
+
+// ============================================================================
+// M10 — PERSONNEL / GARDIEN (Master Spec Partie 2.2/13.3, Doc A §9)
+// ============================================================================
+
+enum StatutPersonnel {
+  PRESENT
+  ABSENT
+  REMPLACE
+}
+
+enum StatutVisite {
+  EN_ATTENTE
+  AUTORISE
+  REFUSE
+}
+
+// Le tableau Master Spec Partie 2.2 référence "Doc A §7" pour `visite`, mais §7
+// (docs/domain-reference/07-parties-communes.md) ne couvre que les espaces communs — le seul
+// document Doc A qui traite du contrôle d'accès visiteurs est §9.2
+// (docs/domain-reference/09-personnel-gardien.md, ligne "Visiteurs et contrôle d'accès") : écart
+// de renumérotation signalé (même famille de divergence que CategorieIncident/UrgenceIncident en
+// M7), pas une invention — Doc A §9 fait donc autorité ici comme pour `personnel`.
+model Personnel {
+  id            String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateurId String          @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur     @relation(fields: [utilisateurId], references: [id])
+  coproprieteId String          @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete     @relation(fields: [coproprieteId], references: [id])
+  statut        StatutPersonnel @default(PRESENT)
+  // Doc A §9.2 "Logement attribué (lot type LOGE_GARDIEN)" — nullable : gardien non-résident.
+  logementLotId String?         @map("logement_lot_id") @db.Uuid
+  logementLot   Lot?            @relation(fields: [logementLotId], references: [id])
+  creeLe        DateTime        @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@unique([utilisateurId, coproprieteId])
+  @@index([coproprieteId])
+  @@map("personnel")
+}
+
+// Doc A §9.2 "Module visites : Gardien enregistre → notification push au résident → Résident
+// autorise ou refuse → Gardien reçoit la réponse". copropriete_id absent du tableau Master Spec
+// littéral (id, gardien_id, lot_id, visiteur_nom, statut, horodatage) — ajouté par nécessité,
+// même logique que les autres tables M4/M7/M9 (une policy RLS de tenant isolation directe est
+// non négociable, CLAUDE.md §1.8).
+model Visite {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String       @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete  @relation(fields: [coproprieteId], references: [id])
+  gardienId     String       @map("gardien_id") @db.Uuid
+  gardien       Utilisateur  @relation("VisiteGardien", fields: [gardienId], references: [id])
+  lotId         String       @map("lot_id") @db.Uuid
+  lot           Lot          @relation(fields: [lotId], references: [id])
+  visiteurNom   String       @map("visiteur_nom")
+  statut        StatutVisite @default(EN_ATTENTE)
+  horodatage    DateTime     @default(now()) @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@index([lotId])
+  @@map("visite")
+}
+
+// ============================================================================
+// M11 — LITIGES (Master Spec Partie 2.2, Doc A §12.1)
+// ============================================================================
+
+enum StatutLitige {
+  OUVERT
+  RESOLU
+  CLOS
+}
+
+// Colonnes du tableau Master Spec Partie 2.2 (id, copropriete_id, type, description, statut,
+// escalade_niveau int). `type` reste un TEXT libre : Doc A §12.1 liste 8 familles de conflits
+// mais sans nomenclature fermée — pas d'enum devinée. `escalade_niveau` suit le workflow Doc A
+// §12.1 "Syndic répond → Si non résolu → Médiation AG → Tribunal" : 0 = traitement syndic,
+// 1 = médiation AG, 2 = tribunal (monotone, jamais décrémenté — valeur probante).
+// `cree_par` ajouté par nécessité (absent du tableau littéral) : porteur du litige, support de
+// la policy RLS de confidentialité (un résident ne voit que SES litiges, Doc A §12.3).
+// ⚠️ LEGAL_QUESTIONS_BRIEF.md §0 : une étape de conciliation préalable obligatoire (Loi 30-24)
+// pourrait devoir s'insérer avant le niveau tribunal — non modélisée tant que non confirmée.
+model ConflitLitige {
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId  String       @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete  @relation(fields: [coproprieteId], references: [id])
+  type           String
+  description    String
+  statut         StatutLitige @default(OUVERT)
+  escaladeNiveau Int          @default(0) @map("escalade_niveau")
+  creePar        String       @map("cree_par") @db.Uuid
+  createur       Utilisateur  @relation("LitigeCreateur", fields: [creePar], references: [id])
+  creeLe         DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe      DateTime     @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@map("conflit_litige")
+}
+
+// Contrainte Master Spec 2.4 : somme des quote_part actives (date_fin IS NULL) d'un même lot =
+// 100% — appliquée par un contrainte trigger DEFERRABLE INITIALLY DEFERRED en SQL brut (voir
+// migration M3), pas exprimable en Prisma. S'applique aussi bien au plein propriétaire unique
+// (une seule ligne à 100%) qu'à l'indivision (Doc A §2.4).
+model LotProprietaire {
+  id                         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId                      String        @map("lot_id") @db.Uuid
+  lot                        Lot           @relation(fields: [lotId], references: [id])
+  utilisateurId              String        @map("utilisateur_id") @db.Uuid
+  utilisateur                Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  quotePart                  Decimal       @map("quote_part") @db.Decimal(5, 2)
+  typePropriete              TypePropriete @map("type_propriete")
+  estRepresentantIndivision  Boolean       @default(false) @map("est_representant_indivision")
+  dateDebut                  DateTime      @map("date_debut") @db.Date
+  dateFin                    DateTime?     @map("date_fin") @db.Date
+
+  @@index([lotId])
+  @@index([utilisateurId])
+  @@map("lot_proprietaire")
+}
+
+model LotOccupant {
+  id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId                  String         @map("lot_id") @db.Uuid
+  lot                    Lot            @relation(fields: [lotId], references: [id])
+  utilisateurId          String         @map("utilisateur_id") @db.Uuid
+  utilisateur            Utilisateur    @relation(fields: [utilisateurId], references: [id])
+  typeOccupation         TypeOccupation @map("type_occupation")
+  dateDebut              DateTime       @map("date_debut") @db.Date
+  dateFin                DateTime?      @map("date_fin") @db.Date
+  accesFinancesAccorde   Boolean        @default(false) @map("acces_finances_accorde")
+  recoitConvocations     Boolean        @default(false) @map("recoit_convocations")
+
+  @@index([lotId])
+  @@index([utilisateurId])
+  @@map("lot_occupant")
+}
+
+// Doc A §2.5 : ouverture d'une succession au décès d'un propriétaire. Le workflow complet
+// (désignation des héritiers, clôture) est traité au fil de l'eau par le syndic — cette table
+// couvre la structure de données minimale ; les endpoints dédiés (au-delà de la lecture via le
+// lot) sont un TODO ROADMAP explicite, pas un oubli silencieux.
+model Succession {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId                String           @map("lot_id") @db.Uuid
+  lot                  Lot              @relation(fields: [lotId], references: [id])
+  proprietaireDecedeId String           @map("proprietaire_decede_id") @db.Uuid
+  statut               StatutSuccession @default(OUVERTE)
+  contactTemporaireId  String?          @map("contact_temporaire_id") @db.Uuid
+  dateOuverture        DateTime         @default(now()) @map("date_ouverture") @db.Timestamptz
+
+  @@index([lotId])
+  @@map("succession")
+}
+
+// ============================================================================
+// M4 — AUDIT LOG (Master Spec Partie 2.2 "Documents, notifications, audit")
+// ============================================================================
+
+// Append-only strict (CLAUDE.md §1 non-négociable n°2) : pas de modifieLe, pas d'UPDATE/DELETE
+// autorisé côté application_role (REVOKE en migration) — correction = nouvelle ligne.
+// coproprieteId : absent de la table Master Spec Partie 2.2 littérale, ajouté ici (comme
+// copropriete.totalTantiemes en M3) parce qu'une policy RLS de tenant isolation est non
+// négociable (CLAUDE.md §1.8) et qu'il n'existe aucune autre colonne fixe pour la dériver — la
+// jointure via entite/entite_id dépend du type d'entité et ne peut pas servir de policy générique.
+model AuditLog {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String    @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  // Nullable : action système (job Inngest) sans acteur humain (Master Spec Partie 2.2).
+  acteurId      String?   @map("acteur_id") @db.Uuid
+  acteur        Utilisateur? @relation(fields: [acteurId], references: [id])
+  action        String
+  entite        String
+  entiteId      String    @map("entite_id") @db.Uuid
+  avantJson     Json?     @map("avant_json")
+  apresJson     Json?     @map("apres_json")
+  horodatage    DateTime  @default(now()) @db.Timestamptz
+  ip            String?
+
+  @@index([coproprieteId])
+  @@index([entite, entiteId])
+  @@map("audit_log")
+}
+
+// ============================================================================
+// ENUMS — M5 (Master Spec Partie 2.2/6, Doc A §3)
+// ============================================================================
+
+enum StatutBudgetAg {
+  PROPOSE
+  VOTE
+  ACTIF
+}
+
+// Master Spec Partie 2.2 liste seulement CHARGES_COURANTES/TRAVAUX/FONDS_RESERVE. Doc A §3.2
+// distingue plus finement (le "travaux" du Master Spec y est nommé EXCEPTIONNEL, avec en plus
+// REGULARISATION/URGENCE/DEMARRAGE) — Doc A fait autorité sur le métier (CLAUDE.md), donc cette
+// liste reprend Doc A §3.2 plutôt que le Master Spec littéral.
+enum TypeAppelDeFonds {
+  CHARGES_COURANTES
+  EXCEPTIONNEL
+  FONDS_RESERVE
+  REGULARISATION
+  URGENCE
+  DEMARRAGE
+}
+
+enum StatutAppelDeFonds {
+  BROUILLON
+  EMIS
+  CLOTURE
+}
+
+enum StatutAppelDeFondsLot {
+  PAYE
+  PARTIEL
+  IMPAYE
+}
+
+enum MethodePaiement {
+  CMI
+  VIREMENT
+  ESPECES
+  CHEQUE
+}
+
+enum StatutPaiement {
+  VALIDE
+  EN_ATTENTE
+  REJETE
+}
+
+enum StatutContestationCharge {
+  OUVERTE
+  REPONDUE
+  MEDIEE
+  TRIBUNAL
+}
+
+// Doc A §3.3 (6 niveaux, délais précis J+3…J+90) l'emporte sur Master Spec Partie 6.3 (4 niveaux
+// N0-N3, délais différents) — même conflit Doc A/Master Spec, tranché en faveur de Doc A
+// (métier) ; voir apps/api/lib/finances/escalade.ts pour le détail des délais retenus.
+enum NiveauEscalade {
+  N0
+  N1
+  N2
+  N3
+  N4
+  N5
+  N6
+}
+
+enum TypeMouvementFondsReserve {
+  COTISATION
+  DEPENSE
+}
+
+// ============================================================================
+// M5 — MOTEUR FINANCIER (Master Spec Partie 2.2/6, Doc A §3)
+// ============================================================================
+
+// CRUD livré (24/08/2026, migration `20260824130000_m5_budget_ag_crud`) : `POST/GET /finances/budgets-ag`,
+// `PATCH /finances/budgets-ag/:id/statut` — voir `apps/api/lib/finances/budget-ag.ts`. FK vers
+// `assemblee_generale` ajoutée maintenant que M6 existe (absente à la création de la table en M5).
+// ⚠️ LIMITE CONNUE, signalée : l'enum `StatutBudgetAg` (propose/vote/actif) est repris tel quel du
+// Master Spec littéral (Partie 2.2) — il n'a PAS de 4e état "remplacé/révisé". Un index unique
+// partiel (1 seul budget ACTIF par (copropriete_id, exercice), migration SQL) empêche l'ambiguïté
+// dans `genererAppelDeFonds`, mais il n'existe donc AUCUN mécanisme de "budget rectificatif"
+// (Doc A §3.2 "Dépassement budget en cours d'année") : un budget déjà ACTIF ne peut pas être
+// remplacé par une révision sans étendre l'enum — pas fait ici pour ne pas dévier du schéma
+// littéral sans confirmation produit.
+model BudgetAg {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String              @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete         @relation(fields: [coproprieteId], references: [id])
+  agId          String?             @map("ag_id") @db.Uuid
+  assembleeGenerale AssembleeGenerale? @relation(fields: [agId], references: [id])
+  exercice      String
+  montantTotal  Decimal             @map("montant_total") @db.Decimal(14, 2)
+  statut        StatutBudgetAg      @default(PROPOSE)
+  creeLe        DateTime            @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime            @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([coproprieteId])
+  @@index([agId])
+  @@map("budget_ag")
+}
+
+model AppelDeFonds {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String             @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete        @relation(fields: [coproprieteId], references: [id])
+  // Format "YYYY-MM" (Master Spec Partie 6.2) — (copropriete_id, periode, type) = clé d'idempotence.
+  periode       String
+  type          TypeAppelDeFonds
+  montantTotal  Decimal            @map("montant_total") @db.Decimal(14, 2)
+  dateEcheance  DateTime           @map("date_echeance") @db.Date
+  statut        StatutAppelDeFonds @default(BROUILLON)
+  creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
+
+  lignes AppelDeFondsLot[]
+
+  @@unique([coproprieteId, periode, type])
+  @@index([coproprieteId])
+  @@map("appel_de_fonds")
+}
+
+model AppelDeFondsLot {
+  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appelDeFondsId String                @map("appel_de_fonds_id") @db.Uuid
+  appelDeFonds   AppelDeFonds          @relation(fields: [appelDeFondsId], references: [id])
+  lotId          String                @map("lot_id") @db.Uuid
+  lot            Lot                   @relation(fields: [lotId], references: [id])
+  montantDu      Decimal               @map("montant_du") @db.Decimal(14, 2)
+  montantPaye    Decimal               @default(0) @map("montant_paye") @db.Decimal(14, 2)
+  statut         StatutAppelDeFondsLot @default(IMPAYE)
+  // Master Spec Partie 2.4 : "montant_paye ≤ montant_du sauf trop-perçu explicitement flaggé" —
+  // CHECK conditionnel appliqué en migration ; ce flag est la condition d'exception.
+  tropPercuAutorise  Boolean          @default(false) @map("trop_percu_autorise")
+  // Doc A §3.3 "Cas Particuliers" : "Flag CONTESTE sur la ligne d'appel fonds".
+  conteste           Boolean          @default(false)
+  // Suivi de l'escalade impayés (Doc A §3.3) — absent du tableau Master Spec littéral, ajouté
+  // pour ne jamais renotifier deux fois le même palier (apps/api/lib/finances/escalade.ts).
+  niveauEscalade     NiveauEscalade   @default(N0) @map("niveau_escalade")
+  derniereEscaladeLe DateTime?        @map("derniere_escalade_le") @db.Timestamptz
+  creeLe             DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe          DateTime         @updatedAt @map("modifie_le") @db.Timestamptz
+
+  paiements     Paiement[]
+  quittance     Quittance?
+  contestations ContestationCharge[]
+
+  @@unique([appelDeFondsId, lotId])
+  @@index([lotId])
+  @@map("appel_de_fonds_lot")
+}
+
+// Append-only strict (Master Spec Partie 2.4 : "Pas de DELETE/UPDATE sur ... paiement" —
+// application_role n'a jamais UPDATE/DELETE, voir migration).
+model Paiement {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId             String          @map("lot_id") @db.Uuid
+  lot               Lot             @relation(fields: [lotId], references: [id])
+  appelDeFondsLotId String          @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  montant           Decimal         @db.Decimal(14, 2)
+  methode           MethodePaiement
+  referenceCmi      String?         @unique @map("reference_cmi")
+  statut            StatutPaiement  @default(VALIDE)
+  // Doc A §3.4 "Locataire paie à la place du propriétaire" — le payeur peut différer du
+  // propriétaire du lot ; absent du tableau Master Spec littéral, ajouté pour ce cas explicite.
+  payeurUtilisateurId String?       @map("payeur_utilisateur_id") @db.Uuid
+  horodatage          DateTime      @default(now()) @db.Timestamptz
+
+  @@index([lotId])
+  @@index([appelDeFondsLotId])
+  @@map("paiement")
+}
+
+// Master Spec Partie 6.5 : "Solde = somme des mouvements, jamais un champ modifiable
+// directement" — donc PAS de colonne `solde` stockée ici malgré le tableau Partie 2.2 qui en
+// liste une ; le solde est calculé à la lecture par SUM(fonds_reserve_mouvement.montant), pour
+// respecter la contrainte d'auditabilité plus forte énoncée par le texte de la Partie 6.5.
+model FondsReserve {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String      @unique @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  mouvements FondsReserveMouvement[]
+
+  @@map("fonds_reserve")
+}
+
+// Append-only strict (Master Spec Partie 6.5).
+model FondsReserveMouvement {
+  id             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  fondsReserveId String                    @map("fonds_reserve_id") @db.Uuid
+  fondsReserve   FondsReserve              @relation(fields: [fondsReserveId], references: [id])
+  type           TypeMouvementFondsReserve
+  // Signé : positif = cotisation (entrée), négatif = dépense (sortie) — solde = SUM(montant).
+  montant        Decimal                   @db.Decimal(14, 2)
+  // Lien décision AG (Master Spec Partie 6.5 : "Décaissement lié à une décision AG") — SANS FK
+  // vers `ag_resolution`, cette table n'existe pas encore (M6). À ajouter quand M6 sera construit.
+  resolutionAgId String?                   @map("resolution_ag_id") @db.Uuid
+  description    String?
+  horodatage     DateTime                  @default(now()) @db.Timestamptz
+
+  @@index([fondsReserveId])
+  @@map("fonds_reserve_mouvement")
+}
+
+// Append-only (preuve fiscale — Master Spec Partie 9 : rétention 10 ans).
+model Quittance {
+  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appelDeFondsLotId String          @unique @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  // Nullable : génération du PDF lui-même hors scope M5 (module Documents, Master Spec Partie 9,
+  // pas encore livré) — la ligne de quittance prouve le paiement complet même sans PDF, à câbler
+  // quand le module Documents existera.
+  pdfUrl            String?         @map("pdf_url")
+  numero            String          @unique
+  dateEmission      DateTime        @default(now()) @map("date_emission") @db.Timestamptz
+
+  @@map("quittance")
+}
+
+model ContestationCharge {
+  id                String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appelDeFondsLotId String                   @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot          @relation(fields: [appelDeFondsLotId], references: [id])
+  utilisateurId     String                   @map("utilisateur_id") @db.Uuid
+  motif             String
+  statut            StatutContestationCharge @default(OUVERTE)
+  reponseSyndic     String?                  @map("reponse_syndic")
+  creeLe            DateTime                 @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe         DateTime                 @updatedAt @map("modifie_le")
+
+  @@index([appelDeFondsLotId])
+  @@map("contestation_charge")
+}
+
+// ============================================================================
+// ENUMS — M7 (Master Spec Partie 2.2 "Incidents, personnel, tiers", Doc A §5)
+// ============================================================================
+
+// Doc A §5.1 (11 catégories) l'emporte sur le Master Spec littéral (qui ne donne qu'un champ
+// "categorie" texte sans liste fermée) — même logique que TypeAppelDeFonds en M5 : Doc A fait
+// autorité sur le métier (CLAUDE.md), sa liste devient l'enum plutôt qu'un champ texte libre.
+enum CategorieIncident {
+  PLOMBERIE
+  ELECTRICITE
+  ASCENSEUR
+  NETTOYAGE
+  SECURITE
+  STRUCTURE
+  JARDINS_ESPACES_VERTS
+  NUISANCES
+  PARKING
+  EQUIPEMENTS_COLLECTIFS
+  ADMINISTRATIF
+}
+
+enum PartieIncident {
+  COMMUNE
+  PRIVATIVE
+}
+
+// Master Spec Partie 2.2 littéral : 3 valeurs (normale/urgente/urgence_maximale). Doc A §5.1
+// distingue en réalité 4 paliers pour certaines sous-catégories (un "TRÈS URGENT" intermédiaire —
+// ex. ascenseur bloqué avec personne, structure à risque d'effondrement — entre URGENTE et
+// URGENCE_MAXIMALE). ⚠️ Écart signalé, PAS résolu ici : on garde les 3 valeurs du Master Spec
+// (schéma = source de vérité technique) et on classe ces cas dans URGENCE_MAXIMALE (le plus proche
+// par délai réel, 30 min) plutôt que de deviner un 4e palier non demandé explicitement par le
+// Master Spec — à corriger si le produit confirme qu'il faut le palier intermédiaire.
+enum UrgenceIncident {
+  NORMALE
+  URGENTE
+  URGENCE_MAXIMALE
+}
+
+enum StatutIncident {
+  OUVERT
+  EN_COURS
+  RESOLU
+  FERME
+}
+
+// ============================================================================
+// M7 — INCIDENTS, PERSONNEL, TIERS (Master Spec Partie 2.2, Doc A §5)
+// ============================================================================
+
+// Doc A §12.3 : "Un prestataire peut-il voir les finances de la copropriété ? NON. Prestataire
+// accède uniquement à son ticket d'intervention." — pour appliquer cette confidentialité en RLS,
+// il faut relier le compte applicatif (role_utilisateur.role = PRESTATAIRE) à SA fiche
+// prestataire. Le tableau Master Spec littéral (id, copropriete_id, nom, specialite, contact,
+// actif) ne porte pas ce lien : utilisateur_id est ajouté ici pour cette raison précise (même
+// logique d'extension conservatrice que copropriete.total_tantiemes en M3). Nullable : un
+// prestataire peut être géré uniquement par référence (nom/contact) sans jamais avoir de compte
+// applicatif — dans ce cas il n'a simplement aucune visibilité RLS sur ses tickets via l'app.
+model Prestataire {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String      @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  nom           String
+  specialite    String
+  contact       String
+  actif         Boolean     @default(true)
+  utilisateurId String?     @unique @map("utilisateur_id") @db.Uuid
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  incidentsAssignes Incident[]
+
+  @@index([coproprieteId])
+  @@map("prestataire")
+}
+
+model Incident {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String            @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete       @relation(fields: [coproprieteId], references: [id])
+  // Nullable : incident en partie commune, pas rattaché à un lot précis (Master Spec Partie 2.2).
+  lotId         String?           @map("lot_id") @db.Uuid
+  lot           Lot?              @relation(fields: [lotId], references: [id])
+  categorie     CategorieIncident
+  sousCategorie String            @map("sous_categorie")
+  // Doc A §5 assume un signalement en texte libre en plus de la catégorie ("Signalement…") —
+  // absent du tableau Master Spec littéral, ajouté comme complément nécessaire (nullable, la
+  // catégorie/sous-catégorie suffisent déjà à qualifier l'incident).
+  description   String?
+  partie        PartieIncident
+  urgence       UrgenceIncident
+  statut        StatutIncident    @default(OUVERT)
+  creePar       String            @map("cree_par") @db.Uuid
+  createur      Utilisateur       @relation("IncidentCreateur", fields: [creePar], references: [id])
+  assigneAId    String?           @map("assigne_a") @db.Uuid
+  assigneA      Prestataire?      @relation(fields: [assigneAId], references: [id])
+  // Calculé à la création à partir de `urgence` (voir apps/api/lib/incidents/incidents.ts —
+  // simplification signalée : delai par palier d'urgence, pas la grille fine par
+  // catégorie/sous-catégorie de Doc A §5.1 qui va de 30 min à 1 semaine selon le cas précis).
+  slaDeadline   DateTime?         @map("sla_deadline") @db.Timestamptz
+  creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+
+  logs IncidentLog[]
+
+  @@index([coproprieteId])
+  @@index([lotId])
+  @@map("incident")
+}
+
+// Append-only (même discipline que audit_log — Master Spec Partie 2.2 : "historique complet").
+model IncidentLog {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidentId   String          @map("incident_id") @db.Uuid
+  incident     Incident        @relation(fields: [incidentId], references: [id])
+  // Nullable : première ligne créée à l'ouverture du ticket, pas de statut "avant".
+  statutAvant  StatutIncident? @map("statut_avant")
+  statutApres  StatutIncident  @map("statut_apres")
+  // Nullable : action système (aucune prévue aujourd'hui, gardé pour cohérence avec audit_log).
+  acteurId     String?         @map("acteur_id") @db.Uuid
+  acteur       Utilisateur?    @relation("IncidentLogActeur", fields: [acteurId], references: [id])
+  commentaire  String?
+  horodatage   DateTime        @default(now()) @db.Timestamptz
+
+  @@index([incidentId])
+  @@map("incident_log")
+}
+
+// ============================================================================
+// ENUMS — M6 (Master Spec Partie 2.2 "assemblées générales" / Partie 8, Doc A §6)
+// ⚠️ MODULE LÉGALEMENT SENSIBLE — docs/LEGAL_QUESTIONS_BRIEF.md §0 : la Loi 30-24 (9 juillet 2024)
+// pourrait changer qui a le droit de convoquer une AG. Construit ici sous forme de STRUCTURE
+// (schéma, machine à états, mécaniques de calcul déjà données noir sur blanc par le Master Spec
+// Partie 8.3/8.4/8.5) — les VALEURS légales encore disputées (délai de convocation déjà géré en
+// M1 via copropriete.delaiConvocationJours, quorum de 1re convocation, limite de procurations)
+// restent des champs NULLABLES sur `copropriete`, jamais une constante codée en dur — voir
+// quorumPremiereConvocation / limiteProcurationsMandataire ci-dessus et les 422 explicites dans
+// apps/api/lib/ag/ag.ts. Si l'avocat confirme que la Loi 30-24 change qui peut convoquer une AG,
+// revoir `apps/api/lib/auth/permissions.ts::"ag.creer"` (actuellement syndic-only, Master Spec
+// littéral) AVANT toute mise en production.
+// ============================================================================
+
+// Master Spec Partie 2.2 littéral : 3 valeurs. Doc A §6.1 en liste davantage (constitutive, à la
+// demande des copropriétaires) — écart signalé, non modélisé ici (pas demandé explicitement par
+// le schéma technique), à ajouter si le produit le confirme.
+enum TypeAg {
+  ORDINAIRE
+  EXTRAORDINAIRE
+  REVOCATION
+}
+
+// Master Spec Partie 8.1 : PLANIFIEE → CONVOQUEE → EN_COURS → CLOTUREE, + branche ANNULEE.
+// ⚠️ LIMITE CONNUE, signalée dans LEGAL_QUESTIONS_BRIEF.md §2 : le mécanisme légal "quorum non
+// atteint en 1re convocation → 2e convocation sans quorum" (Doc A §6.3) n'est PAS modélisé comme
+// état intermédiaire ici — en pratique, une 2e convocation doit être créée comme une NOUVELLE
+// ligne `assemblee_generale` par le syndic (voir apps/api/lib/ag/ag.ts::ouvrirAg qui bloque avec
+// 422 si le quorum n'est pas atteint, sans transition automatique).
+enum StatutAg {
+  PLANIFIEE
+  CONVOQUEE
+  EN_COURS
+  CLOTUREE
+  ANNULEE
+}
+
+enum TypeMajoriteAg {
+  SIMPLE
+  DOUBLE
+  UNANIMITE
+}
+
+enum ResultatResolutionAg {
+  EN_ATTENTE
+  ADOPTEE
+  REJETEE
+}
+
+enum ValeurVoteAg {
+  POUR
+  CONTRE
+  ABSTENTION
+}
+
+// ============================================================================
+// M6 — ASSEMBLÉES GÉNÉRALES (Master Spec Partie 2.2/8, Doc A §6)
+// ============================================================================
+
+model AssembleeGenerale {
+  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId     String      @map("copropriete_id") @db.Uuid
+  copropriete       Copropriete @relation(fields: [coproprieteId], references: [id])
+  type              TypeAg
+  dateConvocation   DateTime?   @map("date_convocation") @db.Timestamptz
+  dateAg            DateTime    @map("date_ag") @db.Timestamptz
+  statut            StatutAg    @default(PLANIFIEE)
+  // Snapshot au moment de `ouvrirAg` — capture la valeur de copropriete.quorumPremiereConvocation
+  // utilisée pour CETTE AG (traçabilité si la config change ensuite). Nullable tant que non ouverte.
+  quorumRequis      Decimal?    @map("quorum_requis") @db.Decimal(4, 3)
+  quorumAtteint     Decimal?    @map("quorum_atteint") @db.Decimal(4, 3)
+  motifAnnulation   String?     @map("motif_annulation")
+  creeLe            DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe         DateTime    @updatedAt @map("modifie_le") @db.Timestamptz
+
+  resolutions       AgResolution[]
+  procurations      AgProcuration[]
+  pv                AgPv?
+  notificationLogs  AgNotificationLog[]
+  budgets           BudgetAg[]
+
+  @@index([coproprieteId])
+  @@map("assemblee_generale")
+}
+
+model AgResolution {
+  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId         String               @map("ag_id") @db.Uuid
+  ag           AssembleeGenerale    @relation(fields: [agId], references: [id])
+  ordre        Int
+  texte        String
+  typeMajorite TypeMajoriteAg       @map("type_majorite")
+  resultat     ResultatResolutionAg @default(EN_ATTENTE)
+  creeLe       DateTime             @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe    DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
+
+  votes AgVote[]
+
+  @@index([agId])
+  @@map("ag_resolution")
+}
+
+// Append-only strict (Master Spec Partie 2.4 : "Pas de DELETE/UPDATE sur ag_vote").
+// Anonymisation à l'affichage résident / nominatif pour le syndic (Doc A §12.3) appliquée au
+// niveau SERVICE (apps/api/lib/ag/ag.ts) + RLS (un résident ne voit que SON propre vote en lecture
+// directe de la table ; les résultats agrégés passent par la fonction SECURITY DEFINER
+// `ag_resultats_resolution`, voir migration — pas par un SELECT direct filtré par rôle).
+model AgVote {
+  id                   String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  resolutionId         String       @map("resolution_id") @db.Uuid
+  resolution           AgResolution @relation(fields: [resolutionId], references: [id])
+  lotId                String       @map("lot_id") @db.Uuid
+  lot                  Lot          @relation(fields: [lotId], references: [id])
+  utilisateurId        String       @map("utilisateur_id") @db.Uuid
+  utilisateur          Utilisateur  @relation("AgVoteVotant", fields: [utilisateurId], references: [id])
+  valeur               ValeurVoteAg
+  tantiemesRepresentes Decimal      @map("tantiemes_representes") @db.Decimal(14, 2)
+  horodatage           DateTime     @default(now()) @db.Timestamptz
+
+  @@unique([resolutionId, lotId])
+  @@index([resolutionId])
+  @@map("ag_vote")
+}
+
+// Doc A §6.5 : mandant → mandataire pour une AG donnée. `revoqueeLe` (absent du tableau Master
+// Spec littéral, ajouté par nécessité) porte le "retrait de procuration avant l'AG" — sans lui,
+// aucune procuration créée par erreur ne pourrait jamais être neutralisée sans DELETE (interdit
+// sur l'esprit append-only du reste du module AG).
+model AgProcuration {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId          String            @map("ag_id") @db.Uuid
+  ag            AssembleeGenerale @relation(fields: [agId], references: [id])
+  lotId         String            @map("lot_id") @db.Uuid
+  lot           Lot               @relation(fields: [lotId], references: [id])
+  mandantId     String            @map("mandant_id") @db.Uuid
+  mandant       Utilisateur       @relation("AgProcurationMandant", fields: [mandantId], references: [id])
+  mandataireId  String            @map("mandataire_id") @db.Uuid
+  mandataire    Utilisateur       @relation("AgProcurationMandataire", fields: [mandataireId], references: [id])
+  revoqueeLe    DateTime?         @map("revoquee_le") @db.Timestamptz
+  creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([agId])
+  @@index([mandataireId])
+  @@map("ag_procuration")
+}
+
+// Append-only (Master Spec Partie 2.4 : "Pas de DELETE sur ag_pv").
+model AgPv {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId                 String            @unique @map("ag_id") @db.Uuid
+  ag                   AssembleeGenerale @relation(fields: [agId], references: [id])
+  contenuJson          Json              @map("contenu_json")
+  // Nullable : génération du PDF (React-PDF, Master Spec Partie 8.6) hors scope de cette session —
+  // le hash d'intégrité et le contenu structuré suffisent déjà à prouver le contenu des décisions.
+  pdfUrl               String?           @map("pdf_url")
+  hashIntegrite        String            @map("hash_integrite")
+  horodatageGeneration DateTime          @default(now()) @map("horodatage_generation") @db.Timestamptz
+
+  @@map("ag_pv")
+}
+
+// Append-only (preuve légale d'envoi — Doc A §12.2, Master Spec Partie 7.2/9.2).
+model AgNotificationLog {
+  id                String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId              String            @map("ag_id") @db.Uuid
+  ag                AssembleeGenerale @relation(fields: [agId], references: [id])
+  utilisateurId     String            @map("utilisateur_id") @db.Uuid
+  utilisateur       Utilisateur       @relation("AgNotificationLogDestinataire", fields: [utilisateurId], references: [id])
+  canal             CanalInvitation
+  horodatageEnvoi   DateTime          @default(now()) @map("horodatage_envoi") @db.Timestamptz
+  accuseReceptionLe DateTime?         @map("accuse_reception_le") @db.Timestamptz
+
+  @@index([agId])
+  @@map("ag_notification_log")
 }

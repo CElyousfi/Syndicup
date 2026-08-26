@@ -14,6 +14,7 @@ export type ErrorCode =
   | "FORBIDDEN"
   | "NOT_FOUND"
   | "CONFLICT"
+  | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR";
 
@@ -23,6 +24,9 @@ const STATUS: Record<ErrorCode, number> = {
   FORBIDDEN: 403,
   NOT_FOUND: 404,
   CONFLICT: 409,
+  // 422 : payload syntaxiquement valide mais violant une règle métier (ex. somme des quote_part
+  // ≠ 100%, budget AG absent) — distinct de VALIDATION_ERROR (400, payload mal formé).
+  UNPROCESSABLE_ENTITY: 422,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
 };

@@ -34,7 +34,7 @@ export function genererCode(): string {
   return Array.from(bytes, (b) => alphabet[b % alphabet.length]).join("");
 }
 
-function expiration(canal: InvitationCreateInput["canal"]): Date {
+export function expiration(canal: InvitationCreateInput["canal"]): Date {
   return new Date(Date.now() + EXPIRATION_HEURES[canal] * 3600 * 1000);
 }
 
