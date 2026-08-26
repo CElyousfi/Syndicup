@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/incidents — liste et création d'incidents (Master Spec Partie 2.2, Doc A §5 — M7).
  */
+import { withApiHandler } from "../../../lib/http/handler";
 import { incidentCreateSchema } from "../../../lib/incidents/schemas";
 import {
   creerIncident,
@@ -11,7 +12,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const url = new URL(req.url);
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const body = await req.json().catch(() => null);
@@ -43,3 +44,6 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);
+export const POST = withApiHandler(handlePOST);

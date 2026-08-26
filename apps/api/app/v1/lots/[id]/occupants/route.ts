@@ -2,6 +2,7 @@
  * POST /v1/lots/:id/occupants — ajoute un occupant (locataire ou propriétaire occupant — Doc A
  * §2.2/§2.3).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { lotOccupantCreateSchema } from "../../../../../lib/lots/schemas";
 import {
   ajouterOccupant,
@@ -11,7 +12,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -28,3 +29,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

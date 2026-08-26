@@ -4,6 +4,7 @@
  * de téléchargement dédiée, mais Partie 9.3 exige explicitement de ne jamais exposer d'URL
  * Supabase Storage publique — un endpoint qui vérifie permission/RLS avant de signer est requis.
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import {
   obtenirUrlTelechargement,
   PermissionRefuseeError,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../lib/http/respond";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleGET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -26,3 +27,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);

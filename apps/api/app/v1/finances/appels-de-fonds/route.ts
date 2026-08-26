@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/finances/appels-de-fonds — génération batch et liste (Master Spec Partie 6.2 — M5).
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import { appelDeFondsGenererSchema } from "../../../../lib/finances/schemas";
 import {
   genererAppelDeFonds,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const url = new URL(req.url);
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const body = await req.json().catch(() => null);
@@ -45,3 +46,6 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);
+export const POST = withApiHandler(handlePOST);

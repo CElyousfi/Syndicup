@@ -4,12 +4,13 @@
  * rôle : le code d'invitation détermine copropriété + lot + rôle (jamais choisis par l'invité).
  * Edge cases 5.5 → codes normalisés : 404 invalide/expiré, 409 déjà utilisé / email dupliqué.
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { inviteAcceptSchema } from "../../../../../lib/auth/schemas";
 import { accepterInvitation } from "../../../../../lib/auth/invitations";
 import { identiteFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   let identite;
   try {
     identite = await identiteFromRequest(req);
@@ -62,3 +63,5 @@ export async function POST(req: Request) {
       return fail("CONFLICT", "Un syndic actif existe déjà pour cette copropriété (Partie 2.4).");
   }
 }
+
+export const POST = withApiHandler(handlePOST);

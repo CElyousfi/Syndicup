@@ -1,6 +1,7 @@
 /**
  * POST /v1/ag/:id/procurations/:procurationId/revoquer — retrait de procuration (Doc A §6.5 — M6).
  */
+import { withApiHandler } from "../../../../../../../lib/http/handler";
 import {
   revoquerProcuration,
   PermissionRefuseeError,
@@ -10,7 +11,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../../../lib/http/respond";
 
-export async function POST(
+async function handlePOST(
   req: Request,
   { params }: { params: Promise<{ id: string; procurationId: string }> }
 ) {
@@ -28,3 +29,5 @@ export async function POST(
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

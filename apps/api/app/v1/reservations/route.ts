@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/reservations — liste et création de réservations (Doc A §7.2 — M8).
  */
+import { withApiHandler } from "../../../lib/http/handler";
 import { reservationCreateSchema } from "../../../lib/espaces-communs/schemas";
 import {
   creerReservation,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const url = new URL(req.url);
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const body = await req.json().catch(() => null);
@@ -44,3 +45,6 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);
+export const POST = withApiHandler(handlePOST);

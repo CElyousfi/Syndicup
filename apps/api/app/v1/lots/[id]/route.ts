@@ -1,6 +1,7 @@
 /**
  * GET/PATCH /v1/lots/:id — consultation et modification d'un lot (Master Spec Partie 2.2 — M3).
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import { lotUpdateSchema } from "../../../../lib/lots/schemas";
 import {
   obtenirLot,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleGET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -27,7 +28,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -45,3 +46,6 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);
+export const PATCH = withApiHandler(handlePATCH);

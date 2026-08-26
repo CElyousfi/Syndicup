@@ -3,6 +3,7 @@
  * ⚠️ Vérification automatique du solde de charges non disponible (dépend du moteur financier
  * M5, pas encore livré) — voir apps/api/lib/lots/lots.ts::transfererPropriete.
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { lotTransfertProprieteSchema } from "../../../../../lib/lots/schemas";
 import {
   transfererPropriete,
@@ -13,7 +14,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -31,3 +32,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

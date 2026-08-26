@@ -4,11 +4,12 @@
  * sms_sent) — un rate limiter applicatif Upstash/Redis viendra en plus au moment du choix
  * d'infra (pas de dépendance ajoutée sans décision — ROADMAP).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { otpRequestSchema } from "../../../../../lib/auth/schemas";
 import { createSupabaseAuth } from "../../../../../lib/auth/supabase";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = otpRequestSchema.safeParse(body);
   if (!parsed.success) return failZod(parsed.error);
@@ -21,3 +22,5 @@ export async function POST(req: Request) {
   }
   return ok({ envoye: true });
 }
+
+export const POST = withApiHandler(handlePOST);

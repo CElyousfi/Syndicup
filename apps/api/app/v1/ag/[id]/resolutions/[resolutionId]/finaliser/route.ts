@@ -2,6 +2,7 @@
  * POST /v1/ag/:id/resolutions/:resolutionId/finaliser — calcule ADOPTEE/REJETEE (Master Spec
  * Partie 8.4 — M6, ajout nécessaire, voir permissions.ts "ag.finaliser_resolution").
  */
+import { withApiHandler } from "../../../../../../../lib/http/handler";
 import {
   finaliserResolution,
   PermissionRefuseeError,
@@ -11,7 +12,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../../../lib/http/respond";
 
-export async function POST(
+async function handlePOST(
   req: Request,
   { params }: { params: Promise<{ id: string; resolutionId: string }> }
 ) {
@@ -29,3 +30,5 @@ export async function POST(
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

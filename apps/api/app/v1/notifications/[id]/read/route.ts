@@ -2,6 +2,7 @@
  * PATCH /v1/notifications/:id/read — marque une notification comme lue (Master Spec Partie 3.2
  * — M9).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import {
   marquerLue,
   PermissionRefuseeError,
@@ -10,7 +11,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../lib/http/respond";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -24,3 +25,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const PATCH = withApiHandler(handlePATCH);

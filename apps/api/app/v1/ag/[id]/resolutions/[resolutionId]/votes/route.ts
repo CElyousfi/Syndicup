@@ -1,11 +1,12 @@
 /**
  * GET /v1/ag/:id/resolutions/:resolutionId/votes — détail nominatif (syndic only, Doc A §12.3 — M6).
  */
+import { withApiHandler } from "../../../../../../../lib/http/handler";
 import { listerVotesNominatifs, PermissionRefuseeError } from "../../../../../../../lib/ag/ag";
 import { tenantFromRequest, mapAuthError } from "../../../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../../../lib/http/respond";
 
-export async function GET(
+async function handleGET(
   req: Request,
   { params }: { params: Promise<{ id: string; resolutionId: string }> }
 ) {
@@ -21,3 +22,5 @@ export async function GET(
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);

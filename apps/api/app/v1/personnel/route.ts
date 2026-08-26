@@ -1,6 +1,7 @@
 /**
  * GET/POST /v1/personnel — registre du personnel gardien (Master Spec Partie 13.3, Doc A §9 — M10).
  */
+import { withApiHandler } from "../../../lib/http/handler";
 import { personnelCreateSchema } from "../../../lib/personnel/schemas";
 import {
   creerPersonnel,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const rows = await listerPersonnel(ctx);
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const body = await req.json().catch(() => null);
@@ -42,3 +43,6 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);
+export const POST = withApiHandler(handlePOST);

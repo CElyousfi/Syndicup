@@ -2,6 +2,7 @@
  * GET /v1/notifications — boîte de réception personnelle de l'appelant (Master Spec Partie 3.2,
  * 7.2 — M9).
  */
+import { withApiHandler } from "../../../lib/http/handler";
 import {
   listerMesNotifications,
   PermissionRefuseeError,
@@ -9,7 +10,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail } from "../../../lib/http/respond";
 
-export async function GET(req: Request) {
+async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const rows = await listerMesNotifications(ctx);
@@ -21,3 +22,5 @@ export async function GET(req: Request) {
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);

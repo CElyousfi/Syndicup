@@ -7,6 +7,12 @@
  */
 import { randomUUID } from "node:crypto";
 import type { ZodError } from "zod";
+import { getRequestContext } from "./request-context-storage";
+
+/** request_id du contexte de requête (posé par withApiHandler) ; fallback UUID hors requête. */
+function requestId(): string {
+  return getRequestContext()?.requestId ?? randomUUID();
+}
 
 export type ErrorCode =
   | "VALIDATION_ERROR"
@@ -33,14 +39,16 @@ const STATUS: Record<ErrorCode, number> = {
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {
   return Response.json(
-    { data, meta: { request_id: randomUUID(), ...init?.meta } },
+    { data, meta: { request_id: requestId(), ...init?.meta } },
     { status: init?.status ?? 200 }
   );
 }
 
 export function fail(code: ErrorCode, message: string, fields?: Record<string, string>) {
   return Response.json(
-    { error: { code, message, ...(fields ? { fields } : {}) } },
+    // meta.request_id aussi sur les erreurs : sans lui un client ne peut corréler aucun échec
+    // avec les logs/Sentry côté serveur (CLAUDE.md §5).
+    { error: { code, message, ...(fields ? { fields } : {}) }, meta: { request_id: requestId() } },
     { status: STATUS[code] }
   );
 }

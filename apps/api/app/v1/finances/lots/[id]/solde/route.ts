@@ -1,6 +1,7 @@
 /**
  * GET /v1/finances/lots/:id/solde — solde de charges d'un lot (Master Spec Partie 4.2 — M5).
  */
+import { withApiHandler } from "../../../../../../lib/http/handler";
 import {
   obtenirSoldeLot,
   PermissionRefuseeError,
@@ -9,7 +10,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../../lib/http/respond";
 
-export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handleGET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -23,3 +24,5 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     throw e;
   }
 }
+
+export const GET = withApiHandler(handleGET);

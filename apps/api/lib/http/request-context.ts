@@ -12,6 +12,7 @@ import {
 } from "../tenant/jwt";
 import type { TenantContext } from "../tenant/context";
 import { fail } from "./respond";
+import { setRequestIdentity } from "./request-context-storage";
 
 export { UnauthenticatedError, ForbiddenTenantError };
 
@@ -25,7 +26,9 @@ export async function tenantFromRequest(req: Request): Promise<TenantContext> {
   const token = bearerToken(req);
   if (!token) throw new UnauthenticatedError("Header Authorization: Bearer manquant.");
   const requested = req.headers.get("x-copropriete-id") ?? undefined;
-  return resolveTenantContext(token, requested);
+  const ctx = await resolveTenantContext(token, requested);
+  setRequestIdentity(ctx.utilisateurId, ctx.coproprieteId);
+  return ctx;
 }
 
 
@@ -50,6 +53,7 @@ export async function identiteFromRequest(
   // confirmé (GoTrue, Partie 4.3) : la vérification est donc garantie par la seule présence
   // d'une session valide à ce stade, pas par un champ de metadata.
   const verifie = true;
+  setRequestIdentity(sub);
   return { utilisateurId: sub, email, telephone: phone, verifie };
 }
 

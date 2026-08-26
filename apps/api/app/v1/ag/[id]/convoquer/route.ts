@@ -1,6 +1,7 @@
 /**
  * POST /v1/ag/:id/convoquer — envoi de la convocation (Master Spec Partie 8.2 — M6).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import {
   convoquerAg,
   PermissionRefuseeError,
@@ -10,7 +11,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -25,3 +26,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

@@ -2,6 +2,7 @@
  * PATCH /v1/visites/:id/statut — le résident autorise/refuse, le gardien est notifié
  * (Doc A §9.2 — M10).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { visiteChangerStatutSchema } from "../../../../../lib/personnel/schemas";
 import {
   changerStatutVisite,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -30,3 +31,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const PATCH = withApiHandler(handlePATCH);

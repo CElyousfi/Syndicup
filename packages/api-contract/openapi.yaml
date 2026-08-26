@@ -81,6 +81,10 @@ components:
     Error:
       type: object
       required: [error]
+      description: >
+        Enveloppe d'erreur standard. Toute réponse (succès comme erreur) porte aussi le header
+        `X-Request-Id` — repris du header entrant s'il est un UUID valide, généré sinon —
+        identique à `meta.request_id`, pour corrélation client ↔ logs serveur.
       properties:
         error:
           type: object
@@ -88,11 +92,15 @@ components:
           properties:
             code:
               type: string
-              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR]
+              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_ERROR]
             message: { type: string }
             fields:
               type: object
               additionalProperties: { type: string }
+        meta:
+          type: object
+          properties:
+            request_id: { type: string, format: uuid }
 
     Money:
       type: string

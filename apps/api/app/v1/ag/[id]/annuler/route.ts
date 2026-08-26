@@ -1,6 +1,7 @@
 /**
  * POST /v1/ag/:id/annuler — annulation avec motif obligatoire (Doc A §12.2 — M6, ajout nécessaire).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { agAnnulerSchema } from "../../../../../lib/ag/schemas";
 import {
   annulerAg,
@@ -11,7 +12,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePOST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -29,3 +30,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

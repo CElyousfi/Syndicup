@@ -2,6 +2,7 @@
  * POST /v1/finances/paiements — enregistrement d'un paiement manuel (virement/espèces/chèque)
  * (Master Spec Partie 4.2/6.4, Doc A §3.4 — M5).
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import { paiementManuelCreateSchema } from "../../../../lib/finances/schemas";
 import {
   enregistrerPaiementManuel,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
     const body = await req.json().catch(() => null);
@@ -29,3 +30,5 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

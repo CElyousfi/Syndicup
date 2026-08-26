@@ -3,6 +3,7 @@
  * supportée par cet endpoint littéral ; validation/rejet syndic sont des ajouts nécessaires
  * séparés (voir ./valider, ./rejeter).
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import {
   annulerReservation,
   PermissionRefuseeError,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail } from "../../../../lib/http/respond";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -27,3 +28,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const PATCH = withApiHandler(handlePATCH);

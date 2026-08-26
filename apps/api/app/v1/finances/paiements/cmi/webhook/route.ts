@@ -5,6 +5,7 @@
  * légitimité se fait exclusivement par la signature HMAC (voir
  * apps/api/lib/finances/finances.ts::traiterWebhookCmi). N'utilise donc PAS tenantFromRequest.
  */
+import { withApiHandler } from "../../../../../../lib/http/handler";
 import { paiementCmiWebhookSchema } from "../../../../../../lib/finances/schemas";
 import {
   traiterWebhookCmi,
@@ -15,7 +16,7 @@ import {
 } from "../../../../../../lib/finances/finances";
 import { ok, fail, failZod } from "../../../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   try {
     const body = await req.json().catch(() => null);
     const parsed = paiementCmiWebhookSchema.safeParse(body);
@@ -34,3 +35,5 @@ export async function POST(req: Request) {
     throw e;
   }
 }
+
+export const POST = withApiHandler(handlePOST);

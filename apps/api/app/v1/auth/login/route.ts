@@ -1,11 +1,12 @@
 /**
  * POST /v1/auth/login — email + mot de passe (option MRE/syndic — Master Spec Partie 4.3).
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import { loginSchema } from "../../../../lib/auth/schemas";
 import { createSupabaseAuth } from "../../../../lib/auth/supabase";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = loginSchema.safeParse(body);
   if (!parsed.success) return failZod(parsed.error);
@@ -19,3 +20,5 @@ export async function POST(req: Request) {
   }
   return ok({ ...session, utilisateur_id: userId });
 }
+
+export const POST = withApiHandler(handlePOST);

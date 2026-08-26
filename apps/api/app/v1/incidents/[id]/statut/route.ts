@@ -1,6 +1,7 @@
 /**
  * PATCH /v1/incidents/:id/statut — changement de statut (Master Spec Partie 4.2 — M7).
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { incidentChangerStatutSchema } from "../../../../../lib/incidents/schemas";
 import {
   changerStatutIncident,
@@ -10,7 +11,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -27,3 +28,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const PATCH = withApiHandler(handlePATCH);

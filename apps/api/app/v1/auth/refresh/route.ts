@@ -1,11 +1,12 @@
 /**
  * POST /v1/auth/refresh — échange un refresh_token contre une nouvelle session.
  */
+import { withApiHandler } from "../../../../lib/http/handler";
 import { refreshSchema } from "../../../../lib/auth/schemas";
 import { createSupabaseAuth } from "../../../../lib/auth/supabase";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
-export async function POST(req: Request) {
+async function handlePOST(req: Request) {
   const body = await req.json().catch(() => null);
   const parsed = refreshSchema.safeParse(body);
   if (!parsed.success) return failZod(parsed.error);
@@ -16,3 +17,5 @@ export async function POST(req: Request) {
   }
   return ok(session);
 }
+
+export const POST = withApiHandler(handlePOST);

@@ -2,6 +2,7 @@
  * PATCH /v1/litiges/:id/statut — clôture RESOLU/CLOS avec motif (ajout nécessaire, Doc A §12.1
  * "Explication syndic suffit souvent" — M11). Rôle autorisé — syndic.
  */
+import { withApiHandler } from "../../../../../lib/http/handler";
 import { litigeResoudreSchema } from "../../../../../lib/litiges/schemas";
 import {
   resoudreLitige,
@@ -12,7 +13,7 @@ import {
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
@@ -30,3 +31,5 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     throw e;
   }
 }
+
+export const PATCH = withApiHandler(handlePATCH);
