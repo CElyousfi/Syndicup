@@ -185,7 +185,7 @@ describe("Solde de lot et paiements (Doc A §3.4)", () => {
       methode: "VIREMENT",
       accepter_trop_percu: false,
     });
-    expect(resultat.statut).toBe("PARTIEL");
+    expect("statut" in resultat && resultat.statut).toBe("PARTIEL");
     expect(resultat.quittance).toBeNull();
   });
 
@@ -212,7 +212,7 @@ describe("Solde de lot et paiements (Doc A §3.4)", () => {
       methode: "ESPECES",
       accepter_trop_percu: false,
     });
-    expect(resultat.statut).toBe("PAYE");
+    expect("statut" in resultat && resultat.statut).toBe("PAYE");
     expect(resultat.quittance).not.toBeNull();
     expect(resultat.quittance?.numero).toContain("QT-");
     void restant;
@@ -293,6 +293,89 @@ describe("Webhook CMI — idempotence (Master Spec Partie 6.4 étape 5)", () => 
     await expect(traiterWebhookCmi({ oid, montant: "10.00", hash })).rejects.toThrowError(
       /Session CMI introuvable/
     );
+  });
+});
+
+describe("Imputation FIFO multi-échéances (Doc A §3.4 — M12)", () => {
+  let ligneAncienne: string;
+  let ligneRecente: string;
+
+  it("répartit un paiement sur les lignes les plus anciennes d'abord", async () => {
+    // Solder d'abord les lignes de lotA2 héritées des tests précédents (suite ordonnée) pour
+    // partir d'un lot net.
+    const restes = await admin.appelDeFondsLot.findMany({
+      where: { lotId: lotA2, statut: { in: ["IMPAYE", "PARTIEL"] } },
+    });
+    for (const reste of restes) {
+      await enregistrerPaiementManuel(ctxSyndicA(), {
+        appel_de_fonds_lot_id: reste.id,
+        montant: reste.montantDu.minus(reste.montantPaye).toFixed(2),
+        methode: "VIREMENT",
+        accepter_trop_percu: false,
+      });
+    }
+
+    // Deux appels de fonds pour lotA2 (60/40 : lotA2 = 40% → 40.00 sur 100.00).
+    const a1 = await genererAppelDeFonds(ctxSyndicA(), {
+      periode: "2026-10",
+      type: "CHARGES_COURANTES",
+      montant_total: "100.00",
+      date_echeance: "2026-10-05",
+    });
+    const a2 = await genererAppelDeFonds(ctxSyndicA(), {
+      periode: "2026-11",
+      type: "CHARGES_COURANTES",
+      montant_total: "100.00",
+      date_echeance: "2026-11-05",
+    });
+    ligneAncienne = a1.lignes.find((l) => l.lotId === lotA2)!.id;
+    ligneRecente = a2.lignes.find((l) => l.lotId === lotA2)!.id;
+
+    // 50.00 pour un dû de 40 (oct) + 40 (nov) : oct soldée, nov partielle à 10.
+    const res = await enregistrerPaiementManuel(ctxSyndicA(), {
+      lot_id: lotA2,
+      montant: "50.00",
+      methode: "VIREMENT",
+      accepter_trop_percu: false,
+    });
+    expect("affectations" in res && res.affectations).toEqual([
+      { appel_de_fonds_lot_id: ligneAncienne, montant: "40.00", statut: "PAYE" },
+      { appel_de_fonds_lot_id: ligneRecente, montant: "10.00", statut: "PARTIEL" },
+    ]);
+
+    const [ancienne, recente] = await Promise.all([
+      admin.appelDeFondsLot.findUnique({ where: { id: ligneAncienne } }),
+      admin.appelDeFondsLot.findUnique({ where: { id: ligneRecente } }),
+    ]);
+    expect(ancienne!.statut).toBe("PAYE");
+    expect(recente!.statut).toBe("PARTIEL");
+    expect(recente!.montantPaye.toString()).toBe("10");
+
+    const audit = await admin.auditLog.findFirst({
+      where: { coproprieteId: coproA, action: "PAIEMENT_FIFO_AFFECTE", entiteId: lotA2 },
+    });
+    expect(audit).not.toBeNull();
+  });
+
+  it("rejette un montant FIFO dépassant le dû total du lot (avance non supportée — écart signalé)", async () => {
+    await expect(
+      enregistrerPaiementManuel(ctxSyndicA(), {
+        lot_id: lotA2,
+        montant: "9999.00",
+        methode: "ESPECES",
+        accepter_trop_percu: false,
+      })
+    ).rejects.toBeInstanceOf(ContrainteMetierError);
+  });
+
+  it("Zod : rejette un payload avec les deux modes (ciblé + FIFO) à la fois", () => {
+    const parsed = paiementManuelCreateSchema.safeParse({
+      appel_de_fonds_lot_id: "3f0d2f6a-0000-4000-8000-000000000001",
+      lot_id: "3f0d2f6a-0000-4000-8000-000000000002",
+      montant: "10.00",
+      methode: "VIREMENT",
+    });
+    expect(parsed.success).toBe(false);
   });
 });
 

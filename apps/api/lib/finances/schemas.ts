@@ -35,13 +35,20 @@ export type AppelDeFondsGenererInput = z.infer<typeof appelDeFondsGenererSchema>
 
 export const MODES_PAIEMENT_MANUEL = ["VIREMENT", "ESPECES", "CHEQUE"] as const;
 
-export const paiementManuelCreateSchema = z.object({
-  appel_de_fonds_lot_id: z.string().uuid(),
-  montant: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
-  methode: z.enum(MODES_PAIEMENT_MANUEL),
-  payeur_utilisateur_id: z.string().uuid().nullish(),
-  accepter_trop_percu: z.boolean().optional().default(false),
-});
+// Deux modes exclusifs (Doc A §3.4) : ciblé (appel_de_fonds_lot_id) ou FIFO (lot_id).
+export const paiementManuelCreateSchema = z
+  .object({
+    appel_de_fonds_lot_id: z.string().uuid().optional(),
+    lot_id: z.string().uuid().optional(),
+    montant: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+    methode: z.enum(MODES_PAIEMENT_MANUEL),
+    payeur_utilisateur_id: z.string().uuid().nullish(),
+    accepter_trop_percu: z.boolean().optional().default(false),
+  })
+  .refine(
+    (v) => (v.appel_de_fonds_lot_id ? 1 : 0) + (v.lot_id ? 1 : 0) === 1,
+    "Fournir exactement un de appel_de_fonds_lot_id (paiement ciblé) ou lot_id (imputation FIFO)."
+  );
 export type PaiementManuelCreateInput = z.infer<typeof paiementManuelCreateSchema>;
 
 export const paiementCmiInitierSchema = z.object({

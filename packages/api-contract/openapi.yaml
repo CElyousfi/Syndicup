@@ -348,13 +348,20 @@ components:
 
     PaiementManuelCreate:
       type: object
-      required: [appel_de_fonds_lot_id, montant, methode]
+      required: [montant, methode]
       description: >
-        Paiement hors CMI (virement, espèces, chèque) — Master Spec Partie 6.4/Doc A §3.4. Cible
-        UNE seule ligne appel_de_fonds_lot (pas d'imputation FIFO multi-lignes automatique — voir
-        apps/api/lib/finances/finances.ts::appliquerPaiement, limite connue documentée).
+        Paiement hors CMI (virement, espèces, chèque) — Master Spec Partie 6.4/Doc A §3.4.
+        Deux modes exclusifs : `appel_de_fonds_lot_id` (cible UNE ligne) OU `lot_id`
+        (imputation automatique FIFO sur les lignes impayées les plus anciennes du lot,
+        Doc A §3.4 "règle du droit commun"). En mode FIFO, un montant dépassant le dû total
+        du lot est rejeté 422 — l'avance (Doc A §3.4 "Paiement en avance") n'est pas encore
+        supportée (écart signalé).
       properties:
         appel_de_fonds_lot_id: { type: string, format: uuid }
+        lot_id:
+          type: string
+          format: uuid
+          description: Mode FIFO — exclusif avec appel_de_fonds_lot_id.
         montant: { $ref: "#/components/schemas/Money" }
         methode: { type: string, enum: [VIREMENT, ESPECES, CHEQUE] }
         payeur_utilisateur_id:

@@ -9,7 +9,7 @@ import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
-import { money, repartirAuProrata, toApiString, isEqual, isGreaterThan } from "../money";
+import { money, repartirAuProrata, subtract, toApiString, isEqual, isGreaterThan } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
 import type {
   AppelDeFondsGenererInput,
@@ -319,15 +319,108 @@ export async function enregistrerPaiementManuel(
   return withTenantIdempotent(
     ctx,
     { cle: idempotencyKey, endpoint: "POST /finances/paiements", payload: input },
-    (db) =>
-      appliquerPaiement(db, ctx, {
-        appelDeFondsLotId: input.appel_de_fonds_lot_id,
+    async (db) => {
+      if (input.lot_id) {
+        return appliquerPaiementFifo(db, ctx, {
+          lotId: input.lot_id,
+          montant: input.montant,
+          methode: input.methode,
+          payeurUtilisateurId: input.payeur_utilisateur_id ?? null,
+        });
+      }
+      return appliquerPaiement(db, ctx, {
+        // Le refine Zod garantit qu'exactement un des deux modes est présent.
+        appelDeFondsLotId: input.appel_de_fonds_lot_id!,
         montant: input.montant,
         methode: input.methode,
         payeurUtilisateurId: input.payeur_utilisateur_id ?? null,
         accepterTropPercu: input.accepter_trop_percu,
-      })
+      });
+    }
   );
+}
+
+/**
+ * Imputation FIFO (Doc A §3.4 "règle du droit commun") : le montant est réparti sur les lignes
+ * impayées/partielles du lot, par date d'échéance croissante — une ligne `paiement` append-only
+ * par affectation (le grand livre reste lisible ligne à ligne).
+ *
+ * ⚠️ ÉCART SIGNALÉ : le "paiement en avance" (Doc A §3.4 — surplus porté en avoir, déduit du
+ * prochain appel) n'est PAS implémenté : un montant dépassant le dû total du lot est rejeté 422
+ * plutôt que silencieusement tronqué ou transformé en avance sans mécanisme d'avoir tracé.
+ */
+async function appliquerPaiementFifo(
+  db: TenantDb,
+  ctx: TenantContext,
+  input: {
+    lotId: string;
+    montant: string;
+    methode: "VIREMENT" | "ESPECES" | "CHEQUE";
+    payeurUtilisateurId: string | null;
+  }
+) {
+  const lot = await db.lot.findUnique({ where: { id: input.lotId } });
+  if (!lot) throw new RessourceIntrouvableError("Lot introuvable.");
+
+  const lignes = await db.appelDeFondsLot.findMany({
+    where: { lotId: input.lotId, statut: { in: ["IMPAYE", "PARTIEL"] } },
+    include: { appelDeFonds: { select: { dateEcheance: true } } },
+  });
+  lignes.sort(
+    (a, b) => a.appelDeFonds.dateEcheance.getTime() - b.appelDeFonds.dateEcheance.getTime()
+  );
+
+  const duTotal = lignes.reduce(
+    (acc, l) => acc.plus(subtract(l.montantDu.toString(), l.montantPaye.toString())),
+    money(0)
+  );
+  if (isGreaterThan(input.montant, duTotal)) {
+    throw new ContrainteMetierError(
+      `Montant (${toApiString(input.montant)}) supérieur au dû total du lot (${toApiString(duTotal)}) — ` +
+        "l'avance (Doc A §3.4) n'est pas encore supportée : ajuster le montant ou cibler une ligne avec accepter_trop_percu."
+    );
+  }
+
+  let restant = money(input.montant);
+  const affectations: Array<{ appel_de_fonds_lot_id: string; montant: string; statut: string }> =
+    [];
+  let derniereQuittance = null;
+  for (const ligne of lignes) {
+    if (restant.lessThanOrEqualTo(0)) break;
+    const du = subtract(ligne.montantDu.toString(), ligne.montantPaye.toString());
+    if (du.lessThanOrEqualTo(0)) continue;
+    const part = isGreaterThan(restant, du) ? du : restant;
+    const res = await appliquerPaiement(db, ctx, {
+      appelDeFondsLotId: ligne.id,
+      montant: toApiString(part),
+      methode: input.methode,
+      payeurUtilisateurId: input.payeurUtilisateurId,
+      accepterTropPercu: false,
+    });
+    affectations.push({
+      appel_de_fonds_lot_id: ligne.id,
+      montant: toApiString(part),
+      statut: res.statut,
+    });
+    derniereQuittance = res.quittance ?? derniereQuittance;
+    restant = subtract(restant, part);
+  }
+
+  await ecrireAuditLog(db, {
+    coproprieteId: ctx.coproprieteId,
+    acteurId: ctx.utilisateurId,
+    action: "PAIEMENT_FIFO_AFFECTE",
+    entite: "lot",
+    entiteId: input.lotId,
+    apres: { montant: toApiString(input.montant), affectations },
+  });
+
+  return {
+    lot_id: input.lotId,
+    montant: toApiString(input.montant),
+    affectations,
+    quittance: derniereQuittance,
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
