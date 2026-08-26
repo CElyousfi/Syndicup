@@ -71,3 +71,21 @@ export const contestationChargeRepondreSchema = z.object({
   reponse_syndic: z.string().min(1),
 });
 export type ContestationChargeRepondreInput = z.infer<typeof contestationChargeRepondreSchema>;
+
+// ── M12 — Budgets AG (Master Spec Partie 2.2, Doc A §3.2) ────────────────────
+const exerciceSchema = z.string().regex(/^\d{4}$/, 'Exercice invalide (format "YYYY").');
+
+export const budgetAgCreateSchema = z.object({
+  exercice: exerciceSchema,
+  montant_total: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
+  ag_id: z.string().uuid().nullish(),
+});
+export type BudgetAgCreateInput = z.infer<typeof budgetAgCreateSchema>;
+
+export const budgetAgUpdateSchema = z
+  .object({
+    montant_total: decimalStringSchema({ maxDigitsAvantVirgule: 12 }).optional(),
+    ag_id: z.string().uuid().nullish(),
+  })
+  .refine((v) => Object.keys(v).length > 0, "Aucun champ à modifier.");
+export type BudgetAgUpdateInput = z.infer<typeof budgetAgUpdateSchema>;

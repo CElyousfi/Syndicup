@@ -63,6 +63,27 @@ export const PERMISSIONS: PermissionMatrix = {
     CONSEIL_SYNDICAL: false,
     PROPRIETAIRE: false,
   },
+  // M12 — CRUD budgets AG (Master Spec Partie 2.2, Doc A §3.2 "Budget annuel voté en AG").
+  // Écriture : syndic seul (le vote AG qui légitime le budget est tracé via ag_id).
+  "finances.gerer_budget": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  // Lecture large : transparence budgétaire (Doc A §10.2 "Détail budget par poste visible
+  // dans app") — le budget est un agrégat, pas une donnée nominative.
+  "finances.lire_budget": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
   // M5 (Master Spec Partie 4.2/6, Doc A §3). Lecture large : la confidentialité fine par lot est
   // appliquée par la policy RLS "tenant_isolation" sur `appel_de_fonds_lot` (défense en
   // profondeur, Partie 1.6) — cette entrée ne fait que gater l'accès à l'endpoint lui-même.

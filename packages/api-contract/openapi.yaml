@@ -257,6 +257,31 @@ components:
         canal: { type: string, enum: [EMAIL, SMS, QR_CODE, WHATSAPP] }
 
     # ── Domaine : Finances (M5 — Master Spec Partie 2.2/6, Doc A §3) ────────
+    BudgetAg:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ag_id: { type: string, format: uuid, nullable: true }
+        exercice: { type: string, pattern: '^\d{4}$', example: "2026" }
+        montant_total: { $ref: "#/components/schemas/Money" }
+        statut: { type: string, enum: [PROPOSE, VOTE, ACTIF, REMPLACE] }
+
+    BudgetAgCreate:
+      type: object
+      required: [exercice, montant_total]
+      properties:
+        exercice: { type: string, pattern: '^\d{4}$' }
+        montant_total: { $ref: "#/components/schemas/Money" }
+        # Résolution AG qui a voté ce budget (Master Spec Partie 2.2 : budget "voté en AG") —
+        # nullable tant que l'AG n'est pas encore tracée dans la plateforme.
+        ag_id: { type: string, format: uuid, nullable: true }
+
+    BudgetAgUpdate:
+      type: object
+      properties:
+        montant_total: { $ref: "#/components/schemas/Money" }
+        ag_id: { type: string, format: uuid, nullable: true }
+
     TypeAppelDeFonds:
       type: string
       # Doc A §3.2 fait autorité sur le métier (CLAUDE.md) — remplace la liste littérale du
@@ -1204,6 +1229,120 @@ paths:
   # ══════════════════════════════════════════════════════════════════════
   # FINANCES — syndic (write), résident (read scopé à son lot)
   # ══════════════════════════════════════════════════════════════════════
+  /finances/budgets:
+    get:
+      tags: [Finances]
+      summary: Liste des budgets AG de la copropriété (transparence budgétaire — lecture large).
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/BudgetAg" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Finances]
+      summary: Crée un budget AG en statut PROPOSE (Master Spec Partie 2.2, Doc A §3.2) — syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BudgetAgCreate" }
+      responses:
+        "201":
+          description: Créé (statut PROPOSE).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BudgetAg" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /finances/budgets/{id}:
+    get:
+      tags: [Finances]
+      summary: Détail d'un budget AG.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BudgetAg" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Finances]
+      summary: Modifie un budget encore PROPOSE (un budget voté/actif est figé) — syndic.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BudgetAgUpdate" }
+      responses:
+        "200":
+          description: Modifié.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BudgetAg" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422":
+          description: Budget non modifiable (statut ≠ PROPOSE).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /finances/budgets/{id}/activer:
+    post:
+      tags: [Finances]
+      summary: >
+        Active un budget (statut ACTIF) — prérequis de la génération d'appels de fonds
+        (Master Spec Partie 6.2 étape 1). Si un budget ACTIF existe déjà pour le même exercice,
+        il passe REMPLACE (budget rectificatif, Doc A §3.2) dans la même transaction —
+        audit BUDGET_REMPLACE + BUDGET_ACTIVE.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200":
+          description: Activé (et ancien ACTIF éventuellement REMPLACE).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BudgetAg" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /finances/appels-de-fonds:
     get:
       tags: [Finances]
