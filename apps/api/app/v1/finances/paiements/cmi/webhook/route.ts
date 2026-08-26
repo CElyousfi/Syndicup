@@ -14,10 +14,14 @@ import {
   ContrainteMetierError,
   ConflitIdempotenceError,
 } from "../../../../../../lib/finances/finances";
+import { enforceRateLimit } from "../../../../../../lib/rate-limit/apply";
+import { RATE_LIMITS } from "../../../../../../lib/rate-limit";
 import { ok, fail, failZod } from "../../../../../../lib/http/respond";
 
 async function handlePOST(req: Request) {
   try {
+    const limite = await enforceRateLimit(req, "cmi-webhook", RATE_LIMITS.webhookCmi());
+    if (limite) return limite;
     const body = await req.json().catch(() => null);
     const parsed = paiementCmiWebhookSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
