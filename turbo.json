@@ -1,5 +1,24 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "DIRECT_URL",
+    "JWT_SECRET",
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "SUPABASE_SERVICE_ROLE_KEY",
+    "CMI_*",
+    "SENTRY_DSN",
+    "INNGEST_*",
+    "UPSTASH_*",
+    "RATE_LIMIT_*",
+    "RESEND_*",
+    "FCM_*",
+    "SMS_*",
+    "AG_RAPPEL_JOURS_AVANT",
+    "AXIOM_TOKEN",
+    "BETTERSTACK_API_KEY"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
@@ -16,7 +35,8 @@
       "dependsOn": ["^typecheck", "build"]
     },
     "test": {
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "cache": false
     }
   }
 }

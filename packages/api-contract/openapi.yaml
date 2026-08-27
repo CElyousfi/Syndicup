@@ -1865,7 +1865,7 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/AssembleeGenerale" }
-        "422": { description: delai_convocation_jours non configuré, ou délai insuffisant — voir LEGAL_QUESTIONS_BRIEF.md §1. }
+        "422": { description: "delai_convocation_jours non configuré, ou délai insuffisant — voir LEGAL_QUESTIONS_BRIEF.md §1." }
 
   /ag/{id}/ouvrir:
     post:
@@ -1883,7 +1883,7 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/AssembleeGenerale" }
-        "422": { description: Avant la date prévue, ou quorum_premiere_convocation non configuré — LEGAL_QUESTIONS_BRIEF.md §2. }
+        "422": { description: "Avant la date prévue, ou quorum_premiere_convocation non configuré — LEGAL_QUESTIONS_BRIEF.md §2." }
 
   /ag/{id}/annuler:
     post:
