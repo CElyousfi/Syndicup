@@ -6,6 +6,7 @@
  */
 import type { Prisma } from "@prisma/client";
 import type { TenantDb } from "../tenant/db";
+import { getRequestContext } from "../http/request-context-storage";
 
 export async function ecrireAuditLog(
   db: TenantDb,
@@ -29,7 +30,9 @@ export async function ecrireAuditLog(
       entiteId: params.entiteId,
       avantJson: params.avant,
       apresJson: params.apres,
-      ip: params.ip ?? null,
+      // IP : explicite si fournie, sinon reprise du contexte de requête (x-forwarded-for,
+      // posé par withApiHandler) — null pour les acteurs système (jobs).
+      ip: params.ip ?? getRequestContext()?.ip ?? null,
     },
   });
 }

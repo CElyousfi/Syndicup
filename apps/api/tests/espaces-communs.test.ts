@@ -80,6 +80,7 @@ afterAll(async () => {
   await admin.lot.deleteMany({ where: { id: lotAlice } });
   await admin.roleUtilisateur.deleteMany({ where: { coproprieteId: coproA } });
   await admin.utilisateur.deleteMany({ where: { id: { in: [syndicA, alice, bob] } } });
+  await admin.auditLog.deleteMany({ where: { coproprieteId: coproA } });
   await admin.copropriete.deleteMany({ where: { id: coproA } });
   await admin.$disconnect();
   await disconnectTenantDb();

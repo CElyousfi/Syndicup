@@ -4,6 +4,7 @@
 import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
+import { ecrireAuditLog } from "../audit/audit";
 import type {
   EspaceCommunCreateInput,
   ReservationCreateInput,
@@ -119,10 +120,20 @@ export async function validerReservation(ctx: TenantContext, reservationId: stri
     if (reservation.statut !== "EN_ATTENTE") {
       throw new ContrainteMetierError(`Validation impossible depuis le statut ${reservation.statut}.`);
     }
-    return db.reservationEspaceCommun.update({
+    const maj = await db.reservationEspaceCommun.update({
       where: { id: reservationId },
       data: { statut: "CONFIRMEE" },
     });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "RESERVATION_VALIDEE",
+      entite: "reservation_espace_commun",
+      entiteId: reservationId,
+      avant: { statut: "EN_ATTENTE" },
+      apres: { statut: "CONFIRMEE" },
+    });
+    return maj;
   });
 }
 
@@ -136,10 +147,20 @@ export async function rejeterReservation(ctx: TenantContext, reservationId: stri
     if (reservation.statut !== "EN_ATTENTE") {
       throw new ContrainteMetierError(`Rejet impossible depuis le statut ${reservation.statut}.`);
     }
-    return db.reservationEspaceCommun.update({
+    const maj = await db.reservationEspaceCommun.update({
       where: { id: reservationId },
       data: { statut: "REJETEE", motifRejet: motif },
     });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "RESERVATION_REJETEE",
+      entite: "reservation_espace_commun",
+      entiteId: reservationId,
+      avant: { statut: "EN_ATTENTE" },
+      apres: { statut: "REJETEE", motif },
+    });
+    return maj;
   });
 }
 

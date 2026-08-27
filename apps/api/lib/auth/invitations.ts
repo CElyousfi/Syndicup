@@ -10,6 +10,7 @@ import { can } from "./permissions";
 import { withTenant } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import type { InvitationCreateInput } from "./schemas";
+import { ecrireAuditLog } from "../audit/audit";
 
 export class PermissionRefuseeError extends Error {}
 export class InvitationIntrouvableError extends Error {}
@@ -42,8 +43,8 @@ export async function creerInvitation(ctx: TenantContext, input: InvitationCreat
   if (can("onboarding.inviter", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut émettre une invitation (Partie 5.3).");
   }
-  return withTenant(ctx, (db) =>
-    db.invitation.create({
+  return withTenant(ctx, async (db) => {
+    const invitation = await db.invitation.create({
       data: {
         coproprieteId: ctx.coproprieteId,
         lotId: input.lot_id ?? null,
@@ -53,8 +54,18 @@ export async function creerInvitation(ctx: TenantContext, input: InvitationCreat
         code: genererCode(),
         expireLe: expiration(input.canal),
       },
-    })
-  );
+    });
+    // Probant (Partie 5.3 : l'invitation lie compte↔lot↔rôle) — jamais le code dans l'audit.
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "INVITATION_CREEE",
+      entite: "invitation",
+      entiteId: invitation.id,
+      apres: { role_cible: invitation.roleCible, lot_id: invitation.lotId, canal: invitation.canal },
+    });
+    return invitation;
+  });
 }
 
 export async function listerInvitations(ctx: TenantContext, page: number, limit: number) {
@@ -95,7 +106,7 @@ export async function regenererInvitation(ctx: TenantContext, invitationId: stri
       where: { id: ancienne.id },
       data: { statut: "REGENEREE" },
     });
-    return db.invitation.create({
+    const nouvelle = await db.invitation.create({
       data: {
         coproprieteId: ancienne.coproprieteId,
         lotId: ancienne.lotId,
@@ -106,6 +117,16 @@ export async function regenererInvitation(ctx: TenantContext, invitationId: stri
         expireLe: expiration(ancienne.canal),
       },
     });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "INVITATION_REGENEREE",
+      entite: "invitation",
+      entiteId: nouvelle.id,
+      avant: { invitation_precedente: ancienne.id },
+      apres: { role_cible: nouvelle.roleCible, lot_id: nouvelle.lotId },
+    });
+    return nouvelle;
   });
 }
 
@@ -156,6 +177,25 @@ export async function accepterInvitation(params: {
   const resultat = rows[0]?.resultat;
   if (!resultat) {
     throw new Error("invitation_accepter n'a rien retourné — anomalie DB.");
+  }
+  if (resultat.statut === "OK") {
+    // Probant : le rattachement compte↔rôle↔lot vient d'être créé. Le contexte tenant n'existe
+    // qu'à partir du résultat de la RPC — audit dans la copropriété rejointe.
+    const ctxNouveau: TenantContext = {
+      utilisateurId: params.utilisateurId,
+      coproprieteId: resultat.copropriete_id,
+      role: resultat.role as TenantContext["role"],
+    };
+    await withTenant(ctxNouveau, (db) =>
+      ecrireAuditLog(db, {
+        coproprieteId: resultat.copropriete_id,
+        acteurId: params.utilisateurId,
+        action: "INVITATION_ACCEPTEE",
+        entite: "utilisateur",
+        entiteId: params.utilisateurId,
+        apres: { role: resultat.role, lot_id: resultat.lot_id },
+      })
+    );
   }
   return resultat;
 }

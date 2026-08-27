@@ -5,6 +5,7 @@ import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
 import { creerUrlSignee } from "../storage/supabase-storage";
 import type { TenantContext } from "../tenant/context";
+import { ecrireAuditLog } from "../audit/audit";
 import type { DocumentCreateInput } from "./schemas";
 
 export class PermissionRefuseeError extends Error {}
@@ -14,8 +15,8 @@ export async function creerDocument(ctx: TenantContext, input: DocumentCreateInp
   if (can("documents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ajouter un document.");
   }
-  return withTenant(ctx, (db) =>
-    db.document.create({
+  return withTenant(ctx, async (db) => {
+    const document = await db.document.create({
       data: {
         coproprieteId: ctx.coproprieteId,
         type: input.type,
@@ -24,8 +25,17 @@ export async function creerDocument(ctx: TenantContext, input: DocumentCreateInp
         storagePath: input.storage_path,
         creePar: ctx.utilisateurId,
       },
-    })
-  );
+    });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "DOCUMENT_CREE",
+      entite: "document",
+      entiteId: document.id,
+      apres: { type: document.type, visibilite: document.visibilite, nom: document.nom },
+    });
+    return document;
+  });
 }
 
 /**
