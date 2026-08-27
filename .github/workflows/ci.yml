@@ -31,6 +31,7 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
       DATABASE_URL: postgresql://app_local:app_local@127.0.0.1:54322/postgres
       JWT_SECRET: ci-only-jwt-secret-with-at-least-32-characters
+      CMI_WEBHOOK_HMAC_SECRET: ci-only-cmi-webhook-secret
     steps:
       - uses: actions/checkout@v4
 
@@ -69,6 +70,11 @@ jobs:
       - run: pip install openapi-spec-validator
       - name: Validate OpenAPI 3.1 syntax
         run: python -m openapi_spec_validator packages/api-contract/openapi.yaml
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Conformité contrat ↔ routes implémentées
+        run: node packages/api-contract/scripts/check-conformance.mjs
       # TODO une fois le contrat plus mature : ajouter une détection de breaking change
       # (ex. openapi-diff contre la version sur `main`) — Master Spec Partie 15.1 étape 4.
 
@@ -81,7 +87,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm audit --audit-level=high || true
-        # `|| true` volontaire au démarrage du projet pour ne pas bloquer les premières PR sur
-        # des vulnérabilités transitives non critiques — retirer ce filet dès que le projet a
-        # une baseline stable (Master Spec Partie 10.5).
+      # Bloquant sur CRITIQUE ; les vulnérabilités high restent visibles (step informatif
+      # non bloquant) — resserrer à high dès que la baseline transitive est stable (Partie 10.5).
+      - name: Audit bloquant (critical)
+        run: npm audit --audit-level=critical
+      - name: Audit informatif (high)
+        run: npm audit --audit-level=high || true

@@ -18,6 +18,13 @@ Definition of Done (`CLAUDE.md` §4) est entièrement cochée pour tous ses endp
 - [ ] Pipeline CI (`.github/workflows/ci.yml`) vert sur un commit vide
 - [ ] Sentry, Axiom/Better Stack, Inngest, FCM : projets créés et clés dans les env vars (staging au minimum ; production peut suivre)
 - [ ] Domaine réservé + Resend configuré (SPF/DKIM/DMARC vérifiés)
+- [ ] Upstash Redis (rate limiting global multi-instances — le limiteur mémoire par instance suffit avant lancement)
+- [ ] Compte marchand CMI (bac à sable puis production) — le payload webhook implémenté est une hypothèse à valider contre le contrat commerçant réel
+- [ ] Agrégateur SMS marocain contractualisé (adaptateur `lib/notifications/transports/sms.ts` à finaliser sur son format)
+
+*Tous les seams de code sont prêts (27/08) : chaque service ci-dessus s'active par variable
+d'environnement (`.env.example`) sans changement de code, sauf CMI (payload à ajuster), FCM
+(tokens d'appareils + OAuth2 avec le client mobile) et SMS (format agrégateur).*
 
 ## M1 — Schéma de base & RLS de base (aucune feature encore)
 
@@ -94,10 +101,10 @@ dédiés dans `tests/lot-transfert.test.ts`.
 - [x] Test critique : somme des lignes d'un appel de fonds = montant total à la centime près (`tests/finances.test.ts`)
 - [x] Test critique : idempotence du webhook CMI rejoué deux fois (`tests/finances.test.ts`)
 - [x] Trop-perçu (Doc A §3.4) : `CHECK` DB (`montant_paye <= montant_du OR trop_percu_autorise`) + flag `accepter_trop_percu` explicite côté payload — rejet 422 sinon. **Pas de workflow REMBOURSER/REPORTER** (Doc A §3.4) — seul l'enregistrement du trop-perçu est supporté, la décision syndic reste manuelle/hors plateforme pour l'instant.
-- [ ] **Limite connue (signalée, pas résolue en silence)** : pas d'imputation FIFO multi-lignes des paiements (Doc A §3.4 "paiement partiel imputé sur les charges les plus anciennes") — chaque paiement cible explicitement UNE `appel_de_fonds_lot_id` (cohérent avec le flux CMI Partie 6.4 qui prend cet id en entrée). Un vrai FIFO multi-lignes nécessiterait un modèle de répartition non présent dans le Master Spec littéral — à construire explicitement si demandé.
+- [x] ~~Pas d'imputation FIFO multi-lignes~~ **Livré (27/08)** : `POST /finances/paiements` accepte `lot_id` (mode FIFO — répartition par date d'échéance croissante, une ligne `paiement` append-only par affectation, audit `PAIEMENT_FIFO_AFFECTE`) en plus du mode ciblé `appel_de_fonds_lot_id`. **Écart restant signalé** : le surplus au-delà du dû total est rejeté 422 — le "paiement en avance" (avoir, Doc A §3.4) n'est pas modélisé.
 - [x] ~~Écart signalé : aucune table de "session CMI"~~ **Levé (26/08, migration M12 `paiement_cmi_session`)** : la cible du paiement est persistée en session (oid unique), le webhook la résout via `cmi_session_copropriete_id()` (SECURITY DEFINER), signature HMAC comparée en temps constant (`timingSafeEqual`), variable standardisée `CMI_WEBHOOK_HMAC_SECRET`. Reste : **non testé contre un vrai bac à sable CMI** (aucun credential commerçant dans ce repo) — payload webhook à ajuster au contrat commerçant réel.
-- [x] Escalade impayés N0→N6 (Doc A §3.3) : moteur livré dans `apps/api/lib/finances/escalade.ts` — délais J+3/15/30/45/60/90 surchargeables par `copropriete.politique_recouvrement_json`, passe idempotente (jamais deux notifications pour le même palier grâce à `niveau_escalade`/`derniere_escalade_le`), lignes contestées exclues (Doc A §3.3 Cas Particuliers), notification copropriétaire à chaque palier + alerte syndic à partir de N4, audit_log `IMPAYE_ESCALADE` acteur système. Tests `tests/escalade.test.ts` (7). **Reste à brancher** : le déclencheur cron quotidien (Inngest non câblé — `apps/api/inngest/` n'est qu'un README ; `executerEscaladeImpayesToutesCoproprietes()` est le point d'entrée prêt) et les PDF N2/N3/N6 (module Documents incomplet), plan d'apurement N4 sans table d'échéancier dédiée (à modéliser si demandé).
-- [ ] **Non livré** : `budget_ag` n'a pas d'endpoint CRUD dédié (Doc A §6 : "voté en AG") — seule la lecture par `genererAppelDeFonds` existe ; création/vote réel dépend de M6 (Assemblées Générales), cohérent avec le stub déjà noté sur la table (`ag_id` sans FK, M6 pas livré).
+- [x] Escalade impayés N0→N6 (Doc A §3.3) : moteur livré dans `apps/api/lib/finances/escalade.ts` — délais J+3/15/30/45/60/90 surchargeables par `copropriete.politique_recouvrement_json`, passe idempotente (jamais deux notifications pour le même palier grâce à `niveau_escalade`/`derniere_escalade_le`), lignes contestées exclues (Doc A §3.3 Cas Particuliers), notification copropriétaire à chaque palier + alerte syndic à partir de N4, audit_log `IMPAYE_ESCALADE` acteur système. Tests `tests/escalade.test.ts` (7). **Cron branché (27/08)** : job Inngest quotidien `escalade-impayes-quotidienne` (`apps/api/inngest/functions/`). Restent les PDF N2/N3/N6 (module Documents incomplet), plan d'apurement N4 sans table d'échéancier dédiée (à modéliser si demandé).
+- [x] ~~budget_ag sans CRUD~~ **Livré (27/08)** : `GET/POST /finances/budgets`, `GET/PATCH /finances/budgets/{id}` (modifiable en PROPOSE), `POST /finances/budgets/{id}/activer` (Idempotency-Key ; l'ACTIF existant du même exercice passe REMPLACE = budget rectificatif Doc A §3.2). Lien `ag_id` nullable vers la résolution AG. Audit BUDGET_CREE/MODIFIE/ACTIVE/REMPLACE. Tests `tests/budgets.test.ts` (5).
 - [ ] Web/mobile : écrans finances (solde, historique paiements, paiement CMI, quittances) — **différés** avec le reste de l'UI, backend-first (voir `docs/PARITE_WEB_MOBILE.md`)
 
 ## M6 — Assemblées Générales
@@ -170,9 +177,9 @@ mise en production.*
 - [x] **Bug RLS non-évident trouvé et corrigé** : `Prisma.create()` fait un `INSERT ... RETURNING *` implicite ; Postgres applique la policy `SELECT` (pas seulement `WITH CHECK`) à la ligne renvoyée par un `RETURNING`, ce qui bloquait tout envoi de notification à un tiers (ex. syndic → résident) même quand le `WITH CHECK` était satisfait. `envoyerNotification` utilise désormais un `INSERT` brut sans `RETURNING` (voir commentaire dans `apps/api/lib/notifications/notifications.ts`).
 - [x] Tests (`tests/documents-notifications.test.ts`, 7 tests) : permission création syndic-only, visibilité PUBLIC_COPROPRIETE/SYNDIC_ONLY/CONSEIL_SYNDICAL, boîte de réception personnelle, marquage lu, refus de marquer la notification d'autrui
 - [x] `envoyerNotification` câblé dans `ag.ts::convoquerAg` (chaque destinataire actif reçoit une notification `AG_CONVOCATION` dans sa boîte de réception générique, en plus de `ag_notification_log` qui reste la preuve légale d'envoi append-only) et dans `incidents.ts::creerIncident` (mass-push `INCIDENT_URGENCE_MAXIMALE` à SYNDIC+GARDIEN quand `urgence = URGENCE_MAXIMALE`, Doc A §5.3) — tests dans `tests/ag.test.ts`/`tests/incidents.test.ts`
-- [ ] **Non livré** : le reste de la matrice événement → canal → destinataire (Partie 7.1) — seuls les deux cas ci-dessus sont câblés ; paiement/quittance/résiliation/etc. ne déclenchent encore aucune notification
-- [ ] **Non livré** : templates FR/AR par `template_code`, rendu selon `langue_preferee` — `template_code` est aujourd'hui une simple chaîne libre, aucun moteur de rendu/traduction
-- [ ] **Non livré** : intégration réelle FCM (push), SMS (⚠️ dépend du choix d'agrégateur — voir note en fin de document), Resend (email) — `envoyerNotification` simule l'envoi en écrivant directement `statut_envoi = ENVOYE`, aucun agrégateur réel branché
+- [x] **Partiellement livré (27/08)** : matrice 7.1 complétée pour — appel de fonds émis → propriétaires EMAIL+PUSH (fan-out Inngest idempotent), PV disponible → copropriétaires (+ locataires si `locataire_voit_pv`), changement de statut incident → créateur, rappels AG J-3. Restent : quittance générée, visiteur temps réel (Realtime), résiliation/divers.
+- [x] ~~templates FR/AR~~ **Livré (27/08)** : registre `lib/notifications/templates.ts` (tous les codes émis couverts, interpolation {{param}}, code inconnu = erreur explicite), rendu selon `langue_preferee`. ⚠️ Chaînes AR = première passe machine, À FAIRE RELIRE par un locuteur natif avant production.
+- [ ] **Seams livrés (27/08), intégrations réelles en attente de comptes (M0)** : adaptateurs env-gated `lib/notifications/transports/` — Resend (EMAIL, fonctionnel dès RESEND_API_KEY+RESEND_FROM+domaine DNS), FCM (stub explicite — tokens d'appareils + OAuth2 à finir avec le client mobile), SMS (stub — agrégateur à contractualiser). `envoyerNotification` écrit désormais le statut RÉEL retourné (EN_ATTENTE en dev via noop — plus jamais de ENVOYE simulé).
 - [ ] Web/mobile : écrans notifications/documents — différés avec le reste de l'UI, backend-first (voir `docs/PARITE_WEB_MOBILE.md`)
 
 ## M10 — Personnel / gardien (+ offline mobile)
@@ -204,7 +211,8 @@ fil de l'eau plutôt qu'en bloc à la fin, pour rester testable en continu. Rapp
 
 *Réf. Master Spec Partie 5.6, 10.1. Dépend de `docs/LEGAL_QUESTIONS_BRIEF.md` §5-6.*
 
-- [ ] Job Inngest mensuel d'anonymisation
+- [x] **Livré (27/08)** — module utilisateurs : `GET/PATCH /users/me` (rectification CNDP), `GET /users/me/export` (droit d'accès, JSON multi-copropriétés, audit `EXPORT_DONNEES_CNDP`), `GET /users/{id}` (syndic), `POST /users/{id}/anonymize` (DESACTIVE requis, PII effacées, lignes financières/votes/PV conservées, audit `ANONYMISATION_CNDP`). Colonnes `utilisateur.desactive_le/anonymise_le`, `copropriete.retention_desactivation_mois` (nullable — légalement gaté §5).
+- [x] **Livré (27/08)** — Job Inngest mensuel `anonymisation-cndp-mensuelle` : anonymise les comptes DESACTIVE dont la rétention est échue ; **saute toute copropriété sans `retention_desactivation_mois` configurée** (jamais de durée devinée). ⚠️ Ne devient effectif en production qu'après la réponse de l'avocat (§5) ET la saisie de la valeur confirmée par copropriété.
 - [ ] Déclaration préalable du traitement déposée sur portail.cndp.ma (démarche administrative, pas du code — cf. brief juridique §6)
 - [ ] CGU + politique de confidentialité FR/AR publiées et liées
 
