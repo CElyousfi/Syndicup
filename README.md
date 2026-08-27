@@ -82,6 +82,7 @@ npm run setup:local-role --workspace=@copropriete-maroc/database   # rôle app_l
 npm run db:seed                          # optionnel — Résidence Al Amal + invitation GARDIEN "SEED0001"
 npm run dev                              # API sur http://localhost:3001
 npx inngest-cli@latest dev -u http://localhost:3001/api/inngest   # optionnel — jobs (escalade,
+                                         # nécessite INNGEST_DEV=1 dans apps/api/.env.local,
                                          # anonymisation CNDP, rappels AG, fan-out appels de fonds),
                                          # UI sur http://localhost:8288, aucun compte cloud requis
 ```
