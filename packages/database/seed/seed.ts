@@ -1,11 +1,9 @@
 /**
- * Seed de développement — aligné sur l'état RÉEL du schéma (M1 + M2 : copropriete,
- * utilisateur, role_utilisateur, invitation).
- *
- * ⚠️ La version initiale de ce fichier (commit 4ab8055) seedait aussi lots, indivision,
- * occupants, personnel et appels de fonds — modèles pas encore présents dans schema.prisma.
- * Restaurer ces sections depuis l'historique git AU FIL de M3 (lots) et M4 (finances), pas
- * avant : un seed qui référence des modèles inexistants casse `npm run seed` silencieusement.
+ * Seed de développement — couvre M1→M11 : copropriété, utilisateurs/rôles, invitation, lots
+ * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
+ * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
+ * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
+ * procurations, rétention CNDP) restent NULL — discipline 422 (LEGAL_QUESTIONS_BRIEF).
  *
  * Connexion via DIRECT_URL (postgres) et non DATABASE_URL (app_local) : le seed écrit dans
  * plusieurs copropriétés sans contexte tenant, ce que RLS interdit à juste titre au rôle
@@ -148,9 +146,153 @@ async function main() {
     },
   });
 
+  // ── M3 — Lots (tantièmes alignés sur totalTantiemes = 1000) ──────────────
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: { totalTantiemes: "1000.00" },
+  });
+  const [lotA1, lotA2, lotA3, parkingP1, loge] = await Promise.all([
+    prisma.lot.create({
+      data: { coproprieteId: copro.id, typeLot: "APPARTEMENT", numero: "A1", etage: 1, tantiemes: "300.00", statut: "OCCUPE" },
+    }),
+    prisma.lot.create({
+      data: { coproprieteId: copro.id, typeLot: "APPARTEMENT", numero: "A2", etage: 2, tantiemes: "250.00", statut: "OCCUPE" },
+    }),
+    prisma.lot.create({
+      data: { coproprieteId: copro.id, typeLot: "APPARTEMENT", numero: "A3", etage: 3, tantiemes: "250.00", statut: "OCCUPE" },
+    }),
+    prisma.lot.create({
+      data: { coproprieteId: copro.id, typeLot: "PARKING", numero: "P1", tantiemes: "100.00", statut: "OCCUPE" },
+    }),
+    prisma.lot.create({
+      data: { coproprieteId: copro.id, typeLot: "LOGE_GARDIEN", numero: "LG", tantiemes: "100.00", statut: "OCCUPE" },
+    }),
+  ]);
+  await prisma.lot.update({ where: { id: parkingP1.id }, data: { lotParentId: lotA1.id } });
+
+  // Propriétés : A1 plein (proprietaireA, aussi propriétaire du parking), A2 bailleur MRE
+  // (loué au locataire), A3 en indivision 50/50 (représentant : indivisaire1 — Doc A §2.4).
+  await prisma.lotProprietaire.createMany({
+    data: [
+      { lotId: lotA1.id, utilisateurId: proprietaireA.id, quotePart: "100.00", typePropriete: "PLEIN", dateDebut: new Date("2024-01-01") },
+      { lotId: parkingP1.id, utilisateurId: proprietaireA.id, quotePart: "100.00", typePropriete: "PLEIN", dateDebut: new Date("2024-01-01") },
+      { lotId: lotA2.id, utilisateurId: proprietaireMRE.id, quotePart: "100.00", typePropriete: "PLEIN", dateDebut: new Date("2024-01-01") },
+      { lotId: lotA3.id, utilisateurId: indivisaire1.id, quotePart: "50.00", typePropriete: "INDIVISION", estRepresentantIndivision: true, dateDebut: new Date("2024-01-01") },
+      { lotId: lotA3.id, utilisateurId: indivisaire2.id, quotePart: "50.00", typePropriete: "INDIVISION", dateDebut: new Date("2024-01-01") },
+    ],
+  });
+  await prisma.lotOccupant.createMany({
+    data: [
+      { lotId: lotA1.id, utilisateurId: proprietaireA.id, typeOccupation: "PROPRIETAIRE_OCCUPANT", dateDebut: new Date("2024-01-01") },
+      { lotId: lotA2.id, utilisateurId: locataire.id, typeOccupation: "LOCATAIRE", dateDebut: new Date("2025-03-01"), accesFinancesAccorde: false, recoitConvocations: false },
+    ],
+  });
+
+  // ── M10 — Personnel (gardien logé) ───────────────────────────────────────
+  await prisma.personnel.create({
+    data: { coproprieteId: copro.id, utilisateurId: gardienUser.id, statut: "PRESENT", logementLotId: loge.id },
+  });
+
+  // ── M5 — Budget ACTIF + appel de fonds EMIS + un paiement partiel ────────
+  const exercice = String(new Date().getFullYear());
+  await prisma.budgetAg.create({
+    data: { coproprieteId: copro.id, exercice, montantTotal: "48000.00", statut: "ACTIF" },
+  });
+  const periode = `${exercice}-01`;
+  const appel = await prisma.appelDeFonds.create({
+    data: {
+      coproprieteId: copro.id,
+      periode,
+      type: "CHARGES_COURANTES",
+      montantTotal: "4000.00",
+      dateEcheance: new Date(`${exercice}-01-10`),
+      statut: "EMIS",
+      lignes: {
+        create: [
+          { lotId: lotA1.id, montantDu: "1200.00" },
+          { lotId: lotA2.id, montantDu: "1000.00" },
+          { lotId: lotA3.id, montantDu: "1000.00" },
+          { lotId: parkingP1.id, montantDu: "400.00" },
+          { lotId: loge.id, montantDu: "400.00" },
+        ],
+      },
+    },
+    include: { lignes: true },
+  });
+  const ligneA1 = appel.lignes.find((l) => l.lotId === lotA1.id)!;
+  await prisma.paiement.create({
+    data: { lotId: lotA1.id, appelDeFondsLotId: ligneA1.id, montant: "500.00", methode: "VIREMENT", statut: "VALIDE" },
+  });
+  await prisma.appelDeFondsLot.update({
+    where: { id: ligneA1.id },
+    data: { montantPaye: "500.00", statut: "PARTIEL" },
+  });
+
+  // ── M8 — Espace commun réservable + une réservation confirmée ────────────
+  const salle = await prisma.espaceCommun.create({
+    data: {
+      coproprieteId: copro.id,
+      nom: "Salle polyvalente",
+      type: "SALLE",
+      capacite: 30,
+      reservable: true,
+      reglesReservationJson: { validation_automatique: true },
+    },
+  });
+  await prisma.reservationEspaceCommun.create({
+    data: {
+      espaceId: salle.id,
+      lotId: lotA1.id,
+      utilisateurId: proprietaireA.id,
+      dateDebut: new Date(Date.now() + 7 * 24 * 3600 * 1000),
+      dateFin: new Date(Date.now() + 7 * 24 * 3600 * 1000 + 3 * 3600 * 1000),
+      statut: "CONFIRMEE",
+    },
+  });
+
+  // ── M6 — AG convoquée avec deux résolutions (quorum/délais légaux NULL → 422 assumé) ──
+  const ag = await prisma.assembleeGenerale.create({
+    data: {
+      coproprieteId: copro.id,
+      type: "ORDINAIRE",
+      dateAg: new Date(Date.now() + 30 * 24 * 3600 * 1000),
+      dateConvocation: new Date(),
+      statut: "CONVOQUEE",
+      resolutions: {
+        create: [
+          { ordre: 1, texte: `Approbation du budget ${exercice} (48 000 MAD).`, typeMajorite: "SIMPLE" },
+          { ordre: 2, texte: "Travaux de ravalement de la façade.", typeMajorite: "DOUBLE" },
+        ],
+      },
+    },
+  });
+
+  // ── M7 — Prestataire + incident en cours ─────────────────────────────────
+  const prestataire = await prisma.prestataire.create({
+    data: { coproprieteId: copro.id, nom: "Plomberie Atlas", specialite: "Plomberie", contact: "+212522000000" },
+  });
+  await prisma.incident.create({
+    data: {
+      coproprieteId: copro.id,
+      lotId: null,
+      categorie: "PLOMBERIE",
+      sousCategorie: "Fuite colonne montante",
+      description: "Fuite au sous-sol près du compteur général.",
+      partie: "COMMUNE",
+      urgence: "URGENTE",
+      statut: "EN_COURS",
+      creePar: locataire.id,
+      assigneAId: prestataire.id,
+      slaDeadline: new Date(Date.now() + 4 * 3600 * 1000),
+    },
+  });
+
   console.log("Seed terminé :", {
     copropriete: copro.nom,
     utilisateurs: 7,
+    lots: 5,
+    appelDeFonds: periode,
+    ag: ag.id,
     invitationEnAttente: invitation.code,
   });
 }
