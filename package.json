@@ -16,7 +16,8 @@
     "test": "turbo run test",
     "db:generate": "npm run generate --workspace=@copropriete-maroc/database",
     "db:migrate": "npm run migrate:dev --workspace=@copropriete-maroc/database",
-    "db:seed": "npm run seed --workspace=@copropriete-maroc/database"
+    "db:seed": "npm run seed --workspace=@copropriete-maroc/database",
+    "check:conformance": "node packages/api-contract/scripts/check-conformance.mjs"
   },
   "devDependencies": {
     "supabase": "^2.114.0",
