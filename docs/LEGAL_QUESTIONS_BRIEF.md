@@ -4,6 +4,30 @@
 copropriété (Loi 18-00/106-12/30-24) et en protection des données (Loi 09-08 / CNDP) avant tout
 codage en dur de ces valeurs.**
 
+---
+
+## ⚠️ Valeurs PROVISOIRES en vigueur (décision du propriétaire du projet, 27/08/2026)
+
+Le propriétaire du projet a explicitement demandé le 27/08/2026 de rendre le module AG
+opérationnel avec des valeurs raisonnables issues des sources convergentes de ce brief, **en
+attendant** la validation par l'avocat (qui reste requise avant l'ouverture publique).
+
+Ces valeurs ne sont PAS codées en dur : elles sont saisies comme **configuration de
+copropriété** (PATCH /coproprietes/{id}, tracé en audit_log `COPROPRIETE_MODIFIEE`) et posées
+par le seed local — modifiables à tout moment dans Paramètres → Paramètres légaux (page J5),
+et remises à « non configuré » (null) si l'avocat infirme.
+
+| Paramètre | Valeur provisoire | Source indicative (§ ci-dessous) |
+|---|---|---|
+| `delai_convocation_jours` | **15** | §1 — art. 22 (ou 16) Loi 18-00, sources convergentes |
+| `quorum_premiere_convocation` | **0.5** | §2 — art. 18, moitié des voix (guide institutionnel) |
+| `limite_procurations_mandataire` | **3** | §4 — maximum 3 mandants par mandataire |
+| `retention_desactivation_mois` | **24** | §5 — « durée légale + 2 ans », base prudente 24 mois |
+
+**À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
+d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
+CNDP (§6) et la question Loi 30-24 (§0) restent des préalables à l'ouverture publique.
+
 Ce document existe parce que le Master Engineering Spec (Partie 8.2, 8.3, 8.5, 5.6, 19.6) refuse
 explicitement de coder en dur des valeurs légales non confirmées — c'est la bonne approche. Ce
 brief rassemble, pour chaque valeur en attente, ce que des sources secondaires publiques

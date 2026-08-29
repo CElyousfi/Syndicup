@@ -12,6 +12,7 @@ import { emitEvent } from "../events/emit";
 import type { TenantContext } from "../tenant/context";
 import { money, repartirAuProrata, subtract, toApiString, isEqual, isGreaterThan } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
+import { envoyerNotification } from "../notifications/notifications";
 import type {
   AppelDeFondsGenererInput,
   PaiementManuelCreateInput,
@@ -160,6 +161,75 @@ export async function listerAppelsDeFonds(ctx: TenantContext, page: number, limi
 }
 
 /**
+ * Détail d'un appel de fonds AVEC ses lignes — GET /finances/appels-de-fonds/:id.
+ * La confidentialité fine reste portée par la RLS sur `appel_de_fonds_lot` : un résident qui
+ * lit un appel ne reçoit que les lignes de ses propres lots, le syndic/conseil les reçoit toutes.
+ */
+export async function obtenirAppelDeFonds(ctx: TenantContext, appelId: string) {
+  if (can("finances.lister_appels_de_fonds", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter un appel de fonds.");
+  }
+  const appel = await withTenant(ctx, (db) =>
+    db.appelDeFonds.findUnique({
+      where: { id: appelId },
+      include: { lignes: { orderBy: { creeLe: "asc" } } },
+    })
+  );
+  if (!appel) throw new RessourceIntrouvableError("Appel de fonds introuvable.");
+  return appel;
+}
+
+/**
+ * GET /finances/synthese — la photographie financière du périmètre visible de l'appelant en UN
+ * appel : tous les appels de fonds (métadonnées) + toutes les lignes que la RLS lui laisse voir
+ * (syndic/conseil : toutes ; résident : ses lots uniquement). Conçu pour supprimer les N+1 du
+ * frontend (tableaux de bord, listes, soldes) — aucune agrégation monétaire côté client au-delà
+ * de l'affichage.
+ */
+/**
+ * GET /finances/paiements — journal des paiements (comptabilité autonome, export CSV).
+ * Même périmètre que la synthèse : la RLS sur `paiement` (via le lot) limite un résident à
+ * ses propres lots ; syndic/conseil voient tout. Filtre optionnel par exercice (année civile).
+ */
+export async function listerPaiements(ctx: TenantContext, exercice?: string) {
+  if (can("finances.lister_appels_de_fonds", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter les paiements.");
+  }
+  const annee = exercice && /^\d{4}$/.test(exercice) ? Number(exercice) : null;
+  return withTenant(ctx, (db) =>
+    db.paiement.findMany({
+      where: {
+        lot: { coproprieteId: ctx.coproprieteId },
+        ...(annee
+          ? { horodatage: { gte: new Date(`${annee}-01-01T00:00:00Z`), lt: new Date(`${annee + 1}-01-01T00:00:00Z`) } }
+          : {}),
+      },
+      orderBy: { horodatage: "desc" },
+      take: 2000,
+    })
+  );
+}
+
+export async function syntheseFinanciere(ctx: TenantContext) {
+  if (can("finances.lister_appels_de_fonds", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter la synthèse financière.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [appels, lignes] = await Promise.all([
+      db.appelDeFonds.findMany({
+        where: { coproprieteId: ctx.coproprieteId },
+        orderBy: { periode: "desc" },
+      }),
+      db.appelDeFondsLot.findMany({
+        where: { appelDeFonds: { coproprieteId: ctx.coproprieteId } },
+        orderBy: { creeLe: "asc" },
+      }),
+    ]);
+    return { appels, lignes };
+  });
+}
+
+/**
  * Solde d'un lot — GET /finances/lots/:id/solde (Master Spec Partie 4.2). Somme des
  * (montant_du - montant_paye) sur toutes les lignes non closes du lot. La confidentialité
  * (un résident ne voit que son propre lot) est appliquée par la policy RLS sur
@@ -198,6 +268,31 @@ export async function obtenirSoldeLot(ctx: TenantContext, lotId: string) {
   });
 }
 
+/** Notification « paiement reçu » aux copropriétaires actifs du lot (flux temps réel + boîte). */
+async function notifierPaiementLot(
+  db: TenantDb,
+  ctx: TenantContext,
+  lotId: string,
+  montant: string,
+  quittanceId: string | null
+) {
+  const proprietaires = await db.lotProprietaire.findMany({
+    where: { lotId, dateFin: null },
+    select: { utilisateurId: true },
+  });
+  await Promise.all(
+    proprietaires.map((p) =>
+      envoyerNotification(db, {
+        coproprieteId: ctx.coproprieteId,
+        utilisateurId: p.utilisateurId,
+        templateCode: "PAIEMENT_RECU",
+        canal: "PUSH",
+        contenuJson: { lot_id: lotId, montant, quittance_id: quittanceId },
+      })
+    )
+  );
+}
+
 /**
  * Applique un paiement (quel que soit le canal) sur une ligne appel_de_fonds_lot :
  *   - crée la ligne `paiement` (append-only)
@@ -227,6 +322,8 @@ async function appliquerPaiement(
     // FK audit_log_acteur_id_fkey si on le passait tel quel). Master Spec Partie 2.2 : acteur_id
     // "nullable si système" — exactement ce cas.
     acteurId?: string | null;
+    /** false = l'appelant notifie lui-même (FIFO : une notification pour tout le paiement). */
+    notifier?: boolean;
   }
 ) {
   // Idempotence AVANT toute autre vérification métier (Partie 6.4 étape 5) : un callback CMI
@@ -302,6 +399,12 @@ async function appliquerPaiement(
       avant: { montant_paye: ligne.montantPaye.toString(), statut: ligne.statut },
       apres: { montant_paye: montantPaieMaj.toString(), statut: nouveauStatut, paiement_id: paiement.id },
     });
+
+    // Les copropriétaires actifs du lot sont prévenus (sauf en mode FIFO, qui notifie une fois
+    // pour l'ensemble des affectations — voir enregistrerPaiementManuel).
+    if (params.notifier !== false) {
+      await notifierPaiementLot(db, ctx, ligne.lotId, toApiString(money(params.montant)), quittance?.id ?? null);
+    }
 
     return { paiement, statut: nouveauStatut, quittance };
   } catch (e) {
@@ -406,6 +509,7 @@ async function appliquerPaiementFifo(
       methode: input.methode,
       payeurUtilisateurId: input.payeurUtilisateurId,
       accepterTropPercu: false,
+      notifier: false,
     });
     affectations.push({
       appel_de_fonds_lot_id: ligne.id,
@@ -424,6 +528,9 @@ async function appliquerPaiementFifo(
     entiteId: input.lotId,
     apres: { montant: toApiString(input.montant), affectations },
   });
+  if (affectations.length > 0) {
+    await notifierPaiementLot(db, ctx, input.lotId, toApiString(input.montant), derniereQuittance?.id ?? null);
+  }
 
   return {
     lot_id: input.lotId,
@@ -563,6 +670,52 @@ export async function obtenirQuittance(ctx: TenantContext, quittanceId: string) 
   return quittance;
 }
 
+/**
+ * GET /finances/quittances/:id/pdf — rendu PDF à la demande (déterministe : quittance,
+ * paiements et ligne sont immuables). Même confidentialité que la consultation (RLS +
+ * permission) : un résident n'atteint que les quittances de ses lots.
+ */
+export async function obtenirQuittancePdf(ctx: TenantContext, quittanceId: string) {
+  if (can("finances.voir_quittance", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter une quittance.");
+  }
+  return withTenant(ctx, async (db) => {
+    const quittance = await db.quittance.findUnique({ where: { id: quittanceId } });
+    if (!quittance) throw new RessourceIntrouvableError("Quittance introuvable.");
+    const ligne = await db.appelDeFondsLot.findUnique({
+      where: { id: quittance.appelDeFondsLotId },
+    });
+    if (!ligne) throw new RessourceIntrouvableError("Ligne d'appel de fonds introuvable.");
+    const [appel, lot, copropriete, paiements] = await Promise.all([
+      db.appelDeFonds.findUnique({ where: { id: ligne.appelDeFondsId } }),
+      db.lot.findUnique({ where: { id: ligne.lotId } }),
+      db.copropriete.findUnique({ where: { id: ctx.coproprieteId } }),
+      db.paiement.findMany({
+        where: { appelDeFondsLotId: ligne.id, statut: "VALIDE" },
+        orderBy: { horodatage: "asc" },
+      }),
+    ]);
+    const { genererQuittancePdfBuffer } = await import("./quittance-pdf");
+    const buffer = await genererQuittancePdfBuffer({
+      numero: quittance.numero,
+      coproprieteNom: copropriete?.nom ?? "Copropriété",
+      coproprieteAdresse: copropriete ? `${copropriete.adresse}, ${copropriete.ville}` : "",
+      lotNumero: lot?.numero ?? "—",
+      lotType: lot?.typeLot ?? "",
+      periode: appel?.periode ?? "—",
+      typeAppel: appel?.type ?? "—",
+      montant: toApiString(money(ligne.montantDu)),
+      dateEmission: quittance.dateEmission.toISOString(),
+      paiements: paiements.map((p) => ({
+        montant: toApiString(money(p.montant)),
+        methode: p.methode,
+        horodatage: p.horodatage.toISOString(),
+      })),
+    });
+    return { buffer, numero: quittance.numero };
+  });
+}
+
 export async function creerContestation(ctx: TenantContext, input: ContestationChargeCreateInput) {
   if (can("finances.contester_charge", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à contester une charge.");
@@ -581,8 +734,47 @@ export async function creerContestation(ctx: TenantContext, input: ContestationC
       },
     });
     await db.appelDeFondsLot.update({ where: { id: input.appel_de_fonds_lot_id }, data: { conteste: true } });
+    // Le syndic est prévenu à l'instant qu'une réponse est attendue.
+    const syndics = await db.roleUtilisateur.findMany({
+      where: { coproprieteId: ctx.coproprieteId, actif: true, role: "SYNDIC" },
+      select: { utilisateurId: true },
+    });
+    await Promise.all(
+      syndics.map((s) =>
+        envoyerNotification(db, {
+          coproprieteId: ctx.coproprieteId,
+          utilisateurId: s.utilisateurId,
+          templateCode: "CONTESTATION_NOUVELLE",
+          canal: "PUSH",
+          contenuJson: {
+            contestation_id: contestation.id,
+            appel_de_fonds_lot_id: ligne.id,
+            lot_id: ligne.lotId,
+            motif: input.motif.slice(0, 140),
+          },
+        })
+      )
+    );
     return contestation;
   });
+}
+
+/**
+ * GET /finances/contestations — le syndic (répondant) voit toutes les contestations du tenant,
+ * un résident voit les siennes. La RLS sur contestation_charge reste la seconde couche.
+ */
+export async function listerContestations(ctx: TenantContext) {
+  const peutRepondre = can("finances.repondre_contestation", ctx.role) === true;
+  const peutContester = can("finances.contester_charge", ctx.role) !== false;
+  if (!peutRepondre && !peutContester) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter les contestations.");
+  }
+  return withTenant(ctx, (db) =>
+    db.contestationCharge.findMany({
+      where: peutRepondre ? {} : { utilisateurId: ctx.utilisateurId },
+      orderBy: { creeLe: "desc" },
+    })
+  );
 }
 
 export async function repondreContestation(
@@ -596,9 +788,22 @@ export async function repondreContestation(
   return withTenant(ctx, async (db) => {
     const existante = await db.contestationCharge.findUnique({ where: { id: contestationId } });
     if (!existante) throw new RessourceIntrouvableError("Contestation introuvable.");
-    return db.contestationCharge.update({
+    const maj = await db.contestationCharge.update({
       where: { id: contestationId },
       data: { statut: input.statut, reponseSyndic: input.reponse_syndic },
     });
+    // Le résident reçoit la réponse à l'instant.
+    await envoyerNotification(db, {
+      coproprieteId: ctx.coproprieteId,
+      utilisateurId: existante.utilisateurId,
+      templateCode: "CONTESTATION_REPONSE",
+      canal: "PUSH",
+      contenuJson: {
+        contestation_id: contestationId,
+        appel_de_fonds_lot_id: existante.appelDeFondsLotId,
+        statut: input.statut,
+      },
+    });
+    return maj;
   });
 }

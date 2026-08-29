@@ -111,10 +111,13 @@ export async function resolveTenantContext(
   }
 
   const superAdmin = roles.find((r) => r.role === "SUPER_ADMIN");
-  if (superAdmin && requestedCoproprieteId) {
+  if (superAdmin) {
+    // SUPER_ADMIN : copropriété demandée si fournie, sinon sa copropriété d'ancrage —
+    // un opérateur fraîchement connecté (aucun cookie de sélection encore posé) doit
+    // pouvoir lire son profil et atteindre la console sans étape supplémentaire.
     const ctx: TenantContext = {
       utilisateurId,
-      coproprieteId: requestedCoproprieteId,
+      coproprieteId: requestedCoproprieteId ?? superAdmin.copropriete_id,
       role: "SUPER_ADMIN",
     };
     assertValidTenantContext(ctx);
@@ -130,12 +133,28 @@ export async function resolveTenantContext(
       );
     }
   } else {
-    if (roles.length > 1) {
+    // Sans copropriété demandée : n'échouer QUE si l'ambiguïté est réelle. Plusieurs
+    // rôles dans la MÊME copropriété (ex. syndic également membre du conseil) ne sont
+    // pas une ambiguïté de tenant — on retient le rôle le plus privilégié.
+    const coprosDistinctes = [...new Set(roles.map((r) => r.copropriete_id))];
+    if (coprosDistinctes.length > 1) {
       throw new ForbiddenTenantError(
         "Plusieurs copropriétés dans le JWT — préciser la copropriété cible."
       );
     }
-    claim = roles[0];
+    const PRIORITE: RoleClaim["role"][] = [
+      "SYNDIC",
+      "CONSEIL_SYNDICAL",
+      "PROPRIETAIRE",
+      "INDIVISAIRE",
+      "PERSONNE_MORALE_REPRESENTANT",
+      "LOCATAIRE",
+      "GARDIEN",
+      "PRESTATAIRE",
+    ];
+    claim = [...roles].sort(
+      (a, b) => PRIORITE.indexOf(a.role) - PRIORITE.indexOf(b.role)
+    )[0];
   }
 
   if (!claim) {

@@ -80,13 +80,37 @@ npm run db:generate
 npm run db:migrate
 npm run setup:local-role --workspace=@copropriete-maroc/database   # rôle app_local (RLS, sans BYPASSRLS)
 npm run db:seed                          # optionnel — Résidence Al Amal + invitation GARDIEN "SEED0001"
-npm run dev                              # API sur http://localhost:3001
+npm run seed:auth --workspace=@copropriete-maroc/database   # comptes GoTrue des utilisateurs
+                                         # seedés (email + mot de passe SyndicUp2026!) — sans lui,
+                                         # aucun compte du seed ne peut se connecter
+npm run dev                              # API sur :3001 + web sur http://localhost:3000
 npx inngest-cli@latest dev -u http://localhost:3001/api/inngest   # optionnel — jobs (escalade,
                                          # nécessite INNGEST_DEV=1 dans apps/api/.env.local,
                                          # anonymisation CNDP, rappels AG, fan-out appels de fonds),
                                          # UI sur http://localhost:8288, aucun compte cloud requis
 ```
 
-OTP en local : numéros de test dans `supabase/config.toml` (`test_otp`) — ex. `+212600000001`,
-code `123456`. Aucun SMS réel n'est envoyé (provider Twilio factice, exigé par GoTrue même
-pour les numéros de test).
+OTP en local : numéros de test dans `supabase/config.toml` (`test_otp`) — tous les numéros du
+seed (`+212600000001` → `…006`), code `123456`. Aucun SMS réel n'est envoyé (provider Twilio
+factice, exigé par GoTrue même pour les numéros de test).
+
+### Local = production (notifications, documents, PDF)
+
+Le local se comporte comme la production — même code, seules les URLs changent :
+
+- **Emails** réellement livrés au serveur SMTP local (Inbucket/Mailpit) — boîte visible sur
+  http://127.0.0.1:54324 (`SMTP_URL=smtp://127.0.0.1:54325` dans apps/api/.env.local ; en prod,
+  Resend API ou n'importe quel SMTP transactionnel).
+- **SMS** livrés à la passerelle dev (`SMS_PROVIDER=dev`) : chaque SMS apparaît dans Inbucket
+  sous `sms+<numéro>@sms.local` ; en prod, `SMS_PROVIDER=twilio` ou `generic` (agrégateur
+  marocain — voir .env.example). Un destinataire sans email bascule automatiquement en SMS.
+- **Documents** : bucket privé `documents` auto-provisionné par l'API au premier usage ;
+  téléversement depuis la page Documents (URL signée), téléchargement en URL signée 15 min.
+- **PDF** : quittances rendues à la demande (`GET /finances/quittances/:id/pdf`), PV d'AG généré
+  à la clôture et servi via `GET /ag/:id/pv/pdf`.
+- **Paramètres légaux** : valeurs PROVISOIRES posées par le seed (15 j / 0,5 / 3 / 24 mois) —
+  décision tracée dans `docs/LEGAL_QUESTIONS_BRIEF.md`, à confirmer par l'avocat avant
+  l'ouverture publique.
+
+Connexion de démonstration (web http://localhost:3000) : `syndic.alamal@example.ma` /
+`SyndicUp2026!` (tous les comptes du seed partagent ce mot de passe local).

@@ -1,0 +1,470 @@
+@import "tailwindcss";
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Système SyndicUp — thème « Résidence » : fond greige chaud, surfaces
+   blanches très arrondies, encre #121212, accent vert sauge profond,
+   accents secondaires lilas / sable / tosca pour les pastilles d'icônes.
+   Statuts : armée #395917 / ambre #A66A00 / rouge profond #98140B.
+   Rayons 24 cartes / 999 pills / 14 champs. Chiffres tabulaires pour
+   l'argent. Propriétés logiques uniquement — l'AR (RTL) se pose sans
+   redécoupe.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+@theme {
+  /* Encre & neutres (chauds, jamais bleutés) */
+  --color-ink: #121212;
+  --color-ink-strong: #201f23;
+  --color-body: #45515c;
+  --color-soft: #596269;
+  --color-faint: #7d8583;
+  --color-hairline: #e9e7df;
+  --color-hairline-strong: #d9d6cb;
+  --color-ground: #ecebe4;
+  --color-hover: #f7f6f2;
+  --color-surface: #ffffff;
+
+  /* Action — vert sauge profond (liens, focus, jauges, éléments actifs) */
+  --color-action: #4c6c5a;
+  --color-action-deep: #3d5a4a;
+  --color-action-tint: #e6efea;
+  --color-action-wash: #f2f6f3;
+
+  /* Accents secondaires — pastilles d'icônes, séries de graphiques */
+  --color-sage: #a4c8ae;
+  --color-sage-tint: #e6efea;
+  --color-moss: #617c6c;
+  --color-army: #395917;
+  --color-lilac: #595d75;
+  --color-lilac-mid: #b8bed5;
+  --color-lilac-tint: #e3e4ea;
+  --color-sand: #a39170;
+  --color-sand-mid: #e5d6b8;
+  --color-sand-tint: #f1ead9;
+  --color-tosca-deep: #48707a;
+  --color-tosca-mid: #c1d8da;
+  --color-tosca-tint: #e4eeef;
+
+  /* Statuts */
+  --color-ok: #395917;
+  --color-ok-tint: #e9f0dd;
+  --color-warn: #8a5a00;
+  --color-warn-tint: #f5ecda;
+  --color-danger: #98140b;
+  --color-danger-tint: #f8e9e7;
+
+  /* Rayons */
+  --radius-card: 24px;
+  --radius-btn: 999px;
+  --radius-field: 14px;
+
+  /* Typo */
+  --font-sans: var(--font-geist-sans), var(--font-arabic), ui-sans-serif, system-ui,
+    -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --shadow-pop: 0 24px 48px -16px rgb(32 31 35 / 0.22), 0 4px 12px -4px rgb(32 31 35 / 0.08);
+  --shadow-lift: 0 1px 2px rgb(32 31 35 / 0.03), 0 12px 32px -20px rgb(32 31 35 / 0.14);
+  --shadow-float: 0 2px 6px rgb(32 31 35 / 0.04), 0 20px 44px -24px rgb(32 31 35 / 0.18);
+}
+
+/* RTL : la police arabe passe en tête quand la page est en arabe. */
+:root[lang="ar"] {
+  --font-sans: var(--font-arabic), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background: var(--color-ground);
+    color: var(--color-ink-strong);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    font-feature-settings: "ss01";
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-action) 22%, transparent);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-action);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* L'argent et toute donnée alignée en colonne : chiffres tabulaires. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  input,
+  select,
+  textarea,
+  button {
+    font: inherit;
+  }
+}
+
+@layer utilities {
+  .card {
+    background: var(--color-surface);
+    border: 1px solid rgb(32 31 35 / 0.05);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-lift);
+    /* Enfant de grille : ne jamais laisser le min-content interne élargir la colonne
+       (piège CSS min-width:auto — la page ne doit jamais défiler horizontalement). */
+    min-width: 0;
+  }
+
+  /* Carte « accent » — panneau teinté (sans bordure) pour les mises en avant. */
+  .card-tint {
+    border-radius: var(--radius-card);
+    border: 1px solid transparent;
+  }
+
+  /* Hachures diagonales — barre active des graphiques (cf. référence). */
+  .bar-stripes {
+    background-image: repeating-linear-gradient(
+      135deg,
+      transparent 0 5px,
+      rgb(255 255 255 / 0.22) 5px 10px
+    );
+  }
+
+  /* Barre de défilement discrète pour les zones denses (tables, panneaux). */
+  .scroll-thin {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-hairline-strong) transparent;
+  }
+
+  .animate-in-up {
+    animation: in-up 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .animate-fade {
+    animation: fade 0.25s ease both;
+  }
+
+  .animate-pulse-dot {
+    animation: pulse-dot 1.6s ease-in-out infinite;
+  }
+
+  .animate-bar-grow {
+    animation: bar-grow 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+    transform-origin: bottom;
+  }
+}
+
+/* Miroir RTL des icônes directionnelles (flèches, chevrons, sortie). */
+[dir="rtl"] .icon-flip {
+  transform: scaleX(-1);
+}
+
+@keyframes in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    transform: scaleY(0.4);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
+}
+
+/* Halo pulsé de la visite guidée — invite au clic sur l'élément en lumière.
+   Posé sur un enfant dédié : le voile du projecteur reste statique (aucun
+   repaint plein écran, fluide même sur mobile). */
+.animate-tour-pulse {
+  animation: tour-pulse 1.8s ease-out infinite;
+}
+
+@keyframes tour-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(164 200 174 / 0.75);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 16px rgb(164 200 174 / 0);
+  }
+}
+
+/* Accessibilité : préférence pour la réduction des animations. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-in-up,
+  .animate-fade,
+  .animate-bar-grow,
+  .animate-pulse-dot,
+  .animate-tour-pulse {
+    animation: none;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   COQUE MOBILE — l'application, pas un site qui se replie.
+   Tout ce bloc ne s'applique qu'en dessous de lg (barre latérale absente) ou
+   md (formulaires, tables). Le desktop reste strictement inchangé.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Cartes statistiques : zones de grille, deux mises en page. */
+.stat {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon label"
+    "value value";
+  column-gap: 12px;
+  row-gap: 16px;
+  align-items: center;
+  padding: 20px;
+}
+.stat-icon { grid-area: icon; }
+.stat-label { grid-area: label; }
+.stat-value-row { grid-area: value; }
+
+@media (max-width: 639px) {
+  /* Deux cartes par rangée, icône au-dessus : une grille de tuiles, comme une app bancaire. */
+  .grid:has(> .stat) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .stat {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "icon"
+      "label"
+      "value";
+    row-gap: 4px;
+    padding: 14px 14px 16px;
+    border-radius: 20px;
+    align-content: start;
+  }
+  .stat-icon { margin-bottom: 6px; }
+  .stat-icon > * { width: 38px !important; height: 38px !important; }
+  .stat-icon svg { width: 20px; height: 20px; }
+  .stat-label { font-size: 12.5px; white-space: normal; line-height: 1.25; }
+  .stat-value { font-size: 21px; white-space: normal; overflow-wrap: anywhere; }
+  .stat-value-row { row-gap: 4px; }
+  /* Nombre impair de tuiles : la dernière occupe la rangée entière. */
+  .grid:has(> .stat) > .stat:last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+
+@media (max-width: 1023px) {
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    overscroll-behavior-y: none;
+  }
+
+  /* Barre de titre : voile translucide sous l'encoche. */
+  .app-topbar {
+    background: color-mix(in srgb, var(--color-ground) 86%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    padding-top: env(safe-area-inset-top);
+  }
+
+  /* Contenu : place pour la barre d'onglets + zone de geste. */
+  .app-main {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  /* Barre d'onglets. */
+  .app-tabbar {
+    background: color-mix(in srgb, var(--color-surface) 92%, transparent);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-top: 1px solid var(--color-hairline);
+    padding-bottom: env(safe-area-inset-bottom);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .app-tabbar .tab { min-height: 58px; }
+  .app-tabbar .tab.is-active .tab-pill {
+    background: var(--color-ink);
+    color: var(--color-sage);
+  }
+  .app-tabbar .tab:active .tab-pill { transform: scale(0.94); }
+  .app-tabbar .tab-pill { transition: transform 0.12s ease, background-color 0.18s ease; }
+
+  /* Feuilles (menu « Plus », modales). */
+  .sheet-handle {
+    width: 40px;
+    height: 5px;
+    margin: 8px auto 6px;
+    border-radius: 999px;
+    background: var(--color-hairline-strong);
+  }
+  .app-sheet { padding-bottom: env(safe-area-inset-bottom); }
+  .app-sheet .tile:active { transform: scale(0.97); }
+  .tile { transition: transform 0.12s ease; }
+
+  .animate-sheet-up {
+    animation: sheet-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  /* Cartes tactiles : légère pression au toucher, jamais d'effet survol résiduel. */
+  a.card:active, .card a:active { transform: scale(0.995); }
+  .card { border-radius: 22px; }
+
+  /* Entrée de page : glissement plus franc, comme une vue qui arrive. */
+  .animate-in-up { animation-name: in-up-mobile; animation-duration: 0.32s; }
+}
+
+@media (max-width: 767px) {
+  /* Modales → feuilles du bas. */
+  dialog.su-modal {
+    margin: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    max-height: 92dvh;
+    border-radius: 28px 28px 0 0;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  dialog.su-modal:not([open]) { display: none; }
+  dialog.su-modal[open] { animation: sheet-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  dialog.su-modal .su-modal-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    min-height: 0;
+  }
+
+  /* Champs : 16px évite le zoom automatique iOS ; hauteur confortable au pouce. */
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 16px;
+  }
+  .page-actions > * { flex: 1 1 auto; min-height: 44px; }
+
+  /* Tables → listes de cartes. */
+  .su-table thead { display: none; }
+  .su-table, .su-table tbody, .su-table tr, .su-table td { display: block; width: 100%; }
+  .su-table tr {
+    padding: 12px 16px 12px;
+    border-bottom: 1px solid var(--color-hairline);
+  }
+  .su-table tr:last-child { border-bottom: 0; }
+  .su-table tr:hover { background: transparent; }
+  .su-table td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 5px 0;
+    text-align: end;
+  }
+  .su-table td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 11.5px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--color-faint);
+    text-align: start;
+  }
+  .su-table td[data-label=""]::before { content: none; }
+  .su-table td:first-child {
+    display: block;
+    padding: 0 0 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--color-ink);
+    text-align: start;
+  }
+  .su-table td:first-child::before { content: none; }
+  /* Dernière cellule alignée à l'extrémité = actions : boutons à droite, sans libellé. */
+  .su-table td:last-child[data-end] {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    padding-top: 10px;
+  }
+  .su-table td:last-child[data-end]::before { content: none; }
+  .su-table td:last-child[data-end] > * { max-width: 100%; }
+  .su-table td > * { min-width: 0; }
+  .su-table td .tnum { white-space: nowrap; }
+
+  /* Filtres de liste : recherche pleine largeur, sélecteurs deux par rangée. */
+  .filters > .relative { flex: 1 1 100%; }
+  .filters > .relative input { width: 100%; }
+  .filters > select { flex: 1 1 40%; width: auto; }
+  .filters > button { flex: 0 0 auto; min-height: 40px; }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(28px); opacity: 0.4; }
+  to { transform: none; opacity: 1; }
+}
+
+@keyframes in-up-mobile {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-sheet-up, dialog.su-modal[open] { animation: none; }
+}
+
+/* Toasts (notifications éphémères) — montent depuis le bas de l'écran, sortent en glissant. */
+.animate-toast-in { animation: toast-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-toast-out { animation: toast-out 0.28s cubic-bezier(0.4, 0, 1, 1) both; }
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+
+/* Mouvement homogène : toute transition non explicitée suit la même courbe et la même durée,
+   sur des propriétés composables (jamais de layout thrash). */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+a, button, [role="button"], [role="link"], .card, input, select, textarea {
+  transition-timing-function: var(--ease-out);
+}
+.card { transition-property: box-shadow, border-color, transform, background-color; transition-duration: 0.22s; }
+button, a, [role="button"], [role="link"] { transition-duration: 0.18s; }
+@media (prefers-reduced-motion: reduce) {
+  .animate-toast-in, .animate-toast-out { animation: none; }
+}

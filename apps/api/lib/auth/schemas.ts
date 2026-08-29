@@ -28,9 +28,27 @@ export const refreshSchema = z.object({
   refresh_token: z.string().min(1),
 });
 
+/** `jeton` : jeton d'ouverture de l'appareil (usage unique, M17) — facultatif mais requis dès
+ *  que le code a été ouvert : sans lui, le code est considéré consommé. */
 export const inviteAcceptSchema = z.object({
   code: z.string().min(1),
+  jeton: z.string().min(16).max(128).optional(),
 });
+
+/**
+ * Inscription par invitation (scan du QR / saisie du code) : l'invité crée son compte et
+ * ses identifiants dans le même geste — le code (usage unique) est la preuve d'identité.
+ */
+export const inviteInscriptionSchema = z.object({
+  code: z.string().min(4).max(16),
+  email: z.string().email().max(200),
+  mot_de_passe: z.string().min(8).max(128),
+  prenom: z.string().min(1).max(100),
+  nom: z.string().min(1).max(100),
+  langue_preferee: z.enum(["FR", "AR"]).default("FR"),
+  jeton: z.string().min(16).max(128).optional(),
+});
+export type InviteInscriptionInput = z.infer<typeof inviteInscriptionSchema>;
 
 // SUPER_ADMIN volontairement absent : jamais attribué par invitation (Partie 5.3 —
 // pas d'auto-élévation de privilège).

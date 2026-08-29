@@ -239,6 +239,11 @@ components:
         code: { type: string }
         statut: { type: string, enum: [EN_ATTENTE, ACCEPTEE, EXPIREE, REGENEREE] }
         expire_le: { type: string, format: date-time }
+        ouverte_le:
+          type: string
+          format: date-time
+          nullable: true
+          description: Premier scan du code (usage unique — le code est alors lié à cet appareil).
 
     InvitationCreate:
       type: object
@@ -281,6 +286,28 @@ components:
               role: { $ref: "#/components/schemas/RoleType" }
               actif: { type: boolean }
 
+    MembreCopropriete:
+      allOf:
+        - $ref: "#/components/schemas/UtilisateurProfil"
+        - type: object
+          properties:
+            roles:
+              type: array
+              items:
+                type: object
+                properties:
+                  role: { type: string }
+                  actif: { type: boolean }
+                  depuis: { type: string, format: date-time }
+            lots:
+              type: array
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  numero: { type: string }
+                  lien: { type: string, enum: [PROPRIETAIRE, OCCUPANT] }
+            membre_depuis: { type: string, format: date-time }
     UtilisateurProfilUpdate:
       type: object
       properties:
@@ -354,6 +381,7 @@ components:
         delai_convocation_jours: { type: integer, nullable: true, minimum: 1 }
         quorum_premiere_convocation: { type: string, nullable: true, pattern: '^0\.\d{1,3}$|^1(\.0{1,3})?$' }
         limite_procurations_mandataire: { type: integer, nullable: true, minimum: 1 }
+        retention_desactivation_mois: { type: integer, nullable: true, minimum: 1, description: "Rétention CNDP avant anonymisation automatique (mois) — valeur légalement gatée (LEGAL_QUESTIONS_BRIEF §5)." }
 
     # ── Domaine : Finances (M5 — Master Spec Partie 2.2/6, Doc A §3) ────────
     BudgetAg:
@@ -796,6 +824,15 @@ components:
             Calculé à la création à partir du seul palier d'urgence (48h/4h/30min) — simplification
             signalée, pas la grille fine par catégorie de Doc A §5.1 (voir
             apps/api/lib/incidents/incidents.ts).
+        photos:
+          type: array
+          maxItems: 5
+          items: { type: string }
+          description: >
+            Chemins storage des photos du signalement (bucket privé `documents`, préfixe
+            `<copropriete_id>/incidents/`). Lecture via GET /incidents/{id}/photos (URLs
+            signées 15 min — Master Spec Partie 9.3). Ajout signalé : champ absent du tableau
+            Master Spec littéral, requis par le signalement photo mobile (Doc A §5).
         cree_le: { type: string, format: date-time }
 
     IncidentCreate:
@@ -812,6 +849,13 @@ components:
         description: { type: string, nullable: true }
         partie: { type: string, enum: [COMMUNE, PRIVATIVE] }
         urgence: { type: string, enum: [NORMALE, URGENTE, URGENCE_MAXIMALE] }
+        photos:
+          type: array
+          maxItems: 5
+          items: { type: string }
+          description: >
+            Chemins storage retournés par POST /incidents/upload-url — chacun doit vivre dans
+            le périmètre de la copropriété courante (revérifié côté service).
 
     IncidentChangerStatut:
       type: object
@@ -1001,6 +1045,87 @@ paths:
   # ══════════════════════════════════════════════════════════════════════
   # INVITATIONS — syndic (Master Spec Partie 5.1, 5.3, 5.5)
   # ══════════════════════════════════════════════════════════════════════
+  /auth/invite/{code}:
+    get:
+      tags: [Auth]
+      summary: >
+        Aperçu PUBLIC d'une invitation (écran d'inscription après scan du QR / saisie du code) :
+        nom de la copropriété, rôle visé, expiration, état. Aucune donnée personnelle ; un code
+        inconnu répond simplement `statut: INVALIDE`. Limité (anti-énumération).
+      parameters:
+        - name: jeton
+          in: query
+          required: false
+          schema: { type: string, minLength: 16, maxLength: 128 }
+          description: >
+            Jeton d'ouverture de l'appareil (usage unique) : le premier appel avec un jeton lie le
+            code à cet appareil ; tout appel ultérieur sans ce jeton répond `statut: OUVERTE`.
+        - name: code
+          in: path
+          required: true
+          schema: { type: string, minLength: 4, maxLength: 16 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      statut: { type: string, enum: [EN_ATTENTE, ACCEPTEE, EXPIREE, REGENEREE, INVALIDE] }
+                      copropriete_nom: { type: string }
+                      ville: { type: string }
+                      role_cible: { type: string }
+                      expire_le: { type: string, format: date-time }
+
+  /auth/invite/inscription:
+    post:
+      tags: [Auth]
+      summary: >
+        Inscription par invitation — le geste unique de l'invité : après scan du QR ou saisie du
+        code, il crée son compte (email + mot de passe + identité) et rejoint sa copropriété
+        avec le rôle et le lot fixés par l'émetteur. Le code est à usage unique et vérifié AVANT
+        toute création (aucun compte orphelin) ; expiré/utilisé → 404/409. Retourne une
+        session ouverte. Public, limité par email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code, email, mot_de_passe, prenom, nom]
+              properties:
+                code: { type: string }
+                email: { type: string, format: email }
+                mot_de_passe: { type: string, minLength: 8 }
+                prenom: { type: string, maxLength: 100 }
+                nom: { type: string, maxLength: 100 }
+                langue_preferee: { type: string, enum: [FR, AR], default: FR }
+      responses:
+        "201":
+          description: Compte créé, rattaché, session ouverte.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      access_token: { type: string }
+                      refresh_token: { type: string }
+                      expires_in: { type: integer }
+                      copropriete_id: { type: string, format: uuid }
+                      role: { type: string }
+                      statut_compte: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "404": { description: Code invalide ou expiré. }
+        "409": { description: Déjà utilisée / email déjà inscrit / syndic déjà actif. }
+        "429": { description: Trop de tentatives. }
+
   /invitations:
     get:
       tags: [Auth]
@@ -1023,7 +1148,11 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Auth]
-      summary: Émet une invitation liée à un lot + rôle (jamais de sélection de rôle libre par l'invité — Master Spec Partie 5.3). Rôle autorisé — syndic.
+      summary: >
+        Émet une invitation liée à un lot + rôle (jamais de sélection de rôle libre par l'invité —
+        Master Spec Partie 5.3). Rôle autorisé — syndic (et super_admin pour la première
+        invitation d'une copropriété). Frontière de responsabilité : le rôle cible SYNDIC n'est
+        attribuable QUE par le super_admin — un syndic qui vise SYNDIC reçoit 403.
       requestBody:
         required: true
         content:
@@ -1057,6 +1186,27 @@ paths:
                   data: { $ref: "#/components/schemas/Invitation" }
         "404": { $ref: "#/components/responses/NotFound" }
         "409": { description: "Invitation déjà acceptée — rien à régénérer." }
+
+  /invitations/{id}:
+    delete:
+      tags: [Auth]
+      summary: >
+        Annule une invitation EN_ATTENTE : elle passe à EXPIREE (le code cesse de fonctionner,
+        la trace reste — jamais de suppression physique). Rôle autorisé — syndic ; super_admin
+        pour une invitation SYNDIC.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: Invitation annulée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Invitation" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Seule une invitation en attente peut être annulée." }
 
   # ══════════════════════════════════════════════════════════════════════
   # COPROPRIÉTÉS — super_admin (create), syndic (manage own)
@@ -1137,6 +1287,37 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /coproprietes/{id}/logo:
+    get:
+      tags: [Copropriétés]
+      summary: URL signée (15 min) du logo de la résidence — `{ url: null }` sans logo. Tout membre.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK — `{ data: { url } }`." }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /coproprietes/{id}/logo/upload-url:
+    post:
+      tags: [Copropriétés]
+      summary: >
+        Prépare le téléversement du logo (chemin `<copropriete>/branding/…`, URL signée PUT). Rôle
+        autorisé — syndic. Le chemin est ensuite enregistré via PATCH /coproprietes/{id}
+        (`logo_storage_path` ; null pour retirer le logo).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string }
+                content_type: { type: string, enum: [image/jpeg, image/png, image/webp, image/svg+xml] }
+      responses:
+        "200": { description: "`{ data: { storage_path, upload_url, token } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /coproprietes/{id}/config:
     get:
       tags: [Copropriétés]
@@ -1159,6 +1340,48 @@ paths:
   # ══════════════════════════════════════════════════════════════════════
   # LOTS — syndic (write), tous (read scopé)
   # ══════════════════════════════════════════════════════════════════════
+  /coproprietes/{id}/synthese-admin:
+    get:
+      tags: [Copropriétés]
+      summary: >
+        Synthèse opérateur d'une copropriété (console d'administration) : compteurs de santé —
+        lots, rôles actifs, invitations, incidents, documents, montants appelés/encaissés,
+        prochaine AG, dernière activité (audit_log). Rôle autorisé — super_admin uniquement.
+        Les montants sont retournés en chaînes décimales : tout calcul (taux…) reste au client
+        via sa librairie monétaire (jamais de float — CLAUDE.md §1.1).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lots: { type: integer }
+                      residents_actifs: { type: integer }
+                      invitations_en_attente: { type: integer }
+                      invitations_acceptees: { type: integer }
+                      incidents_ouverts: { type: integer }
+                      sla_depasses: { type: integer }
+                      documents: { type: integer }
+                      montant_du: { type: string, example: "12000.00" }
+                      montant_paye: { type: string, example: "8400.00" }
+                      prochaine_ag:
+                        type: object
+                        nullable: true
+                        properties:
+                          id: { type: string, format: uuid }
+                          date_ag: { type: string, format: date-time }
+                          type: { type: string }
+                          statut: { type: string }
+                      derniere_activite: { type: string, format: date-time, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /lots:
     get:
       tags: [Lots]
@@ -1205,6 +1428,11 @@ paths:
   /lots/{id}:
     get:
       tags: [Lots]
+      summary: >
+        Détail d'un lot, enrichi de ses rattachements `proprietaires` et `occupants` (chacun avec
+        un objet `utilisateur { id, nom, prenom }` nullable si la RLS masque la personne) —
+        nécessaire à la fiche lot C2 du brief frontend. GET /lots renvoie le même enrichissement
+        par ligne.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
         "200":
@@ -1244,16 +1472,42 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+    delete:
+      tags: [Lots]
+      summary: >
+        Supprime un lot créé par erreur (sans propriétaire, occupant, appel de fonds ni autre
+        référence). Rôle autorisé — syndic. Refusé (409) dès que le lot a un historique.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "Lot supprimé — `{ data: { id } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Le lot a un historique et ne peut pas être supprimé." }
   /lots/{id}/proprietaires:
     post:
       tags: [Lots]
-      summary: Ajoute un copropriétaire (gère l'indivision — quote_part doit sommer à 100%, Doc A §2.4). Rôle autorisé — syndic.
+      summary: >
+        Ajoute un copropriétaire (plein, SCI) OU, d'un seul bloc, les co-indivisaires d'une
+        indivision (`{ proprietaires: [...] }`) — la règle « quote_part actives = 100 % » (Doc A
+        §2.4) est vérifiée par trigger différé au commit, donc sur l'ensemble inséré dans la même
+        transaction. Rôle autorisé — syndic. Réponse : l'objet créé (forme unitaire) ou le
+        tableau (forme liste).
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/LotProprietaireCreate" }
+            schema:
+              oneOf:
+                - $ref: "#/components/schemas/LotProprietaireCreate"
+                - type: object
+                  required: [proprietaires]
+                  properties:
+                    proprietaires:
+                      type: array
+                      minItems: 1
+                      maxItems: 20
+                      items: { $ref: "#/components/schemas/LotProprietaireCreate" }
       responses:
         "201":
           description: Créé
@@ -1387,6 +1641,26 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/UtilisateurProfil" }
+
+  /users:
+    get:
+      tags: [Utilisateurs]
+      summary: >
+        Annuaire des membres de la copropriété courante — toute personne ayant un rôle (actif ou
+        non), avec ses rôles, ses lots (propriétaire / occupant) et l'état de son compte. Rôle
+        autorisé — syndic uniquement (même permission que la fiche).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/MembreCopropriete" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /users/{id}:
     get:
@@ -1624,6 +1898,58 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /finances/appels-de-fonds/{id}:
+    get:
+      tags: [Finances]
+      summary: >
+        Détail d'un appel de fonds AVEC ses lignes par lot (page D3 du brief frontend). La RLS
+        sur appel_de_fonds_lot restreint les lignes au périmètre de l'appelant : un résident ne
+        reçoit que les lignes de ses propres lots (Doc A §12.3).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AppelDeFonds" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /finances/synthese:
+    get:
+      tags: [Finances]
+      summary: >
+        Synthèse financière en un appel — tous les appels de fonds (métadonnées, sans lignes
+        imbriquées) + toutes les lignes appel_de_fonds_lot visibles par l'appelant (RLS :
+        syndic/conseil = toutes, résident = ses lots). Endpoint de lecture agrégée destiné au
+        frontend (suppression des N+1) ; l'affichage seul est calculé côté client, jamais une
+        écriture.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      appels:
+                        type: array
+                        items: { $ref: "#/components/schemas/AppelDeFonds" }
+                      lignes:
+                        type: array
+                        items: { $ref: "#/components/schemas/AppelDeFondsLot" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /finances/lots/{id}/solde:
     get:
       tags: [Finances]
@@ -1642,6 +1968,29 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
 
   /finances/paiements:
+    get:
+      tags: [Finances]
+      summary: >
+        Journal des paiements (comptabilité autonome et export CSV). Même périmètre que la
+        synthèse : la RLS via le lot limite un résident à ses propres lots ; syndic/conseil
+        voient tout. Filtre optionnel `exercice` (année civile, YYYY). Ordre antéchronologique.
+      parameters:
+        - name: exercice
+          in: query
+          required: false
+          schema: { type: string, pattern: "^\\d{4}$" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Paiement" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Finances]
       summary: Enregistre un paiement hors CMI (virement, espèces, chèque) — rôle autorisé syndic.
@@ -1755,7 +2104,41 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /finances/quittances/{id}/pdf:
+    get:
+      tags: [Finances]
+      summary: >
+        La quittance en PDF (valeur fiscale, conservation 10 ans — Doc A §3.4). Rendu à la
+        demande depuis les lignes immuables quittance/paiement — même confidentialité que
+        GET /finances/quittances/{id}.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: PDF (application/pdf, Content-Disposition attachment).
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /finances/contestations:
+    get:
+      tags: [Finances]
+      summary: >
+        Liste des contestations de charges (page D6 du brief frontend) — le syndic voit toutes
+        les contestations du tenant, un résident uniquement les siennes (RLS en seconde couche).
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ContestationCharge" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Finances]
       summary: Contestation d'une ligne de charge par un résident concerné (Doc A §3.3 "Cas Particuliers").
@@ -1989,6 +2372,26 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /ag/{id}/procurations:
+    get:
+      tags: [Assemblées Générales]
+      summary: >
+        Liste des procurations de l'AG (section E4 du brief frontend) — syndic : toutes ;
+        copropriétaire : celles où il est mandant OU mandataire (pour voter en séance au nom
+        du mandant). RLS ag_procuration en seconde couche.
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/AgProcuration" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     post:
       tags: [Assemblées Générales]
       summary: Ajout nécessaire (Doc A §6.5). Rôle autorisé — syndic, ou le mandant pour sa propre procuration.
@@ -2073,6 +2476,29 @@ paths:
       responses:
         "200": { description: URL signée du PDF + hash_integrite. }
 
+  /ag/{id}/pv/pdf:
+    get:
+      tags: [Assemblées Générales]
+      summary: >
+        URL signée (15 min) du PDF du procès-verbal (Master Spec Partie 8.6/9.3). Même périmètre
+        d'accès que GET /ag/{id}/pv ; régénère le PDF (rendu déterministe de contenu_json) sur le
+        chemin canonique si la clôture n'avait pas pu le téléverser — la ligne ag_pv append-only
+        n'est jamais modifiée.
+      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      url: { type: string, format: uri }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   # ══════════════════════════════════════════════════════════════════════
   # INCIDENTS — tous (create), syndic/gardien/prestataire assigné (update scopé) — M7
   # ══════════════════════════════════════════════════════════════════════
@@ -2118,6 +2544,55 @@ paths:
                 properties:
                   data: { $ref: "#/components/schemas/Incident" }
         "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /incidents/{id}:
+    get:
+      tags: [Incidents]
+      summary: >
+        Détail d'un incident AVEC son journal append-only `logs: IncidentLog[]` (page F3 du
+        brief frontend — timeline horodatée). Même périmètre de confidentialité que la liste.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: "#/components/schemas/Incident"
+                      - type: object
+                        properties:
+                          createur:
+                            type: object
+                            description: >
+                              Auteur du signalement (un syndic/gardien n'est rattaché à aucun lot :
+                              l'annuaire par lots ne suffit pas). Contact exposé au périmètre déjà
+                              autorisé à voir l'incident (RLS) — utile pour joindre le déclarant.
+                            properties:
+                              id: { type: string, format: uuid }
+                              nom: { type: string, nullable: true }
+                              prenom: { type: string, nullable: true }
+                              telephone: { type: string, nullable: true }
+                              email: { type: string, nullable: true }
+                          logs:
+                            type: array
+                            items:
+                              allOf:
+                                - $ref: "#/components/schemas/IncidentLog"
+                                - type: object
+                                  properties:
+                                    acteur:
+                                      type: object
+                                      nullable: true
+                                      properties:
+                                        id: { type: string, format: uuid }
+                                        nom: { type: string, nullable: true }
+                                        prenom: { type: string, nullable: true }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
 
@@ -2176,6 +2651,67 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
 
+  /incidents/upload-url:
+    post:
+      tags: [Incidents]
+      summary: >
+        URL signée d'upload d'UNE photo de signalement (image uniquement) vers le bucket privé
+        `documents`, préfixe `<copropriete_id>/incidents/` — même exception d'architecture que
+        les documents (CLAUDE.md §1.4). Rôle autorisé — tout rôle pouvant créer un incident.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, minLength: 1, maxLength: 180 }
+                content_type:
+                  type: string
+                  description: Doit être un type image (jpeg, png, webp, heic, heif).
+      responses:
+        "201":
+          description: Chemin canonique + URL signée d'upload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      storage_path: { type: string }
+                      upload_url: { type: string, format: uri }
+                      token: { type: string }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /incidents/{id}/photos:
+    get:
+      tags: [Incidents]
+      summary: >
+        URLs signées 15 minutes des photos du signalement (Master Spec Partie 9.3 — jamais
+        d'URL publique). Même périmètre de confidentialité que le détail de l'incident.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        path: { type: string }
+                        url: { type: string, format: uri }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /prestataires:
     get:
       tags: [Incidents]
@@ -2214,6 +2750,47 @@ paths:
                   data: { $ref: "#/components/schemas/Prestataire" }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  /prestataires/{id}:
+    patch:
+      tags: [Incidents]
+      summary: Modifie la fiche d'un prestataire (nom, spécialité, contact, actif). Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                nom: { type: string }
+                specialite: { type: string }
+                contact: { type: string }
+                actif: { type: boolean }
+      responses:
+        "200":
+          description: Prestataire mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Prestataire" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Incidents]
+      summary: >
+        Supprime un prestataire sans intervention dans l'historique. Rôle autorisé — syndic.
+        Refusé (409) s'il a été assigné à au moins un incident : le désactiver est alors la voie.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "Prestataire supprimé — `{ data: { id } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Le prestataire a des interventions dans l'historique." }
 
   # ══════════════════════════════════════════════════════════════════════
   # PERSONNEL / GARDIEN — syndic (write personnel), gardien (visites)
@@ -2398,6 +2975,48 @@ paths:
                   data: { $ref: "#/components/schemas/EspaceCommun" }
         "403": { $ref: "#/components/responses/Forbidden" }
 
+  /espaces-communs/{id}:
+    patch:
+      tags: [Espaces communs]
+      summary: Modifie un espace commun (nom, type, capacité, réservable, validation automatique). Rôle autorisé — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                nom: { type: string }
+                type: { type: string }
+                capacite: { type: integer, nullable: true }
+                reservable: { type: boolean }
+                validation_automatique: { type: boolean }
+      responses:
+        "200":
+          description: Espace mis à jour.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EspaceCommun" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Espaces communs]
+      summary: >
+        Supprime un espace commun sans aucune réservation. Rôle autorisé — syndic. Refusé (409)
+        dès qu'une réservation existe : rendre l'espace non réservable est alors la bonne action.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "Espace supprimé — `{ data: { id } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Des réservations existent pour cet espace." }
+
   /reservations:
     get:
       tags: [Espaces communs]
@@ -2517,6 +3136,39 @@ paths:
       responses:
         "201": { description: Créé. }
 
+  /documents/upload-url:
+    post:
+      tags: [Documents]
+      summary: >
+        URL signée d'upload (2 h) vers le bucket privé `documents` — le client téléverse
+        directement au Storage (exception d'architecture autorisée, CLAUDE.md §1.4) puis
+        enregistre les métadonnées via POST /documents. Rôle autorisé — syndic.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, minLength: 1, maxLength: 200 }
+                content_type: { type: string, minLength: 1, maxLength: 150 }
+      responses:
+        "201":
+          description: Chemin canonique + URL signée d'upload.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      storage_path: { type: string }
+                      upload_url: { type: string, format: uri }
+                      token: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
   /documents/{id}/download-url:
     get:
       tags: [Documents]
@@ -2524,6 +3176,19 @@ paths:
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
         "200": { description: OK }
+
+  /documents/{id}:
+    delete:
+      tags: [Documents]
+      summary: >
+        Supprime un document téléversé (objet storage + ligne, audit_log). Rôle autorisé — syndic.
+        Refusé (409) pour un document généré par la plateforme (PV d'AG, quittance — valeur probante).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "Document supprimé — `{ data: { id } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { description: "Document généré par la plateforme, non supprimable." }
 
   # ══════════════════════════════════════════════════════════════════════
   # NOTIFICATIONS — utilisateur (ses propres notifications)
@@ -2534,6 +3199,18 @@ paths:
       parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
       responses:
         "200": { description: OK }
+
+  /notifications/stream:
+    get:
+      tags: [Notifications]
+      summary: >
+        Flux temps réel (Server-Sent Events, `text/event-stream`) des notifications de l'appelant :
+        événement `etat` à l'ouverture ({ unread, connus[] }), puis un événement `notification`
+        ({ id, titre, corps, lu, unread }) à chaque nouvelle notification (latence ≤ 2 s), `ping`
+        toutes les 20 s. Le client se reconnecte de lui-même (EventSource).
+      responses:
+        "200": { description: "Flux SSE." }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /notifications/{id}/read:
     patch:

@@ -147,7 +147,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await admin.auditLog.deleteMany({ where: { coproprieteId: coproA } });
-  await admin.incidentLog.deleteMany({});
+  // Périmètre STRICT : incident_log est append-only et probant — un nettoyage global
+  // effaçait le journal de tous les incidents de la base locale (démo comprise).
+  await admin.incidentLog.deleteMany({ where: { incident: { coproprieteId: coproA } } });
   await admin.incident.deleteMany({ where: { coproprieteId: coproA } });
   await admin.prestataire.deleteMany({ where: { coproprieteId: coproA } });
   await admin.lotProprietaire.deleteMany({ where: { lotId: lotA1 } });

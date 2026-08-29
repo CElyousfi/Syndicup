@@ -1,12 +1,14 @@
 /**
- * POST /v1/lots/:id/proprietaires — ajoute un copropriétaire (plein, indivision, SCI — Doc A
- * §2.4). Contrainte "somme des quote_part actives = 100%" appliquée par trigger DB (migration
- * M3), remontée ici en 422.
+ * POST /v1/lots/:id/proprietaires — ajoute un copropriétaire (plein, SCI) OU, d'un seul bloc,
+ * les co-indivisaires d'une indivision `{ proprietaires: [...] }` (Doc A §2.4). La contrainte
+ * « somme des quote_part actives = 100 % » est appliquée par un trigger DB différé au commit
+ * (migration M3) : une indivision ne peut donc être créée qu'en une transaction — d'où la
+ * forme liste. Remontée en 422 si la somme n'est pas 100.
  */
 import { withApiHandler } from "../../../../../lib/http/handler";
-import { lotProprietaireCreateSchema } from "../../../../../lib/lots/schemas";
+import { lotProprietairesCreateSchema } from "../../../../../lib/lots/schemas";
 import {
-  ajouterProprietaire,
+  ajouterProprietaires,
   PermissionRefuseeError,
   LotIntrouvableError,
   ContrainteMetierError,
@@ -19,10 +21,12 @@ async function handlePOST(req: Request, { params }: { params: Promise<{ id: stri
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
     const body = await req.json().catch(() => null);
-    const parsed = lotProprietaireCreateSchema.safeParse(body);
+    const parsed = lotProprietairesCreateSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const lotProprietaire = await ajouterProprietaire(ctx, id, parsed.data);
-    return ok(lotProprietaire, { status: 201 });
+    const liste = "proprietaires" in parsed.data ? parsed.data.proprietaires : [parsed.data];
+    const crees = await ajouterProprietaires(ctx, id, liste);
+    // Rétro-compatible : un seul copropriétaire → l'objet ; une liste → le tableau.
+    return ok("proprietaires" in parsed.data ? crees : crees[0], { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);
     if (mapped) return mapped;

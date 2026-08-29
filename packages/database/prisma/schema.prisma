@@ -152,6 +152,8 @@ model Copropriete {
   dateCreation          DateTime          @default(now()) @map("date_creation") @db.Timestamptz
   statut                StatutCopropriete @default(ACTIVE)
   configJson            Json?             @map("config_json")
+  // Logo de la résidence (M18) — chemin storage `<copropriete>/branding/…`, URL signée à la demande.
+  logoStoragePath       String?           @map("logo_storage_path")
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
   delaiConvocationJours Int?              @map("delai_convocation_jours")
@@ -278,6 +280,9 @@ model Invitation {
   code          String           @unique
   statut        StatutInvitation @default(EN_ATTENTE)
   expireLe      DateTime         @map("expire_le") @db.Timestamptz
+  // Usage unique (M17) : premier scan → lié à l'appareil (jeton haché) ; les autres sont refusés.
+  ouverteLe          DateTime? @map("ouverte_le") @db.Timestamptz
+  jetonOuvertureHash String?   @map("jeton_ouverture_hash")
   creeLe        DateTime         @default(now()) @map("cree_le") @db.Timestamptz
 
   @@index([coproprieteId])
@@ -998,6 +1003,11 @@ model Incident {
   // simplification signalée : delai par palier d'urgence, pas la grille fine par
   // catégorie/sous-catégorie de Doc A §5.1 qui va de 30 min à 1 semaine selon le cas précis).
   slaDeadline   DateTime?         @map("sla_deadline") @db.Timestamptz
+  // Photos du signalement (Doc A §5 : signalement illustré) — chemins storage dans le bucket
+  // privé `documents` sous `<copropriete_id>/incidents/…`, max 5, accès via URL signée 15 min
+  // (même règle que les documents, Master Spec Partie 9.3). Ajout signalé : champ absent du
+  // tableau Master Spec littéral, nécessaire au signalement photo mobile.
+  photos        String[]          @default([])
   creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe     DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
 

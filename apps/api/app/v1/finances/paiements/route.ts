@@ -9,12 +9,27 @@ import { withApiHandler } from "../../../../lib/http/handler";
 import { paiementManuelCreateSchema } from "../../../../lib/finances/schemas";
 import {
   enregistrerPaiementManuel,
+  listerPaiements,
   PermissionRefuseeError,
   RessourceIntrouvableError,
   ContrainteMetierError,
 } from "../../../../lib/finances/finances";
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
+
+/** GET /v1/finances/paiements?exercice=YYYY — journal des paiements (RLS : périmètre du rôle). */
+async function handleGET(req: Request) {
+  try {
+    const ctx = await tenantFromRequest(req);
+    const exercice = new URL(req.url).searchParams.get("exercice") ?? undefined;
+    return ok(await listerPaiements(ctx, exercice));
+  } catch (e) {
+    const mapped = mapAuthError(e);
+    if (mapped) return mapped;
+    if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
+    throw e;
+  }
+}
 
 async function handlePOST(req: Request) {
   try {
@@ -37,3 +52,4 @@ async function handlePOST(req: Request) {
 }
 
 export const POST = withApiHandler(handlePOST);
+export const GET = withApiHandler(handleGET);

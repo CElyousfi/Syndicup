@@ -134,11 +134,16 @@ describe("Notifications — boîte de réception personnelle (Partie 7.2)", () =
         canal: "EMAIL",
       })
     );
+    // Les documents publiés plus haut ont déjà notifié Alice et Bob (DOCUMENT_PUBLIE) : on
+    // vérifie l'isolation sur la convocation, et qu'aucune ligne d'autrui ne fuit.
     const rowsAlice = await listerMesNotifications(ctxAlice());
-    expect(rowsAlice.length).toBe(1);
-    expect(rowsAlice[0]?.statutEnvoi).toBe("EN_ATTENTE");
+    const convocationsAlice = rowsAlice.filter((r) => r.templateCode === "AG_CONVOCATION");
+    expect(convocationsAlice.length).toBe(1);
+    expect(convocationsAlice[0]?.statutEnvoi).toBe("EN_ATTENTE");
+    expect(rowsAlice.every((r) => r.utilisateurId === alice)).toBe(true);
     const rowsBob = await listerMesNotifications(ctxBob());
-    expect(rowsBob.length).toBe(0);
+    expect(rowsBob.some((r) => r.templateCode === "AG_CONVOCATION")).toBe(false);
+    expect(rowsBob.every((r) => r.utilisateurId === bob)).toBe(true);
   });
 
   it("marque une notification comme lue", async () => {

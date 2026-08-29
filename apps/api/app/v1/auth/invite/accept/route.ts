@@ -31,7 +31,8 @@ async function handlePOST(req: Request) {
       telephone: identite.telephone,
       identiteVerifiee: identite.verifie,
     },
-    parsed.data.code
+    parsed.data.code,
+    parsed.data.jeton
   );
 
   switch (resultat.statut) {

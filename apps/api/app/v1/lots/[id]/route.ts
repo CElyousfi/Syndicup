@@ -6,6 +6,7 @@ import { lotUpdateSchema } from "../../../../lib/lots/schemas";
 import {
   obtenirLot,
   modifierLot,
+  supprimerLot,
   PermissionRefuseeError,
   LotIntrouvableError,
   ContrainteMetierError,
@@ -47,5 +48,21 @@ async function handlePATCH(req: Request, { params }: { params: Promise<{ id: str
   }
 }
 
+async function handleDELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await tenantFromRequest(req);
+    const { id } = await params;
+    return ok(await supprimerLot(ctx, id));
+  } catch (e) {
+    const mapped = mapAuthError(e);
+    if (mapped) return mapped;
+    if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
+    if (e instanceof LotIntrouvableError) return fail("NOT_FOUND", e.message);
+    if (e instanceof ContrainteMetierError) return fail("CONFLICT", e.message);
+    throw e;
+  }
+}
+
 export const GET = withApiHandler(handleGET);
+export const DELETE = withApiHandler(handleDELETE);
 export const PATCH = withApiHandler(handlePATCH);

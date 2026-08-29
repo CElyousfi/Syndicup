@@ -57,6 +57,14 @@ export async function envoyerNotification(
     .catch(() => null);
   const langue = (destinataire?.languePreferee ?? "FR") as "FR" | "AR";
 
+  // Réalité marocaine (brief frontend §1) : beaucoup de résidents n'ont qu'un téléphone.
+  // Un canal EMAIL sans adresse email bascule sur SMS quand un numéro existe — le canal
+  // réellement utilisé est celui enregistré dans la ligne notification (preuve honnête).
+  let canal = params.canal;
+  if (canal === "EMAIL" && !destinataire?.email && destinataire?.telephone) {
+    canal = "SMS";
+  }
+
   let statutEnvoi: "EN_ATTENTE" | "ENVOYE" | "ECHOUE" = "EN_ATTENTE";
   try {
     const rendu = templateExiste(params.templateCode)
@@ -70,7 +78,7 @@ export async function envoyerNotification(
           corps: JSON.stringify(params.contenuJson ?? {}),
           langue,
         };
-    const resultat = await transportPour(params.canal).envoyer({
+    const resultat = await transportPour(canal).envoyer({
       destinataire: {
         utilisateurId: params.utilisateurId,
         email: destinataire?.email ?? null,
@@ -85,7 +93,7 @@ export async function envoyerNotification(
     // Un transport défaillant ne doit jamais faire échouer l'écriture métier appelante —
     // la ligne notification trace l'échec (ECHOUE) pour reprise.
     logger.error("Transport de notification en erreur", {
-      canal: params.canal,
+      canal,
       template_code: params.templateCode,
       erreur: e instanceof Error ? e.message : String(e),
     });
@@ -99,7 +107,7 @@ export async function envoyerNotification(
       (id, copropriete_id, utilisateur_id, template_code, canal, statut_envoi, contenu_json, horodatage_envoi)
     VALUES
       (${id}::uuid, ${params.coproprieteId}::uuid, ${params.utilisateurId}::uuid, ${params.templateCode},
-       ${params.canal}::"CanalNotification", ${statutEnvoi}::"StatutEnvoiNotification",
+       ${canal}::"CanalNotification", ${statutEnvoi}::"StatutEnvoiNotification",
        ${params.contenuJson === undefined ? null : (params.contenuJson as Prisma.InputJsonObject)}::jsonb,
        ${horodatageEnvoi})
   `;
@@ -108,7 +116,7 @@ export async function envoyerNotification(
     coproprieteId: params.coproprieteId,
     utilisateurId: params.utilisateurId,
     templateCode: params.templateCode,
-    canal: params.canal,
+    canal,
     statutEnvoi,
     contenuJson: params.contenuJson ?? null,
     accuseReception: null,
@@ -122,12 +130,33 @@ export async function listerMesNotifications(ctx: TenantContext) {
   if (can("notifications.lire", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à consulter les notifications.");
   }
-  return withTenant(ctx, (db) =>
-    db.notification.findMany({
-      where: { utilisateurId: ctx.utilisateurId },
-      orderBy: { horodatageEnvoi: "desc" },
-    })
-  );
+  return withTenant(ctx, async (db) => {
+    const [rows, moi] = await Promise.all([
+      db.notification.findMany({
+        where: { utilisateurId: ctx.utilisateurId },
+        orderBy: { horodatageEnvoi: "desc" },
+      }),
+      db.utilisateur.findUnique({
+        where: { id: ctx.utilisateurId },
+        select: { languePreferee: true },
+      }),
+    ]);
+    // Boîte de réception (brief I2) : titre/corps RENDUS dans la langue du destinataire —
+    // contenu_json ne stocke que les variables du template, jamais le texte final.
+    const langue = moi?.languePreferee ?? "FR";
+    return rows.map((n) => {
+      let rendu: { titre: string; corps: string } | null = null;
+      if (templateExiste(n.templateCode)) {
+        const r = render(
+          n.templateCode,
+          langue,
+          (n.contenuJson ?? {}) as Record<string, unknown>
+        );
+        rendu = { titre: r.titre, corps: r.corps };
+      }
+      return { ...n, rendu };
+    });
+  });
 }
 
 /**
@@ -149,5 +178,61 @@ export async function marquerLue(ctx: TenantContext, notificationId: string) {
       where: { id: notificationId },
       data: { lu: true, luLe: new Date() },
     });
+  });
+}
+
+/**
+ * Flux temps réel (GET /notifications/stream) — état initial puis nouveautés depuis un instant.
+ * Lecture courte sous contexte tenant à chaque tick : la RLS limite au destinataire.
+ */
+export async function etatNotifications(ctx: TenantContext) {
+  if (can("notifications.lire", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter les notifications.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [nonLues, recentes] = await Promise.all([
+      db.notification.count({ where: { utilisateurId: ctx.utilisateurId, lu: false } }),
+      db.notification.findMany({
+        where: { utilisateurId: ctx.utilisateurId },
+        orderBy: { horodatageEnvoi: "desc" },
+        take: 30,
+        select: { id: true },
+      }),
+    ]);
+    return { unread: nonLues, connus: recentes.map((n) => n.id) };
+  });
+}
+
+export async function nouvellesNotificationsDepuis(ctx: TenantContext, depuis: Date) {
+  return withTenant(ctx, async (db) => {
+    const rows = await db.notification.findMany({
+      where: { utilisateurId: ctx.utilisateurId, horodatageEnvoi: { gt: depuis } },
+      orderBy: { horodatageEnvoi: "asc" },
+      take: 20,
+    });
+    if (rows.length === 0) return { rows: [], unread: null as number | null };
+    const [moi, nonLues] = await Promise.all([
+      db.utilisateur.findUnique({ where: { id: ctx.utilisateurId }, select: { languePreferee: true } }),
+      db.notification.count({ where: { utilisateurId: ctx.utilisateurId, lu: false } }),
+    ]);
+    const langue = moi?.languePreferee ?? "FR";
+    return {
+      unread: nonLues,
+      rows: rows.map((n) => {
+        const r = templateExiste(n.templateCode)
+          ? render(n.templateCode, langue, (n.contenuJson ?? {}) as Record<string, unknown>)
+          : null;
+        return {
+          id: n.id,
+          titre: r?.titre ?? n.templateCode,
+          corps: r?.corps ?? "",
+          lu: n.lu,
+          horodatageEnvoi: n.horodatageEnvoi,
+          // Le client déduit la page cible (AG, lot, incident…) du code + des variables.
+          templateCode: n.templateCode,
+          contenuJson: n.contenuJson,
+        };
+      }),
+    };
   });
 }

@@ -8,7 +8,12 @@
 import { describe, expect, it } from "vitest";
 import { canTransition, assertTransition } from "../lib/auth/account-state";
 import { invitationCreateSchema } from "../lib/auth/schemas";
-import { genererCode } from "../lib/auth/invitations";
+import {
+  genererCode,
+  creerInvitation,
+  assertPeutViserLeRole,
+  PermissionRefuseeError,
+} from "../lib/auth/invitations";
 
 describe("Machine à états du compte (Partie 5.2)", () => {
   it("autorise INVITE → EN_VALIDATION → ACTIF", () => {
@@ -80,5 +85,24 @@ describe("Génération de code d'invitation (Partie 5.1)", () => {
   it("génère des codes distincts", () => {
     const codes = new Set(Array.from({ length: 50 }, () => genererCode()));
     expect(codes.size).toBe(50);
+  });
+});
+
+describe("Frontière de responsabilité : le rôle SYNDIC n'est attribuable que par le super admin", () => {
+  const base = { utilisateurId: "00000000-0000-4000-8000-000000000001", coproprieteId: "00000000-0000-4000-8000-000000000002" };
+
+  it("refuse à un SYNDIC d'inviter un SYNDIC (403 avant toute écriture)", async () => {
+    await expect(
+      creerInvitation({ ...base, role: "SYNDIC" }, { role_cible: "SYNDIC", canal: "WHATSAPP", lot_id: null })
+    ).rejects.toBeInstanceOf(PermissionRefuseeError);
+  });
+
+  it("laisse un SYNDIC inviter les autres rôles (la garde ne bloque que SYNDIC)", () => {
+    // Aucune base ici : on vérifie seulement que la garde ne lève pas pour GARDIEN.
+    expect(() => assertPeutViserLeRole({ ...base, role: "SYNDIC" }, "GARDIEN")).not.toThrow();
+  });
+
+  it("autorise le SUPER_ADMIN à viser SYNDIC", () => {
+    expect(() => assertPeutViserLeRole({ ...base, role: "SUPER_ADMIN" }, "SYNDIC")).not.toThrow();
   });
 });

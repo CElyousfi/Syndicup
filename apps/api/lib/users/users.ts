@@ -156,3 +156,63 @@ export async function exporterMesDonnees(utilisateurId: string, roles: RoleClaim
 
   return { profil, genere_le: new Date().toISOString(), coproprietes };
 }
+
+/**
+ * GET /users — annuaire complet de la copropriété (syndic) : toute personne ayant un rôle dans
+ * le tenant (actif ou non), avec ses rôles, ses lots (propriétaire / occupant) et l'état de son
+ * compte. C'est la vue « qui est rattaché à ma résidence » de celui qui invite — même
+ * permission que la fiche (users.lire_fiche), même périmètre RLS.
+ */
+export async function listerMembres(ctx: TenantContext) {
+  if (can("users.lire_fiche", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut consulter l'annuaire des membres.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [roles, proprietaires, occupants] = await Promise.all([
+      db.roleUtilisateur.findMany({
+        where: { coproprieteId: ctx.coproprieteId },
+        include: { utilisateur: true },
+        orderBy: { creeLe: "asc" },
+      }),
+      db.lotProprietaire.findMany({
+        where: { lot: { coproprieteId: ctx.coproprieteId }, dateFin: null },
+        select: { utilisateurId: true, lot: { select: { id: true, numero: true } } },
+      }),
+      db.lotOccupant.findMany({
+        where: { lot: { coproprieteId: ctx.coproprieteId }, dateFin: null },
+        select: { utilisateurId: true, lot: { select: { id: true, numero: true } } },
+      }),
+    ]);
+    const lotsPar = new Map<string, Array<{ id: string; numero: string; lien: "PROPRIETAIRE" | "OCCUPANT" }>>();
+    const ajouter = (uid: string, lot: { id: string; numero: string }, lien: "PROPRIETAIRE" | "OCCUPANT") => {
+      const liste = lotsPar.get(uid) ?? [];
+      if (!liste.some((l) => l.id === lot.id && l.lien === lien)) liste.push({ ...lot, lien });
+      lotsPar.set(uid, liste);
+    };
+    for (const p of proprietaires) ajouter(p.utilisateurId, p.lot, "PROPRIETAIRE");
+    for (const o of occupants) ajouter(o.utilisateurId, o.lot, "OCCUPANT");
+
+    const membres = new Map<
+      string,
+      ReturnType<typeof profilPublic> & {
+        roles: Array<{ role: string; actif: boolean; depuis: Date }>;
+        lots: Array<{ id: string; numero: string; lien: "PROPRIETAIRE" | "OCCUPANT" }>;
+        membre_depuis: Date;
+      }
+    >();
+    for (const r of roles) {
+      const existant = membres.get(r.utilisateurId);
+      if (existant) {
+        existant.roles.push({ role: r.role, actif: r.actif, depuis: r.creeLe });
+        continue;
+      }
+      membres.set(r.utilisateurId, {
+        ...profilPublic(r.utilisateur),
+        roles: [{ role: r.role, actif: r.actif, depuis: r.creeLe }],
+        lots: lotsPar.get(r.utilisateurId) ?? [],
+        membre_depuis: r.creeLe,
+      });
+    }
+    return [...membres.values()];
+  });
+}

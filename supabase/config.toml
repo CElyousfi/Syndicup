@@ -106,8 +106,9 @@ openai_api_key = "env(OPENAI_API_KEY)"
 enabled = true
 # Port to use for the email testing server web interface.
 port = 54324
-# Uncomment to expose additional ports for testing user applications that send emails.
-# smtp_port = 54325
+# SMTP exposé : l'API y livre les notifications EMAIL en local (transport SMTP → Inbucket),
+# exactement le même code que la production (Resend/SMTP réel) — parité local/prod.
+smtp_port = 54325
 # pop3_port = 54326
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
@@ -117,12 +118,12 @@ enabled = true
 # The maximum file size allowed (e.g. "5MB", "500KB").
 file_size_limit = "50MiB"
 
-# Uncomment to configure local storage buckets
-# [storage.buckets.images]
-# public = false
-# file_size_limit = "50MiB"
-# allowed_mime_types = ["image/png", "image/jpeg"]
-# objects_path = "./images"
+# Bucket privé des documents (règlements, PV d'AG, quittances — Master Spec Partie 9.3).
+# Jamais public : toute lecture passe par une URL signée 15 min générée par l'API.
+# En staging/production, l'API le crée elle-même au premier usage (ensureBucketDocuments).
+[storage.buckets.documents]
+public = false
+file_size_limit = "50MiB"
 
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
@@ -273,6 +274,9 @@ max_frequency = "5s"
 212600000001 = "123456"
 212600000002 = "123456"
 212600000003 = "123456"
+212600000004 = "123456"
+212600000005 = "123456"
+212600000006 = "123456"
 
 # Configure logged in session timeouts.
 # [auth.sessions]

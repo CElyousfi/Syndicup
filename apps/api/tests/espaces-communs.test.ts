@@ -74,8 +74,10 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await admin.reservationEspaceCommun.deleteMany({});
+  await admin.reservationEspaceCommun.deleteMany({ where: { espace: { coproprieteId: coproA } } });
   await admin.espaceCommun.deleteMany({ where: { coproprieteId: coproA } });
+  // Les demandes EN_ATTENTE notifient le syndic (temps réel) — nettoyer avant la copropriété.
+  await admin.notification.deleteMany({ where: { coproprieteId: coproA } });
   await admin.lotProprietaire.deleteMany({ where: { lotId: lotAlice } });
   await admin.lot.deleteMany({ where: { id: lotAlice } });
   await admin.roleUtilisateur.deleteMany({ where: { coproprieteId: coproA } });

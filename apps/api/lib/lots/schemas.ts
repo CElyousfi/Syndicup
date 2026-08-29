@@ -73,6 +73,17 @@ export const lotProprietaireCreateSchema = z.object({
 });
 export type LotProprietaireCreateInput = z.infer<typeof lotProprietaireCreateSchema>;
 
+/**
+ * Corps accepté par POST /lots/:id/proprietaires : un copropriétaire seul (pleine propriété)
+ * OU une liste `{ proprietaires: [...] }` — une indivision doit être créée d'un bloc, la règle
+ * « somme des quote_part = 100 % » étant vérifiée par le trigger différé au commit.
+ */
+export const lotProprietairesCreateSchema = z.union([
+  lotProprietaireCreateSchema,
+  z.object({ proprietaires: z.array(lotProprietaireCreateSchema).min(1).max(20) }),
+]);
+export type LotProprietairesCreateInput = z.infer<typeof lotProprietairesCreateSchema>;
+
 export const TYPES_OCCUPATION = ["PROPRIETAIRE_OCCUPANT", "LOCATAIRE"] as const;
 
 export const lotOccupantCreateSchema = z.object({

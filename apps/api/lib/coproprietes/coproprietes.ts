@@ -14,6 +14,9 @@ import { withTenant } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import type { RoleClaim } from "../tenant/jwt";
 import { ecrireAuditLog } from "../audit/audit";
+import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
+import { randomUUID } from "node:crypto";
+import type { LogoUploadUrlInput } from "./schemas";
 import type { CoproprieteCreateInput, CoproprieteUpdateInput } from "./schemas";
 
 export class PermissionRefuseeError extends Error {}
@@ -120,6 +123,91 @@ export async function creerCopropriete(
   });
 }
 
+/**
+ * GET /coproprietes/:id/synthese-admin — santé d'une copropriété pour la console opérateur.
+ * SUPER_ADMIN uniquement. Compteurs simples + montants en chaînes décimales : aucun calcul
+ * monétaire ici (taux etc. côté client via sa librairie centimes — CLAUDE.md §1.1).
+ */
+export async function syntheseAdmin(ctx: TenantContext, coproprieteId: string) {
+  if (ctx.role !== "SUPER_ADMIN") {
+    throw new PermissionRefuseeError("Console opérateur : réservée au super_admin.");
+  }
+  const ctxCible: TenantContext = {
+    utilisateurId: ctx.utilisateurId,
+    coproprieteId,
+    role: "SUPER_ADMIN",
+  };
+  return withTenant(ctxCible, async (db) => {
+    const copro = await db.copropriete.findUnique({ where: { id: coproprieteId } });
+    if (!copro) throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+
+    const maintenant = new Date();
+    const [
+      lots,
+      residentsActifs,
+      invitationsEnAttente,
+      invitationsAcceptees,
+      incidentsOuverts,
+      slaDepasses,
+      documents,
+      sommes,
+      prochaineAg,
+      derniereActivite,
+    ] = await Promise.all([
+      db.lot.count({ where: { coproprieteId } }),
+      db.roleUtilisateur.count({ where: { coproprieteId, actif: true } }),
+      db.invitation.count({ where: { coproprieteId, statut: "EN_ATTENTE" } }),
+      db.invitation.count({ where: { coproprieteId, statut: "ACCEPTEE" } }),
+      db.incident.count({
+        where: { coproprieteId, statut: { in: ["OUVERT", "EN_COURS"] } },
+      }),
+      db.incident.count({
+        where: {
+          coproprieteId,
+          statut: { in: ["OUVERT", "EN_COURS"] },
+          slaDeadline: { lt: maintenant },
+        },
+      }),
+      db.document.count({ where: { coproprieteId } }),
+      db.appelDeFondsLot.aggregate({
+        where: { appelDeFonds: { coproprieteId } },
+        _sum: { montantDu: true, montantPaye: true },
+      }),
+      db.assembleeGenerale.findFirst({
+        where: { coproprieteId, statut: { in: ["PLANIFIEE", "CONVOQUEE", "EN_COURS"] } },
+        orderBy: { dateAg: "asc" },
+        select: { id: true, dateAg: true, type: true, statut: true },
+      }),
+      db.auditLog.findFirst({
+        where: { coproprieteId },
+        orderBy: { horodatage: "desc" },
+        select: { horodatage: true },
+      }),
+    ]);
+
+    return {
+      lots,
+      residents_actifs: residentsActifs,
+      invitations_en_attente: invitationsEnAttente,
+      invitations_acceptees: invitationsAcceptees,
+      incidents_ouverts: incidentsOuverts,
+      sla_depasses: slaDepasses,
+      documents,
+      montant_du: (sommes._sum.montantDu ?? 0).toString(),
+      montant_paye: (sommes._sum.montantPaye ?? 0).toString(),
+      prochaine_ag: prochaineAg
+        ? {
+            id: prochaineAg.id,
+            date_ag: prochaineAg.dateAg.toISOString(),
+            type: prochaineAg.type,
+            statut: prochaineAg.statut,
+          }
+        : null,
+      derniere_activite: derniereActivite?.horodatage.toISOString() ?? null,
+    };
+  });
+}
+
 export async function modifierCopropriete(
   ctx: TenantContext,
   coproprieteId: string,
@@ -146,12 +234,21 @@ export async function modifierCopropriete(
       data.politiqueRecouvrementJson = (input.politique_recouvrement_json ??
         Prisma.DbNull) as Prisma.InputJsonValue;
     if (input.total_tantiemes !== undefined) data.totalTantiemes = input.total_tantiemes;
+    if (input.logo_storage_path !== undefined) {
+      // Défense en profondeur : le logo vit dans le périmètre storage de CETTE copropriété.
+      if (input.logo_storage_path && !input.logo_storage_path.startsWith(`${coproprieteId}/branding/`)) {
+        throw new PermissionRefuseeError("Logo hors du périmètre de la copropriété.");
+      }
+      data.logoStoragePath = input.logo_storage_path ?? null;
+    }
     if (input.delai_convocation_jours !== undefined)
       data.delaiConvocationJours = input.delai_convocation_jours;
     if (input.quorum_premiere_convocation !== undefined)
       data.quorumPremiereConvocation = input.quorum_premiere_convocation;
     if (input.limite_procurations_mandataire !== undefined)
       data.limiteProcurationsMandataire = input.limite_procurations_mandataire;
+    if (input.retention_desactivation_mois !== undefined)
+      data.retentionDesactivationMois = input.retention_desactivation_mois;
 
     const maj = await db.copropriete.update({ where: { id: coproprieteId }, data });
 
@@ -167,6 +264,7 @@ export async function modifierCopropriete(
         delai_convocation_jours: avant.delaiConvocationJours,
         quorum_premiere_convocation: avant.quorumPremiereConvocation?.toString() ?? null,
         limite_procurations_mandataire: avant.limiteProcurationsMandataire,
+        retention_desactivation_mois: avant.retentionDesactivationMois,
         total_tantiemes: avant.totalTantiemes?.toString() ?? null,
       },
       apres: {
@@ -175,9 +273,38 @@ export async function modifierCopropriete(
         delai_convocation_jours: maj.delaiConvocationJours,
         quorum_premiere_convocation: maj.quorumPremiereConvocation?.toString() ?? null,
         limite_procurations_mandataire: maj.limiteProcurationsMandataire,
+        retention_desactivation_mois: maj.retentionDesactivationMois,
         total_tantiemes: maj.totalTantiemes?.toString() ?? null,
       },
     });
     return maj;
   });
+}
+
+/** POST /coproprietes/:id/logo/upload-url — téléversement direct du logo (syndic). */
+export async function preparerUploadLogo(ctx: TenantContext, coproprieteId: string, input: LogoUploadUrlInput) {
+  if (can("coproprietes.modifier", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut modifier le logo.");
+  }
+  if (coproprieteId !== ctx.coproprieteId && ctx.role !== "SUPER_ADMIN") {
+    throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  }
+  const ext = input.content_type === "image/png" ? "png" : input.content_type === "image/webp" ? "webp" : input.content_type === "image/svg+xml" ? "svg" : "jpg";
+  const storagePath = `${coproprieteId}/branding/logo-${randomUUID()}.${ext}`;
+  const { url, token } = await creerUrlUploadSignee(storagePath);
+  return { storage_path: storagePath, upload_url: url, token };
+}
+
+/** GET /coproprietes/:id/logo — URL signée courte du logo (tout membre), null sans logo. */
+export async function urlLogo(ctx: TenantContext, coproprieteId: string) {
+  if (can("coproprietes.lire", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé.");
+  }
+  if (coproprieteId !== ctx.coproprieteId && ctx.role !== "SUPER_ADMIN") {
+    throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  }
+  const copro = await withTenant(ctx, (db) => db.copropriete.findUnique({ where: { id: coproprieteId }, select: { logoStoragePath: true } }));
+  if (!copro) throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  if (!copro.logoStoragePath) return { url: null };
+  return { url: await creerUrlSignee(copro.logoStoragePath) };
 }

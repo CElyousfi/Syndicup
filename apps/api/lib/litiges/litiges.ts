@@ -37,14 +37,32 @@ export async function creerLitige(ctx: TenantContext, input: LitigeCreateInput) 
         creePar: ctx.utilisateurId,
       },
     });
-    await ecrireAuditLog(db, {
-      coproprieteId: ctx.coproprieteId,
-      acteurId: ctx.utilisateurId,
-      action: "LITIGE_DECLARE",
-      entite: "conflit_litige",
-      entiteId: litige.id,
-      apres: { type: input.type },
+    const syndics = await db.roleUtilisateur.findMany({
+      where: { coproprieteId: ctx.coproprieteId, actif: true, role: "SYNDIC" },
+      select: { utilisateurId: true },
     });
+    await Promise.all([
+      ecrireAuditLog(db, {
+        coproprieteId: ctx.coproprieteId,
+        acteurId: ctx.utilisateurId,
+        action: "LITIGE_DECLARE",
+        entite: "conflit_litige",
+        entiteId: litige.id,
+        apres: { type: input.type },
+      }),
+      // Le syndic est prévenu à l'instant d'un nouveau litige à traiter.
+      ...syndics
+        .filter((s) => s.utilisateurId !== ctx.utilisateurId)
+        .map((s) =>
+          envoyerNotification(db, {
+            coproprieteId: ctx.coproprieteId,
+            utilisateurId: s.utilisateurId,
+            templateCode: "LITIGE_NOUVEAU",
+            canal: "PUSH",
+            contenuJson: { litige_id: litige.id, type: input.type },
+          })
+        ),
+    ]);
     return litige;
   });
 }

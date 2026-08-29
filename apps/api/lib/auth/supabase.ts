@@ -29,6 +29,48 @@ export interface SupabaseAuthPort {
   refresh(refreshToken: string): Promise<{ session: SessionTokens | null; error: string | null }>;
 }
 
+/**
+ * Port ADMIN (service role) — réservé à l'inscription par invitation : création du compte
+ * GoTrue au nom de l'invité (le code d'invitation à usage unique vaut vérification), et
+ * suppression compensatoire si le rattachement échoue (jamais de compte orphelin).
+ * Ne jamais exposer ce client ailleurs.
+ */
+export interface SupabaseAdminPort {
+  creerCompteEmail(
+    email: string,
+    motDePasse: string
+  ): Promise<{ userId: string | null; dejaInscrit: boolean; error: string | null }>;
+  supprimerCompte(userId: string): Promise<void>;
+}
+
+export function createSupabaseAdmin(): SupabaseAdminPort {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRole) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY manquants.");
+  }
+  const admin: SupabaseClient = createClient(url, serviceRole, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return {
+    async creerCompteEmail(email, motDePasse) {
+      const { data, error } = await admin.auth.admin.createUser({
+        email,
+        password: motDePasse,
+        email_confirm: true,
+      });
+      if (error) {
+        const deja = /already|registered|exists/i.test(error.message);
+        return { userId: null, dejaInscrit: deja, error: error.message };
+      }
+      return { userId: data.user?.id ?? null, dejaInscrit: false, error: null };
+    },
+    async supprimerCompte(userId) {
+      await admin.auth.admin.deleteUser(userId);
+    },
+  };
+}
+
 function toTokens(s: {
   access_token: string;
   refresh_token: string;

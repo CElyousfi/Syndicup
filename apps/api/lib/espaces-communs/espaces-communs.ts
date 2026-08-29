@@ -5,8 +5,10 @@ import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
+import { envoyerNotification } from "../notifications/notifications";
 import type {
   EspaceCommunCreateInput,
+  EspaceCommunUpdateInput,
   ReservationCreateInput,
 } from "./schemas";
 
@@ -84,7 +86,7 @@ export async function creerReservation(ctx: TenantContext, input: ReservationCre
       throw new ContrainteMetierError("Créneau déjà réservé ou en attente de validation pour cet espace (Doc A §7.2).");
     }
 
-    return db.reservationEspaceCommun.create({
+    const reservation = await db.reservationEspaceCommun.create({
       data: {
         espaceId: input.espace_id,
         lotId: input.lot_id,
@@ -95,6 +97,25 @@ export async function creerReservation(ctx: TenantContext, input: ReservationCre
         statut: espace.validationAutomatique ? "CONFIRMEE" : "EN_ATTENTE",
       },
     });
+    if (reservation.statut === "EN_ATTENTE") {
+      // Le syndic est prévenu immédiatement d'une demande à valider (flux temps réel).
+      const syndics = await db.roleUtilisateur.findMany({
+        where: { coproprieteId: ctx.coproprieteId, actif: true, role: "SYNDIC" },
+        select: { utilisateurId: true },
+      });
+      await Promise.all(
+        syndics.map((s) =>
+          envoyerNotification(db, {
+            coproprieteId: ctx.coproprieteId,
+            utilisateurId: s.utilisateurId,
+            templateCode: "RESERVATION_NOUVELLE",
+            canal: "PUSH",
+            contenuJson: { reservation_id: reservation.id, espace: espace.nom, date: reservation.dateDebut.toISOString().slice(0, 10) },
+          })
+        )
+      );
+    }
+    return reservation;
   });
 }
 
@@ -124,15 +145,30 @@ export async function validerReservation(ctx: TenantContext, reservationId: stri
       where: { id: reservationId },
       data: { statut: "CONFIRMEE" },
     });
-    await ecrireAuditLog(db, {
-      coproprieteId: ctx.coproprieteId,
-      acteurId: ctx.utilisateurId,
-      action: "RESERVATION_VALIDEE",
-      entite: "reservation_espace_commun",
-      entiteId: reservationId,
-      avant: { statut: "EN_ATTENTE" },
-      apres: { statut: "CONFIRMEE" },
-    });
+    const espace = await db.espaceCommun.findUnique({ where: { id: reservation.espaceId } });
+    await Promise.all([
+      ecrireAuditLog(db, {
+        coproprieteId: ctx.coproprieteId,
+        acteurId: ctx.utilisateurId,
+        action: "RESERVATION_VALIDEE",
+        entite: "reservation_espace_commun",
+        entiteId: reservationId,
+        avant: { statut: "EN_ATTENTE" },
+        apres: { statut: "CONFIRMEE" },
+      }),
+      // Le demandeur est prévenu de la décision (flux temps réel + boîte de réception).
+      envoyerNotification(db, {
+        coproprieteId: ctx.coproprieteId,
+        utilisateurId: reservation.utilisateurId,
+        templateCode: "RESERVATION_VALIDEE",
+        canal: "PUSH",
+        contenuJson: {
+          reservation_id: reservationId,
+          espace: espace?.nom ?? "",
+          date: reservation.dateDebut.toISOString().slice(0, 10),
+        },
+      }),
+    ]);
     return maj;
   });
 }
@@ -151,15 +187,30 @@ export async function rejeterReservation(ctx: TenantContext, reservationId: stri
       where: { id: reservationId },
       data: { statut: "REJETEE", motifRejet: motif },
     });
-    await ecrireAuditLog(db, {
-      coproprieteId: ctx.coproprieteId,
-      acteurId: ctx.utilisateurId,
-      action: "RESERVATION_REJETEE",
-      entite: "reservation_espace_commun",
-      entiteId: reservationId,
-      avant: { statut: "EN_ATTENTE" },
-      apres: { statut: "REJETEE", motif },
-    });
+    const espace = await db.espaceCommun.findUnique({ where: { id: reservation.espaceId } });
+    await Promise.all([
+      ecrireAuditLog(db, {
+        coproprieteId: ctx.coproprieteId,
+        acteurId: ctx.utilisateurId,
+        action: "RESERVATION_REJETEE",
+        entite: "reservation_espace_commun",
+        entiteId: reservationId,
+        avant: { statut: "EN_ATTENTE" },
+        apres: { statut: "REJETEE", motif },
+      }),
+      envoyerNotification(db, {
+        coproprieteId: ctx.coproprieteId,
+        utilisateurId: reservation.utilisateurId,
+        templateCode: "RESERVATION_REJETEE",
+        canal: "PUSH",
+        contenuJson: {
+          reservation_id: reservationId,
+          espace: espace?.nom ?? "",
+          date: reservation.dateDebut.toISOString().slice(0, 10),
+          motif,
+        },
+      }),
+    ]);
     return maj;
   });
 }
@@ -183,9 +234,110 @@ export async function annulerReservation(ctx: TenantContext, reservationId: stri
     if (reservation.statut === "ANNULEE" || reservation.statut === "REJETEE") {
       throw new ContrainteMetierError(`Annulation impossible depuis le statut ${reservation.statut}.`);
     }
-    return db.reservationEspaceCommun.update({
+    const maj = await db.reservationEspaceCommun.update({
       where: { id: reservationId },
       data: { statut: "ANNULEE" },
     });
+    // Annulation par le résident : le syndic est prévenu (le créneau se libère).
+    if (permission === "scoped") {
+      const [espace, syndics] = await Promise.all([
+        db.espaceCommun.findUnique({ where: { id: reservation.espaceId } }),
+        db.roleUtilisateur.findMany({
+          where: { coproprieteId: ctx.coproprieteId, actif: true, role: "SYNDIC" },
+          select: { utilisateurId: true },
+        }),
+      ]);
+      await Promise.all(
+        syndics.map((s) =>
+          envoyerNotification(db, {
+            coproprieteId: ctx.coproprieteId,
+            utilisateurId: s.utilisateurId,
+            templateCode: "RESERVATION_ANNULEE",
+            canal: "PUSH",
+            contenuJson: {
+              reservation_id: reservationId,
+              espace: espace?.nom ?? "",
+              date: reservation.dateDebut.toISOString().slice(0, 10),
+            },
+          })
+        )
+      );
+    }
+    return maj;
+  });
+}
+
+/** PATCH /espaces-communs/:id — modification d'un espace (syndic). */
+export async function modifierEspaceCommun(
+  ctx: TenantContext,
+  espaceId: string,
+  input: EspaceCommunUpdateInput
+) {
+  if (can("espaces_communs.gerer_config", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut modifier un espace commun.");
+  }
+  return withTenant(ctx, async (db) => {
+    const espace = await db.espaceCommun.findUnique({ where: { id: espaceId } });
+    if (!espace || espace.coproprieteId !== ctx.coproprieteId) {
+      throw new IntrouvableError("Espace commun introuvable.");
+    }
+    const maj = await db.espaceCommun.update({
+      where: { id: espaceId },
+      data: {
+        ...(input.nom !== undefined ? { nom: input.nom } : {}),
+        ...(input.type !== undefined ? { type: input.type } : {}),
+        ...(input.capacite !== undefined ? { capacite: input.capacite } : {}),
+        ...(input.reservable !== undefined ? { reservable: input.reservable } : {}),
+        ...(input.validation_automatique !== undefined
+          ? { validationAutomatique: input.validation_automatique }
+          : {}),
+        ...(input.regles_reservation_json !== undefined
+          ? { reglesReservationJson: (input.regles_reservation_json ?? undefined) as never }
+          : {}),
+      },
+    });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "ESPACE_COMMUN_MODIFIE",
+      entite: "espace_commun",
+      entiteId: espaceId,
+      avant: { nom: espace.nom, reservable: espace.reservable, capacite: espace.capacite },
+      apres: { nom: maj.nom, reservable: maj.reservable, capacite: maj.capacite },
+    });
+    return maj;
+  });
+}
+
+/**
+ * DELETE /espaces-communs/:id — suppression (syndic). Refusée (409) dès qu'une réservation
+ * existe : l'historique de réservation est une donnée de vie collective ; l'alternative est de
+ * rendre l'espace non réservable (PATCH reservable=false).
+ */
+export async function supprimerEspaceCommun(ctx: TenantContext, espaceId: string) {
+  if (can("espaces_communs.gerer_config", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut supprimer un espace commun.");
+  }
+  return withTenant(ctx, async (db) => {
+    const espace = await db.espaceCommun.findUnique({ where: { id: espaceId } });
+    if (!espace || espace.coproprieteId !== ctx.coproprieteId) {
+      throw new IntrouvableError("Espace commun introuvable.");
+    }
+    const reservations = await db.reservationEspaceCommun.count({ where: { espaceId } });
+    if (reservations > 0) {
+      throw new ContrainteMetierError(
+        "Des réservations existent pour cet espace : rendez-le non réservable plutôt que de le supprimer."
+      );
+    }
+    await db.espaceCommun.delete({ where: { id: espaceId } });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "ESPACE_COMMUN_SUPPRIME",
+      entite: "espace_commun",
+      entiteId: espaceId,
+      avant: { nom: espace.nom, type: espace.type },
+    });
+    return { id: espaceId };
   });
 }

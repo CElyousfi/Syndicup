@@ -8,6 +8,8 @@
     "migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma",
     "migrate:deploy": "prisma migrate deploy --schema=prisma/schema.prisma",
     "seed": "tsx seed/seed.ts",
+    "seed:auth": "tsx scripts/seed-auth-local.ts",
+    "bootstrap:admin": "tsx scripts/bootstrap-admin.ts",
     "setup:local-role": "tsx scripts/setup-local-app-role.ts",
     "studio": "prisma studio --schema=prisma/schema.prisma"
   },

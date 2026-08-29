@@ -48,7 +48,43 @@ const ctxAlice = (): TenantContext => ({
   role: "PROPRIETAIRE",
 });
 
+const EMAILS_FIXTURE = ["syndic-fin@test.local", "alice-fin@test.local"];
+
+/**
+ * Un run interrompu (Ctrl-C, timeout) laisse ses fixtures : on les purge AVANT de recréer,
+ * sinon l'unicité des emails fait échouer beforeAll — et un afterAll exécuté avec des
+ * identifiants `undefined` deviendrait un deleteMany sans filtre (déjà arrivé une fois).
+ */
+async function purgerFixturesOrphelines() {
+  const orphelins = await admin.utilisateur.findMany({
+    where: { email: { in: EMAILS_FIXTURE } },
+    select: { id: true },
+  });
+  if (orphelins.length === 0) return;
+  const ids = orphelins.map((u) => u.id);
+  const copros = await admin.copropriete.findMany({
+    where: { nom: "Résidence Finances" },
+    select: { id: true },
+  });
+  const coproIds = copros.map((c) => c.id);
+  await admin.contestationCharge.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: { in: coproIds } } } } });
+  await admin.quittance.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: { in: coproIds } } } } });
+  await admin.paiementCmiSession.deleteMany({ where: { coproprieteId: { in: coproIds } } });
+  await admin.paiement.deleteMany({ where: { lot: { coproprieteId: { in: coproIds } } } });
+  await admin.appelDeFondsLot.deleteMany({ where: { appelDeFonds: { coproprieteId: { in: coproIds } } } });
+  await admin.appelDeFonds.deleteMany({ where: { coproprieteId: { in: coproIds } } });
+  await admin.budgetAg.deleteMany({ where: { coproprieteId: { in: coproIds } } });
+  await admin.auditLog.deleteMany({ where: { coproprieteId: { in: coproIds } } });
+  await admin.notification.deleteMany({ where: { utilisateurId: { in: ids } } });
+  await admin.lotProprietaire.deleteMany({ where: { utilisateurId: { in: ids } } });
+  await admin.lot.deleteMany({ where: { coproprieteId: { in: coproIds } } });
+  await admin.roleUtilisateur.deleteMany({ where: { utilisateurId: { in: ids } } });
+  await admin.utilisateur.deleteMany({ where: { id: { in: ids } } });
+  await admin.copropriete.deleteMany({ where: { id: { in: coproIds } } });
+}
+
 beforeAll(async () => {
+  await purgerFixturesOrphelines();
   const copro = await admin.copropriete.create({
     data: {
       nom: "Résidence Finances",
@@ -97,6 +133,12 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  // beforeAll interrompu : aucun identifiant fiable → surtout pas de deleteMany sans filtre.
+  if (!coproA || !lotA1 || !lotA2 || !syndicA || !alice) {
+    await admin.$disconnect();
+    await disconnectTenantDb();
+    return;
+  }
   await admin.contestationCharge.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: coproA } } } });
   await admin.quittance.deleteMany({ where: { appelDeFondsLot: { appelDeFonds: { coproprieteId: coproA } } } });
   await admin.paiementCmiSession.deleteMany({ where: { coproprieteId: coproA } });
@@ -105,6 +147,10 @@ afterAll(async () => {
   await admin.appelDeFonds.deleteMany({ where: { coproprieteId: coproA } });
   await admin.budgetAg.deleteMany({ where: { coproprieteId: coproA } });
   await admin.auditLog.deleteMany({ where: { coproprieteId: coproA } });
+  // Les paiements émettent des notifications (M9) : à purger AVANT les utilisateurs,
+  // sinon la FK notification→utilisateur fait échouer le nettoyage et la suite suivante
+  // bute sur l'unicité des emails de test.
+  await admin.notification.deleteMany({ where: { coproprieteId: coproA } });
   await admin.lotProprietaire.deleteMany({ where: { lotId: { in: [lotA1, lotA2] } } });
   await admin.lot.deleteMany({ where: { id: { in: [lotA1, lotA2] } } });
   await admin.roleUtilisateur.deleteMany({ where: { coproprieteId: coproA } });

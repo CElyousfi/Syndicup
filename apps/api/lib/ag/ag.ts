@@ -189,10 +189,27 @@ export async function ouvrirAg(ctx: TenantContext, agId: string) {
         "Quorum légal de 1re convocation non configuré (docs/LEGAL_QUESTIONS_BRIEF.md §2) — confirmation juridique requise avant d'ouvrir une AG."
       );
     }
-    return db.assembleeGenerale.update({
-      where: { id: agId },
-      data: { statut: "EN_COURS", quorumRequis: copropriete.quorumPremiereConvocation },
+    const membres = await db.roleUtilisateur.findMany({
+      where: { coproprieteId: ctx.coproprieteId, actif: true },
+      select: { utilisateurId: true },
+      distinct: ["utilisateurId"],
     });
+    const [updated] = await Promise.all([
+      db.assembleeGenerale.update({
+        where: { id: agId },
+        data: { statut: "EN_COURS", quorumRequis: copropriete.quorumPremiereConvocation },
+      }),
+      ...membres.map((m) =>
+        envoyerNotification(db, {
+          coproprieteId: ctx.coproprieteId,
+          utilisateurId: m.utilisateurId,
+          templateCode: "AG_OUVERTE",
+          canal: "PUSH",
+          contenuJson: { ag_id: agId, date_ag: ag.dateAg.toISOString() },
+        })
+      ),
+    ]);
+    return updated;
   });
 }
 
@@ -206,6 +223,15 @@ export async function annulerAg(ctx: TenantContext, agId: string, motif: string)
     if (ag.statut === "CLOTUREE" || ag.statut === "ANNULEE") {
       throw new ContrainteMetierError(`Annulation impossible depuis le statut ${ag.statut}.`);
     }
+    // Une AG déjà convoquée : tous les membres actifs sont informés de l'annulation.
+    const destinataires =
+      ag.statut === "CONVOQUEE" || ag.statut === "EN_COURS"
+        ? await db.roleUtilisateur.findMany({
+            where: { coproprieteId: ctx.coproprieteId, actif: true },
+            select: { utilisateurId: true },
+            distinct: ["utilisateurId"],
+          })
+        : [];
     const [updated] = await Promise.all([
       db.assembleeGenerale.update({
         where: { id: agId },
@@ -219,6 +245,15 @@ export async function annulerAg(ctx: TenantContext, agId: string, motif: string)
         entiteId: agId,
         apres: { motif },
       }),
+      ...destinataires.map((d) =>
+        envoyerNotification(db, {
+          coproprieteId: ctx.coproprieteId,
+          utilisateurId: d.utilisateurId,
+          templateCode: "AG_ANNULEE",
+          canal: "EMAIL",
+          contenuJson: { ag_id: agId, date_ag: ag.dateAg.toISOString(), motif },
+        })
+      ),
     ]);
     return updated;
   });
@@ -364,12 +399,21 @@ export async function voter(
 // Résultats agrégés / nominatifs (Doc A §12.3 : anonymisé résident, nominatif syndic)
 // ────────────────────────────────────────────────────────────────────────────
 
-type ResultatLigne = { valeur: "POUR" | "CONTRE" | "ABSTENTION"; nb_votants: bigint; tantiemes_total: string };
+type ResultatLigne = { valeur: "POUR" | "CONTRE" | "ABSTENTION"; nb_votants: number; tantiemes_total: string };
 
 async function resultatsBruts(db: TenantDb, resolutionId: string): Promise<ResultatLigne[]> {
-  return db.$queryRaw<ResultatLigne[]>`
+  const lignes = await db.$queryRaw<
+    Array<{ valeur: ResultatLigne["valeur"]; nb_votants: bigint; tantiemes_total: string }>
+  >`
     SELECT * FROM public.ag_resultats_resolution(${resolutionId}::uuid)
   `;
+  // nb_votants est un bigint Postgres → BigInt JS, que Response.json() ne sait pas sérialiser
+  // (TypeError). Un comptage de votants tient largement dans un number.
+  return lignes.map((l) => ({
+    valeur: l.valeur,
+    nb_votants: Number(l.nb_votants),
+    tantiemes_total: String(l.tantiemes_total),
+  }));
 }
 
 export async function obtenirResultatsResolution(ctx: TenantContext, resolutionId: string) {
@@ -406,8 +450,8 @@ function calculerResultat(
 ): "ADOPTEE" | "REJETEE" {
   const tantiemesPour = money(tallies.find((t) => t.valeur === "POUR")?.tantiemes_total ?? 0);
   const tantiemesContre = money(tallies.find((t) => t.valeur === "CONTRE")?.tantiemes_total ?? 0);
-  const nbPour = Number(tallies.find((t) => t.valeur === "POUR")?.nb_votants ?? 0n);
-  const nbContre = Number(tallies.find((t) => t.valeur === "CONTRE")?.nb_votants ?? 0n);
+  const nbPour = Number(tallies.find((t) => t.valeur === "POUR")?.nb_votants ?? 0);
+  const nbContre = Number(tallies.find((t) => t.valeur === "CONTRE")?.nb_votants ?? 0);
 
   // Master Spec Partie 8.4 : "Égalité parfaite (50/50) → REJETÉE par défaut" — s'applique avant
   // toute autre règle, quel que soit le type de majorité (Doc A §12.2 confirme le cas général).
@@ -628,9 +672,79 @@ export async function obtenirPv(ctx: TenantContext, agId: string) {
   return pv;
 }
 
+/**
+ * GET /ag/:id/pv/pdf — URL signée (15 min) du PDF du PV. Le PDF est un rendu déterministe de
+ * `contenu_json` : si la clôture n'avait pas pu le téléverser (bucket absent à l'époque), il
+ * est régénéré ici sur le chemin canonique — la ligne `ag_pv` append-only n'est jamais
+ * modifiée, la preuve légale reste contenu_json + hash_integrite.
+ */
+export async function obtenirPvPdfUrl(ctx: TenantContext, agId: string) {
+  const pv = await obtenirPv(ctx, agId);
+  const chemin = pv.pdfUrl ?? `${ctx.coproprieteId}/ag-pv/${agId}.pdf`;
+  if (!pv.pdfUrl) {
+    const [ag, copropriete] = await withTenant(ctx, (db) =>
+      Promise.all([
+        db.assembleeGenerale.findUnique({ where: { id: agId } }),
+        db.copropriete.findUnique({ where: { id: ctx.coproprieteId } }),
+      ])
+    );
+    const contenu = pv.contenuJson as {
+      type?: string;
+      date_ag?: string;
+      quorum_requis?: string | null;
+      quorum_atteint?: string | null;
+      resolutions?: { ordre: number; texte: string; type_majorite: string; resultat: string }[];
+    };
+    const pdfBuffer = await genererPvPdfBuffer({
+      coproprieteNom: copropriete?.nom ?? "Copropriété",
+      agId,
+      type: contenu.type ?? ag?.type ?? "ORDINAIRE",
+      dateAg: contenu.date_ag ?? ag?.dateAg.toISOString() ?? new Date(0).toISOString(),
+      quorumRequis: contenu.quorum_requis ?? null,
+      quorumAtteint: contenu.quorum_atteint ?? null,
+      resolutions: (contenu.resolutions ?? []).map((r) => ({
+        ordre: r.ordre,
+        texte: r.texte,
+        typeMajorite: r.type_majorite,
+        resultat: r.resultat,
+      })),
+      hashIntegrite: pv.hashIntegrite,
+      horodatageGeneration: pv.horodatageGeneration.toISOString(),
+    });
+    await televerserDocument(chemin, pdfBuffer, "application/pdf");
+  }
+  const { creerUrlSignee } = await import("../storage/supabase-storage");
+  return { url: await creerUrlSignee(chemin) };
+}
+
 // ────────────────────────────────────────────────────────────────────────────
 // Procurations (Doc A §6.5)
 // ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * GET /ag/:id/procurations — le syndic voit toutes les procurations de l'AG ; un rôle scoped
+ * voit celles où il est mandant OU mandataire (nécessaire pour voter en séance au nom d'un
+ * mandant). La RLS sur ag_procuration reste la seconde couche.
+ */
+export async function listerProcurations(ctx: TenantContext, agId: string) {
+  const permission = can("ag.gerer_procurations", ctx.role);
+  if (permission === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à consulter les procurations.");
+  }
+  return withTenant(ctx, async (db) => {
+    const ag = await db.assembleeGenerale.findUnique({ where: { id: agId } });
+    if (!ag) throw new AgIntrouvableError("AG introuvable.");
+    return db.agProcuration.findMany({
+      where: {
+        agId,
+        ...(permission === "scoped"
+          ? { OR: [{ mandantId: ctx.utilisateurId }, { mandataireId: ctx.utilisateurId }] }
+          : {}),
+      },
+      orderBy: { creeLe: "asc" },
+    });
+  });
+}
 
 export async function creerProcuration(
   ctx: TenantContext,

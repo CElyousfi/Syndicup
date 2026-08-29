@@ -63,6 +63,26 @@ const TEMPLATES: Record<string, Entree> = {
         "صدرت دعوة لدفع مبلغ {{montant}} درهم عن حصتكم (آخر أجل {{date_echeance}}). التفاصيل في التطبيق.",
     },
   },
+  INCIDENT_NOUVEAU: {
+    FR: {
+      titre: "Nouveau signalement",
+      corps: "{{categorie}} — {{sous_categorie}}. Ouvrez l'incident pour le prendre en charge.",
+    },
+    AR: {
+      titre: "بلاغ جديد",
+      corps: "{{categorie}} — {{sous_categorie}}. افتحوا العطل للتكفل به.",
+    },
+  },
+  RESERVATION_NOUVELLE: {
+    FR: {
+      titre: "Réservation à valider",
+      corps: "{{espace}} demandé pour le {{date}}. Validez ou refusez dans l'application.",
+    },
+    AR: {
+      titre: "حجز بانتظار الموافقة",
+      corps: "طُلب {{espace}} ليوم {{date}}. وافقوا أو ارفضوا في التطبيق.",
+    },
+  },
   INCIDENT_URGENCE_MAXIMALE: {
     FR: {
       titre: "URGENCE dans votre résidence",
@@ -121,6 +141,136 @@ const TEMPLATES: Record<string, Entree> = {
     AR: {
       titre: "تم إغلاق نزاعكم",
       corps: "تم إغلاق النزاع « {{type}} » (الحالة: {{statut}}).",
+    },
+  },
+  LITIGE_NOUVEAU: {
+    FR: {
+      titre: "Nouveau litige déclaré",
+      corps: "Un résident a déclaré un litige : « {{type}} ». À examiner dans l'application.",
+    },
+    AR: {
+      titre: "تصريح بنزاع جديد",
+      corps: "صرّح أحد السكان بنزاع: « {{type}} ». يُرجى دراسته في التطبيق.",
+    },
+  },
+  INCIDENT_ASSIGNE: {
+    FR: {
+      titre: "Nouveau ticket assigné",
+      corps: "Un incident « {{categorie}} » ({{sous_categorie}}) vous a été assigné. Consultez-le dans l'application.",
+    },
+    AR: {
+      titre: "تذكرة جديدة مسندة إليكم",
+      corps: "أُسند إليكم عطب « {{categorie}} » ({{sous_categorie}}). اطلعوا عليه في التطبيق.",
+    },
+  },
+  RESERVATION_VALIDEE: {
+    FR: {
+      titre: "Réservation confirmée",
+      corps: "Votre réservation de « {{espace}} » le {{date}} est confirmée.",
+    },
+    AR: {
+      titre: "تم تأكيد الحجز",
+      corps: "تم تأكيد حجزكم لـ « {{espace}} » بتاريخ {{date}}.",
+    },
+  },
+  RESERVATION_REJETEE: {
+    FR: {
+      titre: "Réservation refusée",
+      corps: "Votre réservation de « {{espace}} » le {{date}} a été refusée : {{motif}}",
+    },
+    AR: {
+      titre: "تم رفض الحجز",
+      corps: "رُفض حجزكم لـ « {{espace}} » بتاريخ {{date}}: {{motif}}",
+    },
+  },
+  RESERVATION_ANNULEE: {
+    FR: {
+      titre: "Réservation annulée",
+      corps: "Une réservation de « {{espace}} » le {{date}} a été annulée par le résident.",
+    },
+    AR: {
+      titre: "تم إلغاء حجز",
+      corps: "ألغى الساكن حجز « {{espace}} » بتاريخ {{date}}.",
+    },
+  },
+  CONTESTATION_NOUVELLE: {
+    FR: {
+      titre: "Nouvelle contestation de charges",
+      corps: "Un résident conteste une ligne de charges : « {{motif}} ». Réponse attendue dans l'application.",
+    },
+    AR: {
+      titre: "اعتراض جديد على الواجبات",
+      corps: "يعترض أحد السكان على سطر من الواجبات: « {{motif}} ». الرد مطلوب في التطبيق.",
+    },
+  },
+  CONTESTATION_REPONSE: {
+    FR: {
+      titre: "Réponse à votre contestation",
+      corps: "Le syndic a répondu à votre contestation (suite : {{statut}}). Consultez la réponse dans l'application.",
+    },
+    AR: {
+      titre: "رد على اعتراضكم",
+      corps: "رد السنديك على اعتراضكم (الإجراء: {{statut}}). اطلعوا على الرد في التطبيق.",
+    },
+  },
+  PAIEMENT_RECU: {
+    FR: {
+      titre: "Paiement enregistré",
+      corps: "Un paiement de {{montant}} MAD a été enregistré pour votre lot. Votre solde est à jour dans l'application.",
+    },
+    AR: {
+      titre: "تم تسجيل دفعة",
+      corps: "سُجلت دفعة بمبلغ {{montant}} درهم لوحدتكم. رصيدكم محدَّث في التطبيق.",
+    },
+  },
+  AG_OUVERTE: {
+    FR: {
+      titre: "Assemblée générale ouverte",
+      corps: "L'assemblée générale du {{date_ag}} est ouverte : les votes sont accessibles dans l'application.",
+    },
+    AR: {
+      titre: "الجمع العام مفتوح",
+      corps: "الجمع العام المنعقد بتاريخ {{date_ag}} مفتوح: يمكنكم التصويت الآن في التطبيق.",
+    },
+  },
+  DOCUMENT_PUBLIE: {
+    FR: {
+      titre: "Nouveau document",
+      corps: "« {{nom}} » a été ajouté aux documents de votre copropriété.",
+    },
+    AR: {
+      titre: "وثيقة جديدة",
+      corps: "تمت إضافة « {{nom}} » إلى وثائق ملكيتكم المشتركة.",
+    },
+  },
+  LOT_RATTACHE: {
+    FR: {
+      titre: "Lot rattaché à votre compte",
+      corps: "Vous êtes désormais enregistré(e) comme {{qualite}} du lot {{numero}}.",
+    },
+    AR: {
+      titre: "تم ربط حصة بحسابكم",
+      corps: "تم تسجيلكم بصفة {{qualite}} للحصة {{numero}}.",
+    },
+  },
+  AG_ANNULEE: {
+    FR: {
+      titre: "Assemblée générale annulée",
+      corps: "L'assemblée générale prévue le {{date_ag}} est annulée. Motif : {{motif}}",
+    },
+    AR: {
+      titre: "إلغاء الجمع العام",
+      corps: "أُلغي الجمع العام المقرر بتاريخ {{date_ag}}. السبب: {{motif}}",
+    },
+  },
+  INVITATION_ACCEPTEE: {
+    FR: {
+      titre: "Invitation acceptée",
+      corps: "Un nouveau membre ({{role}}) vient de rejoindre la copropriété.",
+    },
+    AR: {
+      titre: "تم قبول الدعوة",
+      corps: "انضم عضو جديد ({{role}}) إلى الملكية المشتركة.",
     },
   },
 };

@@ -147,9 +147,18 @@ async function main() {
   });
 
   // ── M3 — Lots (tantièmes alignés sur totalTantiemes = 1000) ──────────────
+  // Paramètres légaux : valeurs PROVISOIRES autorisées par le propriétaire du projet le
+  // 27/08/2026 (docs/LEGAL_QUESTIONS_BRIEF.md, section « Valeurs PROVISOIRES en vigueur ») —
+  // configuration de copropriété, pas du code en dur ; à confirmer/corriger par l'avocat.
   await prisma.copropriete.update({
     where: { id: copro.id },
-    data: { totalTantiemes: "1000.00" },
+    data: {
+      totalTantiemes: "1000.00",
+      delaiConvocationJours: 15, // §1 — art. 22 Loi 18-00 (sources convergentes)
+      quorumPremiereConvocation: "0.5", // §2 — art. 18, moitié des voix
+      limiteProcurationsMandataire: 3, // §4 — max 3 mandants par mandataire
+      retentionDesactivationMois: 24, // §5 — « durée légale + 2 ans », base prudente
+    },
   });
   const [lotA1, lotA2, lotA3, parkingP1, loge] = await Promise.all([
     prisma.lot.create({

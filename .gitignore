@@ -55,3 +55,6 @@ coverage/
 # Supabase local
 supabase/.temp/
 supabase/.branches/
+
+# Référence design (fichier volumineux, hors dépôt)
+SyndicUp Mobile.html

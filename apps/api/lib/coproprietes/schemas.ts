@@ -33,6 +33,11 @@ export const coproprieteUpdateSchema = z
     ville: z.string().min(1).max(100).optional(),
     nb_lots: z.number().int().min(1).max(10000).optional(),
     config_json: z.record(z.unknown()).nullish(),
+    // Logo (M18) : chemin `<copropriete>/branding/…` du bucket privé ; null = retirer le logo.
+    logo_storage_path: z
+      .string()
+      .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/branding\/[A-Za-z0-9._-]{1,120}$/i, "Chemin de logo invalide.")
+      .nullish(),
     politique_recouvrement_json: z.record(z.unknown()).nullish(),
     total_tantiemes: decimalString(
       /^\d{1,12}(\.\d{1,2})?$/,
@@ -46,6 +51,13 @@ export const coproprieteUpdateSchema = z
       'Quorum invalide (ratio "0.500" à "1").'
     ).nullish(),
     limite_procurations_mandataire: z.number().int().min(1).max(100).nullish(),
+    retention_desactivation_mois: z.number().int().min(1).max(240).nullish(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), "Aucun champ à modifier.");
 export type CoproprieteUpdateInput = z.infer<typeof coproprieteUpdateSchema>;
+
+export const logoUploadUrlSchema = z.object({
+  nom_fichier: z.string().min(1).max(120),
+  content_type: z.string().regex(/^image\/(jpeg|png|webp|svg\+xml)$/, "Seules les images sont acceptées."),
+});
+export type LogoUploadUrlInput = z.infer<typeof logoUploadUrlSchema>;

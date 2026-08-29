@@ -1,16 +1,30 @@
 /**
- * POST /v1/finances/contestations — contestation d'une ligne de charge par un résident
- * (Doc A §3.3 "Cas Particuliers" — M5).
+ * GET/POST /v1/finances/contestations — liste (scopée par rôle + RLS) et création par un
+ * résident concerné (Doc A §3.3 "Cas Particuliers" — M5).
  */
 import { withApiHandler } from "../../../../lib/http/handler";
 import { contestationChargeCreateSchema } from "../../../../lib/finances/schemas";
 import {
   creerContestation,
+  listerContestations,
   PermissionRefuseeError,
   RessourceIntrouvableError,
 } from "../../../../lib/finances/finances";
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
+
+async function handleGET(req: Request) {
+  try {
+    const ctx = await tenantFromRequest(req);
+    const rows = await listerContestations(ctx);
+    return ok(rows);
+  } catch (e) {
+    const mapped = mapAuthError(e);
+    if (mapped) return mapped;
+    if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
+    throw e;
+  }
+}
 
 async function handlePOST(req: Request) {
   try {
@@ -29,4 +43,5 @@ async function handlePOST(req: Request) {
   }
 }
 
+export const GET = withApiHandler(handleGET);
 export const POST = withApiHandler(handlePOST);

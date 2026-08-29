@@ -13,6 +13,12 @@ export const espaceCommunCreateSchema = z.object({
 });
 export type EspaceCommunCreateInput = z.infer<typeof espaceCommunCreateSchema>;
 
+/** PATCH /espaces-communs/:id — tous les champs facultatifs, au moins un requis. */
+export const espaceCommunUpdateSchema = espaceCommunCreateSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "Aucun champ à modifier.");
+export type EspaceCommunUpdateInput = z.infer<typeof espaceCommunUpdateSchema>;
+
 export const reservationCreateSchema = z
   .object({
     espace_id: z.string().uuid(),

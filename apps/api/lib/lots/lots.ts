@@ -7,12 +7,13 @@
  */
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
-import { withTenant } from "../tenant/db";
+import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
 import { money, toApiString } from "../money";
 import { genererCode, expiration } from "../auth/invitations";
 import { ecrireAuditLog } from "../audit/audit";
+import { envoyerNotification } from "../notifications/notifications";
 import type {
   LotCreateInput,
   LotUpdateInput,
@@ -70,6 +71,45 @@ export async function creerLot(ctx: TenantContext, input: LotCreateInput) {
   }
 }
 
+/**
+ * Rattachements (propriétaires + occupants) des lots demandés, enrichis du nom de l'utilisateur.
+ * Requêtes séparées (jamais d'`include` imbriqué) : la RLS peut masquer des lignes `utilisateur`
+ * sans casser la lecture — le nom sort alors `null`, jamais une erreur.
+ */
+async function chargerRattachements(db: TenantDb, lotIds: string[]) {
+  const [proprietaires, occupants] = await Promise.all([
+    db.lotProprietaire.findMany({
+      where: { lotId: { in: lotIds } },
+      orderBy: [{ dateDebut: "asc" }],
+    }),
+    db.lotOccupant.findMany({
+      where: { lotId: { in: lotIds } },
+      orderBy: [{ dateDebut: "asc" }],
+    }),
+  ]);
+  const utilisateurIds = [
+    ...new Set([...proprietaires, ...occupants].map((r) => r.utilisateurId)),
+  ];
+  const utilisateurs =
+    utilisateurIds.length === 0
+      ? []
+      : await db.utilisateur.findMany({
+          where: { id: { in: utilisateurIds } },
+          select: { id: true, nom: true, prenom: true },
+        });
+  const parId = new Map(utilisateurs.map((u) => [u.id, u]));
+  return {
+    proprietaires: proprietaires.map((p) => ({
+      ...p,
+      utilisateur: parId.get(p.utilisateurId) ?? null,
+    })),
+    occupants: occupants.map((o) => ({
+      ...o,
+      utilisateur: parId.get(o.utilisateurId) ?? null,
+    })),
+  };
+}
+
 export async function listerLots(ctx: TenantContext, page: number, limit: number) {
   if (can("lots.lire", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les lots.");
@@ -84,7 +124,18 @@ export async function listerLots(ctx: TenantContext, page: number, limit: number
         take: limit,
       }),
     ]);
-    return { total, rows };
+    const { proprietaires, occupants } = await chargerRattachements(
+      db,
+      rows.map((l) => l.id)
+    );
+    return {
+      total,
+      rows: rows.map((lot) => ({
+        ...lot,
+        proprietaires: proprietaires.filter((p) => p.lotId === lot.id),
+        occupants: occupants.filter((o) => o.lotId === lot.id),
+      })),
+    };
   });
 }
 
@@ -92,7 +143,12 @@ export async function obtenirLot(ctx: TenantContext, lotId: string) {
   if (can("lots.lire", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à consulter ce lot.");
   }
-  const lot = await withTenant(ctx, (db) => db.lot.findUnique({ where: { id: lotId } }));
+  const lot = await withTenant(ctx, async (db) => {
+    const trouve = await db.lot.findUnique({ where: { id: lotId } });
+    if (!trouve) return null;
+    const { proprietaires, occupants } = await chargerRattachements(db, [trouve.id]);
+    return { ...trouve, proprietaires, occupants };
+  });
   if (!lot) throw new LotIntrouvableError("Lot introuvable.");
   return lot;
 }
@@ -148,21 +204,59 @@ export async function ajouterProprietaire(
   if (can("lots.gerer_proprietaires", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut gérer les copropriétaires d'un lot.");
   }
+  const [seul] = await ajouterProprietaires(ctx, lotId, [input]);
+  return seul!;
+}
+
+/**
+ * Ajout de un ou plusieurs copropriétaires DANS LA MÊME TRANSACTION — indispensable pour une
+ * indivision (50/50, 33/33/34…) : le trigger « somme des quote_part actives = 100 % » est
+ * différé au commit, donc vérifié sur l'ensemble du lot une fois toutes les lignes insérées.
+ */
+export async function ajouterProprietaires(
+  ctx: TenantContext,
+  lotId: string,
+  inputs: LotProprietaireCreateInput[]
+) {
+  if (can("lots.gerer_proprietaires", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut gérer les copropriétaires d'un lot.");
+  }
   try {
     return await withTenant(ctx, async (db) => {
       const lot = await db.lot.findUnique({ where: { id: lotId } });
       if (!lot) throw new LotIntrouvableError("Lot introuvable.");
-      return db.lotProprietaire.create({
-        data: {
-          lotId,
-          utilisateurId: input.utilisateur_id,
-          quotePart: money(input.quote_part).toString(),
-          typePropriete: input.type_propriete,
-          estRepresentantIndivision: input.est_representant_indivision ?? false,
-          dateDebut: new Date(input.date_debut),
-          dateFin: input.date_fin ? new Date(input.date_fin) : null,
-        },
-      });
+      const crees = [];
+      for (const input of inputs) {
+        crees.push(
+          await db.lotProprietaire.create({
+            data: {
+              lotId,
+              utilisateurId: input.utilisateur_id,
+              quotePart: money(input.quote_part).toString(),
+              typePropriete: input.type_propriete,
+              estRepresentantIndivision: input.est_representant_indivision ?? false,
+              dateDebut: new Date(input.date_debut),
+              dateFin: input.date_fin ? new Date(input.date_fin) : null,
+            },
+          })
+        );
+      }
+      await Promise.all(
+        inputs.map((input) =>
+          envoyerNotification(db, {
+            coproprieteId: ctx.coproprieteId,
+            utilisateurId: input.utilisateur_id,
+            templateCode: "LOT_RATTACHE",
+            canal: "PUSH",
+            contenuJson: {
+              lot_id: lotId,
+              numero: lot.numero,
+              qualite: input.type_propriete === "INDIVISION" ? "co-indivisaire" : "copropriétaire",
+            },
+          })
+        )
+      );
+      return crees;
     });
   } catch (e) {
     if (e instanceof LotIntrouvableError) throw e;
@@ -181,7 +275,7 @@ export async function ajouterOccupant(
   return withTenant(ctx, async (db) => {
     const lot = await db.lot.findUnique({ where: { id: lotId } });
     if (!lot) throw new LotIntrouvableError("Lot introuvable.");
-    return db.lotOccupant.create({
+    const occupant = await db.lotOccupant.create({
       data: {
         lotId,
         utilisateurId: input.utilisateur_id,
@@ -192,6 +286,18 @@ export async function ajouterOccupant(
         recoitConvocations: input.recoit_convocations ?? false,
       },
     });
+    await envoyerNotification(db, {
+      coproprieteId: ctx.coproprieteId,
+      utilisateurId: input.utilisateur_id,
+      templateCode: "LOT_RATTACHE",
+      canal: "PUSH",
+      contenuJson: {
+        lot_id: lotId,
+        numero: lot.numero,
+        qualite: input.type_occupation === "LOCATAIRE" ? "locataire" : "propriétaire occupant",
+      },
+    });
+    return occupant;
   });
 }
 
@@ -313,5 +419,52 @@ export async function transfererPropriete(
     });
 
     return invitation;
+  });
+}
+
+/**
+ * DELETE /lots/:id — suppression d'un lot créé par erreur (syndic). Refusée (409) dès que le
+ * lot a une histoire : propriétaires/occupants rattachés, appels de fonds, réservations,
+ * incidents, invitations… Toute contrainte d'intégrité restante remonte aussi en 409 plutôt
+ * qu'en 500 — un lot vécu se conserve, il ne se supprime pas.
+ */
+export async function supprimerLot(ctx: TenantContext, lotId: string) {
+  if (can("lots.modifier", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut supprimer un lot.");
+  }
+  return withTenant(ctx, async (db) => {
+    const lot = await db.lot.findUnique({ where: { id: lotId } });
+    if (!lot || lot.coproprieteId !== ctx.coproprieteId) {
+      throw new LotIntrouvableError("Lot introuvable.");
+    }
+    const [proprietaires, occupants, appels] = await Promise.all([
+      db.lotProprietaire.count({ where: { lotId } }),
+      db.lotOccupant.count({ where: { lotId } }),
+      db.appelDeFondsLot.count({ where: { lotId } }),
+    ]);
+    if (proprietaires > 0 || occupants > 0 || appels > 0) {
+      throw new ContrainteMetierError(
+        "Ce lot a un historique (propriétaires, occupants ou appels de fonds) : il ne peut pas être supprimé."
+      );
+    }
+    try {
+      await db.lot.delete({ where: { id: lotId } });
+    } catch (e) {
+      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2003") {
+        throw new ContrainteMetierError(
+          "Ce lot est référencé ailleurs (réservation, incident, invitation…) : il ne peut pas être supprimé."
+        );
+      }
+      throw e;
+    }
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "LOT_SUPPRIME",
+      entite: "lot",
+      entiteId: lotId,
+      avant: { numero: lot.numero, type_lot: lot.typeLot },
+    });
+    return { id: lotId };
   });
 }
