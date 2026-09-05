@@ -16,6 +16,7 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { CAlert, CShield, CWrench, IconCircle } from "../../../../components/ui/color-icons";
 import { incidentVariant, urgenceVariant } from "../../../../lib/status";
 import { IconPlus } from "../../../../components/ui/icons";
+import { ExportButtons } from "../../../../components/ui/export-buttons";
 
 export async function generateMetadata({
   params,
@@ -77,12 +78,15 @@ export default async function IncidentsPage({
       <PageHeader
         title={titre}
         actions={
-          peutSignaler ? (
-            <ButtonLink href={p("/incidents/nouveau")}>
-              <IconPlus width={16} height={16} />
-              {i.signaler}
-            </ButtonLink>
-          ) : undefined
+          <>
+            {["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"].some((r) => ctx.roles.includes(r as never)) ? <ExportButtons ressource="incidents" labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx, title: dict.rapports.exportIncidentsAide }} /> : null}
+            {peutSignaler ? (
+              <ButtonLink href={p("/incidents/nouveau")}>
+                <IconPlus width={16} height={16} />
+                {i.signaler}
+              </ButtonLink>
+            ) : null}
+          </>
         }
       />
 

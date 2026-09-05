@@ -302,3 +302,11 @@ export const IconReceipt = (p: SVGProps<SVGSVGElement>) => (
     <path d="M9 8.5h6M9 12h6M9 15.5h3.5" />
   </svg>
 );
+
+export const IconPie = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M12 3v9h9" />
+    <path d="M21 12a9 9 0 1 1-9-9" />
+    <path d="M12 12l6.4 6.4" />
+  </svg>
+);

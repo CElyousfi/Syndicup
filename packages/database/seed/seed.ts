@@ -1,5 +1,5 @@
 /**
- * Seed de développement — couvre M1→M17 : copropriété, utilisateurs/rôles, invitation, lots
+ * Seed de développement — couvre M1→M18 : copropriété, utilisateurs/rôles, invitation, lots
  * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
  * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
  * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
@@ -14,6 +14,9 @@
 
 import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
+// M18 — l'instantané du rapport de gestion est construit par la MÊME fonction que l'API (jamais recopié).
+import { construireDonneesRapport } from "../../../apps/api/lib/rapports/gestion-donnees";
+import type { TenantDb } from "../../../apps/api/lib/tenant/db";
 
 const directUrl = process.env.DIRECT_URL;
 if (!directUrl || !directUrl.includes("127.0.0.1")) {
@@ -661,7 +664,57 @@ async function main() {
     },
   });
 
+  // ── M18 — Rapports, rapport de gestion, exports, transparence (Doc A §8, §6, §3.5) ──
+  const exercicePrecedent = String(Number(exercice) - 1);
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: {
+      facturesVisiblesResidents: true, // les résidents d'Al Amal voient les factures des dépenses payées
+      configJson: {
+        reservation_espaces_proprietaires_only: false,
+        // PROVISOIRE — majorité requise pour l'approbation des comptes (LEGAL_QUESTIONS_BRIEF §9) ;
+        // valeur de démonstration, jamais codée en dur côté API (422 si absente).
+        majorite_approbation_comptes: "SIMPLE",
+      },
+    },
+  });
+  const dbSeed = prisma as unknown as TenantDb;
+  const ctxSyndic = { utilisateurId: syndicUser.id, coproprieteId: copro.id, role: "SYNDIC" as const };
+  // 1. Rapport de l'exercice précédent : soumis à l'AG passée (résolution « approbation des comptes » ADOPTEE) → APPROUVE.
+  const resolutionComptes = await prisma.agResolution.create({
+    data: { agId: agPassee.id, ordre: 2, texte: `Approbation des comptes de l'exercice ${exercicePrecedent} (rapport de gestion du syndic)`, typeMajorite: "SIMPLE", resultat: "ADOPTEE" },
+  });
+  const docRapportPrecedent = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "RAPPORT_GESTION", nom: `Rapport de gestion ${exercicePrecedent}.pdf`, visibilite: "PUBLIC_COPROPRIETE", storagePath: `${copro.id}/rapports/rapport-gestion-${exercicePrecedent}.pdf`, creePar: syndicUser.id, creeLe: new Date(Date.now() - 185 * 24 * 3600 * 1000) },
+  });
+  const rapportPrecedent = await prisma.rapportGestion.create({
+    data: {
+      coproprieteId: copro.id, exercice: exercicePrecedent, statut: "APPROUVE", agId: agPassee.id, resolutionAgId: resolutionComptes.id, documentId: docRapportPrecedent.id,
+      donneesJson: (await construireDonneesRapport(dbSeed, ctxSyndic, exercicePrecedent, null, new Date(Date.now() - 185 * 24 * 3600 * 1000))) as never,
+      genereParId: syndicUser.id, genereLe: new Date(Date.now() - 185 * 24 * 3600 * 1000),
+    },
+  });
+  // 2. Rapport de l'exercice courant : GENERE (PDF conseil syndical), prêt à être soumis à la prochaine AG.
+  const docRapportCourant = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "RAPPORT_GESTION", nom: `Rapport de gestion ${exercice}.pdf`, visibilite: "CONSEIL_SYNDICAL", storagePath: `${copro.id}/rapports/rapport-gestion-${exercice}.pdf`, creePar: syndicUser.id },
+  });
+  const rapportCourant = await prisma.rapportGestion.create({
+    data: {
+      coproprieteId: copro.id, exercice, statut: "GENERE", budgetAgId: budget.id, documentId: docRapportCourant.id,
+      donneesJson: (await construireDonneesRapport(dbSeed, ctxSyndic, exercice, budget.id)) as never,
+      genereParId: syndicUser.id,
+    },
+  });
+  // 3. Journal des exports (append-only) : deux extractions du syndic.
+  await prisma.exportLog.createMany({
+    data: [
+      { coproprieteId: copro.id, utilisateurId: syndicUser.id, type: "PROPRIETAIRES", filtresJson: { format: "xlsx" }, nbLignes: 6, horodatage: jour(-12) },
+      { coproprieteId: copro.id, utilisateurId: syndicUser.id, type: "GRAND_LIVRE", filtresJson: { format: "csv", exercice: exercicePrecedent }, nbLignes: 14, horodatage: jour(-3) },
+    ],
+  });
+
   console.log("Seed terminé :", {
+    rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
     copropriete: copro.nom,
     utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },

@@ -32,6 +32,7 @@ import { ProgressBar } from "../../../../../components/ui/progress";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { IconCircle, CChart, CCoins, CFile, CMoneyBag, CWallet, CAlert } from "../../../../../components/ui/color-icons";
 import { IconDownload } from "../../../../../components/ui/icons";
+import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { ParcoursCompta, AideReleveResident, type EtapeParcours } from "../../../../../components/finances/parcours-compta";
 import { escaladeVariant } from "../../../../../lib/status";
 
@@ -370,10 +371,14 @@ export default async function ComptabilitePage({
               title={c.journal}
               subtitle={lbl.journalAide}
               action={
-                <a href={csvHref("paiements")} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-action hover:underline">
-                  <IconDownload width={14} height={14} />
-                  CSV
-                </a>
+                gestion ? (
+                  <ExportButtons ressource="paiements" filtres={{ exercice: annee }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx, title: dict.rapports.exportPaiementsAide }} size="sm" />
+                ) : (
+                  <a href={csvHref("paiements")} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-action hover:underline">
+                    <IconDownload width={14} height={14} />
+                    CSV
+                  </a>
+                )
               }
             />
           </div>

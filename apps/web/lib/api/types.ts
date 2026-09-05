@@ -221,6 +221,8 @@ export interface Copropriete {
   retentionDesactivationMois: number | null;
   creeLe: string;
   modifieLe: string;
+  /** M18 — factures des dépenses PAYEE visibles par les résidents (option syndic). */
+  facturesVisiblesResidents?: boolean;
 }
 
 // ── Lots ────────────────────────────────────────────────────────────────────
@@ -962,4 +964,203 @@ export interface ExportCndp {
     votes: unknown[];
     notifications: unknown[];
   }>;
+}
+
+// ── M18 — Rapports, rapport de gestion, exports, transparence ────────────────
+export type StatutRapportGestion = "BROUILLON" | "GENERE" | "SOUMIS_AG" | "APPROUVE" | "REJETE";
+export type TrancheAnciennete = "0_30" | "31_90" | "91_180" | "PLUS_180";
+
+export interface Recouvrement {
+  appele: string;
+  encaisse: string;
+  reste: string;
+  taux: string | null;
+  nb_lignes: number;
+}
+export interface TrancheImpayes {
+  tranche: TrancheAnciennete;
+  montant: string;
+  nb_lignes: number;
+  nb_lots: number;
+}
+export interface DepensesParCategorie {
+  total: string;
+  nb: number;
+  categories: { categorie: CategorieDepense; montant: string; nb: number; part: string | null }[];
+}
+export interface TableauDeBord {
+  exercice: string;
+  genere_le: string;
+  tresorerie: {
+    compte_courant_estime: string;
+    total_entrees: string;
+    total_sorties_compte_courant: string;
+    reserve: string;
+    reserve_configuree: boolean;
+    serie_12_mois: { mois: string; entrees: string; sorties: string; solde: string }[];
+  };
+  recouvrement: { exercice: Recouvrement; periode: Recouvrement & { mois: string } };
+  impayes: {
+    total: string;
+    nb_lots_en_retard: number;
+    nb_lignes: number;
+    tranches: TrancheImpayes[];
+    top_lots: { lot_id: string; lot_numero: string; reste_du: string; nb_lignes: number; retard_max_jours: number; conteste: boolean }[];
+  };
+  depenses: { exercice: DepensesParCategorie; mois: DepensesParCategorie & { mois: string } };
+  budget_vs_realise: BudgetVsRealise;
+  incidents_ouverts: { total: number; par_urgence: Record<UrgenceIncident, number> };
+  justificatifs_en_attente: { nb: number; montant: string };
+  contrats: null | { echus: number; a_echoir_30j: number };
+}
+export interface TransparenceDepense {
+  id: string;
+  libelle: string;
+  categorie: CategorieDepense;
+  montant_ttc: string;
+  source: string;
+  date: string;
+  prestataire: string | null;
+  poste: string | null;
+  factures?: { id: string; numero: string | null; montant_ttc: string; url: string }[];
+}
+export interface Transparence {
+  exercice: string;
+  copropriete: string | null;
+  factures_visibles: boolean;
+  tresorerie: { compte_courant_estime: string; reserve: string; reserve_configuree: boolean };
+  recouvrement: { exercice: string | null; appele: string; encaisse: string };
+  impayes: { total: string; nb_lots_en_retard: number };
+  budget_vs_realise: {
+    budget: { id: string; statut: string; montant_total: string } | null;
+    postes: { poste_id: string; libelle: string; categorie: CategorieDepense; montant_prevu: string | null; realise: string; pourcentage_realise: string | null; depassement: boolean }[];
+    totaux: { montant_prevu: string | null; realise: string; pourcentage_realise: string | null };
+    fonds_reserve: { solde: string; decaisse_exercice: string; engage: string };
+  };
+  depenses_par_categorie: DepensesParCategorie;
+  depenses: TransparenceDepense[];
+  rapports_gestion: { document_id: string; nom: string; date: string }[];
+}
+export interface LigneGrandLivre {
+  date: string;
+  type: "ENTREE" | "SORTIE" | "RESERVE";
+  compte: "COMPTE_COURANT" | "FONDS_RESERVE";
+  libelle: string;
+  reference: string | null;
+  tiers: string | null;
+  categorie: string | null;
+  entree: string | null;
+  sortie: string | null;
+  solde_compte_courant: string;
+  solde_reserve: string;
+  entite: "paiement" | "depense" | "fonds_reserve_mouvement";
+  entite_id: string;
+}
+export interface GrandLivre {
+  exercice: string;
+  ouverture: { compte_courant: string; reserve: string };
+  totaux: { entrees: string; sorties_compte_courant: string; sorties_reserve: string; mouvements_reserve: string };
+  cloture: { compte_courant: string; reserve: string };
+  nb_lignes: number;
+  lignes: LigneGrandLivre[];
+}
+export interface RapportGestionResume {
+  compte_courant_cloture: string;
+  reserve_cloture: string;
+  taux_recouvrement: string | null;
+  impayes_total: string;
+  nb_lots_en_retard: number;
+  depenses_total: string;
+  budget_prevu: string | null;
+  budget_realise: string;
+}
+export interface RapportGestionDonnees {
+  version: 1;
+  exercice: string;
+  genere_le: string;
+  copropriete: { id: string; nom: string; adresse: string; ville: string; nb_lots: number; logo_storage_path: string | null };
+  syndic: { id: string; nom: string | null };
+  president_conseil: { id: string | null; nom: string | null };
+  budget_ag_id: string | null;
+  tresorerie: {
+    reserve_configuree: boolean;
+    ouverture: { compte_courant: string; reserve: string };
+    totaux: { entrees: string; sorties_compte_courant: string; sorties_reserve: string; mouvements_reserve: string };
+    cloture: { compte_courant: string; reserve: string };
+  };
+  grand_livre_nb_lignes: number;
+  recouvrement: Recouvrement;
+  impayes: { total: string; nb_lots_en_retard: number; nb_lignes: number; tranches: TrancheImpayes[]; par_lot: { lot_id: string; lot_numero: string; reste_du: string; nb_lignes: number; retard_max_jours: number; conteste: boolean }[]; arrete_le: string };
+  budget_vs_realise: BudgetVsRealise;
+  depenses_par_categorie: DepensesParCategorie;
+  depenses: TransparenceDepense[];
+  reserve: { solde_ouverture: string; solde_cloture: string; mouvements: { id: string; date: string; type: string; montant: string; description: string | null; depense_id: string | null }[] };
+  faits_marquants: {
+    nb_incidents: number;
+    incidents_majeurs: { id: string; categorie: string; sous_categorie: string; statut: string; date: string }[];
+    ag_tenues: { id: string; type: string; date: string; quorum_atteint: string | null; nb_resolutions: number }[];
+    contrats_signes: { id: string; libelle: string; type: string; date: string }[];
+  };
+  justificatifs_en_attente: { nb: number; montant: string };
+  seuil_approbation_non_configure: boolean;
+}
+export interface RapportGestion {
+  id: string;
+  exercice: string;
+  statut: StatutRapportGestion;
+  budget_ag_id: string | null;
+  ag: { id: string; type: TypeAg; date_ag: string; statut: StatutAg } | null;
+  resolution: { id: string; ordre: number; texte: string; type_majorite: TypeMajorite; resultat: ResultatResolution } | null;
+  document_id: string | null;
+  document_visibilite: VisibiliteDocument | null;
+  document_url?: string | null;
+  genere_par: { id: string; nom: string | null; prenom: string | null } | null;
+  genere_le: string;
+  cree_le: string;
+  modifie_le: string;
+  resume: RapportGestionResume;
+  donnees?: RapportGestionDonnees;
+  regenere?: boolean;
+  pdf_erreur?: string | null;
+}
+export interface LigneImpayee {
+  appel_de_fonds_lot_id: string;
+  lot_id: string;
+  lot_numero: string;
+  periode: string;
+  type: TypeAppelDeFonds;
+  date_echeance: string;
+  montant_du: string;
+  montant_paye: string;
+  reste_du: string;
+  retard_jours: number;
+  tranche: TrancheAnciennete;
+  statut: StatutLigneAppel;
+  conteste: boolean;
+  niveau_escalade: string;
+}
+export interface SyntheseImpayes {
+  total: string;
+  nb_lots_en_retard: number;
+  nb_lignes: number;
+  tranches: TrancheImpayes[];
+}
+export interface ExportLog {
+  id: string;
+  type: string;
+  filtres: Record<string, unknown> | null;
+  nb_lignes: number;
+  horodatage: string;
+  utilisateur: { id: string; nom: string | null; prenom: string | null } | null;
+}
+export interface ReleveLot {
+  exercice: string;
+  emis_le: string;
+  copropriete: { nom: string; adresse: string; ville: string };
+  lot: { id: string; numero: string; type_lot: TypeLot; etage: number | null; tantiemes: string };
+  proprietaires: { nom: string | null; prenom: string | null; quote_part: string; type_propriete: string }[];
+  appels: { appel_de_fonds_lot_id: string; periode: string; type: TypeAppelDeFonds; date_echeance: string; montant_du: string; montant_paye: string; reste_du: string; statut: StatutLigneAppel; conteste: boolean }[];
+  paiements: { id: string; date: string; methode: string; montant: string; reference: string | null; periode: string }[];
+  justificatifs_en_attente: { id: string; date_paiement: string; methode: string; montant: string; reference: string | null }[];
+  totaux: { appele: string; paye: string; solde_exercice: string; solde_total_du: string; en_attente: string };
 }

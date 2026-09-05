@@ -13,6 +13,7 @@ import {
 } from "../../../../../lib/format";
 import { versCentimes, versChaine, sommeCentimes } from "../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
+import { ReleveButtons } from "../../../../../components/finances/releve-buttons";
 import { Badge } from "../../../../../components/ui/badge";
 import { ButtonLink } from "../../../../../components/ui/button";
 import { LinkTabs } from "../../../../../components/ui/link-tabs";
@@ -59,6 +60,8 @@ export default async function LotDetailPage({
     : "propriete";
 
   const proprietairesActifs = (lot.proprietaires ?? []).filter((p) => !p.dateFin);
+  // M18 — relevé de charges : le conseil (lecture) et le propriétaire du lot y ont droit, pas le locataire.
+  const estProprietaireDuLot = ctx.roles.includes("CONSEIL_SYNDICAL") || proprietairesActifs.some((p) => p.utilisateurId === ctx.profil.id);
   const anciens = (lot.proprietaires ?? []).filter((p) => p.dateFin);
   const occupantsActifs = (lot.occupants ?? []).filter((o) => !o.dateFin);
   const indivision = proprietairesActifs.length > 1;
@@ -268,6 +271,8 @@ export default async function LotDetailPage({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              {/* M18 — relevé de charges (« état daté ») : syndic / conseil, ou propriétaire du lot. */}
+              {gestion || estProprietaireDuLot ? <ReleveButtons dict={dict} lotId={id} lotNumero={lot.numero} /> : null}
               {gestion ? (
                 <PaiementModal
                   dict={dict}

@@ -133,3 +133,8 @@ export const factureVariant = map({
 
 // M17 — justificatifs de paiement.
 export const justificatifVariant = map({ EN_ATTENTE: "warn", VALIDE: "ok", REJETE: "danger", ANNULE: "neutral" });
+
+// M18 — rapports de gestion et ancienneté des impayés.
+export const rapportVariant = map({ BROUILLON: "outline", GENERE: "info", SOUMIS_AG: "warn", APPROUVE: "ok", REJETE: "danger" });
+export const trancheVariant = map({ "0_30": "info", "31_90": "warn", "91_180": "danger", PLUS_180: "danger" });
+export const ligneGrandLivreVariant = map({ ENTREE: "ok", SORTIE: "danger", RESERVE: "info" });

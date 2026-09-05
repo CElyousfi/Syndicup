@@ -24,7 +24,8 @@ export type IconKey =
   | "send"
   | "chart"
   | "suitcase"
-  | "receipt";
+  | "receipt"
+  | "pie";
 
 export interface NavItem {
   href: string;
@@ -64,6 +65,9 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     label: d.contestations,
     icon: "scale",
   };
+  // M18 — rapports de gestion (syndic / conseil) et transparence « où va mon argent » (tout membre).
+  const rapports: NavItem = { href: p("/rapports"), label: d.rapports, icon: "pie" };
+  const transparence: NavItem = { href: p("/rapports/transparence"), label: d.transparence, icon: "pie" };
   const comptabilite = (label = d.comptabilite): NavItem => ({
     href: p("/finances/comptabilite"),
     label,
@@ -120,7 +124,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "SYNDIC":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
+        { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
@@ -131,7 +135,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "CONSEIL_SYNDICAL":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
+        { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
@@ -143,7 +147,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "PERSONNE_MORALE_REPRESENTANT":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [payer, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
+        { label: s.finances, items: [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
         { label: s.vieCollective, items: [ag, incidents(dict.incidents.mesSignalements), litiges] },
         { label: s.quotidien, items: [espaces, reservations, visites, lcd, documents] },
       ];
@@ -157,7 +161,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "LOCATAIRE":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [payer] },
+        { label: s.finances, items: [payer, transparence] },
         {
           label: s.vieCollective,
           items: [incidents(dict.incidents.mesSignalements), litiges],

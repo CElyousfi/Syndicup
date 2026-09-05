@@ -27,6 +27,7 @@ import {
 } from "../../../../components/ui/color-icons";
 import { lotVariant } from "../../../../lib/status";
 import { IconPlus, IconSearch } from "../../../../components/ui/icons";
+import { ExportButtons } from "../../../../components/ui/export-buttons";
 
 /** Glyphe couleur par famille de lot — habitat vs bâtiment/annexe. */
 const LOTS_HABITAT = ["APPARTEMENT", "VILLA", "LOGE_GARDIEN"];
@@ -96,12 +97,15 @@ export default async function LotsPage({
             : undefined
         }
         actions={
-          gestion ? (
-            <ButtonLink href={p("/lots/nouveau")}>
-              <IconPlus width={16} height={16} />
-              {dict.lots.nouveau}
-            </ButtonLink>
-          ) : undefined
+          <>
+            {gestion || ctx.roles.includes("CONSEIL_SYNDICAL") ? <ExportButtons ressource="lots" labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx, title: dict.rapports.exportLotsAide }} /> : null}
+            {gestion ? (
+              <ButtonLink href={p("/lots/nouveau")}>
+                <IconPlus width={16} height={16} />
+                {dict.lots.nouveau}
+              </ButtonLink>
+            ) : null}
+          </>
         }
       />
 

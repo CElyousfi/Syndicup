@@ -16,7 +16,8 @@ import { Pagination } from "../../../../../components/ui/pagination";
 import { StatCard } from "../../../../../components/ui/stat-card";
 import { CCoins, CMoneyBag, CWallet, CAlert } from "../../../../../components/ui/color-icons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
-import { IconDownload, IconPlus } from "../../../../../components/ui/icons";
+import { IconPlus } from "../../../../../components/ui/icons";
+import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { depenseVariant } from "../../../../../lib/status";
 import { FiltresDepenses } from "./filtres";
 
@@ -63,7 +64,6 @@ export default async function DepensesPage({
     const s = u.toString();
     return s ? `?${s}` : "";
   };
-  const csvHref = `/api/depenses-csv${qs({})}`;
 
   return (
     <div className="animate-fade">
@@ -72,10 +72,7 @@ export default async function DepensesPage({
         subtitle={d.subtitle}
         actions={
           <>
-            <ButtonLink href={csvHref} variant="secondary" title={d.exporterCsvAide}>
-              <IconDownload width={16} height={16} />
-              {d.exporterCsv}
-            </ButtonLink>
+            <ExportButtons ressource="depenses" filtres={filtres} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx, title: d.exporterCsvAide }} />
             {gestion ? (
               <ButtonLink href={p("/finances/depenses/nouvelle")}>
                 <IconPlus width={16} height={16} />
