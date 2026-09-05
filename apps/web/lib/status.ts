@@ -130,3 +130,6 @@ export const factureVariant = map({
   CONTESTEE: "danger",
   REGLEE: "ok",
 });
+
+// M17 — justificatifs de paiement.
+export const justificatifVariant = map({ EN_ATTENTE: "warn", VALIDE: "ok", REJETE: "danger", ANNULE: "neutral" });

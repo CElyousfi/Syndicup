@@ -359,6 +359,56 @@ et recopié dans `telephone` / `email` par la migration quand la valeur est reco
   §8.3 — type `DEVIS` déclaré seulement), avance du syndic (Doc A §3.6 `AVANCE_SYNDIC`), saisie
   mobile d'une dépense (web-first), rappel d'échéance de facture par email (PUSH seulement).
 
+## M17 — Justificatifs de paiement (preuve de virement / chèque / espèces, validation syndic)
+
+*Réf. Doc A §3.3 (« virement mal référencé », « chèque sans provision »), §3.4 (imputation FIFO,
+locataire payeur), §12.3 (confidentialité par lot). Domaine : `03-charges-finances.md` §3.8.
+Juridique : brief §8.5. Branche `feature/m17-justificatifs`. Décision projet : aucune API bancaire,
+rapprochement manuel sur preuve ; la donnée est prête pour un import CSV bancaire ultérieur (mêmes
+lignes `justificatif_paiement`).*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enum `StatutJustificatif` (EN_ATTENTE, VALIDE,
+REJETE, **ANNULE** — ajout au prompt pour l'annulation par le déclarant), table
+`justificatif_paiement`, colonnes `copropriete.comptes_bancaires_json` /
+`delai_validation_justificatif_jours`, `paiement.justificatif_id` / `enregistre_par_id` /
+`date_valeur` / `document_id` ; permissions `justificatifs.declarer / lire / valider`,
+`paiements.especes.saisir`, `coproprietes.comptes_bancaires.lire / gerer` ; codes
+`JUSTIFICATIF_STATUT_INVALIDE`, `JUSTIFICATIF_PREUVE_REQUISE`. **Écarts par rapport au prompt** :
+(1) `paiement` est append-only (GRANT SELECT, INSERT) → aucun paiement « EN_ATTENTE » créé par le
+gardien puis basculé VALIDE : la remise d'espèces du gardien est un justificatif ESPECES EN_ATTENTE,
+`POST /finances/paiements/{id}/confirmer` prend l'id du justificatif et équivaut à `/valider` ;
+(2) aucune nouvelle `VisibiliteDocument` : la preuve est un document SYNDIC_ONLY écrit et relu par
+deux fonctions SECURITY DEFINER (`justificatif_attacher_preuve`, `justificatif_preuve_chemin`)
+après filtrage RLS du justificatif — aucune policy existante modifiée ; (3) validation en masse et
+file hors-ligne gardien non livrées (voir parité).
+
+- [x] **Livré (05/09)** — Migrations `..._m17_justificatifs` (+ `_m17_preuve_fn`) : table, CHECKs,
+  RLS (syndic/conseil tout ; résident : lots dont il est propriétaire ou occupant ; gardien : ses
+  saisies), fonctions SECURITY DEFINER ; seed Al Amal (2 comptes bancaires, justificatif validé du
+  MRE avec paiement + quittance, chèque en attente sur solde, espèces du gardien en attente).
+- [x] **Livré (05/09)** — API tag `Justificatifs` (12 opérations) : upload-url, déclaration
+  (preuve obligatoire sauf espèces internes, ligne PAYE refusée), liste (EN_ATTENTE d'abord,
+  compteurs), détail (preuve signée 15 min + échéances ouvertes), valider (ciblé ou FIFO via
+  `appliquerPaiement` / `appliquerPaiementFifo` exportés du moteur M5 avec provenance ; avance >
+  dû → 422, rien écrit), rejeter, annuler, espèces (gardien → EN_ATTENTE, syndic → VALIDE),
+  confirmer ; comptes bancaires (RIB masqué, `PUT` syndic, RIB complet audité `RIB_CONSULTE`).
+  `GET /finances/lots/{id}/solde` → `justificatifs_en_attente` ; `escalade.ts` : ligne couverte
+  par un justificatif EN_ATTENTE non escaladée (test). Job `justificatifs-relance-syndic`
+  (délai configuré, une fois). Notifications FR/AR `JUSTIFICATIF_DECLARE`, `PAIEMENT_VALIDE`,
+  `JUSTIFICATIF_REJETE`, `JUSTIFICATIF_A_VALIDER_RELANCE`, `PAIEMENT_ESPECES_SAISI`. Audit
+  `JUSTIFICATIF_DECLARE/VALIDE/REJETE/ANNULE`, `PAIEMENT_ESPECES_SAISI/CONFIRME`,
+  `COMPTES_BANCAIRES_MODIFIES`, `RIB_CONSULTE`. Tests `tests/justificatifs.test.ts` (7).
+- [x] **Livré (05/09)** — Web : `finances/payer` (résident : comptes, déclaration avec preuve,
+  mes déclarations, montant en attente), `finances/justificatifs` (file par statut, comptes
+  bancaires + RIB audité, déclaration au nom d'un lot), `finances/justificatifs/[id]` (preuve dans
+  la visionneuse, échéances ouvertes, valider / rejeter), `finances/especes` (gardien), proxy
+  `/api/justificatif-preuve`, navigation Payer / Justificatifs / Espèces reçues, FR/AR.
+- [x] **Livré (05/09)** — Mobile `features/justificatifs/` : Payer, file de validation, détail
+  (preuve, valider / rejeter), espèces du gardien (en ligne), deep-links.
+- [ ] **Non livré / à confirmer** : validation en masse ; file hors-ligne du gardien pour les
+  espèces (finances exclues de la file locale) ; import CSV bancaire (rattachement automatique
+  aux justificatifs) ; paiement « en avance » (avoir) toujours refusé (Doc A §3.4).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

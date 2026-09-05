@@ -107,3 +107,20 @@ En droit marocain, certaines charges sont "récupérables" sur le locataire (il 
 | Lot en construction / VEFA : charges pendant travaux | Le promoteur paie les charges pour les lots invendus | Promoteur = copropriétaire temporaire. Charges calculées normalement. | Lot avec proprietaire_type = PROMOTEUR jusqu'à la vente. Charges envoyées au promoteur. |
 | Charges spéciales antenne / fibre collective | Antenne collective ou réseau fibre immeuble = investissement + maintenance | Réparti sur tous les lots selon tantièmes ou forfait égalitaire selon AG | Catégorie charge : TELECOM_COLLECTIF. Mode répartition : TANTIEMES ou EGALITAIRE (configurable). |
 | Dépassement budget en cours d'année | Si dépenses imprévues dépassent le budget voté | Syndic doit convoquer AG extraordinaire pour voter budget rectificatif sauf si règlement lui donne une marge (ex: ±10%) | Alerte automatique si dépenses dépassent X% du budget. Marge configurable. Suggestion de convocation AG extraordinaire. |
+
+---
+
+## 3.8 — Justificatifs de paiement et espèces à la loge (module M17 — dérivé de §3.3 « virement mal référencé », « chèque sans provision », §3.4 imputation FIFO, §12.3 confidentialité)
+
+> Ajout M17 : Doc A décrit le paiement CMI et le paiement « manuel » saisi par le syndic ; en pratique
+> les résidents paient par virement, chèque ou espèces au moins aussi souvent. Aucune API bancaire
+> n'est disponible au Maroc : le rapprochement est manuel, fondé sur une preuve.
+
+| Cas | Règle | Gestion plateforme |
+| --- | --- | --- |
+| Le résident a payé par virement / chèque | Il déclare « j'ai payé » : montant, méthode, banque, compte bénéficiaire (comptes de la copropriété — RIB masqué), référence, preuve (reçu, photo du chèque). Un locataire peut déclarer pour son lot (règle payeur §3.4). | `justificatif_paiement` EN_ATTENTE, Document `JUSTIFICATIF_PAIEMENT` (visibilité syndic ; le résident relit SA preuve via le justificatif). Notification `JUSTIFICATIF_DECLARE` au syndic. Preuve obligatoire (422 `JUSTIFICATIF_PREUVE_REQUISE`) sauf espèces saisies par le syndic / gardien. |
+| Le syndic rapproche du relevé | Il valide (date de valeur) ou rejette avec motif. | Validation = `paiement` VALIDE (ciblé sur l'échéance choisie, ou FIFO sur les plus anciennes si « sur solde »), mise à jour des lignes, quittance par le moteur M5, notification `PAIEMENT_VALIDE` — tout ou rien. Rejet : rien sur le lot, notification `JUSTIFICATIF_REJETE`. Montant > dû total → 422 (l'avance n'est pas modélisée, §3.4). |
+| Déclaration en attente et relances | Le résident a payé mais la preuve attend le syndic. | Le solde affiche « X en attente de validation » (`justificatifs_en_attente`) ; l'escalade impayés (§3.3) est **suspendue** sur une ligne dont le dû est couvert par un justificatif en attente ; rappel au syndic après `delai_validation_justificatif_jours` (nullable, jamais deviné). |
+| Espèces remises au gardien | Le gardien encaisse à la loge ; le syndic confirme. | `POST /finances/paiements/especes` : gardien → justificatif ESPECES EN_ATTENTE (notification `PAIEMENT_ESPECES_SAISI`), syndic → paiement VALIDE direct. La table `paiement` étant append-only, aucun paiement « en attente » n'est créé puis modifié : la ligne naît à la confirmation (`/confirmer` = valider). |
+| Comptes bancaires de la copropriété | Compte courant, fonds de réserve… | `copropriete.comptes_bancaires_json` ; tout membre lit banque + RIB masqué ; le syndic gère et lit le RIB complet (audit `RIB_CONSULTE`). Le RIB complet n'apparaît jamais dans un audit ni une liste. |
+| Confidentialité (§12.3) | Un résident ne voit que ses lots ; le gardien ce qu'il a saisi. | Policy RLS `justificatif_paiement` (propriétaire ou occupant actif du lot ; gardien = `declare_par_id`) ; syndic / conseil tout. |

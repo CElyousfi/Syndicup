@@ -314,3 +314,18 @@ final budgetVsRealiseProvider = FutureProvider.autoDispose<BudgetVsRealise?>((re
     ApiFail<BudgetVsRealise>() => unwrap(r),
   };
 });
+
+// ── M17 Justificatifs de paiement ─────────────────────────────────────────────
+final justificatifsProvider = FutureProvider.autoDispose.family<List<Justificatif>, String?>((ref, statut) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/finances/justificatifs', query: {'limit': 100, if (statut != null) 'statut': statut}, parse: (j) => parseList(j, Justificatif.fromJson)));
+});
+final justificatifProvider = FutureProvider.autoDispose.family<Justificatif, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/finances/justificatifs/$id', parse: (j) => Justificatif.fromJson(asMap(j))));
+});
+/// Comptes bancaires de la copropriété (RIB masqué) — vide si le rôle n'y a pas accès.
+final comptesBancairesProvider = FutureProvider.autoDispose<List<CompteBancaire>>((ref) async {
+  final coproId = ref.watch(sessionProvider)?.coproprieteId;
+  if (coproId == null) return const [];
+  final r = await ref.watch(apiClientProvider).get<List<CompteBancaire>>('/coproprietes/$coproId/comptes-bancaires', parse: (j) => parseList(j, CompteBancaire.fromJson));
+  return r.dataOrNull ?? const [];
+});

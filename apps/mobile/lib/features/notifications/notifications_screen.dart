@@ -101,6 +101,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (code.startsWith('RESERVATION_')) return Icons.calendar_month_rounded;
     if (code.startsWith('DOCUMENT_')) return Icons.description_rounded;
     if (code.startsWith('DEPENSE_') || code == 'FACTURE_ECHEANCE_PROCHE') return Icons.receipt_long_rounded;
+    if (code.startsWith('JUSTIFICATIF_') || code == 'PAIEMENT_VALIDE' || code == 'PAIEMENT_ESPECES_SAISI') return Icons.verified_rounded;
     return Icons.notifications_rounded;
   }
 }

@@ -55,6 +55,10 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const appels: NavItem = { href: p("/finances/appels-de-fonds"), label: d.appels, icon: "coins" };
   // M16 — dépenses : l'argent qui sort (syndic gère, conseil approuve/contrôle).
   const depenses: NavItem = { href: p("/finances/depenses"), label: d.depenses, icon: "receipt" };
+  // M17 — justificatifs : le résident paie et déclare, le syndic valide, le gardien saisit les espèces.
+  const payer: NavItem = { href: p("/finances/payer"), label: d.payer, icon: "coins" };
+  const justificatifs: NavItem = { href: p("/finances/justificatifs"), label: d.justificatifs, icon: "receipt" };
+  const especes: NavItem = { href: p("/finances/especes"), label: d.especes, icon: "coins" };
   const contestations: NavItem = {
     href: p("/finances/contestations"),
     label: d.contestations,
@@ -116,7 +120,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "SYNDIC":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, depenses, comptabilite(), contestations] },
+        { label: s.finances, items: [budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
@@ -127,7 +131,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "CONSEIL_SYNDICAL":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, depenses, comptabilite(), contestations] },
+        { label: s.finances, items: [budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
@@ -139,7 +143,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "PERSONNE_MORALE_REPRESENTANT":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
+        { label: s.finances, items: [payer, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
         { label: s.vieCollective, items: [ag, incidents(dict.incidents.mesSignalements), litiges] },
         { label: s.quotidien, items: [espaces, reservations, visites, lcd, documents] },
       ];
@@ -153,6 +157,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "LOCATAIRE":
       return [
         { label: null, items: [dashboard] },
+        { label: s.finances, items: [payer] },
         {
           label: s.vieCollective,
           items: [incidents(dict.incidents.mesSignalements), litiges],
@@ -164,7 +169,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [visites, lcd, incidents(), lots(), espaces, personnel, prestataires, documents],
+          items: [visites, especes, lcd, incidents(), lots(), espaces, personnel, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":

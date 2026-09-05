@@ -339,10 +339,15 @@ class SoldeLigne {
 class SoldeLot {
   final String lotId, soldeDu;
   final List<SoldeLigne> lignes;
-  const SoldeLot({required this.lotId, required this.soldeDu, required this.lignes});
+  // M17 — paiements déclarés en attente de validation (jamais déduits du solde dû).
+  final String justificatifsEnAttente;
+  final int nbJustificatifsEnAttente;
+  const SoldeLot({required this.lotId, required this.soldeDu, required this.lignes, this.justificatifsEnAttente = '0.00', this.nbJustificatifsEnAttente = 0});
   factory SoldeLot.fromJson(Map<String, dynamic> j) => SoldeLot(
         lotId: _s(j, 'lot_id'),
         soldeDu: _s(j, 'solde_du'),
+        justificatifsEnAttente: _sn(j, 'justificatifs_en_attente') ?? '0.00',
+        nbJustificatifsEnAttente: _in(j, 'nb_justificatifs_en_attente') ?? 0,
         lignes: _list(j['lignes'], (l) => SoldeLigne(appelDeFondsLotId: _s(l, 'appel_de_fonds_lot_id'), montantDu: _s(l, 'montant_du'), montantPaye: _s(l, 'montant_paye'), statut: _s(l, 'statut'), conteste: _b(l, 'conteste'))),
       );
 }
@@ -548,6 +553,44 @@ class Prestataire {
     final t = telephone ?? contact;
     return RegExp(r'^\+?\d{8,}$').hasMatch(t.replaceAll(RegExp(r'[\s.-]'), '')) ? t.replaceAll(RegExp(r'[\s.-]'), '') : null;
   }
+}
+
+// ── M17 — Justificatifs de paiement ─────────────────────────────────────────
+class CompteBancaire {
+  final int index;
+  final String libelle, banque, ribMasque;
+  const CompteBancaire({required this.index, required this.libelle, required this.banque, required this.ribMasque});
+  factory CompteBancaire.fromJson(Map<String, dynamic> j) => CompteBancaire(index: _in(j, 'index') ?? 0, libelle: _s(j, 'libelle'), banque: _s(j, 'banque'), ribMasque: _s(j, 'rib_masque'));
+}
+
+class LigneOuverte {
+  final String appelDeFondsLotId, periode, type, dateEcheance, montantDu, montantPaye, restant, statut;
+  const LigneOuverte({required this.appelDeFondsLotId, required this.periode, required this.type, required this.dateEcheance, required this.montantDu, required this.montantPaye, required this.restant, required this.statut});
+  factory LigneOuverte.fromJson(Map<String, dynamic> j) => LigneOuverte(appelDeFondsLotId: _s(j, 'appel_de_fonds_lot_id'), periode: _s(j, 'periode'), type: _s(j, 'type'), dateEcheance: _s(j, 'date_echeance'), montantDu: _s(j, 'montant_du'), montantPaye: _s(j, 'montant_paye'), restant: _s(j, 'restant'), statut: _s(j, 'statut'));
+}
+
+class Justificatif {
+  final String id, coproprieteId, lotId, declareParId, montant, methode, datePaiementDeclaree, beneficiaire, statut, creeLe;
+  final String? appelDeFondsLotId, banqueEmettrice, reference, documentId, traiteParId, traiteLe, motifRejet, paiementId, lotNumero, declareParNom, traiteParNom, preuveUrl, preuveNom;
+  final List<LigneOuverte> lignesOuvertes;
+  final Map<String, dynamic> details;
+  const Justificatif({required this.id, required this.coproprieteId, required this.lotId, required this.declareParId, required this.montant, required this.methode, required this.datePaiementDeclaree, required this.beneficiaire, required this.statut, required this.creeLe, this.appelDeFondsLotId, this.banqueEmettrice, this.reference, this.documentId, this.traiteParId, this.traiteLe, this.motifRejet, this.paiementId, this.lotNumero, this.declareParNom, this.traiteParNom, this.preuveUrl, this.preuveNom, this.lignesOuvertes = const [], this.details = const {}});
+  static String? _nom(dynamic v) {
+    final m = _map(v);
+    if (m == null) return null;
+    final n = [m['prenom'], m['nom']].whereType<String>().where((x) => x.isNotEmpty).join(' ');
+    return n.isEmpty ? null : n;
+  }
+  factory Justificatif.fromJson(Map<String, dynamic> j) => Justificatif(
+        id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), lotId: _s(j, 'lotId'), declareParId: _s(j, 'declareParId'), montant: _s(j, 'montant'), methode: _s(j, 'methode'),
+        datePaiementDeclaree: _s(j, 'datePaiementDeclaree'), beneficiaire: _s(j, 'beneficiaire'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+        appelDeFondsLotId: _sn(j, 'appelDeFondsLotId'), banqueEmettrice: _sn(j, 'banqueEmettrice'), reference: _sn(j, 'reference'), documentId: _sn(j, 'documentId'),
+        traiteParId: _sn(j, 'traiteParId'), traiteLe: _sn(j, 'traiteLe'), motifRejet: _sn(j, 'motifRejet'), paiementId: _sn(j, 'paiementId'),
+        lotNumero: _map(j['lot'])?['numero']?.toString(), declareParNom: _nom(j['declarePar']), traiteParNom: _nom(j['traitePar']),
+        preuveUrl: _map(j['preuve'])?['url']?.toString(), preuveNom: _map(j['preuve'])?['nom']?.toString(),
+        lignesOuvertes: _list(j['lignes_ouvertes'], LigneOuverte.fromJson), details: _map(j['detailsJson']) ?? const {},
+      );
+  bool get enAttente => statut == 'EN_ATTENTE';
 }
 
 // ── M16 — Dépenses, factures, postes budgétaires ────────────────────────────

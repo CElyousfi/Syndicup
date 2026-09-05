@@ -26,3 +26,4 @@ const Map<String, BadgeVariant> sejourVariant = {'PREVU': BadgeVariant.info, 'EN
 // M16 — dépenses et factures (même palette que apps/web/lib/status.ts).
 const Map<String, BadgeVariant> depenseVariant = {'BROUILLON': BadgeVariant.outline, 'A_APPROUVER': BadgeVariant.warn, 'APPROUVEE': BadgeVariant.info, 'REJETEE': BadgeVariant.danger, 'PAYEE': BadgeVariant.ok, 'ANNULEE': BadgeVariant.neutral};
 const Map<String, BadgeVariant> factureVariant = {'RECUE': BadgeVariant.neutral, 'VERIFIEE': BadgeVariant.info, 'CONTESTEE': BadgeVariant.danger, 'REGLEE': BadgeVariant.ok};
+const Map<String, BadgeVariant> justificatifVariant = {'EN_ATTENTE': BadgeVariant.warn, 'VALIDE': BadgeVariant.ok, 'REJETE': BadgeVariant.danger, 'ANNULE': BadgeVariant.neutral};

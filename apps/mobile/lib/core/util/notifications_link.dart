@@ -19,6 +19,10 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('VISITE_')) return id('visite_id') != null ? '/visites/${id('visite_id')}' : '/visites';
   if (templateCode.startsWith('RESERVATION_')) return '/reservations';
   if (templateCode.startsWith('LITIGE_')) return '/litiges';
+  // M17 — justificatifs : déclaration à valider, validation, rejet, espèces, relance.
+  if (templateCode.startsWith('JUSTIFICATIF_') || templateCode == 'PAIEMENT_VALIDE' || templateCode == 'PAIEMENT_ESPECES_SAISI') {
+    return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
+  }
   // M16 — dépenses : approbation, décision, échéance de facture.
   if (templateCode.startsWith('DEPENSE_') || templateCode == 'FACTURE_ECHEANCE_PROCHE') {
     return id('depense_id') != null ? '/depenses/${id('depense_id')}' : '/depenses';

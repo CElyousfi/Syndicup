@@ -28,6 +28,7 @@ et remises à « non configuré » (null) si l'avocat infirme.
 | `seuil_approbation_conseil` (M16) | **5 000 MAD** (seed Al Amal ; NULL = approbation syndic explicite sur tout, rapports « seuil non configuré ») | §8.1 — Doc A §8.3 « seuil configurable (ex : 5000 DH) » |
 | `reserve_sans_resolution_autorisee` (M16) | **false** | §8.2 — Doc A §3.6 « décision AG requise sauf urgence définie dans le règlement » |
 | `tva_par_defaut` (M16) | **20 %** (pré-remplissage seulement, le TTC saisi fait foi) | §8.3 — taux normal de TVA marocain, à confirmer par poste |
+| `delai_validation_justificatif_jours` (M17) | **5 jours** (seed ; NULL = aucun rappel) | §8.5 — délai de traitement d'un justificatif par le syndic |
 
 **À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
 d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
@@ -265,6 +266,20 @@ prestations de services) relèvent de taux réduits ou d'exonérations selon la 
 **À confirmer :** la copropriété (non assujettie en principe) doit-elle contrôler la ventilation
 HT/TVA des factures reçues ? Le module ne fait qu'un contrôle arithmétique (HT + TVA = TTC) et un
 pré-remplissage ; aucun taux n'est appliqué automatiquement.
+
+### 8.5 — Justificatifs de paiement des résidents (module M17)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `delai_validation_justificatif_jours` | **NULL par défaut** (5 posé par le seed) — rappel au syndic tant qu'un justificatif attend | PROVISOIRE |
+
+**À confirmer :** (1) la déclaration de paiement avec preuve téléversée (reçu de virement, photo de
+chèque) a-t-elle une valeur probante vis-à-vis du syndic tant qu'elle n'est pas validée ? Le module
+ne déduit rien du solde avant validation et suspend seulement l'escalade des impayés sur la ligne
+couverte ; (2) conservation des preuves (données bancaires du résident : banque émettrice,
+référence) — durée et base CNDP, aujourd'hui alignée sur la rétention des pièces financières ;
+(3) espèces reçues par le gardien : la remise enregistrée dans l'application (horodatée, confirmée
+par le syndic) vaut-elle reçu, ou un reçu papier reste-t-il obligatoire ?
 
 ### 8.4 — Approbation des comptes en AG et conservation des pièces
 

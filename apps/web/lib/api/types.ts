@@ -328,6 +328,9 @@ export interface AppelDeFonds {
 }
 
 export interface SoldeLot {
+  /** M17 — paiements déclarés en attente de validation (jamais déduits du solde dû). */
+  justificatifs_en_attente?: string;
+  nb_justificatifs_en_attente?: number;
   lot_id: string;
   solde_du: string;
   lignes: Array<{
@@ -698,6 +701,45 @@ export interface BudgetVsRealise {
   seuil_approbation_conseil: string | null;
   seuil_non_configure: boolean;
   nb_a_approuver: number;
+}
+
+// ── M17 — Justificatifs de paiement ─────────────────────────────────────────
+export type StatutJustificatif = "EN_ATTENTE" | "VALIDE" | "REJETE" | "ANNULE";
+export interface Justificatif {
+  id: string;
+  coproprieteId: string;
+  lotId: string;
+  appelDeFondsLotId: string | null;
+  declareParId: string;
+  montant: string;
+  methode: "VIREMENT" | "CHEQUE" | "ESPECES";
+  datePaiementDeclaree: string;
+  banqueEmettrice: string | null;
+  beneficiaire: string;
+  reference: string | null;
+  documentId: string | null;
+  statut: StatutJustificatif;
+  traiteParId: string | null;
+  traiteLe: string | null;
+  motifRejet: string | null;
+  paiementId: string | null;
+  detailsJson: { affectations?: Array<{ appel_de_fonds_lot_id: string; montant: string; statut: string }>; date_valeur?: string; quittance_id?: string | null } | null;
+  creeLe: string;
+  lot?: { id: string; numero: string; typeLot: string };
+  declarePar?: { id: string; nom: string | null; prenom: string | null } | null;
+  traitePar?: { id: string; nom: string | null; prenom: string | null } | null;
+  document?: { id: string; nom: string } | null;
+}
+export interface JustificatifDetail extends Justificatif {
+  preuve: { nom: string; url: string } | null;
+  lignes_ouvertes: Array<{ appel_de_fonds_lot_id: string; periode: string; type: string; date_echeance: string; montant_du: string; montant_paye: string; restant: string; statut: string }>;
+  paiements: Array<{ id: string; montant: string; appelDeFondsLotId: string; horodatage: string }>;
+}
+export interface CompteBancaire {
+  index: number;
+  libelle: string;
+  banque: string;
+  rib_masque: string;
 }
 
 export interface PrestataireFiche extends Prestataire {
