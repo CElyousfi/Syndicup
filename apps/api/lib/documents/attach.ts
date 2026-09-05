@@ -15,7 +15,7 @@ import type { TenantDb } from "../tenant/db";
 import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
 import type { TypeDocumentSysteme } from "./types";
 
-export type ModuleDocument = "depenses" | "justificatifs" | "contrats" | "personnel" | "communication" | "taches" | "parkings" | "import";
+export type ModuleDocument = "depenses" | "justificatifs" | "rapports" | "contrats" | "personnel" | "communication" | "taches" | "parkings" | "import";
 
 export class CheminHorsPerimetreError extends Error {}
 

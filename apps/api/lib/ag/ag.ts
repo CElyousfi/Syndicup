@@ -271,15 +271,22 @@ export async function creerResolution(
   if (can("ag.gerer_resolutions", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ajouter une résolution.");
   }
-  return withTenant(ctx, async (db) => {
-    const ag = await db.assembleeGenerale.findUnique({ where: { id: agId } });
-    if (!ag) throw new AgIntrouvableError("AG introuvable.");
-    if (ag.statut === "CLOTUREE" || ag.statut === "ANNULEE") {
-      throw new ContrainteMetierError(`Ajout de résolution impossible depuis le statut ${ag.statut}.`);
-    }
-    return db.agResolution.create({
-      data: { agId, ordre: input.ordre, texte: input.texte, typeMajorite: input.type_majorite },
-    });
+  return withTenant(ctx, (db) => creerResolutionDb(db, agId, input));
+}
+
+/**
+ * Cœur de la création d'une résolution, réutilisable dans une transaction tenant déjà ouverte
+ * (M18 : soumission du rapport de gestion → résolution « approbation des comptes » créée par CE
+ * service, jamais dupliqué). Les contrôles de permission restent à la charge de l'appelant.
+ */
+export async function creerResolutionDb(db: TenantDb, agId: string, input: AgResolutionCreateInput) {
+  const ag = await db.assembleeGenerale.findUnique({ where: { id: agId } });
+  if (!ag) throw new AgIntrouvableError("AG introuvable.");
+  if (ag.statut === "CLOTUREE" || ag.statut === "ANNULEE") {
+    throw new ContrainteMetierError(`Ajout de résolution impossible depuis le statut ${ag.statut}.`);
+  }
+  return db.agResolution.create({
+    data: { agId, ordre: input.ordre, texte: input.texte, typeMajorite: input.type_majorite },
   });
 }
 
@@ -505,7 +512,12 @@ export async function finaliserResolution(ctx: TenantContext, agId: string, reso
       tallies,
       copropriete?.totalTantiemes ? money(copropriete.totalTantiemes).toString() : null
     );
-    return db.agResolution.update({ where: { id: resolutionId }, data: { resultat } });
+    const maj = await db.agResolution.update({ where: { id: resolutionId }, data: { resultat } });
+    // M18 — hook : une résolution « approbation des comptes » finalisée bascule le rapport de gestion
+    // lié en APPROUVE / REJETE (Doc A §6 / §8) — même transaction, audité.
+    const { finaliserRapportsLies } = await import("../rapports/gestion");
+    await finaliserRapportsLies(db, ctx, resolutionId, resultat);
+    return maj;
   });
 }
 

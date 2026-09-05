@@ -436,6 +436,15 @@ const JUSTIFICATIFS: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, JUSTIFICATIFS);
 
+// ── M18 — Rapports de gestion (Doc A §8 reddition des comptes, §6 approbation en AG) ─────────
+const RAPPORTS: Record<string, Entree> = {
+  RAPPORT_GESTION_DISPONIBLE: {
+    FR: { titre: "Rapport de gestion {{exercice}} disponible", corps: "Le rapport de gestion de l'exercice {{exercice}} est soumis à l'approbation de l'AG du {{date_ag}}. Consultez-le dans l'application (Documents / Transparence)." },
+    AR: { titre: "تقرير التسيير {{exercice}} متاح", corps: "تقرير التسيير للسنة المالية {{exercice}} معروض على مصادقة الجمعية العامة بتاريخ {{date_ag}}. يمكنكم الاطلاع عليه في التطبيق (الوثائق / الشفافية)." },
+  },
+};
+Object.assign(TEMPLATES, RAPPORTS);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

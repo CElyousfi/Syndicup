@@ -256,7 +256,7 @@ export async function listerDepenses(ctx: TenantContext, filtres: DepensesFiltre
 }
 
 /** Itérateur CSV — même filtre que la liste, pagination interne (jamais tout en mémoire). */
-export async function exporterDepensesCsv(ctx: TenantContext, filtres: DepensesFiltres): Promise<{ entetes: string[]; lignes: CelluleCsv[][]; nbLignes: number }> {
+export async function exporterDepensesCsv(ctx: TenantContext, filtres: DepensesFiltres, format: "csv" | "xlsx" = "csv"): Promise<{ entetes: string[]; lignes: CelluleCsv[][]; nbLignes: number }> {
   if (can("depenses.exporter", ctx.role) !== true) throw new PermissionRefuseeError("Rôle non autorisé à exporter les dépenses.");
   return withTenant(ctx, async (db) => {
     const where = whereFiltres(ctx, filtres);
@@ -284,7 +284,7 @@ export async function exporterDepensesCsv(ctx: TenantContext, filtres: DepensesF
       }
       if (page.length < taille) break;
     }
-    await journaliserExport(db, ctx, { type: "DEPENSES", filtres: filtres as Record<string, unknown>, nbLignes: lignes.length });
+    await journaliserExport(db, ctx, { type: "DEPENSES", filtres: filtres as Record<string, unknown>, nbLignes: lignes.length, format });
     return {
       entetes: ["date", "libelle", "categorie", "poste", "prestataire", "montant_ht", "tva", "montant_ttc", "statut", "source", "methode_paiement", "reference_paiement", "paye_le", "nb_factures"],
       lignes,

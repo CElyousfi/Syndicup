@@ -256,6 +256,9 @@ model Copropriete {
   comptesBancairesJson             Json?                     @map("comptes_bancaires_json")
   // Rappel au syndic quand un justificatif reste EN_ATTENTE plus de N jours — nullable, jamais deviné.
   delaiValidationJustificatifJours Int?                      @map("delai_validation_justificatif_jours")
+  // M18 — Transparence (Doc A §3.5) : les résidents voient la liste des dépenses PAYEE ; les
+  // factures elles-mêmes ne leur sont exposées que si le syndic active cette option.
+  facturesVisiblesResidents        Boolean                   @default(false) @map("factures_visibles_residents")
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
@@ -283,6 +286,8 @@ model Copropriete {
   depenses            Depense[]
   depenseLogs         DepenseLog[]
   justificatifs       JustificatifPaiement[]
+  rapportsGestion     RapportGestion[]
+  exportLogs          ExportLog[]
 
   @@map("copropriete")
 }
@@ -334,6 +339,8 @@ model Utilisateur {
   justificatifsDeclares    JustificatifPaiement[]    @relation("JustificatifDeclarant")
   justificatifsTraites     JustificatifPaiement[]    @relation("JustificatifTraitant")
   paiementsEnregistres     Paiement[]                @relation("PaiementEnregistreur")
+  rapportsGeneres          RapportGestion[]          @relation("RapportGenerateur")
+  exportLogs               ExportLog[]
 
   @@map("utilisateur")
 }
@@ -532,6 +539,7 @@ model Document {
   depensesJustifiees Depense[]              @relation("DepenseJustificatifPaiement")
   justificatifs      JustificatifPaiement[] @relation("JustificatifPreuve")
   paiementsPreuve    Paiement[]             @relation("PaiementPreuve")
+  rapportsGestion    RapportGestion[]       @relation("RapportGestionPdf")
 
   @@index([coproprieteId])
   @@map("document")
@@ -876,8 +884,9 @@ model BudgetAg {
   // M16 — `montantTotal` = Σ budget_poste.montant_prevu, tenu à jour par le trigger
   // `budget_ag_recalculer_total` (migration m16) — jamais modifié directement quand des lignes
   // existent (service : 422 BUDGET_TOTAL_DERIVE_DES_POSTES).
-  postes   BudgetPoste[]
-  depenses Depense[]
+  postes          BudgetPoste[]
+  depenses        Depense[]
+  rapportsGestion RapportGestion[]
 
   @@index([coproprieteId])
   @@index([agId])
@@ -1299,6 +1308,7 @@ model AssembleeGenerale {
   pv               AgPv?
   notificationLogs AgNotificationLog[]
   budgets          BudgetAg[]
+  rapportsGestion  RapportGestion[]
 
   @@index([coproprieteId])
   @@map("assemblee_generale")
@@ -1316,8 +1326,9 @@ model AgResolution {
   modifieLe    DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
   votes                 AgVote[]
-  coproprietesRegimeLcd Copropriete[] @relation("CoproprieteRegimeLcdResolution")
+  coproprietesRegimeLcd Copropriete[]    @relation("CoproprieteRegimeLcdResolution")
   depenses              Depense[]
+  rapportsGestion       RapportGestion[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1779,4 +1790,72 @@ model JustificatifPaiement {
   @@index([lotId])
   @@index([declareParId])
   @@map("justificatif_paiement")
+}
+
+// ============================================================================
+// M18 — RAPPORTS, RAPPORT DE GESTION ANNUEL, EXPORTS, TRANSPARENCE (Doc A §8 reddition des
+// comptes, §6 approbation des comptes en AG, §3.5 transparence « où va mon argent »).
+// Le rapport de gestion fige dans `donnees_json` TOUS les chiffres utilisés (trésorerie, budget vs
+// réalisé, impayés, grand livre, faits marquants) : le PDF (FR + AR) est reproductible et
+// auditable. Soumis à l'AG, il est lié à une résolution « approbation des comptes » créée par le
+// service AG existant ; la finalisation de la résolution le passe APPROUVE / REJETE (hook ag.ts).
+// `export_log` est APPEND-ONLY : chaque export CSV / XLSX / PDF est tracé (CNDP : qui a extrait
+// quelles données personnelles, quand). ⚠️ Ajouts signalés au-delà du Master Spec : enum
+// StatutRapportGestion, tables rapport_gestion / export_log, copropriete.factures_visibles_residents.
+// ============================================================================
+
+enum StatutRapportGestion {
+  BROUILLON
+  GENERE
+  SOUMIS_AG
+  APPROUVE
+  REJETE
+}
+
+model RapportGestion {
+  id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId  String               @map("copropriete_id") @db.Uuid
+  copropriete    Copropriete          @relation(fields: [coproprieteId], references: [id])
+  // Exercice comptable « YYYY » — unique par copropriété hors rapports REJETE (index partiel, migration).
+  exercice       String
+  budgetAgId     String?              @map("budget_ag_id") @db.Uuid
+  budgetAg       BudgetAg?            @relation(fields: [budgetAgId], references: [id])
+  statut         StatutRapportGestion @default(GENERE)
+  agId           String?              @map("ag_id") @db.Uuid
+  ag             AssembleeGenerale?   @relation(fields: [agId], references: [id])
+  resolutionAgId String?              @map("resolution_ag_id") @db.Uuid
+  resolutionAg   AgResolution?        @relation(fields: [resolutionAgId], references: [id])
+  // PDF généré (Document.type = RAPPORT_GESTION, visibilité CONSEIL_SYNDICAL jusqu'à la soumission).
+  documentId     String?              @map("document_id") @db.Uuid
+  document       Document?            @relation("RapportGestionPdf", fields: [documentId], references: [id])
+  // Instantané figé de chaque chiffre (montants en chaînes décimales) — source du PDF.
+  donneesJson    Json                 @map("donnees_json")
+  genereParId    String               @map("genere_par_id") @db.Uuid
+  generePar      Utilisateur          @relation("RapportGenerateur", fields: [genereParId], references: [id])
+  genereLe       DateTime             @default(now()) @map("genere_le") @db.Timestamptz
+  creeLe         DateTime             @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe      DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([coproprieteId, exercice])
+  @@index([resolutionAgId])
+  @@map("rapport_gestion")
+}
+
+/// Journal des exports — APPEND-ONLY (pas de modifie_le, GRANT SELECT+INSERT uniquement).
+model ExportLog {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String      @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  // Ex. DEPENSES, LOTS, PROPRIETAIRES, PAIEMENTS, IMPAYES, GRAND_LIVRE, RELEVE_LOT, RAPPORT_GESTION_PDF…
+  type          String
+  // Format (csv / xlsx / pdf) + filtres appliqués — jamais les données exportées elles-mêmes.
+  filtresJson   Json?       @map("filtres_json")
+  nbLignes      Int         @map("nb_lignes")
+  horodatage    DateTime    @default(now()) @db.Timestamptz
+
+  @@index([coproprieteId, horodatage])
+  @@index([utilisateurId])
+  @@map("export_log")
 }

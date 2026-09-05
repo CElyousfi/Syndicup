@@ -6,6 +6,9 @@ import { enforceRateLimit } from "../../../../lib/rate-limit/apply";
 import { RATE_LIMITS } from "../../../../lib/rate-limit";
 import { readIdempotencyKey } from "../../../../lib/http/idempotency";
 import { withApiHandler } from "../../../../lib/http/handler";
+import { formatDemande, reponseExport } from "../../../../lib/http/export";
+import { exporterPaiements } from "../../../../lib/rapports/exports";
+import { mapErreurRapports } from "../../../../lib/rapports/http";
 import { paiementManuelCreateSchema } from "../../../../lib/finances/schemas";
 import {
   enregistrerPaiementManuel,
@@ -21,9 +24,18 @@ import { ok, fail, failZod } from "../../../../lib/http/respond";
 async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
-    const exercice = new URL(req.url).searchParams.get("exercice") ?? undefined;
+    const url = new URL(req.url);
+    const exercice = url.searchParams.get("exercice") ?? undefined;
+    // M18 — export journalisé (export_log) : ?format=csv|xlsx.
+    const format = formatDemande(url);
+    if (format !== "json") {
+      const { entetes, lignes } = await exporterPaiements(ctx, exercice, format);
+      return reponseExport(format, `paiements-${exercice ?? "tous"}`, entetes, lignes);
+    }
     return ok(await listerPaiements(ctx, exercice));
   } catch (e) {
+    const rapports = mapErreurRapports(e);
+    if (rapports) return rapports;
     const mapped = mapAuthError(e);
     if (mapped) return mapped;
     if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);

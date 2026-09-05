@@ -34,6 +34,7 @@ tags:
   - name: LCD
   - name: Dépenses
   - name: Justificatifs
+  - name: Rapports
     description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
@@ -1454,6 +1455,304 @@ components:
         plaque_vehicule: { type: string, nullable: true }
         pieces_jointes: { type: array, maxItems: 10, items: { type: string } }
 
+    # ── M18 — Rapports, rapport de gestion, exports, transparence (Doc A §8, §6, §3.5 — ⚠️ module absent du Master Spec, signalé ROADMAP M18) ──
+    StatutRapportGestion:
+      type: string
+      enum: [BROUILLON, GENERE, SOUMIS_AG, APPROUVE, REJETE]
+    Recouvrement:
+      type: object
+      properties:
+        appele: { $ref: "#/components/schemas/Money" }
+        encaisse: { $ref: "#/components/schemas/Money" }
+        reste: { $ref: "#/components/schemas/Money" }
+        taux: { type: string, nullable: true, description: "Pourcentage (1 décimale), null si rien n'a été appelé." }
+        nb_lignes: { type: integer }
+    TrancheAnciennete:
+      type: object
+      properties:
+        tranche: { type: string, enum: [0_30, 31_90, 91_180, PLUS_180] }
+        montant: { $ref: "#/components/schemas/Money" }
+        nb_lignes: { type: integer }
+        nb_lots: { type: integer }
+    Tresorerie:
+      type: object
+      description: "Compte courant ESTIMÉ = Σ paiements VALIDE − Σ dépenses PAYEE compte courant (aucune API bancaire — décision M18) ; réserve = solde du ledger fonds_reserve_mouvement."
+      properties:
+        compte_courant_estime: { $ref: "#/components/schemas/Money" }
+        total_entrees: { $ref: "#/components/schemas/Money" }
+        total_sorties_compte_courant: { $ref: "#/components/schemas/Money" }
+        reserve: { $ref: "#/components/schemas/Money" }
+        reserve_configuree: { type: boolean }
+        serie_12_mois:
+          type: array
+          items:
+            type: object
+            properties:
+              mois: { type: string, example: "2026-09" }
+              entrees: { $ref: "#/components/schemas/Money" }
+              sorties: { $ref: "#/components/schemas/Money" }
+              solde: { $ref: "#/components/schemas/Money" }
+    TableauDeBord:
+      type: object
+      properties:
+        exercice: { type: string }
+        genere_le: { type: string, format: date-time }
+        tresorerie: { $ref: "#/components/schemas/Tresorerie" }
+        recouvrement:
+          type: object
+          properties:
+            exercice: { $ref: "#/components/schemas/Recouvrement" }
+            periode: { $ref: "#/components/schemas/Recouvrement" }
+        impayes:
+          type: object
+          properties:
+            total: { $ref: "#/components/schemas/Money" }
+            nb_lots_en_retard: { type: integer }
+            nb_lignes: { type: integer }
+            tranches: { type: array, items: { $ref: "#/components/schemas/TrancheAnciennete" } }
+            top_lots:
+              type: array
+              description: "5 lots les plus en retard (syndic / conseil uniquement)."
+              items:
+                type: object
+                properties:
+                  lot_id: { type: string, format: uuid }
+                  lot_numero: { type: string }
+                  reste_du: { $ref: "#/components/schemas/Money" }
+                  nb_lignes: { type: integer }
+                  retard_max_jours: { type: integer }
+                  conteste: { type: boolean }
+        depenses:
+          type: object
+          properties:
+            exercice: { $ref: "#/components/schemas/DepensesParCategorie" }
+            mois: { $ref: "#/components/schemas/DepensesParCategorie" }
+        budget_vs_realise: { $ref: "#/components/schemas/BudgetVsRealise" }
+        incidents_ouverts:
+          type: object
+          properties:
+            total: { type: integer }
+            par_urgence: { type: object, additionalProperties: { type: integer } }
+        justificatifs_en_attente:
+          type: object
+          properties:
+            nb: { type: integer }
+            montant: { $ref: "#/components/schemas/Money" }
+        contrats: { type: object, nullable: true, description: "M19 — null tant que le module Contrats n'est pas livré." }
+    DepensesParCategorie:
+      type: object
+      properties:
+        total: { $ref: "#/components/schemas/Money" }
+        nb: { type: integer }
+        categories:
+          type: array
+          items:
+            type: object
+            properties:
+              categorie: { $ref: "#/components/schemas/CategorieDepense" }
+              montant: { $ref: "#/components/schemas/Money" }
+              nb: { type: integer }
+              part: { type: string, nullable: true, description: "% du total (1 décimale)." }
+    Transparence:
+      type: object
+      description: "Vue « où va mon argent » — agrégats de niveau copropriété UNIQUEMENT (jamais de lot, jamais de montant par lot)."
+      properties:
+        exercice: { type: string }
+        copropriete: { type: string, nullable: true }
+        factures_visibles: { type: boolean }
+        tresorerie:
+          type: object
+          properties:
+            compte_courant_estime: { $ref: "#/components/schemas/Money" }
+            reserve: { $ref: "#/components/schemas/Money" }
+            reserve_configuree: { type: boolean }
+        recouvrement:
+          type: object
+          properties:
+            exercice: { type: string, nullable: true, description: "Taux en %." }
+            appele: { $ref: "#/components/schemas/Money" }
+            encaisse: { $ref: "#/components/schemas/Money" }
+        impayes:
+          type: object
+          properties:
+            total: { $ref: "#/components/schemas/Money" }
+            nb_lots_en_retard: { type: integer }
+        budget_vs_realise:
+          type: object
+          properties:
+            budget: { type: object, nullable: true }
+            postes:
+              type: array
+              items:
+                type: object
+                properties:
+                  poste_id: { type: string, format: uuid }
+                  libelle: { type: string }
+                  categorie: { $ref: "#/components/schemas/CategorieDepense" }
+                  montant_prevu: { $ref: "#/components/schemas/Money" }
+                  realise: { $ref: "#/components/schemas/Money" }
+                  pourcentage_realise: { type: string, nullable: true }
+                  depassement: { type: boolean }
+            totaux: { type: object }
+            fonds_reserve: { type: object }
+        depenses_par_categorie: { $ref: "#/components/schemas/DepensesParCategorie" }
+        depenses:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              libelle: { type: string }
+              categorie: { $ref: "#/components/schemas/CategorieDepense" }
+              montant_ttc: { $ref: "#/components/schemas/Money" }
+              source: { type: string }
+              date: { type: string, format: date }
+              prestataire: { type: string, nullable: true }
+              poste: { type: string, nullable: true }
+              factures:
+                type: array
+                description: "Présent uniquement si `factures_visibles` (option syndic)."
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    numero: { type: string, nullable: true }
+                    montant_ttc: { $ref: "#/components/schemas/Money" }
+                    url: { type: string, description: "URL signée 15 min." }
+        rapports_gestion:
+          type: array
+          items:
+            type: object
+            properties:
+              document_id: { type: string, format: uuid }
+              nom: { type: string }
+              date: { type: string, format: date-time }
+    LigneGrandLivre:
+      type: object
+      properties:
+        date: { type: string, format: date }
+        type: { type: string, enum: [ENTREE, SORTIE, RESERVE] }
+        compte: { type: string, enum: [COMPTE_COURANT, FONDS_RESERVE] }
+        libelle: { type: string }
+        reference: { type: string, nullable: true }
+        tiers: { type: string, nullable: true }
+        categorie: { type: string, nullable: true }
+        entree: { $ref: "#/components/schemas/Money" }
+        sortie: { $ref: "#/components/schemas/Money" }
+        solde_compte_courant: { $ref: "#/components/schemas/Money" }
+        solde_reserve: { $ref: "#/components/schemas/Money" }
+        entite: { type: string, enum: [paiement, depense, fonds_reserve_mouvement] }
+        entite_id: { type: string, format: uuid }
+    GrandLivre:
+      type: object
+      properties:
+        exercice: { type: string }
+        ouverture:
+          type: object
+          properties:
+            compte_courant: { $ref: "#/components/schemas/Money" }
+            reserve: { $ref: "#/components/schemas/Money" }
+        totaux:
+          type: object
+          properties:
+            entrees: { $ref: "#/components/schemas/Money" }
+            sorties_compte_courant: { $ref: "#/components/schemas/Money" }
+            sorties_reserve: { $ref: "#/components/schemas/Money" }
+            mouvements_reserve: { $ref: "#/components/schemas/Money" }
+        cloture:
+          type: object
+          properties:
+            compte_courant: { $ref: "#/components/schemas/Money" }
+            reserve: { $ref: "#/components/schemas/Money" }
+        nb_lignes: { type: integer }
+        lignes: { type: array, items: { $ref: "#/components/schemas/LigneGrandLivre" } }
+    RapportGestion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        exercice: { type: string }
+        statut: { $ref: "#/components/schemas/StatutRapportGestion" }
+        budget_ag_id: { type: string, format: uuid, nullable: true }
+        ag: { type: object, nullable: true }
+        resolution: { type: object, nullable: true, description: "Résolution « approbation des comptes » (ordre, texte, type_majorite, resultat)." }
+        document_id: { type: string, format: uuid, nullable: true, description: "PDF publique FR — Document RAPPORT_GESTION (CONSEIL_SYNDICAL puis PUBLIC_COPROPRIETE à la soumission)." }
+        document_visibilite: { type: string, nullable: true }
+        document_url: { type: string, nullable: true, description: "Détail uniquement — URL signée 15 min." }
+        genere_par: { type: object, nullable: true }
+        genere_le: { type: string, format: date-time }
+        resume:
+          type: object
+          properties:
+            compte_courant_cloture: { $ref: "#/components/schemas/Money" }
+            reserve_cloture: { $ref: "#/components/schemas/Money" }
+            taux_recouvrement: { type: string, nullable: true }
+            impayes_total: { $ref: "#/components/schemas/Money" }
+            nb_lots_en_retard: { type: integer }
+            depenses_total: { $ref: "#/components/schemas/Money" }
+            budget_prevu: { $ref: "#/components/schemas/Money" }
+            budget_realise: { $ref: "#/components/schemas/Money" }
+        donnees: { type: object, description: "Détail uniquement — instantané figé (version 1) de tous les chiffres : trésorerie, recouvrement, impayés (par lot), budget vs réalisé, dépenses, réserve, faits marquants." }
+        pdf_erreur: { type: string, nullable: true, description: "Génération uniquement — le rapport reste BROUILLON si le PDF a échoué (régénérable)." }
+    RapportGestionCreate:
+      type: object
+      required: [exercice]
+      properties:
+        exercice: { type: string, pattern: "^\\d{4}$" }
+        budget_ag_id: { type: string, format: uuid, nullable: true, description: "Défaut = budget ACTIF de l'exercice." }
+    RapportSoumettreAg:
+      type: object
+      required: [ag_id]
+      properties:
+        ag_id: { type: string, format: uuid, description: "AG PLANIFIEE ou CONVOQUEE de la copropriété." }
+        type_majorite: { type: string, enum: [SIMPLE, DOUBLE, UNANIMITE], description: "Sinon lu dans config_json.majorite_approbation_comptes ; absent des deux → 422 RAPPORT_PARAMETRE_NON_CONFIGURE (brief §9)." }
+    LigneImpayee:
+      type: object
+      properties:
+        appel_de_fonds_lot_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        lot_numero: { type: string }
+        periode: { type: string }
+        type: { type: string }
+        date_echeance: { type: string, format: date }
+        montant_du: { $ref: "#/components/schemas/Money" }
+        montant_paye: { $ref: "#/components/schemas/Money" }
+        reste_du: { $ref: "#/components/schemas/Money" }
+        retard_jours: { type: integer }
+        tranche: { type: string, enum: [0_30, 31_90, 91_180, PLUS_180] }
+        statut: { type: string }
+        conteste: { type: boolean }
+        niveau_escalade: { type: string }
+    ReleveLot:
+      type: object
+      description: "Relevé de charges (« état daté », Doc A §11) — appels de l'exercice, paiements, déclarations en attente, soldes."
+      properties:
+        exercice: { type: string }
+        emis_le: { type: string, format: date-time }
+        copropriete: { type: object }
+        lot: { type: object }
+        proprietaires: { type: array, items: { type: object } }
+        appels: { type: array, items: { type: object } }
+        paiements: { type: array, items: { type: object } }
+        justificatifs_en_attente: { type: array, items: { type: object } }
+        totaux:
+          type: object
+          properties:
+            appele: { $ref: "#/components/schemas/Money" }
+            paye: { $ref: "#/components/schemas/Money" }
+            solde_exercice: { $ref: "#/components/schemas/Money" }
+            solde_total_du: { $ref: "#/components/schemas/Money" }
+            en_attente: { $ref: "#/components/schemas/Money" }
+    ExportLog:
+      type: object
+      description: "Journal append-only des exports (CNDP) — jamais les données exportées elles-mêmes."
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, example: PROPRIETAIRES }
+        filtres: { type: object, nullable: true }
+        nb_lignes: { type: integer }
+        horodatage: { type: string, format: date-time }
+        utilisateur: { type: object }
+
   responses:
     ValidationError:
       description: Payload invalide.
@@ -1968,6 +2267,7 @@ paths:
     get:
       tags: [Lots]
       parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
       responses:
@@ -2604,6 +2904,7 @@ paths:
         synthèse : la RLS via le lot limite un résident à ses propres lots ; syndic/conseil
         voient tout. Filtre optionnel `exercice` (année civile, YYYY). Ordre antéchronologique.
       parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
         - name: exercice
           in: query
           required: false
@@ -3139,6 +3440,8 @@ paths:
         voient tout ; un résident ne voit que les incidents qu'il a créés ; un prestataire ne voit
         que les incidents qui lui sont assignés.
       parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
       responses:
         "200":
           description: OK
@@ -4818,3 +5121,255 @@ paths:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── M18 — Rapports, rapport de gestion, exports, transparence ──
+  /rapports/tableau-de-bord:
+    get:
+      tags: [Rapports]
+      summary: "Tableau de bord de gestion (syndic / conseil) : trésorerie + 12 mois, recouvrement, impayés par ancienneté et top 5 lots, dépenses par catégorie, budget vs réalisé, incidents ouverts, justificatifs en attente."
+      parameters:
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' }, description: Défaut = année courante. }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/TableauDeBord" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /rapports/transparence:
+    get:
+      tags: [Rapports]
+      summary: "« Où va mon argent » — tout membre, locataires compris : agrégats de niveau copropriété, JAMAIS de donnée par lot ; dépenses PAYEE paginées, factures si option syndic."
+      parameters:
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Transparence" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /rapports/grand-livre:
+    get:
+      tags: [Rapports]
+      summary: "Grand livre de l'exercice (syndic / conseil) — paiements, dépenses payées, mouvements de réserve, soldes courants. `format=csv|xlsx` = export journalisé (export_log GRAND_LIVRE)."
+      parameters:
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/GrandLivre" }
+            text/csv: { schema: { type: string } }
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: { schema: { type: string, format: binary } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /rapports/gestion:
+    get:
+      tags: [Rapports]
+      summary: "Rapports de gestion de la copropriété (syndic / conseil) — filtres statut / exercice, tri `exercice|genere_le|statut`."
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - { name: sort, in: query, schema: { type: string } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutRapportGestion" } }
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/RapportGestion" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Rapports]
+      summary: "Génère le rapport de gestion d'un exercice (syndic) : instantané figé de tous les chiffres + PDF publique FR (Document RAPPORT_GESTION). Un BROUILLON / GENERE du même exercice est régénéré (200) ; SOUMIS_AG / APPROUVE → 409. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RapportGestionCreate" }
+      responses:
+        "201":
+          description: Créé (GENERE, ou BROUILLON si le PDF a échoué).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RapportGestion" }
+        "200": { description: Régénéré. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /rapports/gestion/{id}:
+    get:
+      tags: [Rapports]
+      summary: Détail d'un rapport de gestion avec l'instantané complet et l'URL signée du PDF.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RapportGestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /rapports/gestion/{id}/pdf:
+    get:
+      tags: [Rapports]
+      summary: "PDF du rapport rendu depuis l'instantané — `langue=fr|ar`, `variante=publique` (sans détail par lot, défaut) ou `complete` (impayés par lot — syndic / conseil). Export journalisé (RAPPORT_GESTION_PDF)."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: langue, in: query, schema: { type: string, enum: [fr, ar], default: fr } }
+        - { name: variante, in: query, schema: { type: string, enum: [publique, complete], default: publique } }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /rapports/gestion/{id}/soumettre-ag:
+    post:
+      tags: [Rapports]
+      summary: "Soumet le rapport GENERE à une AG PLANIFIEE / CONVOQUEE : résolution « Approbation des comptes de l'exercice N » créée par le service AG (majorité du payload ou de config_json.majorite_approbation_comptes — sinon 422 RAPPORT_PARAMETRE_NON_CONFIGURE), document rendu PUBLIC_COPROPRIETE, notification RAPPORT_GESTION_DISPONIBLE aux copropriétaires. La finalisation de la résolution bascule le rapport APPROUVE / REJETE. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RapportSoumettreAg" }
+      responses:
+        "200":
+          description: OK (SOUMIS_AG)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/RapportGestion" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /rapports/impayes:
+    get:
+      tags: [Rapports]
+      summary: "Impayés échus (IMPAYE / PARTIEL) avec ancienneté — syndic / conseil. Filtres `tranche`, `lot_id` ; tri `retard_jours|reste_du|date_echeance|lot` ; `meta.synthese` = total, nb lots, tranches ; `format=csv|xlsx` journalisé."
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - { name: sort, in: query, schema: { type: string } }
+        - { name: tranche, in: query, schema: { type: string, enum: [0_30, 31_90, 91_180, PLUS_180] } }
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/LigneImpayee" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /rapports/proprietaires:
+    get:
+      tags: [Rapports]
+      summary: "Annuaire nominatif des propriétaires actifs (nom, contact, quote-part) — SYNDIC seul, `format=csv|xlsx` obligatoire, journalisé (export_log PROPRIETAIRES)."
+      parameters:
+        - { name: format, in: query, required: true, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200": { description: Fichier. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /rapports/exports:
+    get:
+      tags: [Rapports]
+      summary: Journal des exports (export_log, append-only) — syndic / conseil.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ExportLog" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /finances/lots/{id}/releve:
+    get:
+      tags: [Rapports]
+      summary: "Relevé de charges du lot (« état daté », Doc A §11) — syndic / conseil tout lot, propriétaire ses lots. Journalisé (export_log RELEVE_LOT)."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/ReleveLot" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /finances/lots/{id}/releve/pdf:
+    get:
+      tags: [Rapports]
+      summary: "Relevé de charges en PDF — `langue=fr|ar`."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+        - { name: langue, in: query, schema: { type: string, enum: [fr, ar], default: fr } }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /coproprietes/{id}/transparence:
+    patch:
+      tags: [Copropriétés]
+      summary: "Active / désactive la visibilité des factures des dépenses PAYEE pour les résidents (syndic, audité TRANSPARENCE_FACTURES_MODIFIEE)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [factures_visibles_residents]
+              properties:
+                factures_visibles_residents: { type: boolean }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }

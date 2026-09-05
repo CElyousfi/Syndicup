@@ -133,6 +133,7 @@ afterAll(async () => {
   await admin.incidentLog.deleteMany({ where: { incident: { coproprieteId: copro } } });
   await admin.incident.deleteMany({ where: { coproprieteId: copro } });
   await admin.prestataire.deleteMany({ where: { coproprieteId: copro } });
+  await admin.exportLog.deleteMany({ where: { coproprieteId: copro } });
   await admin.auditLog.deleteMany({ where: { coproprieteId: copro } });
   await admin.lotProprietaire.deleteMany({ where: { lotId: lotA1 } });
   await admin.lot.deleteMany({ where: { coproprieteId: copro } });
@@ -341,8 +342,8 @@ describe("M16 — paiement, factures, fonds de réserve", () => {
     expect(csv.entetes[0]).toBe("date");
     expect(csv.nbLignes).toBeGreaterThanOrEqual(5);
     expect(csv.lignes.every((l) => /^\d+\.\d{2}$/.test(String(l[7])))).toBe(true);
-    const audit = await admin.auditLog.findFirst({ where: { coproprieteId: copro, action: "DEPENSES_EXPORTEES", acteurId: conseil } });
-    expect(audit).not.toBeNull();
+    const journal = await admin.exportLog.findFirst({ where: { coproprieteId: copro, type: "DEPENSES", utilisateurId: conseil } });
+    expect(journal).not.toBeNull();
     await expect(exporterDepensesCsv(ctxAmina(), {})).rejects.toBeInstanceOf(PermissionRefuseeError);
   });
 

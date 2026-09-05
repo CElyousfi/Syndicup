@@ -8,7 +8,7 @@
  */
 import type Decimal from "decimal.js";
 import { can } from "../auth/permissions";
-import { withTenant } from "../tenant/db";
+import { withTenant, type TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { money, toApiString } from "../money";
 import { chargerParametresDepenses, soldeFondsReserve, PermissionRefuseeError } from "./depenses";
@@ -53,15 +53,26 @@ function presenter(prevu: Decimal | null, c: Cumul) {
 export async function budgetVsRealise(ctx: TenantContext, exerciceDemande?: string) {
   if (can("depenses.lire", ctx.role) !== true) throw new PermissionRefuseeError("Rôle non autorisé à consulter le budget vs réalisé.");
   const exercice = exerciceDemande ?? String(new Date().getUTCFullYear());
-  return withTenant(ctx, async (db) => {
+  return withTenant(ctx, (db) => calculerBudgetVsRealise(db, ctx.coproprieteId, exercice));
+}
+
+export type BudgetVsRealise = Awaited<ReturnType<typeof calculerBudgetVsRealise>>;
+
+/**
+ * Cœur du calcul, sans contrôle de permission — réutilisé par M18 (tableau de bord, transparence,
+ * rapport de gestion). Sous un rôle résident, la RLS ne montre que les dépenses PAYEE : les
+ * colonnes « en attente / engagé » ressortent à zéro, ce qui est exactement la vue anonymisée voulue.
+ */
+export async function calculerBudgetVsRealise(db: TenantDb, coproprieteId: string, exercice: string) {
+  {
     const [budget, params, reserve] = await Promise.all([
-      db.budgetAg.findFirst({ where: { coproprieteId: ctx.coproprieteId, exercice, statut: "ACTIF" }, include: { postes: { orderBy: [{ ordre: "asc" }, { creeLe: "asc" }] } } }),
-      chargerParametresDepenses(db, ctx.coproprieteId),
-      soldeFondsReserve(db, ctx.coproprieteId),
+      db.budgetAg.findFirst({ where: { coproprieteId, exercice, statut: "ACTIF" }, include: { postes: { orderBy: [{ ordre: "asc" }, { creeLe: "asc" }] } } }),
+      chargerParametresDepenses(db, coproprieteId),
+      soldeFondsReserve(db, coproprieteId),
     ]);
     const depenses = await db.depense.findMany({
       where: {
-        coproprieteId: ctx.coproprieteId,
+        coproprieteId,
         statut: { in: ["A_APPROUVER", "APPROUVEE", "PAYEE"] },
         OR: [
           ...(budget ? [{ budgetAgId: budget.id }] : []),
@@ -99,7 +110,7 @@ export async function budgetVsRealise(ctx: TenantContext, exerciceDemande?: stri
 
     // Impayés (charges appelées non encaissées) — même calcul que le solde de lot, agrégé.
     const lignes = await db.appelDeFondsLot.findMany({
-      where: { appelDeFonds: { coproprieteId: ctx.coproprieteId }, statut: { in: ["IMPAYE", "PARTIEL"] } },
+      where: { appelDeFonds: { coproprieteId }, statut: { in: ["IMPAYE", "PARTIEL"] } },
       select: { montantDu: true, montantPaye: true },
     });
     const impayes = lignes.reduce((acc, l) => acc.plus(money(l.montantDu).minus(money(l.montantPaye))), money(0));
@@ -117,5 +128,5 @@ export async function budgetVsRealise(ctx: TenantContext, exerciceDemande?: stri
       seuil_non_configure: params.seuilApprobationConseil === null,
       nb_a_approuver: depenses.filter((d) => d.statut === "A_APPROUVER").length,
     };
-  });
+  }
 }

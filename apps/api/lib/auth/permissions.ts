@@ -466,6 +466,77 @@ export const PERMISSIONS: PermissionMatrix = {
     PROPRIETAIRE: false,
     LOCATAIRE: false,
   },
+  // ── M18 — Rapports, rapport de gestion, exports, transparence (Doc A §8 reddition des comptes,
+  //    §6 approbation des comptes en AG, §3.5 transparence — ⚠️ module absent du Master Spec 4.2,
+  //    signalé dans ROADMAP M18) ──
+  // Tableau de bord syndic / conseil, grand livre, liste et détail des rapports de gestion.
+  "rapports.syndic.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    INDIVISAIRE: false,
+    PERSONNE_MORALE_REPRESENTANT: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // « Où va mon argent » : vue agrégée anonymisée (jamais de donnée par lot) — tout membre de la
+  // copropriété, locataires compris (Doc A §3.5). Gardien / prestataire / gestionnaire LCD : non.
+  "rapports.transparence.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    INDIVISAIRE: true,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    LOCATAIRE: true,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Générer le rapport de gestion, le soumettre à l'AG, activer la visibilité des factures : syndic
+  // seul (Doc A §8 : le syndic rend les comptes, le conseil contrôle et lit).
+  "rapports.gestion.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Exports (csv / xlsx) des listes de gestion : lots, impayés, paiements, dépenses, grand livre,
+  // incidents… — syndic et conseil ; chaque export est tracé dans export_log (CNDP).
+  "exports.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Annuaire des propriétaires (données personnelles nominatives) : syndic seul, tracé.
+  "exports.proprietaires": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  // Relevé de charges d'un lot (« état daté », Doc A §11) : syndic / conseil pour tout lot ; le
+  // propriétaire (indivisaire, représentant) pour SES lots — RLS + vérification applicative.
+  "exports.releve_lot": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
   // Comptes bancaires de la copropriété : tout membre lit banque + RIB masqué (écran « Payer par
   // virement ») ; le syndic gère et lit le RIB complet (audité RIB_CONSULTE).
   "coproprietes.comptes_bancaires.lire": {

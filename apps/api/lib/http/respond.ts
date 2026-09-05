@@ -45,7 +45,10 @@ export type ErrorCode =
   // M17 — justificatifs de paiement.
   | "JUSTIFICATIF_STATUT_INVALIDE"
   | "JUSTIFICATIF_PREUVE_REQUISE"
-  | "JUSTIFICATIF_PARAMETRE_NON_CONFIGURE";
+  | "JUSTIFICATIF_PARAMETRE_NON_CONFIGURE"
+  // M18 — rapports de gestion.
+  | "RAPPORT_STATUT_INVALIDE"
+  | "RAPPORT_PARAMETRE_NON_CONFIGURE";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -78,6 +81,8 @@ const STATUS: Record<ErrorCode, number> = {
   JUSTIFICATIF_STATUT_INVALIDE: 422,
   JUSTIFICATIF_PREUVE_REQUISE: 422,
   JUSTIFICATIF_PARAMETRE_NON_CONFIGURE: 422,
+  RAPPORT_STATUT_INVALIDE: 422,
+  RAPPORT_PARAMETRE_NON_CONFIGURE: 422,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {
