@@ -91,7 +91,7 @@ npx inngest-cli@latest dev -u http://localhost:3001/api/inngest   # optionnel �
 ```
 
 OTP en local : numéros de test dans `supabase/config.toml` (`test_otp`) — tous les numéros du
-seed (`+212600000001` → `…006`), code `123456`. Aucun SMS réel n'est envoyé (provider Twilio
+seed (`+212600000001` → `…007` ; `…007` = membre du conseil syndical, M16), code `123456`. Aucun SMS réel n'est envoyé (provider Twilio
 factice, exigé par GoTrue même pour les numéros de test).
 
 ### Local = production (notifications, documents, PDF)

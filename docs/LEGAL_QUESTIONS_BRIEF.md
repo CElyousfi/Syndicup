@@ -25,6 +25,9 @@ et remises à « non configuré » (null) si l'avocat infirme.
 | `retention_desactivation_mois` | **24** | §5 — « durée légale + 2 ans », base prudente 24 mois |
 | `regime_lcd` (M15) | **NON_DEFINI** (rien de déclarable tant que non fixé) | §7 — Doc A §10.2, régime voté en AG |
 | Rétention données voyageur (M15) | **= `retention_desactivation_mois`** | §7.3 — valeur propre aux séjours à confirmer |
+| `seuil_approbation_conseil` (M16) | **5 000 MAD** (seed Al Amal ; NULL = approbation syndic explicite sur tout, rapports « seuil non configuré ») | §8.1 — Doc A §8.3 « seuil configurable (ex : 5000 DH) » |
+| `reserve_sans_resolution_autorisee` (M16) | **false** | §8.2 — Doc A §3.6 « décision AG requise sauf urgence définie dans le règlement » |
+| `tva_par_defaut` (M16) | **20 %** (pré-remplissage seulement, le TTC saisi fait foi) | §8.3 — taux normal de TVA marocain, à confirmer par poste |
 
 **À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
 d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
@@ -211,6 +214,63 @@ gestion des nuisances**, pas l'identification administrative.
 4. Le gestionnaire LCD (conciergerie) est-il un **sous-traitant** au sens de la loi 09-08 ?
    Conséquences contractuelles (le rôle `GESTIONNAIRE_LCD` lui donne accès aux séjours de ses
    lots uniquement).
+
+---
+
+## 8. Dépenses, approbation par le conseil syndical, fonds de réserve, TVA (module M16)
+
+**Doc A §8.3** : « Toute dépense > seuil configurable (ex : 5000 DH) doit être liée à une résolution
+AG ou classée comme urgence. Dépenses non liées = alerte conseil syndical » ; « Transparence : 3
+devis obligatoires au-delà d'un seuil ». **Doc A §3.6** : « Utilisation fonds de réserve :
+décision AG requise sauf urgence (définie dans le règlement) ». Le module M16 implémente ces règles
+**sans coder aucune valeur** : trois paramètres de copropriété nullables (`PATCH /coproprietes/{id}`,
+audité), 422 explicite ou approbation explicite tant que non configurés.
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `seuil_approbation_conseil` | **NULL par défaut** (5 000 MAD posé par le seed de démonstration) — NULL = toute dépense soumise exige l'approbation explicite du syndic et les rapports signalent « seuil non configuré » | PROVISOIRE |
+| `reserve_sans_resolution_autorisee` | **false** — un décaissement de la réserve exige une résolution d'AG ADOPTEE (`DEPENSE_RESERVE_RESOLUTION_REQUISE`) | PROVISOIRE |
+| `tva_par_defaut` | **NULL par défaut** (20 posé par le seed) — simple pré-remplissage du formulaire, le TTC saisi depuis la facture fait foi | PROVISOIRE |
+
+### 8.1 — Le seuil d'approbation du conseil est-il légal, et qui le fixe ?
+
+**Indication trouvée** : Doc A §8.3 parle d'un seuil « configurable » avec 5 000 DH en exemple,
+sans base légale citée. La Loi 18-00 confie au conseil syndical un rôle d'assistance et de
+contrôle du syndic (art. 31 et suivants selon les sources) sans montant chiffré.
+
+**À confirmer :**
+1. Le règlement de copropriété ou l'AG peuvent-ils fixer un seuil au-delà duquel le syndic ne peut
+   engager une dépense sans l'aval du conseil syndical ? Ce seuil doit-il être voté (résolution
+   liée) ou peut-il être une simple décision de gestion ?
+2. Une dépense au-dessus du seuil approuvée par le conseil mais **non votée en AG** (travaux non
+   prévus au budget) engage-t-elle la responsabilité personnelle du syndic ? Faut-il exiger une
+   résolution d'AG au-delà d'un second seuil (`seuil_contrat_ag`, prévu M19) ?
+3. La règle « 3 devis obligatoires au-delà d'un seuil » (Doc A §8.3) a-t-elle une base légale ou
+   n'est-elle qu'une bonne pratique ? Le type de document `DEVIS` est déclaré, le comparatif n'est
+   pas modélisé tant que ce point n'est pas tranché.
+
+### 8.2 — Décaissement du fonds de réserve sans résolution d'AG
+
+**Indication trouvée** : Doc A §3.6 admet une exception « urgence (définie dans le règlement) ».
+
+**À confirmer :** la définition de l'urgence (sinistre, mise en sécurité…) et qui la constate
+(syndic seul ? conseil ?). Tant que ce n'est pas tranché, `reserve_sans_resolution_autorisee`
+reste `false` par défaut et toute activation est une décision de règlement tracée en audit.
+
+### 8.3 — TVA et mentions fiscales des factures
+
+**Indication trouvée** : taux normal de TVA 20 % au Maroc ; certains postes (eau, électricité,
+prestations de services) relèvent de taux réduits ou d'exonérations selon la nature du fournisseur.
+
+**À confirmer :** la copropriété (non assujettie en principe) doit-elle contrôler la ventilation
+HT/TVA des factures reçues ? Le module ne fait qu'un contrôle arithmétique (HT + TVA = TTC) et un
+pré-remplissage ; aucun taux n'est appliqué automatiquement.
+
+### 8.4 — Approbation des comptes en AG et conservation des pièces
+
+**À confirmer :** durée de conservation des factures et preuves de paiement (les quittances sont
+déjà conservées 10 ans, Master Spec Partie 9) — le module ne supprime jamais une dépense PAYEE ni
+sa preuve ; l'approbation annuelle des comptes est portée par le rapport de gestion (M18).
 
 ---
 

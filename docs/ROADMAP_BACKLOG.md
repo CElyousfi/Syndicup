@@ -283,6 +283,82 @@ déclaration porte l'usage LCD — aucun schéma Zod/test existant touché).
 - [ ] Durée de rétention propre aux séjours (aujourd'hui = `retention_desactivation_mois`).
 - [ ] Exécution en arrière-plan OS de la file hors-ligne gardien (comme les visites M10).
 
+## M16 — Dépenses, factures, fournisseurs, postes budgétaires
+
+*Réf. Doc A §3 (charges — §3.5 postes, §3.6 fonds de réserve, §3.7 dépassement du budget), §8
+(obligations du syndic — §8.3 « dépense > seuil configurable → conseil syndical », « 3 devis »),
+§6 (approbation des comptes). Domaine : `docs/domain-reference/14-depenses-comptabilite.md`.
+Juridique : `docs/LEGAL_QUESTIONS_BRIEF.md` §8 (tout PROVISOIRE). Branche
+`feature/m16-depenses`. Décisions du prompt maître (non rouvertes) : aucune API bancaire
+(rapprochement manuel sur preuve), l'argent qui sort est le miroir de l'argent qui entre,
+`fonds_reserve_mouvement` reste l'unique grand livre de la réserve, un seul `document` pour tous
+les fichiers, paramètres légaux jamais codés en dur.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec Partie 2.2 / 3.2 (CLAUDE.md §2)** : enums
+`CategorieDepense`, `StatutDepense`, `SourceFinancement`, `StatutFacture`, `TypeDepenseLog` ;
+tables `budget_poste`, `depense`, `facture`, `depense_log` (append-only) ; colonnes
+`copropriete.seuil_approbation_conseil` / `reserve_sans_resolution_autorisee` / `tva_par_defaut`
+(nullables, brief §8), `prestataire.ice / rc / adresse / email / telephone / rib / notes /
+note_moyenne`, `incident.note_prestataire / commentaire_prestataire / evalue_le`,
+`fonds_reserve_mouvement.depense_id`, `depense.contrat_id` (sans FK, posée pour M19) ;
+permissions `depenses.lire / gerer / approuver / exporter`, `prestataires.rib.lire`,
+`incidents.evaluer` ; codes 422/409 `DEPENSE_STATUT_INVALIDE`, `DEPENSE_APPROBATION_CONSEIL_REQUISE`,
+`DEPENSE_RESERVE_RESOLUTION_REQUISE`, `FONDS_RESERVE_INSUFFISANT`, `BUDGET_TOTAL_DERIVE_DES_POSTES`,
+`BUDGET_POSTE_UTILISE`, `INCIDENT_NON_RESOLU`, `INCIDENT_DEJA_EVALUE`. **Écarts par rapport au
+prompt maître, signalés** : (1) le mouvement de réserve utilise le type existant `DEPENSE` de
+`TypeMouvementFondsReserve` plutôt qu'une nouvelle valeur `RETRAIT` (deux noms pour la même chose) ;
+(2) `document.type` reste un TEXT libre — les documents téléversés par le syndic portent un type
+saisi librement dans l'UI existante — les types système M16 sont des constantes fermées
+(`apps/api/lib/documents/types.ts` : `FACTURE`, `JUSTIFICATIF_DEPENSE`, `DEVIS`…), pas un enum
+Postgres, pour ne pas casser les données ; (3) `tva_par_defaut` est nullable **sans défaut DB**
+(valeur fiscale → discipline du brief), le seed pose 20 ; (4) `Prestataire.contact` est conservé
+et recopié dans `telephone` / `email` par la migration quand la valeur est reconnaissable.
+
+- [x] **Livré (05/09)** — Schéma + migrations `20260905142547_m16_depenses` et
+  `..._m16_prestataire_note_fn` : tables, CHECKs (`montant_ttc > 0`, HT/TVA ensemble, note 1–5,
+  signe des mouvements de réserve), triggers `budget_poste_recalculer_total` (invariant
+  `budget_ag.montant_total = Σ postes`) et `fonds_reserve_solde_non_negatif`, reprise (une ligne
+  AUTRE / « Budget global » par budget existant, `contact` → `telephone`/`email`), RLS (syndic /
+  conseil : tout ; résidents : dépenses PAYEE seulement, aucune facture ni journal ; gardien,
+  prestataire, autre copropriété : rien ; `depense_log` sans UPDATE/DELETE), fonction SECURITY
+  DEFINER `prestataire_recalculer_note`. Tests `tests/depenses-rls.test.ts` (8).
+- [x] **Livré (05/09)** — API tag `Dépenses` (20 opérations) : postes du budget
+  (`/finances/budgets/{id}/postes[/{posteId}]`), `/finances/budget-vs-realise`, `/depenses` (filtres,
+  pagination, tri, `format=csv` journalisé), `upload-url`, détail / PATCH (BROUILLON, REJETEE),
+  `soumettre` / `approuver` / `rejeter` / `payer` / `annuler` (Idempotency-Key), factures,
+  documents signés, `POST /incidents/{id}/depense`, `POST /incidents/{id}/evaluation`,
+  `GET /prestataires/{id}` (fiche + historique), `GET /prestataires/{id}/rib` (audité). Routage
+  d'approbation par seuil ; réserve : résolution ADOPTEE ou paramètre, solde jamais négatif,
+  mouvement `DEPENSE` dans la même transaction ; preuve de paiement = `document`
+  `JUSTIFICATIF_DEPENSE` ; factures RECUE/VERIFIEE → REGLEE au paiement ; RIB masqué (4 derniers).
+  Helpers partagés M16→M25 : `lib/http/pagination.ts`, `lib/http/export.ts` (CSV BOM « ; »,
+  formules neutralisées, journalisation), `lib/documents/attach.ts`, `lib/documents/types.ts`.
+  Budgets M12 : la création pose une ligne globale, le total est dérivé des postes. Tests
+  `tests/depenses.test.ts` (17) ; suite complète verte.
+- [x] **Livré (05/09)** — Notifications FR/AR `DEPENSE_A_APPROUVER` (conseil), `DEPENSE_APPROUVEE`
+  / `DEPENSE_REJETEE` (créateur), `FACTURE_ECHEANCE_PROCHE` ; job Inngest quotidien
+  `depenses-factures-echeances` (J-7, une seule fois par facture, idempotent) ; audit `DEPENSE_*`,
+  `FACTURE_*`, `BUDGET_POSTE_*` (+ `BUDGET_POSTE_MODIFIE_APRES_ACTIVATION`),
+  `PRESTATAIRE_RIB_CONSULTE`, `INCIDENT_PRESTATAIRE_EVALUE`, `DEPENSES_EXPORTEES`.
+- [x] **Livré (05/09)** — Web : `finances/depenses` (onglets par statut, filtres, totaux, KPI,
+  export CSV), création / modification, détail (factures + visionneuse intégrée, journal, preuve,
+  dialogues soumettre / approuver / rejeter / payer avec photo / annuler), `finances/budgets/[id]`
+  (éditeur de postes, barres prévu vs consommé), `prestataires/[id]` (onglets, RIB masqué + lecture
+  auditée, évaluations), fiche incident (dépenses liées, création depuis l'incident, évaluation),
+  navigation « Dépenses » (syndic, conseil), proxys `/api/depense-document` et `/api/depenses-csv`,
+  FR/AR RTL.
+- [x] **Livré (05/09)** — Mobile `features/depenses/` : liste (KPI, onglets), détail, approbation /
+  rejet du conseil (push → décision avec motif), paiement avec photo du reçu (syndic), évaluation du
+  prestataire par le résident, dépenses liées sur l'incident, deep-links `DEPENSE_*` /
+  `FACTURE_ECHEANCE_PROCHE`. Écarts de parité consignés dans `docs/PARITE_WEB_MOBILE.md`.
+- [x] Seed Al Amal : 6 postes, 7 dépenses (tous statuts, une payée depuis la réserve sur résolution
+  ADOPTEE d'une AG passée), facture à échéance J+5, membre du conseil syndical (`+212600000007`),
+  fiche fournisseur avec RIB, incident résolu évalué.
+- [ ] **Hors périmètre M16 (repris ensuite ou à confirmer — domaine 14.7)** : transparence résident et
+  rapport de gestion (M18), dépenses de contrat (M19) et de paie (M20), comparatif de 3 devis (Doc A
+  §8.3 — type `DEVIS` déclaré seulement), avance du syndic (Doc A §3.6 `AVANCE_SYNDIC`), saisie
+  mobile d'une dépense (web-first), rappel d'échéance de facture par email (PUSH seulement).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*
