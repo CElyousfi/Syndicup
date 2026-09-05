@@ -3,6 +3,7 @@ import 'package:syndicup/core/api/models.dart';
 import 'package:syndicup/core/auth/app_state.dart';
 import 'package:syndicup/core/i18n/dict.dart';
 import 'package:syndicup/core/util/nav.dart';
+import 'package:syndicup/core/util/notifications_link.dart';
 
 AppContext ctxFor(String role) => AppContext(
       profil: Profil(id: 'u', languePreferee: 'FR', statutCompte: 'ACTIF', roles: [ProfilRole(coproprieteId: 'c', role: role, actif: true)]),
@@ -40,6 +41,19 @@ void main() {
     expect(paths('GESTIONNAIRE_LCD'), isNot(contains('/finances/appels-de-fonds')));
     final tabs = buildTabs(buildNav(ctxFor('GARDIEN'), dictFr), ctxFor('GARDIEN'), dictFr).map((t) => t.path);
     expect(tabs, contains('/location-courte-duree'));
+  });
+  test('M16 : les dépenses sont dans la navigation du syndic et du conseil, jamais chez un résident, le gardien ou le prestataire', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths('SYNDIC'), contains('/depenses'));
+    expect(paths('CONSEIL_SYNDICAL'), contains('/depenses'));
+    for (final r in ['PROPRIETAIRE', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/depenses')), reason: r);
+    }
+    expect(ctxFor('CONSEIL_SYNDICAL').approuveDepenses, isTrue);
+    expect(ctxFor('CONSEIL_SYNDICAL').gereDepenses, isFalse);
+    expect(ctxFor('SYNDIC').gereDepenses, isTrue);
+    expect(lienNotification('DEPENSE_A_APPROUVER', {'depense_id': 'abc'}), '/depenses/abc');
+    expect(lienNotification('FACTURE_ECHEANCE_PROCHE', {'depense_id': 'abc'}), '/depenses/abc');
   });
   test('rôles dérivés', () {
     expect(ctxFor('SYNDIC').isGestion, isTrue);

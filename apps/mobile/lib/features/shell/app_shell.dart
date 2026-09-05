@@ -65,6 +65,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (t.startsWith('AG_') || t == 'PV_DISPONIBLE') ref.invalidate(agListProvider);
     if (t.startsWith('RESERVATION_')) ref.invalidate(reservationsProvider);
     if (t.startsWith('APPEL_') || t.startsWith('IMPAYE_') || t == 'PAIEMENT_RECU') ref.invalidate(syntheseProvider);
+    if (t.startsWith('DEPENSE_') || t == 'FACTURE_ECHEANCE_PROCHE') ref.invalidate(depensesProvider);
     if (!mounted) return;
     final path = lienNotification(e.templateCode, e.contenuJson);
     ScaffoldMessenger.of(context)

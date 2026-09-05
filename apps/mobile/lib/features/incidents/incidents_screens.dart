@@ -17,6 +17,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../depenses/depenses_screens.dart';
 import '../shell/app_shell.dart';
 
 IconData iconCategorie(String c) => switch (c) {
@@ -385,6 +386,26 @@ class IncidentDetailScreen extends ConsumerWidget {
                   ],
                 ),
               ),
+              // M16 — évaluation du prestataire (créateur du ticket ou syndic, incident résolu, une fois).
+              if (i.notePrestataire != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(children: [
+                    Directionality(textDirection: TextDirection.ltr, child: Row(children: [for (int n = 1; n <= 5; n++) Icon(n <= i.notePrestataire! ? Icons.star_rounded : Icons.star_border_rounded, size: 18, color: SuColors.warn)])),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(i.commentairePrestataire ?? fill(d.depenses.dejaEvalue, {'note': i.notePrestataire!}), style: t.bodySmall)),
+                  ]),
+                )
+              else if (i.resolu && i.assigneAId != null && (ctx.isGestion || i.creePar == ctx.profil.id))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: OutlinedButton.icon(onPressed: () => _evaluer(context, ref, i), icon: const Icon(Icons.star_rate_rounded), label: Text(d.depenses.evaluer)),
+                ),
+              // M16 — dépenses nées de l'incident (syndic / conseil).
+              if (ctx.voitDepenses && i.depenses.isNotEmpty) ...[
+                SectionHeader(d.depenses.depensesLiees, subtitle: i.totalDepenses == null ? null : '${d.depenses.totalDepensesLiees} : ${formatMAD(i.totalDepenses, l)}'),
+                CardList([for (final x in i.depenses) DepenseRow(x)]),
+              ],
               if (peutChanger && i.statut != 'FERME') ...[
                 const SizedBox(height: 12),
                 FilledButton.icon(onPressed: () => _changerStatut(context, ref, i), icon: const Icon(Icons.swap_vert_rounded), label: Text(d.incidents.changerStatut)),
@@ -413,6 +434,13 @@ class IncidentDetailScreen extends ConsumerWidget {
         }),
       ],
     );
+  }
+
+  Future<void> _evaluer(BuildContext context, WidgetRef ref, Incident i) async {
+    await showFormSheet<void>(context, title: context.dict.depenses.evaluerTitre, builder: (_) => EvaluationPrestataireForm(incident: i, onDone: () {
+      ref.invalidate(incidentProvider(i.id));
+      ref.invalidate(prestatairesProvider);
+    }));
   }
 
   Future<void> _changerStatut(BuildContext context, WidgetRef ref, Incident i) async {

@@ -11,6 +11,7 @@ import '../../features/auth/invitation_screens.dart';
 import '../../features/auth/login_screen.dart';
 import '../../features/auth/welcome_screen.dart';
 import '../../features/dashboard/dashboard_screen.dart';
+import '../../features/depenses/depenses_screens.dart';
 import '../../features/documents/document_viewer_screen.dart';
 import '../../features/documents/documents_screen.dart';
 import '../../features/espaces/espaces_screens.dart';
@@ -112,6 +113,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/incidents/nouveau', builder: (_, s) => IncidentFormScreen(sejourId: s.uri.queryParameters['sejour'])),
           GoRoute(path: '/incidents/:id', builder: (_, s) => IncidentDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/prestataires', builder: (_, __) => const PrestatairesScreen()),
+          GoRoute(path: '/depenses', builder: (_, __) => const DepensesScreen()),
+          GoRoute(path: '/depenses/:id', builder: (_, s) => DepenseDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/espaces-communs', builder: (_, __) => const EspacesScreen()),
           GoRoute(path: '/reservations', builder: (_, __) => const ReservationsScreen()),
           GoRoute(path: '/visites', builder: (_, s) => VisitesScreen(enregistrer: s.uri.queryParameters['enregistrer'] == '1')),

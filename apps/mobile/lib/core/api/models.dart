@@ -503,7 +503,12 @@ class Incident {
   final List<String> photos;
   final List<IncidentLog> journal;
   final IncidentActeur? createur;
-  const Incident({required this.id, required this.coproprieteId, this.lotId, required this.categorie, required this.sousCategorie, this.description, required this.partie, required this.urgence, required this.statut, required this.creePar, this.assigneAId, this.slaDeadline, this.photos = const [], required this.creeLe, required this.modifieLe, this.journal = const [], this.createur});
+  // M16 — évaluation du prestataire (créateur du ticket ou syndic, après RESOLU/FERME) et
+  // dépenses nées de l'incident (détail, rôles syndic/conseil uniquement).
+  final int? notePrestataire;
+  final String? commentairePrestataire, totalDepenses;
+  final List<Depense> depenses;
+  const Incident({required this.id, required this.coproprieteId, this.lotId, required this.categorie, required this.sousCategorie, this.description, required this.partie, required this.urgence, required this.statut, required this.creePar, this.assigneAId, this.slaDeadline, this.photos = const [], required this.creeLe, required this.modifieLe, this.journal = const [], this.createur, this.notePrestataire, this.commentairePrestataire, this.totalDepenses, this.depenses = const []});
   factory Incident.fromJson(Map<String, dynamic> j) => Incident(
         id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), lotId: _sn(j, 'lotId'), categorie: _s(j, 'categorie'),
         sousCategorie: _s(j, 'sousCategorie'), description: _sn(j, 'description'), partie: _s(j, 'partie'), urgence: _s(j, 'urgence'),
@@ -512,8 +517,11 @@ class Incident {
         creeLe: _s(j, 'creeLe'), modifieLe: _s(j, 'modifieLe'),
         journal: _list(j['journal'] ?? j['logs'], IncidentLog.fromJson),
         createur: _map(j['createur']) == null ? null : IncidentActeur.fromJson(_map(j['createur'])!),
+        notePrestataire: _in(j, 'notePrestataire'), commentairePrestataire: _sn(j, 'commentairePrestataire'), totalDepenses: _sn(j, 'total_depenses'),
+        depenses: _list(j['depenses'], Depense.fromJson),
       );
   bool get ouvert => statut == 'OUVERT' || statut == 'EN_COURS';
+  bool get resolu => statut == 'RESOLU' || statut == 'FERME';
   bool get slaDepasse => ouvert && slaDeadline != null && (DateTime.tryParse(slaDeadline!)?.isBefore(DateTime.now()) ?? false);
 }
 
@@ -527,11 +535,133 @@ class Prestataire {
   final String id, coproprieteId, nom, specialite, contact, creeLe;
   final bool actif;
   final String? utilisateurId;
-  const Prestataire({required this.id, required this.coproprieteId, required this.nom, required this.specialite, required this.contact, required this.actif, this.utilisateurId, required this.creeLe});
+  // M16 — fiche fournisseur (le RIB complet n'est jamais dans une réponse de liste/fiche).
+  final String? telephone, email, ice, adresse, ribMasque, noteMoyenne;
+  const Prestataire({required this.id, required this.coproprieteId, required this.nom, required this.specialite, required this.contact, required this.actif, this.utilisateurId, required this.creeLe, this.telephone, this.email, this.ice, this.adresse, this.ribMasque, this.noteMoyenne});
   factory Prestataire.fromJson(Map<String, dynamic> j) => Prestataire(
         id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), nom: _s(j, 'nom'), specialite: _s(j, 'specialite'), contact: _s(j, 'contact'),
         actif: _b(j, 'actif', true), utilisateurId: _sn(j, 'utilisateurId'), creeLe: _s(j, 'creeLe'),
+        telephone: _sn(j, 'telephone'), email: _sn(j, 'email'), ice: _sn(j, 'ice'), adresse: _sn(j, 'adresse'), ribMasque: _sn(j, 'ribMasque'), noteMoyenne: _sn(j, 'noteMoyenne'),
       );
+  /// Numéro à composer : téléphone structuré, sinon `contact` s'il ressemble à un numéro.
+  String? get telephoneAppel {
+    final t = telephone ?? contact;
+    return RegExp(r'^\+?\d{8,}$').hasMatch(t.replaceAll(RegExp(r'[\s.-]'), '')) ? t.replaceAll(RegExp(r'[\s.-]'), '') : null;
+  }
+}
+
+// ── M16 — Dépenses, factures, postes budgétaires ────────────────────────────
+class DepenseRef {
+  final String id, nom;
+  const DepenseRef({required this.id, required this.nom});
+}
+
+class Facture {
+  final String id, depenseId, dateFacture, montantTtc, statut, documentId, creeLe;
+  final String? numero, dateEcheance, documentNom;
+  const Facture({required this.id, required this.depenseId, this.numero, required this.dateFacture, this.dateEcheance, required this.montantTtc, required this.statut, required this.documentId, required this.creeLe, this.documentNom});
+  factory Facture.fromJson(Map<String, dynamic> j) => Facture(
+        id: _s(j, 'id'), depenseId: _s(j, 'depenseId'), numero: _sn(j, 'numero'), dateFacture: _s(j, 'dateFacture'), dateEcheance: _sn(j, 'dateEcheance'),
+        montantTtc: _s(j, 'montantTtc'), statut: _s(j, 'statut'), documentId: _s(j, 'documentId'), creeLe: _s(j, 'creeLe'),
+        documentNom: _map(j['document'])?['nom']?.toString(),
+      );
+}
+
+class DepenseLog {
+  final String id, type, horodatage;
+  final String? acteurNom;
+  final Map<String, dynamic> details;
+  const DepenseLog({required this.id, required this.type, required this.horodatage, this.acteurNom, this.details = const {}});
+  factory DepenseLog.fromJson(Map<String, dynamic> j) {
+    final a = _map(j['acteur']);
+    final nom = a == null ? null : [a['prenom'], a['nom']].whereType<String>().where((x) => x.isNotEmpty).join(' ');
+    return DepenseLog(id: _s(j, 'id'), type: _s(j, 'type'), horodatage: _s(j, 'horodatage'), acteurNom: (nom == null || nom.isEmpty) ? null : nom, details: _map(j['detailsJson']) ?? const {});
+  }
+}
+
+class Depense {
+  final String id, coproprieteId, categorie, libelle, montantTtc, dateDepense, statut, source, creeParId, creeLe;
+  final String? description, montantHt, tva, budgetPosteId, prestataireId, incidentId, resolutionAgId, approuveParId, approuveLe, motifRejet, payeLe, methodePaiement, referencePaiement, justificatifPaiementDocumentId;
+  final DepenseRef? prestataire, budgetPoste, incident, creePar, approuvePar;
+  final List<Facture> factures;
+  final List<DepenseLog> logs;
+  final int nbFactures;
+  final String? mouvementReserve; // montant (négatif) du mouvement de réserve si payée depuis la réserve
+  final String? niveauApprobationRequis; // SYNDIC | CONSEIL (détail uniquement)
+  final bool seuilNonConfigure;
+  const Depense({required this.id, required this.coproprieteId, required this.categorie, required this.libelle, required this.montantTtc, required this.dateDepense, required this.statut, required this.source, required this.creeParId, required this.creeLe, this.description, this.montantHt, this.tva, this.budgetPosteId, this.prestataireId, this.incidentId, this.resolutionAgId, this.approuveParId, this.approuveLe, this.motifRejet, this.payeLe, this.methodePaiement, this.referencePaiement, this.justificatifPaiementDocumentId, this.prestataire, this.budgetPoste, this.incident, this.creePar, this.approuvePar, this.factures = const [], this.logs = const [], this.nbFactures = 0, this.mouvementReserve, this.niveauApprobationRequis, this.seuilNonConfigure = false});
+  static DepenseRef? _ref(dynamic v, String champNom) {
+    final m = _map(v);
+    if (m == null) return null;
+    final nom = champNom == 'personne' ? [m['prenom'], m['nom']].whereType<String>().where((x) => x.isNotEmpty).join(' ') : (m[champNom] ?? '').toString();
+    return DepenseRef(id: (m['id'] ?? '').toString(), nom: nom);
+  }
+  factory Depense.fromJson(Map<String, dynamic> j) {
+    final mouvements = (j['mouvementsFondsReserve'] as List?)?.whereType<Map>().toList() ?? const [];
+    return Depense(
+      id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), categorie: _s(j, 'categorie'), libelle: _s(j, 'libelle'), montantTtc: _s(j, 'montantTtc'),
+      dateDepense: _s(j, 'dateDepense'), statut: _s(j, 'statut'), source: _s(j, 'source'), creeParId: _s(j, 'creeParId'), creeLe: _s(j, 'creeLe'),
+      description: _sn(j, 'description'), montantHt: _sn(j, 'montantHt'), tva: _sn(j, 'tva'), budgetPosteId: _sn(j, 'budgetPosteId'), prestataireId: _sn(j, 'prestataireId'),
+      incidentId: _sn(j, 'incidentId'), resolutionAgId: _sn(j, 'resolutionAgId'), approuveParId: _sn(j, 'approuveParId'), approuveLe: _sn(j, 'approuveLe'), motifRejet: _sn(j, 'motifRejet'),
+      payeLe: _sn(j, 'payeLe'), methodePaiement: _sn(j, 'methodePaiement'), referencePaiement: _sn(j, 'referencePaiement'), justificatifPaiementDocumentId: _sn(j, 'justificatifPaiementDocumentId'),
+      prestataire: _ref(j['prestataire'], 'nom'), budgetPoste: _ref(j['budgetPoste'], 'libelle'), incident: _ref(j['incident'], 'sousCategorie'),
+      creePar: _ref(j['creePar'], 'personne'), approuvePar: _ref(j['approuvePar'], 'personne'),
+      factures: _list(j['factures'], Facture.fromJson), logs: _list(j['logs'], DepenseLog.fromJson),
+      nbFactures: (_map(j['_count'])?['factures'] as num?)?.toInt() ?? 0,
+      mouvementReserve: mouvements.isEmpty ? null : mouvements.first['montant']?.toString(),
+      niveauApprobationRequis: _sn(j, 'niveau_approbation_requis'), seuilNonConfigure: _b(j, 'seuil_non_configure'),
+    );
+  }
+  bool get payee => statut == 'PAYEE';
+  bool get modifiable => statut == 'BROUILLON' || statut == 'REJETEE';
+}
+
+class DepenseDocument {
+  final String url, nom;
+  final String? factureId, numero, statut;
+  const DepenseDocument({required this.url, required this.nom, this.factureId, this.numero, this.statut});
+  factory DepenseDocument.fromJson(Map<String, dynamic> j) => DepenseDocument(url: _s(j, 'url'), nom: _s(j, 'nom'), factureId: _sn(j, 'facture_id'), numero: _sn(j, 'numero'), statut: _sn(j, 'statut'));
+}
+
+class DepenseDocuments {
+  final List<DepenseDocument> factures;
+  final DepenseDocument? justificatif;
+  const DepenseDocuments({this.factures = const [], this.justificatif});
+  factory DepenseDocuments.fromJson(Map<String, dynamic> j) => DepenseDocuments(
+        factures: _list(j['factures'], DepenseDocument.fromJson),
+        justificatif: _map(j['justificatif_paiement']) == null ? null : DepenseDocument.fromJson(_map(j['justificatif_paiement'])!),
+      );
+}
+
+class BudgetVsRealiseLigne {
+  final String? posteId, libelle, montantPrevu, ecart, pourcentageConsomme;
+  final String categorie, enAttente, engage, realise, consomme;
+  final bool depassement;
+  final int nbDepenses;
+  const BudgetVsRealiseLigne({this.posteId, this.libelle, required this.categorie, this.montantPrevu, required this.enAttente, required this.engage, required this.realise, required this.consomme, this.ecart, this.pourcentageConsomme, required this.depassement, required this.nbDepenses});
+  factory BudgetVsRealiseLigne.fromJson(Map<String, dynamic> j) => BudgetVsRealiseLigne(
+        posteId: _sn(j, 'poste_id'), libelle: _sn(j, 'libelle'), categorie: _s(j, 'categorie'), montantPrevu: _sn(j, 'montant_prevu'), enAttente: _s(j, 'en_attente'), engage: _s(j, 'engage'),
+        realise: _s(j, 'realise'), consomme: _s(j, 'consomme'), ecart: _sn(j, 'ecart'), pourcentageConsomme: _sn(j, 'pourcentage_consomme'), depassement: _b(j, 'depassement'), nbDepenses: _in(j, 'nb_depenses') ?? 0,
+      );
+}
+
+class BudgetVsRealise {
+  final String exercice, reserveSolde, impayesTotal;
+  final String? budgetId, budgetMontantTotal, seuilApprobationConseil;
+  final bool seuilNonConfigure;
+  final int nbAApprouver;
+  final BudgetVsRealiseLigne totaux;
+  final List<BudgetVsRealiseLigne> postes, horsPoste;
+  const BudgetVsRealise({required this.exercice, this.budgetId, this.budgetMontantTotal, required this.totaux, this.postes = const [], this.horsPoste = const [], required this.reserveSolde, required this.impayesTotal, this.seuilApprobationConseil, required this.seuilNonConfigure, required this.nbAApprouver});
+  factory BudgetVsRealise.fromJson(Map<String, dynamic> j) {
+    final b = _map(j['budget']);
+    return BudgetVsRealise(
+      exercice: _s(j, 'exercice'), budgetId: b?['id']?.toString(), budgetMontantTotal: b?['montant_total']?.toString(),
+      totaux: BudgetVsRealiseLigne.fromJson(_map(j['totaux']) ?? const {}), postes: _list(j['postes'], BudgetVsRealiseLigne.fromJson), horsPoste: _list(j['hors_poste'], BudgetVsRealiseLigne.fromJson),
+      reserveSolde: (_map(j['fonds_reserve'])?['solde'] ?? '0.00').toString(), impayesTotal: _s(j, 'impayes_total'),
+      seuilApprobationConseil: _sn(j, 'seuil_approbation_conseil'), seuilNonConfigure: _b(j, 'seuil_non_configure'), nbAApprouver: _in(j, 'nb_a_approuver') ?? 0,
+    );
+  }
 }
 
 // ── Personnel & visites ─────────────────────────────────────────────────────

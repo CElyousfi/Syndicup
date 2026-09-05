@@ -23,3 +23,6 @@ const Map<String, BadgeVariant> coproVariant = {'ACTIVE': BadgeVariant.ok, 'ARCH
 const Map<String, BadgeVariant> regimeLcdVariant = {'NON_DEFINI': BadgeVariant.neutral, 'AUTORISEE': BadgeVariant.ok, 'ENCADREE': BadgeVariant.info, 'INTERDITE': BadgeVariant.danger};
 const Map<String, BadgeVariant> declarationLcdVariant = {'EN_ATTENTE': BadgeVariant.warn, 'VALIDEE': BadgeVariant.ok, 'REFUSEE': BadgeVariant.danger, 'SUSPENDUE': BadgeVariant.ink, 'CLOTUREE': BadgeVariant.outline};
 const Map<String, BadgeVariant> sejourVariant = {'PREVU': BadgeVariant.info, 'EN_COURS': BadgeVariant.ok, 'TERMINE': BadgeVariant.outline, 'ANNULE': BadgeVariant.neutral};
+// M16 — dépenses et factures (même palette que apps/web/lib/status.ts).
+const Map<String, BadgeVariant> depenseVariant = {'BROUILLON': BadgeVariant.outline, 'A_APPROUVER': BadgeVariant.warn, 'APPROUVEE': BadgeVariant.info, 'REJETEE': BadgeVariant.danger, 'PAYEE': BadgeVariant.ok, 'ANNULEE': BadgeVariant.neutral};
+const Map<String, BadgeVariant> factureVariant = {'RECUE': BadgeVariant.neutral, 'VERIFIEE': BadgeVariant.info, 'CONTESTEE': BadgeVariant.danger, 'REGLEE': BadgeVariant.ok};

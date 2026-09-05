@@ -44,6 +44,10 @@ class AppContext {
   bool get isResident => !isGestion && !isConseil && !isGardien && !isPrestataire;
   /// Lecture financière étendue : syndic, conseil, super admin.
   bool get voitFinancesGlobales => isGestion || isConseil;
+  // M16 — dépenses : le syndic gère et paie, le conseil lit et approuve au-dessus du seuil.
+  bool get voitDepenses => isGestion || isConseil;
+  bool get gereDepenses => isGestion;
+  bool get approuveDepenses => isGestion || isConseil;
   bool get voitAg => !isLocataire && !isGardien && !isPrestataire && role != 'GESTIONNAIRE_LCD';
   bool get multiCopro => profil.roles.where((r) => r.actif).map((r) => r.coproprieteId).toSet().length > 1;
 

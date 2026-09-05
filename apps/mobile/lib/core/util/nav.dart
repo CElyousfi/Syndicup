@@ -41,6 +41,7 @@ IconData navIcon(String key) => switch (key) {
       'bell' => Icons.notifications_rounded,
       'person' => Icons.person_rounded,
       'suitcase' => Icons.luggage_rounded,
+      'receipt' => Icons.receipt_long_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -51,6 +52,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   NavItem lots([String? label]) => NavItem('/lots', label ?? d.lots, 'building');
   final budgets = NavItem('/finances/budgets', d.budgets, 'wallet');
   final appels = NavItem('/finances/appels-de-fonds', d.appels, 'coins');
+  // M16 — dépenses (syndic gère, conseil approuve / contrôle).
+  final depenses = NavItem('/depenses', d.depenses, 'receipt');
   final contestations = NavItem('/finances/contestations', d.contestations, 'scale');
   NavItem comptabilite([String? label]) => NavItem('/finances/comptabilite', label ?? d.comptabilite, 'chart');
   final ag = NavItem('/ag', d.ag, 'vote');
@@ -79,7 +82,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'SYNDIC':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [budgets, appels, comptabilite(), contestations]),
+        NavSection(s.finances, [budgets, appels, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
@@ -87,7 +90,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'CONSEIL_SYNDICAL':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [budgets, appels, comptabilite(), contestations]),
+        NavSection(s.finances, [budgets, appels, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
       ];

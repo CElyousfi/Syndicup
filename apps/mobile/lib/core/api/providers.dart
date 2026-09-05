@@ -288,3 +288,29 @@ final lcdSyntheseProvider = FutureProvider.autoDispose.family<LcdSynthese?, Stri
 final lcdPiecesJointesProvider = FutureProvider.autoDispose.family<List<LcdPieceJointe>, String>((ref, id) async {
   return unwrap(await ref.watch(apiClientProvider).get('/lcd/sejours/$id/pieces-jointes', parse: (j) => parseList(j, LcdPieceJointe.fromJson)));
 });
+
+// ── M16 Dépenses ──────────────────────────────────────────────────────────────
+/// Liste des dépenses de l'exercice courant (syndic / conseil) — `statut` null = toutes.
+final depensesProvider = FutureProvider.autoDispose.family<List<Depense>, String?>((ref, statut) async {
+  final exercice = DateTime.now().year.toString();
+  return unwrap(await ref.watch(apiClientProvider).get('/depenses', query: {'limit': 100, 'exercice': exercice, 'sort': '-date_depense', if (statut != null) 'statut': statut}, parse: (j) => parseList(j, Depense.fromJson)));
+});
+
+final depenseProvider = FutureProvider.autoDispose.family<Depense, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/depenses/$id', parse: (j) => Depense.fromJson(asMap(j))));
+});
+
+/// Factures et preuve de paiement (URLs signées 15 min).
+final depenseDocumentsProvider = FutureProvider.autoDispose.family<DepenseDocuments, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/depenses/$id/documents', parse: (j) => DepenseDocuments.fromJson(asMap(j))));
+});
+
+/// Budget vs réalisé de l'exercice courant — `null` pour les rôles sans accès (403).
+final budgetVsRealiseProvider = FutureProvider.autoDispose<BudgetVsRealise?>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<BudgetVsRealise>('/finances/budget-vs-realise', query: {'exercice': DateTime.now().year.toString()}, parse: (j) => BudgetVsRealise.fromJson(asMap(j)));
+  return switch (r) {
+    ApiOk<BudgetVsRealise>(:final data) => data,
+    ApiFail<BudgetVsRealise>(:final status) when status == 403 => null,
+    ApiFail<BudgetVsRealise>() => unwrap(r),
+  };
+});
