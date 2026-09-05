@@ -487,6 +487,13 @@ export interface Incident {
   photos: string[];
   /** M15 — séjour de location courte durée lié (nuisance pendant un séjour). */
   sejourId: string | null;
+  // M16 — évaluation du prestataire (créateur du ticket ou syndic, après RESOLU/FERME).
+  notePrestataire?: number | null;
+  commentairePrestataire?: string | null;
+  evalueLe?: string | null;
+  /** M16 — détail uniquement, rôles syndic/conseil : dépenses nées de l'incident. */
+  depenses?: Depense[];
+  total_depenses?: string | null;
   creeLe: string;
   modifieLe: string;
 }
@@ -541,6 +548,163 @@ export interface Prestataire {
   actif: boolean;
   utilisateurId: string | null;
   creeLe: string;
+  // M16 — fiche fournisseur. Le RIB complet n'est jamais dans une réponse de liste/fiche.
+  ice: string | null;
+  rc: string | null;
+  adresse: string | null;
+  email: string | null;
+  telephone: string | null;
+  notes: string | null;
+  ribMasque: string | null;
+  ribRenseigne: boolean;
+  noteMoyenne: string | null;
+}
+
+// ── M16 — Dépenses, factures, postes budgétaires ────────────────────────────
+export type CategorieDepense =
+  | "ENTRETIEN_COURANT"
+  | "REPARATIONS"
+  | "TRAVAUX"
+  | "PERSONNEL"
+  | "ENERGIE_EAU"
+  | "ASSURANCE"
+  | "HONORAIRES_SYNDIC"
+  | "ADMINISTRATIF"
+  | "IMPOTS_TAXES"
+  | "AUTRE";
+export type StatutDepense = "BROUILLON" | "A_APPROUVER" | "APPROUVEE" | "REJETEE" | "PAYEE" | "ANNULEE";
+export type SourceFinancement = "COMPTE_COURANT" | "FONDS_RESERVE";
+export type StatutFacture = "RECUE" | "VERIFIEE" | "CONTESTEE" | "REGLEE";
+export type MethodePaiementDepense = "VIREMENT" | "CHEQUE" | "ESPECES";
+export type TypeDepenseLog = "CREEE" | "SOUMISE" | "APPROUVEE" | "REJETEE" | "PAYEE" | "ANNULEE" | "FACTURE_AJOUTEE" | "FACTURE_CONTESTEE" | "MODIFIEE";
+
+export interface BudgetPoste {
+  id: string;
+  budgetAgId: string;
+  categorie: CategorieDepense;
+  libelle: string;
+  montantPrevu: string;
+  ordre: number;
+}
+
+export interface Facture {
+  id: string;
+  depenseId: string;
+  prestataireId: string | null;
+  numero: string | null;
+  dateFacture: string;
+  dateEcheance: string | null;
+  montantTtc: string;
+  statut: StatutFacture;
+  documentId: string;
+  creeLe: string;
+  document?: { id: string; nom: string; type: string };
+  prestataire?: { id: string; nom: string } | null;
+}
+
+export interface DepenseLog {
+  id: string;
+  type: TypeDepenseLog;
+  acteurId: string | null;
+  acteur?: { id: string; nom: string | null; prenom: string | null } | null;
+  detailsJson: Record<string, unknown> | null;
+  horodatage: string;
+}
+
+export interface Depense {
+  id: string;
+  coproprieteId: string;
+  budgetAgId: string | null;
+  budgetPosteId: string | null;
+  prestataireId: string | null;
+  categorie: CategorieDepense;
+  libelle: string;
+  description: string | null;
+  montantHt: string | null;
+  tva: string | null;
+  montantTtc: string;
+  dateDepense: string;
+  statut: StatutDepense;
+  source: SourceFinancement;
+  incidentId: string | null;
+  contratId: string | null;
+  personnelId: string | null;
+  periodePaie: string | null;
+  creeParId: string;
+  approuveParId: string | null;
+  approuveLe: string | null;
+  motifRejet: string | null;
+  payeLe: string | null;
+  methodePaiement: MethodePaiementDepense | null;
+  referencePaiement: string | null;
+  justificatifPaiementDocumentId: string | null;
+  resolutionAgId: string | null;
+  creeLe: string;
+  modifieLe: string;
+  prestataire?: { id: string; nom: string; specialite: string } | null;
+  budgetPoste?: { id: string; libelle: string; categorie: CategorieDepense } | null;
+  incident?: { id: string; categorie: string; sousCategorie: string; statut: string } | null;
+  resolutionAg?: { id: string; texte: string; resultat: string; agId: string } | null;
+  creePar?: { id: string; nom: string | null; prenom: string | null } | null;
+  approuvePar?: { id: string; nom: string | null; prenom: string | null } | null;
+  _count?: { factures: number };
+}
+
+export interface DepenseDetail extends Depense {
+  factures: Facture[];
+  logs: DepenseLog[];
+  justificatifPaiementDocument: { id: string; nom: string; type: string } | null;
+  mouvementsFondsReserve: Array<{ id: string; montant: string; horodatage: string; resolutionAgId: string | null }>;
+  niveau_approbation_requis: "SYNDIC" | "CONSEIL";
+  seuil_non_configure: boolean;
+}
+
+export interface DepensesTotaux {
+  montant_ttc: string;
+  par_statut: Partial<Record<StatutDepense, { nb: number; montant_ttc: string }>>;
+}
+
+export interface DepenseDocuments {
+  factures: Array<{ facture_id: string; document_id: string; numero: string | null; statut: StatutFacture; nom: string; type: string; url: string }>;
+  justificatif_paiement: { document_id: string; nom: string; type: string; url: string } | null;
+}
+
+export interface BudgetVsRealiseLigne {
+  poste_id?: string;
+  categorie: CategorieDepense;
+  libelle?: string;
+  ordre?: number;
+  montant_prevu: string | null;
+  en_attente: string;
+  engage: string;
+  realise: string;
+  consomme: string;
+  ecart: string | null;
+  pourcentage_realise: string | null;
+  pourcentage_consomme: string | null;
+  depassement: boolean;
+  nb_depenses: number;
+}
+
+export interface BudgetVsRealise {
+  exercice: string;
+  budget: { id: string; statut: StatutBudget; montant_total: string } | null;
+  postes: BudgetVsRealiseLigne[];
+  hors_poste: BudgetVsRealiseLigne[];
+  par_categorie: BudgetVsRealiseLigne[];
+  totaux: BudgetVsRealiseLigne;
+  fonds_reserve: { solde: string; decaisse_exercice: string; engage: string };
+  impayes_total: string;
+  seuil_approbation_conseil: string | null;
+  seuil_non_configure: boolean;
+  nb_a_approuver: number;
+}
+
+export interface PrestataireFiche extends Prestataire {
+  nb_interventions: number;
+  interventions: Array<{ id: string; categorie: CategorieIncident; sousCategorie: string; statut: StatutIncident; urgence: UrgenceIncident; creeLe: string }>;
+  evaluations: Array<{ incident_id: string; note: number | null; commentaire: string | null; evalue_le: string | null }>;
+  depenses: { total_paye: string; total_engage: string; nb: number; recentes: Depense[] } | null;
 }
 
 // ── Personnel & visites ─────────────────────────────────────────────────────

@@ -23,7 +23,8 @@ export type IconKey =
   | "shield"
   | "send"
   | "chart"
-  | "suitcase";
+  | "suitcase"
+  | "receipt";
 
 export interface NavItem {
   href: string;
@@ -52,6 +53,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const lots = (label = d.lots): NavItem => ({ href: p("/lots"), label, icon: "building" });
   const budgets: NavItem = { href: p("/finances/budgets"), label: d.budgets, icon: "wallet" };
   const appels: NavItem = { href: p("/finances/appels-de-fonds"), label: d.appels, icon: "coins" };
+  // M16 — dépenses : l'argent qui sort (syndic gère, conseil approuve/contrôle).
+  const depenses: NavItem = { href: p("/finances/depenses"), label: d.depenses, icon: "receipt" };
   const contestations: NavItem = {
     href: p("/finances/contestations"),
     label: d.contestations,
@@ -113,7 +116,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "SYNDIC":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, comptabilite(), contestations] },
+        { label: s.finances, items: [budgets, appels, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
@@ -124,7 +127,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     case "CONSEIL_SYNDICAL":
       return [
         { label: null, items: [dashboard] },
-        { label: s.finances, items: [budgets, appels, comptabilite(), contestations] },
+        { label: s.finances, items: [budgets, appels, depenses, comptabilite(), contestations] },
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,

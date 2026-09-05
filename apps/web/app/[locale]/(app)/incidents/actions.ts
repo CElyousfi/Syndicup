@@ -118,8 +118,16 @@ export async function creerPrestataire(_prev: FormState, fd: FormData): Promise<
     body: {
       nom: champ(fd, "nom"),
       specialite: champ(fd, "specialite"),
-      contact: champ(fd, "contact"),
+      contact: champ(fd, "contact") || undefined,
       utilisateur_id: utilisateurId === "" ? null : utilisateurId,
+      // M16 — fiche fournisseur (facultatif à la création).
+      telephone: champ(fd, "telephone") || null,
+      email: champ(fd, "email") || null,
+      ice: champ(fd, "ice") || null,
+      rc: champ(fd, "rc") || null,
+      adresse: champ(fd, "adresse") || null,
+      rib: champ(fd, "rib").replace(/\s+/g, "") || null,
+      notes: champ(fd, "notes") || null,
     },
   });
   if (!res.ok) return fromApiError(res);

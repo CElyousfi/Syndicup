@@ -294,3 +294,11 @@ export const IconSuitcase = (p: SVGProps<SVGSVGElement>) => (
     <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M8 7v13M16 7v13" />
   </svg>
 );
+
+/** M16 — dépenses / factures (reçu). */
+export const IconReceipt = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M6 3.5h12v17l-2.5-1.6-2.5 1.6-2.5-1.6-2.5 1.6-2-1.3z" />
+    <path d="M9 8.5h6M9 12h6M9 15.5h3.5" />
+  </svg>
+);

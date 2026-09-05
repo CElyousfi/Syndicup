@@ -130,7 +130,9 @@ export default async function BudgetsPage({
                         <IconCircle tone="sage" size={36} className="hidden sm:inline-flex">
                           <CWallet width={18} height={18} />
                         </IconCircle>
-                        <span className="tnum font-semibold text-ink">{b.exercice}</span>
+                        <Link href={`/${ctx.locale}/finances/budgets/${b.id}`} className="tnum font-semibold text-ink hover:text-action">
+                          {b.exercice}
+                        </Link>
                       </span>
                     </TD>
                     <TD align="end" className="tnum font-medium text-ink">

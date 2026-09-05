@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
 import { getLots } from "../../../../../lib/finances-data";
 import type {
+  BudgetAg,
+  BudgetPoste,
   Incident,
   IncidentCreateur,
   IncidentLog,
@@ -12,15 +15,16 @@ import type {
 } from "../../../../../lib/api/types";
 import { PhotoGallery } from "../../../../../components/incidents/photo-gallery";
 import { fill } from "../../../../../lib/i18n";
-import { formatDateHeure, formatTelephone, nomComplet } from "../../../../../lib/format";
+import { formatDate, formatDateHeure, formatMAD, formatTelephone, nomComplet } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Avatar } from "../../../../../components/ui/avatar";
 import { CAlert, CSend, CWrench, IconCircle } from "../../../../../components/ui/color-icons";
-import { incidentVariant, urgenceVariant } from "../../../../../lib/status";
+import { depenseVariant, incidentVariant, urgenceVariant } from "../../../../../lib/status";
 import { AssignerModal, ChangerStatutModal } from "./incident-actions";
+import { CreerDepenseIncidentModal, EvaluerPrestataireModal } from "./incident-depense-modals";
 
 type IncidentAvecJournal = Incident & { logs: IncidentLog[]; createur?: IncidentCreateur | null };
 
@@ -62,6 +66,23 @@ export default async function IncidentDetailPage({
   }));
   const prestataires = prestatairesRes?.ok ? prestatairesRes.data : [];
   const prestataireAssigne = prestataires.find((p) => p.id === incident.assigneAId);
+  // M16 — dépenses liées (syndic / conseil) et évaluation du prestataire (créateur ou syndic, RESOLU/FERME).
+  const conseil = ctx.roles.includes("CONSEIL_SYNDICAL");
+  const voitDepenses = (syndic || conseil) && Array.isArray(incident.depenses);
+  const depenses = incident.depenses ?? [];
+  const d = dict.depenses;
+  const e = dict.enumsDepenses;
+  const resolu = incident.statut === "RESOLU" || incident.statut === "FERME";
+  const peutEvaluer = resolu && Boolean(incident.assigneAId) && incident.notePrestataire == null && (syndic || incident.creePar === ctx.profil.id);
+  let postesActifs: BudgetPoste[] = [];
+  if (syndic) {
+    const budgetsRes = await apiFetch<BudgetAg[]>("/finances/budgets", { searchParams: { limit: 50 } });
+    const actif = (budgetsRes.ok ? budgetsRes.data : []).find((b) => b.statut === "ACTIF" && b.exercice === String(new Date().getFullYear()));
+    if (actif) {
+      const pr = await apiFetch<{ postes: BudgetPoste[] }>(`/finances/budgets/${actif.id}/postes`);
+      postesActifs = pr.ok ? pr.data.postes : [];
+    }
+  }
   const lotConcerne = lotsRes.find((l) => l.id === incident.lotId);
   const membreParId = new Map(membres.map((m) => [m.id, m.nom]));
   const nomActeur = (acteurId: string | null, acteur?: { nom: string | null; prenom: string | null } | null) =>
@@ -221,6 +242,34 @@ export default async function IncidentDetailPage({
               </ol>
             )}
           </Card>
+
+          {voitDepenses ? (
+            <Card>
+              <SectionHeader
+                title={d.depensesLiees}
+                subtitle={incident.total_depenses ? `${d.totalDepensesLiees} : ${formatMAD(incident.total_depenses, ctx.locale)}` : undefined}
+                action={syndic ? <CreerDepenseIncidentModal dict={dict} locale={ctx.locale} incidentId={id} postes={postesActifs} /> : undefined}
+              />
+              {depenses.length === 0 ? (
+                <p className="mt-3 text-sm text-soft">{d.aucuneDepenseLiee}</p>
+              ) : (
+                <ul className="mt-3 divide-y divide-hairline">
+                  {depenses.map((dep) => (
+                    <li key={dep.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <Link href={`/${locale}/finances/depenses/${dep.id}`} className="block truncate text-sm font-medium text-ink hover:text-action">{dep.libelle}</Link>
+                        <span className="tnum text-[12px] text-faint">{formatDate(dep.dateDepense, ctx.locale)}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={depenseVariant[dep.statut]}>{e.statutDepense[dep.statut]}</Badge>
+                        <span className="tnum text-sm font-medium text-ink">{formatMAD(dep.montantTtc, ctx.locale)}</span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          ) : null}
         </div>
 
         <div className="space-y-4">
@@ -258,6 +307,17 @@ export default async function IncidentDetailPage({
             ) : (
               <p className="mt-3 text-sm text-soft">{i.nonAssigne}</p>
             )}
+            {incident.notePrestataire != null ? (
+              <p className="mt-3 text-sm text-body">
+                <span className="tnum text-warn" aria-hidden>{"★".repeat(incident.notePrestataire)}</span>{" "}
+                {fill(d.dejaEvalue, { note: incident.notePrestataire })}
+                {incident.commentairePrestataire ? <span className="block text-[13px] text-soft">« {incident.commentairePrestataire} »</span> : null}
+              </p>
+            ) : peutEvaluer ? (
+              <div className="mt-3">
+                <EvaluerPrestataireModal dict={dict} locale={ctx.locale} incidentId={id} prestataireNom={prestataireAssigne?.nom ?? ""} />
+              </div>
+            ) : null}
           </Card>
           <Card>
             <SectionHeader title={i.creePar} />

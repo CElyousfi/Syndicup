@@ -113,3 +113,20 @@ export const regimeLcdVariant = map({
   ENCADREE: "info",
   INTERDITE: "danger",
 });
+
+// M16 — dépenses et factures.
+export const depenseVariant = map({
+  BROUILLON: "outline",
+  A_APPROUVER: "warn",
+  APPROUVEE: "info",
+  REJETEE: "danger",
+  PAYEE: "ok",
+  ANNULEE: "neutral",
+});
+
+export const factureVariant = map({
+  RECUE: "neutral",
+  VERIFIEE: "info",
+  CONTESTEE: "danger",
+  REGLEE: "ok",
+});
