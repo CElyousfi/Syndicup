@@ -173,6 +173,14 @@ describe("RLS M15 — déclarations et séjours LCD", () => {
     expect(evs.map((e) => e.id)).toEqual([evenementA1]);
   });
 
+  it("le gestionnaire LCD lit la fiche des lots qu'il gère, et seulement ceux-là (policy additive lot)", async () => {
+    const lots = await withTenant(ctx(gestionnaire, "GESTIONNAIRE_LCD"), (db) => db.lot.findMany({ select: { id: true } }));
+    expect(lots.map((l) => l.id)).toEqual([lotA1]);
+    // Les séjours incluent le lot (aucun 500 « lot required, got null »).
+    const sejours = await withTenant(ctx(gestionnaire, "GESTIONNAIRE_LCD"), (db) => db.sejourCourteDuree.findMany({ include: { lot: { select: { numero: true } } } }));
+    expect(sejours[0]?.lot.numero).toBe("A1");
+  });
+
   it("le syndic voit tout dans sa copropriété", async () => {
     const decls = await withTenant(ctx(syndicA, "SYNDIC"), (db) => db.lotLocationCourteDuree.findMany());
     expect(decls.length).toBe(2);

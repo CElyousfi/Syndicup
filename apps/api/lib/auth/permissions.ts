@@ -63,6 +63,8 @@ export const PERMISSIONS: PermissionMatrix = {
     PERSONNE_MORALE_REPRESENTANT: true,
     GARDIEN: true,
     PRESTATAIRE: false,
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: true,
   },
   "coproprietes.modifier": {
     SUPER_ADMIN: true,
@@ -80,6 +82,8 @@ export const PERMISSIONS: PermissionMatrix = {
     PERSONNE_MORALE_REPRESENTANT: true,
     GARDIEN: true,
     PRESTATAIRE: false,
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: true,
   },
 
   // ── Utilisateurs (M13 — Master Spec Partie 3.2 : /users/:id "syndic only") ──
@@ -305,6 +309,8 @@ export const PERMISSIONS: PermissionMatrix = {
     LOCATAIRE: true,
     GARDIEN: true,
     PRESTATAIRE: false, // reçoit l'assignation, ne crée pas
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: true,
   },
   "incidents.voir_tous_copropriete": {
     SUPER_ADMIN: true,
@@ -314,6 +320,8 @@ export const PERMISSIONS: PermissionMatrix = {
     LOCATAIRE: "scoped", // les siens
     GARDIEN: true,
     PRESTATAIRE: "scoped", // les siens assignés
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: "scoped",
   },
   // Master Spec Partie 4.2 : "syndic/prestataire (update scopé)". Le gardien est ajouté ici en
   // plus du tableau littéral parce que Doc A §5.3 (workflows spéciaux) le montre systématiquement
@@ -552,6 +560,8 @@ export const PERMISSIONS: PermissionMatrix = {
     INDIVISAIRE: "scoped",
     GARDIEN: true,
     PRESTATAIRE: "scoped",
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: "scoped",
   },
   // Ajout/retrait d'un copropriétaire = mise à jour du registre légal du lot — réservé au
   // syndic (Doc A §2.4/§2.5, pas de self-service résident en M3).
@@ -638,6 +648,8 @@ export const PERMISSIONS: PermissionMatrix = {
     INDIVISAIRE: true,
     GARDIEN: true,
     PRESTATAIRE: false,
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: true,
   },
   // Upload d'un document "libre" (règlement intérieur, contrat prestataire...) — réservé au
   // syndic ; les documents générés automatiquement (PV, quittance) sont créés par le job système
@@ -660,6 +672,8 @@ export const PERMISSIONS: PermissionMatrix = {
     INDIVISAIRE: true,
     GARDIEN: true,
     PRESTATAIRE: true,
+    // M15 — gestionnaire LCD : même portée qu'un propriétaire (scopé à ses lots par RLS).
+    GESTIONNAIRE_LCD: true,
   },
 
   // ── Litiges (Master Spec Partie 2.2, Doc A §12.1 — M11) ─────────────────
