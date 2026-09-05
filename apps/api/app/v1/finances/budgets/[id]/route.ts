@@ -9,6 +9,7 @@ import {
   RessourceIntrouvableError,
   ContrainteMetierError,
 } from "../../../../../lib/finances/finances";
+import { BudgetPosteError } from "../../../../../lib/depenses/budget-postes";
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
 
@@ -41,6 +42,7 @@ async function handlePATCH(req: Request, { params }: RouteCtx) {
     if (mapped) return mapped;
     if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
     if (e instanceof RessourceIntrouvableError) return fail("NOT_FOUND", e.message);
+    if (e instanceof BudgetPosteError) return fail(e.code, e.message);
     if (e instanceof ContrainteMetierError) return fail("UNPROCESSABLE_ENTITY", e.message);
     throw e;
   }

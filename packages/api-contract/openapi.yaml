@@ -32,6 +32,7 @@ tags:
   - name: Notifications
   - name: Litiges
   - name: LCD
+  - name: Dépenses
     description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
@@ -854,6 +855,13 @@ components:
             `<copropriete_id>/incidents/`). Lecture via GET /incidents/{id}/photos (URLs
             signées 15 min — Master Spec Partie 9.3). Ajout signalé : champ absent du tableau
             Master Spec littéral, requis par le signalement photo mobile (Doc A §5).
+        # M16 — évaluation du prestataire (créateur du ticket ou syndic, une fois, après RESOLU/FERME).
+        note_prestataire: { type: integer, minimum: 1, maximum: 5, nullable: true }
+        commentaire_prestataire: { type: string, nullable: true }
+        evalue_le: { type: string, format: date-time, nullable: true }
+        # M16 — détail uniquement, rôles `depenses.lire` : dépenses nées de l'incident + total engagé/payé.
+        depenses: { type: array, items: { $ref: "#/components/schemas/Depense" } }
+        total_depenses: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
         cree_le: { type: string, format: date-time }
 
     IncidentCreate:
@@ -918,15 +926,294 @@ components:
           description: >
             Absent du tableau Master Spec littéral, ajouté pour permettre la confidentialité RLS
             "un prestataire ne voit que son propre ticket" (Doc A §12.3) — voir schema.prisma.
+        # M16 — fiche fournisseur (Doc A §8.3, §3.6). Le RIB complet n'est JAMAIS ici : voir
+        # GET /prestataires/{id}/rib (syndic, audité).
+        ice: { type: string, nullable: true, description: Identifiant Commun de l'Entreprise (15 chiffres). }
+        rc: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        telephone: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        rib_masque: { type: string, nullable: true, example: "•••• 2345", description: 4 derniers caractères du RIB. }
+        rib_renseigne: { type: boolean }
+        note_moyenne: { type: string, nullable: true, example: "4.00", description: Moyenne des notes 1–5 des incidents résolus (recalculée à chaque évaluation). }
+
+    PrestataireFiche:
+      allOf:
+        - $ref: "#/components/schemas/Prestataire"
+        - type: object
+          properties:
+            nb_interventions: { type: integer }
+            interventions: { type: array, items: { type: object } }
+            evaluations:
+              type: array
+              items:
+                type: object
+                properties:
+                  incident_id: { type: string, format: uuid }
+                  note: { type: integer, minimum: 1, maximum: 5 }
+                  commentaire: { type: string, nullable: true }
+                  evalue_le: { type: string, format: date-time, nullable: true }
+            depenses:
+              type: object
+              nullable: true
+              description: Présent pour syndic / conseil syndical uniquement (`depenses.lire`).
+              properties:
+                total_paye: { $ref: "#/components/schemas/Money" }
+                total_engage: { $ref: "#/components/schemas/Money" }
+                nb: { type: integer }
+                recentes: { type: array, items: { type: object } }
 
     PrestataireCreate:
       type: object
-      required: [nom, specialite, contact]
+      required: [nom, specialite]
+      description: Au moins un contact (contact, telephone ou email).
       properties:
         nom: { type: string, minLength: 1 }
         specialite: { type: string, minLength: 1 }
-        contact: { type: string, minLength: 1 }
+        contact: { type: string, minLength: 1, description: Conservé pour compatibilité — préférer telephone / email. }
         utilisateur_id: { type: string, format: uuid, nullable: true }
+        ice: { type: string, pattern: '^[0-9]{15}$', nullable: true }
+        rc: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        telephone: { type: string, nullable: true }
+        rib: { type: string, pattern: '^[0-9]{24}$', nullable: true, description: RIB marocain 24 chiffres — stocké, jamais renvoyé en clair hors /rib. }
+        notes: { type: string, nullable: true }
+
+    # ── M16 — Dépenses, factures, postes budgétaires (Doc A §3, §6, §8 — ⚠️ module absent du
+    #    Master Spec Partie 2.2/3.2, ajouts signalés dans ROADMAP M16) ──
+    CategorieDepense:
+      type: string
+      enum: [ENTRETIEN_COURANT, REPARATIONS, TRAVAUX, PERSONNEL, ENERGIE_EAU, ASSURANCE, HONORAIRES_SYNDIC, ADMINISTRATIF, IMPOTS_TAXES, AUTRE]
+    StatutDepense:
+      type: string
+      enum: [BROUILLON, A_APPROUVER, APPROUVEE, REJETEE, PAYEE, ANNULEE]
+    SourceFinancement:
+      type: string
+      enum: [COMPTE_COURANT, FONDS_RESERVE]
+    StatutFacture:
+      type: string
+      enum: [RECUE, VERIFIEE, CONTESTEE, REGLEE]
+
+    BudgetPoste:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        budget_ag_id: { type: string, format: uuid }
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string }
+        montant_prevu: { $ref: "#/components/schemas/Money" }
+        ordre: { type: integer }
+    BudgetPosteCreate:
+      type: object
+      required: [categorie, libelle, montant_prevu]
+      properties:
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string, minLength: 1, maxLength: 120 }
+        montant_prevu: { $ref: "#/components/schemas/Money" }
+        ordre: { type: integer, minimum: 0 }
+    BudgetPosteUpdate:
+      type: object
+      properties:
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string, minLength: 1, maxLength: 120 }
+        montant_prevu: { $ref: "#/components/schemas/Money" }
+        ordre: { type: integer, minimum: 0 }
+
+    PieceDepense:
+      type: object
+      required: [storage_path, nom]
+      description: Fichier déjà téléversé via POST /depenses/upload-url (préfixe `<copropriete>/depenses/`).
+      properties:
+        storage_path: { type: string }
+        nom: { type: string, maxLength: 200 }
+
+    Depense:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        budget_ag_id: { type: string, format: uuid, nullable: true }
+        budget_poste_id: { type: string, format: uuid, nullable: true }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string }
+        description: { type: string, nullable: true }
+        montant_ht: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        tva: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        date_depense: { type: string, format: date }
+        statut: { $ref: "#/components/schemas/StatutDepense" }
+        source: { $ref: "#/components/schemas/SourceFinancement" }
+        incident_id: { type: string, format: uuid, nullable: true }
+        contrat_id: { type: string, format: uuid, nullable: true, description: Rempli par M19. }
+        personnel_id: { type: string, format: uuid, nullable: true, description: Rempli par M20. }
+        periode_paie: { type: string, nullable: true, pattern: '^\d{4}-\d{2}$' }
+        cree_par_id: { type: string, format: uuid }
+        approuve_par_id: { type: string, format: uuid, nullable: true }
+        approuve_le: { type: string, format: date-time, nullable: true }
+        motif_rejet: { type: string, nullable: true }
+        paye_le: { type: string, format: date, nullable: true }
+        methode_paiement: { type: string, enum: [VIREMENT, CHEQUE, ESPECES], nullable: true }
+        reference_paiement: { type: string, nullable: true, description: N° de chèque / référence de virement (rapprochement bancaire manuel). }
+        justificatif_paiement_document_id: { type: string, format: uuid, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true }
+        niveau_approbation_requis: { type: string, enum: [SYNDIC, CONSEIL], description: Détail uniquement — dérivé du seuil de la copropriété. }
+        seuil_non_configure: { type: boolean, description: Détail uniquement — `copropriete.seuil_approbation_conseil` non renseigné. }
+        cree_le: { type: string, format: date-time }
+    DepenseCreate:
+      type: object
+      required: [categorie, libelle, montant_ttc, date_depense, source]
+      description: HT et TVA vont ensemble et doivent sommer au TTC (à la centime).
+      properties:
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true }
+        montant_ht: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        tva: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        date_depense: { type: string, format: date }
+        source: { $ref: "#/components/schemas/SourceFinancement" }
+        budget_poste_id: { type: string, format: uuid, nullable: true, description: La catégorie du poste doit correspondre à celle de la dépense (422 sinon). }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        incident_id: { type: string, format: uuid, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true, description: Résolution ADOPTEE — obligatoire pour un décaissement du fonds de réserve sauf paramètre de copropriété. }
+    DepenseUpdate:
+      type: object
+      description: BROUILLON ou REJETEE uniquement (422 DEPENSE_STATUT_INVALIDE sinon).
+      properties:
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true }
+        montant_ht: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        tva: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        date_depense: { type: string, format: date }
+        source: { $ref: "#/components/schemas/SourceFinancement" }
+        budget_poste_id: { type: string, format: uuid, nullable: true }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        incident_id: { type: string, format: uuid, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true }
+    DepenseRejeter:
+      type: object
+      required: [motif]
+      properties:
+        motif: { type: string, minLength: 1, maxLength: 1000 }
+    DepenseAnnuler:
+      type: object
+      properties:
+        motif: { type: string, nullable: true, maxLength: 1000 }
+    DepensePayer:
+      type: object
+      required: [methode, date_paiement]
+      description: Référence obligatoire sauf ESPECES. Aucune API bancaire — le syndic rapproche manuellement avec le relevé.
+      properties:
+        methode: { type: string, enum: [VIREMENT, CHEQUE, ESPECES] }
+        reference: { type: string, nullable: true, maxLength: 120 }
+        date_paiement: { type: string, format: date }
+        justificatif: { allOf: [{ $ref: "#/components/schemas/PieceDepense" }], nullable: true, description: Preuve du paiement sortant → Document JUSTIFICATIF_DEPENSE. }
+
+    Facture:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        depense_id: { type: string, format: uuid }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        numero: { type: string, nullable: true }
+        date_facture: { type: string, format: date }
+        date_echeance: { type: string, format: date, nullable: true }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        statut: { $ref: "#/components/schemas/StatutFacture" }
+        document_id: { type: string, format: uuid }
+        cree_le: { type: string, format: date-time }
+    FactureCreate:
+      type: object
+      required: [date_facture, montant_ttc, document]
+      properties:
+        numero: { type: string, nullable: true, maxLength: 80 }
+        date_facture: { type: string, format: date }
+        date_echeance: { type: string, format: date, nullable: true }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        document: { $ref: "#/components/schemas/PieceDepense" }
+    FactureUpdate:
+      type: object
+      required: [statut]
+      properties:
+        statut: { $ref: "#/components/schemas/StatutFacture" }
+
+    DepenseLog:
+      type: object
+      description: Journal append-only d'une dépense.
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [CREEE, SOUMISE, APPROUVEE, REJETEE, PAYEE, ANNULEE, FACTURE_AJOUTEE, FACTURE_CONTESTEE, MODIFIEE] }
+        acteur_id: { type: string, format: uuid, nullable: true }
+        details_json: { type: object, nullable: true }
+        horodatage: { type: string, format: date-time }
+
+    BudgetVsRealiseLigne:
+      type: object
+      properties:
+        poste_id: { type: string, format: uuid }
+        categorie: { $ref: "#/components/schemas/CategorieDepense" }
+        libelle: { type: string }
+        montant_prevu: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        en_attente: { $ref: "#/components/schemas/Money" }
+        engage: { $ref: "#/components/schemas/Money" }
+        realise: { $ref: "#/components/schemas/Money" }
+        consomme: { $ref: "#/components/schemas/Money" }
+        ecart: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        pourcentage_realise: { type: string, nullable: true, example: "42.5" }
+        pourcentage_consomme: { type: string, nullable: true }
+        depassement: { type: boolean }
+        nb_depenses: { type: integer }
+    BudgetVsRealise:
+      type: object
+      properties:
+        exercice: { type: string, pattern: '^\d{4}$' }
+        budget:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            statut: { type: string }
+            montant_total: { $ref: "#/components/schemas/Money" }
+        postes: { type: array, items: { $ref: "#/components/schemas/BudgetVsRealiseLigne" } }
+        hors_poste: { type: array, items: { $ref: "#/components/schemas/BudgetVsRealiseLigne" } }
+        par_categorie: { type: array, items: { $ref: "#/components/schemas/BudgetVsRealiseLigne" } }
+        totaux: { $ref: "#/components/schemas/BudgetVsRealiseLigne" }
+        fonds_reserve:
+          type: object
+          properties:
+            solde: { $ref: "#/components/schemas/Money" }
+            decaisse_exercice: { $ref: "#/components/schemas/Money" }
+            engage: { $ref: "#/components/schemas/Money" }
+        impayes_total: { $ref: "#/components/schemas/Money" }
+        seuil_approbation_conseil: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        seuil_non_configure: { type: boolean, description: Signalé dans les rapports tant que le syndic n'a pas configuré le seuil (brief §8). }
+        nb_a_approuver: { type: integer }
+
+    IncidentDepenseCreate:
+      type: object
+      required: [montant_ttc]
+      description: BROUILLON pré-rempli depuis l'incident (prestataire assigné, catégorie mappée, libellé, description).
+      properties:
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        montant_ht: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        tva: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        libelle: { type: string, maxLength: 200 }
+        description: { type: string, nullable: true }
+        budget_poste_id: { type: string, format: uuid, nullable: true }
+        date_depense: { type: string, format: date }
+        source: { $ref: "#/components/schemas/SourceFinancement" }
+    IncidentEvaluation:
+      type: object
+      required: [note]
+      properties:
+        note: { type: integer, minimum: 1, maximum: 5 }
+        commentaire: { type: string, nullable: true, maxLength: 1000 }
 
     # ── M15 — Location courte durée ──
     RegimeLocationCourteDuree:
@@ -3001,6 +3288,20 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
 
   /prestataires/{id}:
+    get:
+      tags: [Incidents]
+      summary: Fiche fournisseur (M16) — coordonnées, RIB masqué, historique des interventions, évaluations, dépenses (syndic/conseil).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PrestataireFiche" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Incidents]
       summary: Modifie la fiche d'un prestataire (nom, spécialité, contact, actif). Rôle autorisé — syndic.
@@ -3894,4 +4195,369 @@ paths:
                 chemin: { type: string }
       responses:
         "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── M16 — Dépenses, factures, fournisseurs, postes budgétaires ──
+  /finances/budgets/{id}/postes:
+    get:
+      tags: [Dépenses]
+      summary: Postes du budget (transparence budgétaire — tout membre). Invariant budget.montant_total = Σ montant_prevu.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      budget: { $ref: "#/components/schemas/BudgetAg" }
+                      postes: { type: array, items: { $ref: "#/components/schemas/BudgetPoste" } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Dépenses]
+      summary: Ajoute une ligne (syndic). Budget ACTIF — audit BUDGET_POSTE_MODIFIE_APRES_ACTIVATION. 409 si (catégorie, libellé) existe déjà.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BudgetPosteCreate" }
+      responses:
+        "201": { description: Créé (`montant_total` recalculé renvoyé). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /finances/budgets/{id}/postes/{posteId}:
+    patch:
+      tags: [Dépenses]
+      summary: Modifie une ligne (syndic).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: posteId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BudgetPosteUpdate" }
+      responses:
+        "200": { description: Modifié. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    delete:
+      tags: [Dépenses]
+      summary: Supprime une ligne (syndic) — 409 BUDGET_POSTE_UTILISE si une dépense la référence ; un budget garde au moins une ligne (422).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: posteId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Supprimé. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /finances/budget-vs-realise:
+    get:
+      tags: [Dépenses]
+      summary: Prévu / en attente / engagé / réalisé par poste du budget ACTIF de l'exercice, hors poste par catégorie, totaux, réserve, impayés, seuil non configuré (syndic, conseil). Base du tableau de bord M18.
+      parameters:
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' }, description: Défaut = année courante. }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/BudgetVsRealise" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  /depenses:
+    get:
+      tags: [Dépenses]
+      summary: Liste des dépenses (syndic, conseil syndical) — filtres, pagination, tri (`sort=-date_depense|montant_ttc|statut|cree_le`), `format=csv` (export journalisé DEPENSES_EXPORTEES). `meta.totaux` = somme filtrée + compteurs par statut.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - { name: sort, in: query, schema: { type: string } }
+        - { name: format, in: query, schema: { type: string, enum: [json, csv] } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutDepense" } }
+        - { name: categorie, in: query, schema: { $ref: "#/components/schemas/CategorieDepense" } }
+        - { name: budget_poste_id, in: query, schema: { type: string, format: uuid } }
+        - { name: prestataire_id, in: query, schema: { type: string, format: uuid } }
+        - { name: source, in: query, schema: { $ref: "#/components/schemas/SourceFinancement" } }
+        - { name: incident_id, in: query, schema: { type: string, format: uuid } }
+        - { name: contrat_id, in: query, schema: { type: string, format: uuid } }
+        - { name: personnel_id, in: query, schema: { type: string, format: uuid } }
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+        - { name: exercice, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+        - { name: q, in: query, schema: { type: string }, description: Recherche libellé / description / référence. }
+      responses:
+        "200":
+          description: OK (JSON) ou fichier CSV (UTF-8 BOM, « ; »).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Depense" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Dépenses]
+      summary: Crée une dépense en BROUILLON (syndic). Audit DEPENSE_CREEE, journal CREEE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepenseCreate" }
+            example:
+              categorie: REPARATIONS
+              libelle: Réparation fuite colonne montante
+              montant_ht: "2000.00"
+              tva: "400.00"
+              montant_ttc: "2400.00"
+              date_depense: "2026-09-01"
+              source: COMPTE_COURANT
+              prestataire_id: "0198c2f3-7b3a-7c1e-9f11-1a2b3c4d5e6f"
+      responses:
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Depense" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/upload-url:
+    post:
+      tags: [Dépenses]
+      summary: URL signée d'upload (2 h) pour une facture, une preuve de paiement ou un devis — préfixe `<copropriete>/depenses/` (syndic).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, maxLength: 180 }
+                content_type: { type: string, description: image/jpeg|png|webp|heic|heif ou application/pdf. }
+      responses:
+        "201":
+          description: Créé.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      storage_path: { type: string }
+                      upload_url: { type: string }
+                      token: { type: string }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /depenses/{id}:
+    get:
+      tags: [Dépenses]
+      summary: Détail — factures, journal append-only, preuve de paiement, mouvements de réserve, niveau d'approbation requis (syndic, conseil).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    allOf:
+                      - $ref: "#/components/schemas/Depense"
+                      - type: object
+                        properties:
+                          factures: { type: array, items: { $ref: "#/components/schemas/Facture" } }
+                          logs: { type: array, items: { $ref: "#/components/schemas/DepenseLog" } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Dépenses]
+      summary: Modifie une dépense BROUILLON ou REJETEE (syndic) — 422 DEPENSE_STATUT_INVALIDE sinon.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepenseUpdate" }
+      responses:
+        "200": { description: Modifié. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/soumettre:
+    post:
+      tags: [Dépenses]
+      summary: Soumet (syndic) — seuil configuré et montant ≤ seuil → APPROUVEE d'office ; sinon A_APPROUVER (conseil notifié DEPENSE_A_APPROUVER au-dessus du seuil). Réserve sans résolution ADOPTEE → 422 DEPENSE_RESERVE_RESOLUTION_REQUISE. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/approuver:
+    post:
+      tags: [Dépenses]
+      summary: Approuve (A_APPROUVER → APPROUVEE) — conseil syndical au-dessus du seuil, syndic en dessous (422 DEPENSE_APPROBATION_CONSEIL_REQUISE sinon). Notification DEPENSE_APPROUVEE au créateur. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/rejeter:
+    post:
+      tags: [Dépenses]
+      summary: Rejette (A_APPROUVER → REJETEE), motif obligatoire — mêmes règles d'acteur qu'approuver. Notification DEPENSE_REJETEE. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepenseRejeter" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/payer:
+    post:
+      tags: [Dépenses]
+      summary: Paie (APPROUVEE → PAYEE) — syndic seul. Source FONDS_RESERVE → mouvement DEPENSE dans le grand livre de la réserve, même transaction, 422 FONDS_RESERVE_INSUFFISANT si le solde ne couvre pas. Factures RECUE/VERIFIEE → REGLEE. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepensePayer" }
+            example:
+              methode: VIREMENT
+              reference: VIR-2026-0114
+              date_paiement: "2026-09-05"
+              justificatif: { storage_path: "caac2f41-1af9-4094-a651-81d97a5abdae/depenses/0198…-recu.pdf", nom: "Reçu de virement.pdf" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/annuler:
+    post:
+      tags: [Dépenses]
+      summary: Annule (jamais une dépense PAYEE — correction = nouvelle dépense) — syndic. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepenseAnnuler" }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/factures:
+    post:
+      tags: [Dépenses]
+      summary: Ajoute une facture (fichier = Document FACTURE, visibilité conseil) — plusieurs par dépense (acomptes). Syndic — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FactureCreate" }
+      responses:
+        "201": { description: Créée. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /depenses/{id}/factures/{factureId}:
+    patch:
+      tags: [Dépenses]
+      summary: Statut d'une facture (RECUE / VERIFIEE / CONTESTEE / REGLEE) — syndic ; CONTESTEE journalisée.
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: factureId, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FactureUpdate" }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /depenses/{id}/documents:
+    get:
+      tags: [Dépenses]
+      summary: URLs signées 15 min des factures et de la preuve de paiement (syndic, conseil).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      factures: { type: array, items: { type: object, properties: { facture_id: { type: string, format: uuid }, document_id: { type: string, format: uuid }, numero: { type: string, nullable: true }, statut: { $ref: "#/components/schemas/StatutFacture" }, nom: { type: string }, url: { type: string } } } }
+                      justificatif_paiement: { type: object, nullable: true, properties: { document_id: { type: string, format: uuid }, nom: { type: string }, url: { type: string } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /incidents/{id}/depense:
+    post:
+      tags: [Dépenses]
+      summary: Crée un BROUILLON de dépense pré-rempli depuis l'incident (prestataire assigné, catégorie mappée, libellé, description) — syndic.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentDepenseCreate" }
+      responses:
+        "201": { description: Créé. }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /incidents/{id}/evaluation:
+    post:
+      tags: [Incidents]
+      summary: Note le prestataire d'un incident RESOLU/FERME (1–5 + commentaire) — créateur du ticket ou syndic, une seule fois (409 INCIDENT_DEJA_EVALUE) ; recalcule prestataire.note_moyenne. Audit INCIDENT_PRESTATAIRE_EVALUE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentEvaluation" }
+      responses:
+        "201": { description: Évaluation enregistrée. }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /prestataires/{id}/rib:
+    get:
+      tags: [Dépenses]
+      summary: RIB complet du fournisseur — syndic seul, chaque lecture est auditée (PRESTATAIRE_RIB_CONSULTE). Partout ailleurs seuls les 4 derniers caractères sont exposés.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      prestataire_id: { type: string, format: uuid }
+                      nom: { type: string }
+                      rib: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }

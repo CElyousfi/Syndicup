@@ -377,6 +377,40 @@ const IMPAYES: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, IMPAYES);
 
+// ── M16 — Dépenses (Doc A §8.3 approbation conseil, §3.6 fonds de réserve) ─────────────────
+// ⚠️ Chaînes AR : première passe machine, à faire relire par un locuteur natif avant production.
+const DEPENSES: Record<string, Entree> = {
+  DEPENSE_A_APPROUVER: {
+    FR: {
+      titre: "Dépense à approuver",
+      corps: "« {{libelle}} » ({{montant}} MAD) dépasse le seuil d'approbation : votre décision est attendue dans l'application.",
+    },
+    AR: {
+      titre: "نفقة تنتظر الموافقة",
+      corps: "«{{libelle}}» ({{montant}} درهم) تتجاوز سقف الموافقة: قرارك مطلوب في التطبيق.",
+    },
+  },
+  DEPENSE_APPROUVEE: {
+    FR: { titre: "Dépense approuvée", corps: "« {{libelle}} » ({{montant}} MAD) a été approuvée. Vous pouvez procéder au paiement." },
+    AR: { titre: "تمت الموافقة على النفقة", corps: "تمت الموافقة على «{{libelle}}» ({{montant}} درهم). يمكنكم المباشرة بالدفع." },
+  },
+  DEPENSE_REJETEE: {
+    FR: { titre: "Dépense rejetée", corps: "« {{libelle}} » ({{montant}} MAD) a été rejetée : {{motif}}" },
+    AR: { titre: "تم رفض النفقة", corps: "تم رفض «{{libelle}}» ({{montant}} درهم): {{motif}}" },
+  },
+  FACTURE_ECHEANCE_PROCHE: {
+    FR: {
+      titre: "Facture à régler bientôt",
+      corps: "La facture {{numero}} ({{montant}} MAD, {{prestataire}}) arrive à échéance le {{date_echeance}}.",
+    },
+    AR: {
+      titre: "فاتورة مستحقة قريبًا",
+      corps: "الفاتورة {{numero}} ({{montant}} درهم، {{prestataire}}) تستحق بتاريخ {{date_echeance}}.",
+    },
+  },
+};
+Object.assign(TEMPLATES, DEPENSES);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

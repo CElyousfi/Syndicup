@@ -67,21 +67,38 @@ export const incidentAssignerSchema = z.object({
 });
 export type IncidentAssignerInput = z.infer<typeof incidentAssignerSchema>;
 
+// M16 — fiche fournisseur (Doc A §8.3, §3.6). Le RIB (24 caractères au Maroc) est stocké
+// complet mais jamais renvoyé en clair hors GET /prestataires/{id}/rib (audité).
+const telephone = z.string().regex(/^\+?[0-9 .-]{8,20}$/, "Téléphone invalide.");
+const ficheFournisseur = {
+  ice: z.string().regex(/^[0-9]{15}$/, "ICE : 15 chiffres.").nullish(),
+  rc: z.string().min(1).max(60).nullish(),
+  adresse: z.string().min(1).max(300).nullish(),
+  email: z.string().email().max(200).nullish(),
+  telephone: telephone.nullish(),
+  rib: z.string().regex(/^[0-9]{24}$/, "RIB : 24 chiffres.").nullish(),
+  notes: z.string().min(1).max(2000).nullish(),
+};
+
 export const prestataireCreateSchema = z.object({
   nom: z.string().min(1),
   specialite: z.string().min(1),
-  contact: z.string().min(1),
+  // `contact` reste accepté (compatibilité clients existants) ; `telephone`/`email` sont les
+  // champs structurés M16 — au moins un des trois.
+  contact: z.string().min(1).optional(),
   utilisateur_id: z.string().uuid().nullish(),
-});
+  ...ficheFournisseur,
+}).refine((v) => Boolean(v.contact || v.telephone || v.email), "Fournir un contact (téléphone ou email).");
 export type PrestataireCreateInput = z.infer<typeof prestataireCreateSchema>;
 
-/** PATCH /prestataires/:id — fiche (nom, spécialité, contact) et activation. */
+/** PATCH /prestataires/:id — fiche (nom, spécialité, contact, fiche fournisseur M16) et activation. */
 export const prestataireUpdateSchema = z
   .object({
     nom: z.string().min(1).optional(),
     specialite: z.string().min(1).optional(),
     contact: z.string().min(1).optional(),
     actif: z.boolean().optional(),
+    ...ficheFournisseur,
   })
-  .refine((v) => Object.keys(v).length > 0, "Aucun champ à modifier.");
+  .refine((v) => Object.values(v).some((x) => x !== undefined), "Aucun champ à modifier.");
 export type PrestataireUpdateInput = z.infer<typeof prestataireUpdateSchema>;

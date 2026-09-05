@@ -1,6 +1,7 @@
 /**
- * PATCH/DELETE /v1/prestataires/:id — fiche prestataire (syndic). Suppression refusée (409)
- * s'il a des interventions dans l'historique : le désactiver (actif=false) est alors la voie.
+ * GET/PATCH/DELETE /v1/prestataires/:id — fiche prestataire. GET (M16) : fiche fournisseur + historique
+ * (interventions, évaluations, dépenses pour syndic/conseil), RIB masqué. PATCH/DELETE : syndic ;
+ * suppression refusée (409) s'il a des interventions dans l'historique : le désactiver est la voie.
  */
 import { withApiHandler } from "../../../../lib/http/handler";
 import { prestataireUpdateSchema } from "../../../../lib/incidents/schemas";
@@ -11,16 +12,27 @@ import {
   PrestataireIntrouvableError,
   ContrainteMetierError,
 } from "../../../../lib/incidents/incidents";
+import { obtenirPrestataire, PermissionRefuseeError as FichePermission, IntrouvableError as FicheIntrouvable } from "../../../../lib/prestataires/prestataires";
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
 function mapErreur(e: unknown) {
   const mapped = mapAuthError(e);
   if (mapped) return mapped;
-  if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
-  if (e instanceof PrestataireIntrouvableError) return fail("NOT_FOUND", e.message);
+  if (e instanceof PermissionRefuseeError || e instanceof FichePermission) return fail("FORBIDDEN", e.message);
+  if (e instanceof PrestataireIntrouvableError || e instanceof FicheIntrouvable) return fail("NOT_FOUND", e.message);
   if (e instanceof ContrainteMetierError) return fail("CONFLICT", e.message);
   throw e;
+}
+
+async function handleGET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const ctx = await tenantFromRequest(req);
+    const { id } = await params;
+    return ok(await obtenirPrestataire(ctx, id));
+  } catch (e) {
+    return mapErreur(e);
+  }
 }
 
 async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -46,5 +58,6 @@ async function handleDELETE(req: Request, { params }: { params: Promise<{ id: st
   }
 }
 
+export const GET = withApiHandler(handleGET);
 export const PATCH = withApiHandler(handlePATCH);
 export const DELETE = withApiHandler(handleDELETE);

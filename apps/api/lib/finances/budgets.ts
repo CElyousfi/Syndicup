@@ -15,8 +15,9 @@ import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
-import { money } from "../money";
+import { money, toApiString } from "../money";
 import { ecrireAuditLog } from "../audit/audit";
+import { BudgetPosteError } from "../depenses/budget-postes";
 import type { BudgetAgCreateInput, BudgetAgUpdateInput } from "./schemas";
 import {
   PermissionRefuseeError,
@@ -64,7 +65,7 @@ export async function creerBudget(ctx: TenantContext, input: BudgetAgCreateInput
       const ag = await db.assembleeGenerale.findUnique({ where: { id: input.ag_id } });
       if (!ag) throw new RessourceIntrouvableError("AG référencée introuvable.");
     }
-    const budget = await db.budgetAg.create({
+    const cree = await db.budgetAg.create({
       data: {
         coproprieteId: ctx.coproprieteId,
         exercice: input.exercice,
@@ -73,6 +74,13 @@ export async function creerBudget(ctx: TenantContext, input: BudgetAgCreateInput
         statut: "PROPOSE",
       },
     });
+    // M16 — un budget porte toujours au moins une ligne : le montant voté devient une ligne
+    // AUTRE / « Budget global » que le syndic détaille ensuite en postes (montant_total = Σ postes,
+    // tenu par le trigger budget_poste_recalculer_total).
+    await db.budgetPoste.create({
+      data: { budgetAgId: cree.id, categorie: "AUTRE", libelle: "Budget global", montantPrevu: money(input.montant_total).toString(), ordre: 0 },
+    });
+    const budget = await db.budgetAg.findUniqueOrThrow({ where: { id: cree.id } });
     await ecrireAuditLog(db, {
       coproprieteId: ctx.coproprieteId,
       acteurId: ctx.utilisateurId,
@@ -105,12 +113,25 @@ export async function modifierBudget(
       const ag = await db.assembleeGenerale.findUnique({ where: { id: input.ag_id } });
       if (!ag) throw new RessourceIntrouvableError("AG référencée introuvable.");
     }
+    // M16 — montant_total dérivé des postes : modifiable directement seulement tant que le budget
+    // n'a qu'une ligne (la ligne globale créée par défaut) ; au-delà, on édite les postes.
+    if (input.montant_total !== undefined) {
+      const postes = await db.budgetPoste.findMany({ where: { budgetAgId: budgetId }, select: { id: true } });
+      if (postes.length > 1) {
+        throw new BudgetPosteError(
+          "BUDGET_TOTAL_DERIVE_DES_POSTES",
+          "Le montant total est la somme des postes du budget : modifiez les postes (GET/PATCH /finances/budgets/{id}/postes), pas le total."
+        );
+      }
+      if (postes.length === 1) {
+        await db.budgetPoste.update({ where: { id: postes[0]!.id }, data: { montantPrevu: money(input.montant_total).toString() } });
+      }
+    }
     const maj = await db.budgetAg.update({
       where: { id: budgetId },
       data: {
-        ...(input.montant_total !== undefined
-          ? { montantTotal: money(input.montant_total).toString() }
-          : {}),
+        // Sans aucune ligne (donnée antérieure à M16) : écriture directe conservée.
+        ...(input.montant_total !== undefined ? { montantTotal: money(input.montant_total).toString() } : {}),
         ...(input.ag_id !== undefined ? { agId: input.ag_id } : {}),
       },
     });
@@ -120,8 +141,8 @@ export async function modifierBudget(
       action: "BUDGET_MODIFIE",
       entite: "budget_ag",
       entiteId: budgetId,
-      avant: { montant_total: budget.montantTotal.toString() },
-      apres: { montant_total: maj.montantTotal.toString() },
+      avant: { montant_total: toApiString(budget.montantTotal) },
+      apres: { montant_total: toApiString(maj.montantTotal) },
     });
     return maj;
   });

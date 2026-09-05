@@ -11,6 +11,9 @@ import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
 import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
 import { verifierSejourPourIncident, lierIncidentAuSejour, LcdError, IntrouvableError as SejourIntrouvableError } from "../lcd/lcd";
+import { presenterPrestataire } from "../prestataires/prestataires";
+import { money, toApiString } from "../money";
+import type { ErrorCode } from "../http/respond";
 import type {
   IncidentCreateInput,
   IncidentChangerStatutInput,
@@ -18,11 +21,21 @@ import type {
   PrestataireCreateInput,
   PrestataireUpdateInput,
 } from "./schemas";
+import type { IncidentEvaluationInput } from "../depenses/schemas";
 
 export class PermissionRefuseeError extends Error {}
 export class IncidentIntrouvableError extends Error {}
 export class PrestataireIntrouvableError extends Error {}
 export class ContrainteMetierError extends Error {}
+/** M16 — règle métier d'évaluation violée (422 / 409), code explicite. */
+export class IncidentError extends Error {
+  constructor(
+    readonly code: ErrorCode,
+    message: string
+  ) {
+    super(message);
+  }
+}
 
 /**
  * Délai SLA par palier d'urgence (Master Spec Partie 2.2 : champ `sla_deadline`). ⚠️ Simplification
@@ -222,10 +235,68 @@ export async function obtenirIncidentAvecJournal(ctx: TenantContext, incidentId:
       orderBy: { horodatage: "asc" },
       include: { acteur: { select: { id: true, nom: true, prenom: true } } },
     });
-    return { ...trouve, logs };
+    // M16 — dépenses nées de cet incident (syndic / conseil) : liste + total engagé/payé.
+    let depenses: Array<{ id: string; libelle: string; montantTtc: unknown; statut: string; dateDepense: Date; source: string }> = [];
+    let totalDepenses: string | null = null;
+    if (can("depenses.lire", ctx.role) === true) {
+      depenses = await db.depense.findMany({
+        where: { incidentId },
+        orderBy: { dateDepense: "desc" },
+        select: { id: true, libelle: true, montantTtc: true, statut: true, dateDepense: true, source: true },
+      });
+      totalDepenses = toApiString(
+        depenses
+          .filter((d) => d.statut === "APPROUVEE" || d.statut === "PAYEE")
+          .reduce((acc, d) => acc.plus(money(d.montantTtc as string)), money(0))
+      );
+    }
+    return { ...trouve, logs, depenses, total_depenses: totalDepenses };
   });
   if (!incident) throw new IncidentIntrouvableError("Incident introuvable.");
   return incident;
+}
+
+/**
+ * POST /incidents/{id}/evaluation — M16 (Doc A §8.3 « syndic favorise certains prestataires » →
+ * transparence) : le créateur du ticket (ou le syndic) note le prestataire d'un incident RESOLU /
+ * FERME, une seule fois ; `prestataire.note_moyenne` est recalculée sur tous ses incidents notés.
+ */
+export async function evaluerPrestataireIncident(ctx: TenantContext, incidentId: string, input: IncidentEvaluationInput) {
+  const permission = can("incidents.evaluer", ctx.role);
+  if (permission === false) throw new PermissionRefuseeError("Rôle non autorisé à évaluer un prestataire.");
+  return withTenant(ctx, async (db) => {
+    const incident = await db.incident.findUnique({ where: { id: incidentId } });
+    if (!incident) throw new IncidentIntrouvableError("Incident introuvable.");
+    if (permission === "scoped" && incident.creePar !== ctx.utilisateurId) {
+      throw new PermissionRefuseeError("Seul l'auteur du signalement (ou le syndic) évalue le prestataire.");
+    }
+    if (incident.statut !== "RESOLU" && incident.statut !== "FERME") {
+      throw new IncidentError("INCIDENT_NON_RESOLU", "Le prestataire ne s'évalue qu'une fois l'incident RESOLU ou FERME.");
+    }
+    if (!incident.assigneAId) throw new IncidentError("UNPROCESSABLE_ENTITY", "Aucun prestataire n'est assigné à cet incident.");
+    if (incident.notePrestataire !== null) throw new IncidentError("INCIDENT_DEJA_EVALUE", "Ce prestataire a déjà été évalué pour cet incident.");
+    const maj = await db.incident.update({
+      where: { id: incidentId },
+      data: { notePrestataire: input.note, commentairePrestataire: input.commentaire ?? null, evalueLe: new Date() },
+    });
+    // Recalcul de la moyenne par la fonction SECURITY DEFINER `prestataire_recalculer_note`
+    // (migration m16) : un résident ne voit pas la table prestataire sous RLS, il ne doit pas
+    // pouvoir la lire pour autant — la fonction ne renvoie que la moyenne.
+    const rows = await db.$queryRaw<{ note_moyenne: string | null; nb: number }[]>`
+      SELECT public.prestataire_recalculer_note(${incident.assigneAId}::uuid)::text AS note_moyenne,
+             (SELECT count(*)::int FROM public.prestataire_notes(${incident.assigneAId}::uuid)) AS nb
+    `;
+    const { note_moyenne, nb } = rows[0] ?? { note_moyenne: null, nb: 0 };
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "INCIDENT_PRESTATAIRE_EVALUE",
+      entite: "incident",
+      entiteId: incidentId,
+      apres: { prestataire_id: incident.assigneAId, note: input.note, note_moyenne, nb_evaluations: nb },
+    });
+    return { incident: maj, prestataire_id: incident.assigneAId, note_moyenne: note_moyenne ? money(note_moyenne).toFixed(2) : null, nb_evaluations: nb };
+  });
 }
 
 /**
@@ -391,29 +462,47 @@ export async function creerPrestataire(ctx: TenantContext, input: PrestataireCre
   if (can("prestataires.gerer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut créer un prestataire.");
   }
-  return withTenant(ctx, (db) =>
-    db.prestataire.create({
+  return withTenant(ctx, async (db) => {
+    const prestataire = await db.prestataire.create({
       data: {
         coproprieteId: ctx.coproprieteId,
         nom: input.nom,
         specialite: input.specialite,
-        contact: input.contact,
+        // `contact` (M7) reste renseigné pour les clients existants : téléphone ou email structuré sinon.
+        contact: input.contact ?? input.telephone ?? input.email ?? "",
         utilisateurId: input.utilisateur_id ?? null,
+        ice: input.ice ?? null,
+        rc: input.rc ?? null,
+        adresse: input.adresse ?? null,
+        email: input.email ?? null,
+        telephone: input.telephone ?? (input.contact && /^\+?[0-9 .-]{8,20}$/.test(input.contact) ? input.contact : null),
+        rib: input.rib ?? null,
+        notes: input.notes ?? null,
       },
-    })
-  );
+    });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "PRESTATAIRE_CREE",
+      entite: "prestataire",
+      entiteId: prestataire.id,
+      apres: { nom: prestataire.nom, specialite: prestataire.specialite, rib_renseigne: Boolean(prestataire.rib) },
+    });
+    return presenterPrestataire(prestataire);
+  });
 }
 
 export async function listerPrestataires(ctx: TenantContext) {
   if (can("prestataires.lire", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les prestataires.");
   }
-  return withTenant(ctx, (db) =>
-    db.prestataire.findMany({
+  return withTenant(ctx, async (db) => {
+    const rows = await db.prestataire.findMany({
       where: { coproprieteId: ctx.coproprieteId },
       orderBy: { nom: "asc" },
-    })
-  );
+    });
+    return rows.map(presenterPrestataire);
+  });
 }
 
 /** PATCH /prestataires/:id — fiche et activation (syndic). */
@@ -437,6 +526,14 @@ export async function modifierPrestataire(
         ...(input.specialite !== undefined ? { specialite: input.specialite } : {}),
         ...(input.contact !== undefined ? { contact: input.contact } : {}),
         ...(input.actif !== undefined ? { actif: input.actif } : {}),
+        // M16 — fiche fournisseur (null = effacer le champ).
+        ...(input.ice !== undefined ? { ice: input.ice ?? null } : {}),
+        ...(input.rc !== undefined ? { rc: input.rc ?? null } : {}),
+        ...(input.adresse !== undefined ? { adresse: input.adresse ?? null } : {}),
+        ...(input.email !== undefined ? { email: input.email ?? null } : {}),
+        ...(input.telephone !== undefined ? { telephone: input.telephone ?? null } : {}),
+        ...(input.rib !== undefined ? { rib: input.rib ?? null } : {}),
+        ...(input.notes !== undefined ? { notes: input.notes ?? null } : {}),
       },
     });
     await ecrireAuditLog(db, {
@@ -445,10 +542,11 @@ export async function modifierPrestataire(
       action: "PRESTATAIRE_MODIFIE",
       entite: "prestataire",
       entiteId: prestataireId,
-      avant: { nom: prestataire.nom, actif: prestataire.actif },
-      apres: { nom: maj.nom, actif: maj.actif },
+      // Jamais le RIB dans l'audit : seulement le fait qu'il a changé.
+      avant: { nom: prestataire.nom, actif: prestataire.actif, rib_renseigne: Boolean(prestataire.rib) },
+      apres: { nom: maj.nom, actif: maj.actif, rib_renseigne: Boolean(maj.rib), rib_modifie: input.rib !== undefined },
     });
-    return maj;
+    return presenterPrestataire(maj);
   });
 }
 

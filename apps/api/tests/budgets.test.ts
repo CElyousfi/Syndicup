@@ -72,6 +72,7 @@ afterAll(async () => {
   await admin.idempotencyKey.deleteMany({ where: { coproprieteId: coproId } });
   await admin.appelDeFondsLot.deleteMany({ where: { appelDeFonds: { coproprieteId: coproId } } });
   await admin.appelDeFonds.deleteMany({ where: { coproprieteId: coproId } });
+  await admin.budgetPoste.deleteMany({ where: { budgetAg: { coproprieteId: coproId } } });
   await admin.budgetAg.deleteMany({ where: { coproprieteId: coproId } });
   await admin.auditLog.deleteMany({ where: { coproprieteId: coproId } });
   await admin.lot.deleteMany({ where: { id: lotId } });

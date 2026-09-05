@@ -10,8 +10,9 @@ import { anonymisationCndp } from "../../../inngest/functions/anonymisation-cndp
 import { agRappels } from "../../../inngest/functions/ag-rappels";
 import { appelDeFondsFanout } from "../../../inngest/functions/appel-de-fonds-fanout";
 import { lcdSejours } from "../../../inngest/functions/lcd-sejours";
+import { depensesFactures } from "../../../inngest/functions/depenses-factures";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours],
+  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures],
 });

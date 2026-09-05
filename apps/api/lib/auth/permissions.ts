@@ -364,6 +364,75 @@ export const PERMISSIONS: PermissionMatrix = {
     LOCATAIRE: false,
     PRESTATAIRE: false,
   },
+  // ── M16 — Dépenses (Doc A §3.6 fonds de réserve, §8.3 « dépense > seuil configurable → conseil
+  //    syndical », §6 approbation des comptes — ⚠️ module absent du Master Spec 4.2, entrées
+  //    dérivées de Doc A et signalées dans ROADMAP M16) ──
+  // Lecture des dépenses (tous statuts, factures, journal) : syndic et conseil syndical. Un
+  // résident ne lit les dépenses PAYEE que via la vue de transparence (M18) — la policy RLS sur
+  // `depense` ne lui montre déjà que celles-là.
+  "depenses.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    INDIVISAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Créer / modifier / soumettre / payer / annuler une dépense, gérer ses factures : syndic seul
+  // (Doc A §8 : le syndic paie, le conseil contrôle — il ne paie jamais).
+  "depenses.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  // Approuver / rejeter : le conseil syndical au-dessus du seuil `copropriete.seuil_approbation_
+  // conseil`, le syndic en dessous ("scoped" = le service vérifie le seuil — 422
+  // DEPENSE_APPROBATION_CONSEIL_REQUISE si le syndic tente au-dessus).
+  "depenses.approuver": {
+    SUPER_ADMIN: true,
+    SYNDIC: "scoped",
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  // Export CSV des dépenses (journalisé — CNDP : qui a extrait quoi, quand).
+  "depenses.exporter": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+  },
+  // RIB complet d'un fournisseur : lecture syndic uniquement, auditée (PRESTATAIRE_RIB_CONSULTE) ;
+  // partout ailleurs seuls les 4 derniers caractères sont renvoyés.
+  "prestataires.rib.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: false,
+    PROPRIETAIRE: false,
+  },
+  // Noter le prestataire d'un incident RESOLU/FERME (Doc A §8.3 « syndic favorise certains
+  // prestataires » → transparence) : le créateur du ticket ("scoped") ou le syndic, une fois.
+  "incidents.evaluer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: "scoped",
+    LOCATAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    GESTIONNAIRE_LCD: "scoped",
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
 
   // ── Personnel (Master Spec Partie 4.2) ───────────────────────────────────
   "personnel.gerer": {
