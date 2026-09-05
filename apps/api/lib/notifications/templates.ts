@@ -113,6 +113,67 @@ const TEMPLATES: Record<string, Entree> = {
       corps: "{{visiteur_nom}} يطلب الدخول إلى شقتكم. يمكنكم القبول أو الرفض عبر التطبيق.",
     },
   },
+  // ── M15 — Location courte durée (Doc A §10.2) ──
+  LCD_DECLARATION_A_VALIDER: {
+    FR: {
+      titre: "Déclaration de location courte durée à valider",
+      corps: "Le lot {{lot}} demande à être exploité en location courte durée. Validez ou refusez dans l'application.",
+    },
+    AR: {
+      titre: "تصريح كراء قصير المدة بانتظار المصادقة",
+      corps: "الوحدة {{lot}} تطلب استغلالها في الكراء قصير المدة. صادقوا أو ارفضوا في التطبيق.",
+    },
+  },
+  LCD_DECLARATION_DECISION: {
+    FR: {
+      titre: "Décision sur votre déclaration de location courte durée",
+      corps: "Lot {{lot}} : déclaration {{decision}}. {{motif}}",
+    },
+    AR: {
+      titre: "قرار بشأن تصريح الكراء قصير المدة",
+      corps: "الوحدة {{lot}} : التصريح {{decision}}. {{motif}}",
+    },
+  },
+  LCD_SEJOUR_DECLARE: {
+    FR: {
+      titre: "Nouveau séjour déclaré",
+      corps: "Lot {{lot}} : {{nb_voyageurs}} voyageur(s) du {{date_arrivee}} au {{date_depart}}.",
+    },
+    AR: {
+      titre: "تصريح بإقامة جديدة",
+      corps: "الوحدة {{lot}} : {{nb_voyageurs}} مسافر(ين) من {{date_arrivee}} إلى {{date_depart}}.",
+    },
+  },
+  LCD_SEJOUR_GARDIEN: {
+    FR: {
+      titre: "Voyageurs attendus",
+      corps: "Lot {{lot}} : {{nb_voyageurs}} voyageur(s) attendu(s) le {{date_arrivee}} (départ le {{date_depart}}). Détails dans l'application.",
+    },
+    AR: {
+      titre: "مسافرون منتظرون",
+      corps: "الوحدة {{lot}} : {{nb_voyageurs}} مسافر(ين) منتظرون يوم {{date_arrivee}} (المغادرة يوم {{date_depart}}). التفاصيل في التطبيق.",
+    },
+  },
+  LCD_SEJOUR_ANNULE: {
+    FR: {
+      titre: "Séjour annulé",
+      corps: "Le séjour prévu le {{date_arrivee}} au lot {{lot}} est annulé.",
+    },
+    AR: {
+      titre: "إلغاء إقامة",
+      corps: "أُلغيت الإقامة المقررة يوم {{date_arrivee}} بالوحدة {{lot}}.",
+    },
+  },
+  LCD_ARRIVEE_AUJOURDHUI: {
+    FR: {
+      titre: "Arrivée prévue aujourd'hui",
+      corps: "Lot {{lot}} — {{nb_voyageurs}} voyageur(s) {{heure}}. Confirmez l'arrivée dans l'application.",
+    },
+    AR: {
+      titre: "وصول مقرر اليوم",
+      corps: "الوحدة {{lot}} — {{nb_voyageurs}} مسافر(ين) {{heure}}. أكّدوا الوصول في التطبيق.",
+    },
+  },
   VISITE_REPONSE: {
     FR: {
       titre: "Réponse du résident",

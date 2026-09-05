@@ -81,8 +81,13 @@ export async function anonymiserUtilisateur(ctx: TenantContext, utilisateurId: s
   );
 }
 
+/** Valeur de remplacement du nom du voyageur principal après anonymisation (M15). */
+export const ANONYME_VOYAGEUR = "Voyageur anonymisé";
+
 export interface ResultatAnonymisation {
   coproprietesTraitees: number;
+  /** M15 — séjours LCD dont les données voyageur ont été effacées. */
+  sejoursAnonymises: number;
   coproprietesSautees: { coproprieteId: string; raison: string }[];
   utilisateursAnonymises: string[];
   erreurs: { utilisateurId: string; erreur: string }[];
@@ -101,6 +106,7 @@ export async function executerAnonymisationCndp(): Promise<ResultatAnonymisation
   const raw = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
   const resultat: ResultatAnonymisation = {
     coproprietesTraitees: 0,
+    sejoursAnonymises: 0,
     coproprietesSautees: [],
     utilisateursAnonymises: [],
     erreurs: [],
@@ -197,6 +203,46 @@ export async function executerAnonymisationCndp(): Promise<ResultatAnonymisation
       )
     );
     resultat.coproprietesTraitees = coproConfigurees.size;
+
+    // M15 — données voyageur des séjours LCD (CNDP, minimisation) : même rétention que les
+    // comptes (retention_desactivation_mois, PROVISOIRE — LEGAL_QUESTIONS_BRIEF §7), à partir de
+    // la date de départ ; copropriété non configurée = sautée, jamais de durée devinée.
+    const coprosLcd = await raw.copropriete.findMany({
+      where: { retentionDesactivationMois: { not: null }, sejoursLcd: { some: { voyageurPrincipalNom: { not: ANONYME_VOYAGEUR } } } },
+      select: { id: true, retentionDesactivationMois: true },
+    });
+    for (const c of coprosLcd) {
+      const limite = new Date(maintenant);
+      limite.setMonth(limite.getMonth() - (c.retentionDesactivationMois ?? 0));
+      const ctxSysteme: TenantContext = { utilisateurId: ACTEUR_SYSTEME, coproprieteId: c.id, role: "SUPER_ADMIN" };
+      try {
+        const n = await withTenant(ctxSysteme, async (db) => {
+          const cibles = await db.sejourCourteDuree.findMany({
+            where: { coproprieteId: c.id, statut: { in: ["TERMINE", "ANNULE"] }, dateDepart: { lt: limite }, voyageurPrincipalNom: { not: ANONYME_VOYAGEUR } },
+            select: { id: true },
+          });
+          if (cibles.length === 0) return 0;
+          await db.sejourCourteDuree.updateMany({
+            where: { id: { in: cibles.map((s) => s.id) } },
+            data: { voyageurPrincipalNom: ANONYME_VOYAGEUR, voyageurTelephone: null, voyageurNationalite: null, pieceIdentiteType: null, pieceIdentiteFin: null, plaqueVehicule: null },
+          });
+          for (const s of cibles) {
+            await ecrireAuditLog(db, {
+              coproprieteId: c.id,
+              acteurId: null,
+              action: "ANONYMISATION_CNDP",
+              entite: "sejour_courte_duree",
+              entiteId: s.id,
+              apres: { voyageur: "ANONYMISE" },
+            });
+          }
+          return cibles.length;
+        });
+        resultat.sejoursAnonymises += n;
+      } catch (e) {
+        resultat.erreurs.push({ utilisateurId: `sejours:${c.id}`, erreur: e instanceof Error ? e.message : String(e) });
+      }
+    }
     return resultat;
   } finally {
     await raw.$disconnect();
