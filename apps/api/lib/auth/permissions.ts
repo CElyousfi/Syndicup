@@ -420,6 +420,71 @@ export const PERMISSIONS: PermissionMatrix = {
     GARDIEN: false,
     PROPRIETAIRE: false,
   },
+  // ── M17 — Justificatifs de paiement (Doc A §3.3/§3.4 : le résident paie par virement / chèque /
+  //    espèces et déclare, le syndic valide contre le relevé ; §12.3 confidentialité par lot —
+  //    ⚠️ module absent du Master Spec 4.2, signalé dans ROADMAP M17) ──
+  // Déclarer « j'ai payé » : propriétaire / occupant du lot ("scoped", règle payeur M5 : un
+  // locataire peut payer pour le propriétaire), syndic et gardien au nom d'un lot (pour_lot_id).
+  "justificatifs.declarer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    LOCATAIRE: "scoped",
+    GARDIEN: true,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Lire : syndic / conseil (tout), résident (ses lots — RLS), gardien (ce qu'il a saisi — RLS).
+  "justificatifs.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    LOCATAIRE: "scoped",
+    GARDIEN: "scoped",
+    PRESTATAIRE: false,
+  },
+  // Valider / rejeter contre le relevé bancaire, confirmer les espèces reçues à la loge : syndic seul.
+  "justificatifs.valider": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Saisir des espèces reçues : le gardien (→ justificatif EN_ATTENTE) et le syndic (→ paiement VALIDE).
+  "paiements.especes.saisir": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: true,
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+  },
+  // Comptes bancaires de la copropriété : tout membre lit banque + RIB masqué (écran « Payer par
+  // virement ») ; le syndic gère et lit le RIB complet (audité RIB_CONSULTE).
+  "coproprietes.comptes_bancaires.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    INDIVISAIRE: true,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    LOCATAIRE: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+  },
+  "coproprietes.comptes_bancaires.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
   // Noter le prestataire d'un incident RESOLU/FERME (Doc A §8.3 « syndic favorise certains
   // prestataires » → transparence) : le créateur du ticket ("scoped") ou le syndic, une fois.
   "incidents.evaluer": {

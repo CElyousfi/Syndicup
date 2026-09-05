@@ -191,67 +191,73 @@ enum StatutSuccession {
 // ============================================================================
 
 model Copropriete {
-  id                             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nom                            String
-  adresse                        String
-  ville                          String
-  typeResidence                  TypeResidence             @map("type_residence")
-  nbLots                         Int                       @map("nb_lots")
-  dateCreation                   DateTime                  @default(now()) @map("date_creation") @db.Timestamptz
-  statut                         StatutCopropriete         @default(ACTIVE)
-  configJson                     Json?                     @map("config_json")
+  id                               String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom                              String
+  adresse                          String
+  ville                            String
+  typeResidence                    TypeResidence             @map("type_residence")
+  nbLots                           Int                       @map("nb_lots")
+  dateCreation                     DateTime                  @default(now()) @map("date_creation") @db.Timestamptz
+  statut                           StatutCopropriete         @default(ACTIVE)
+  configJson                       Json?                     @map("config_json")
   // Logo de la résidence (M18) — chemin storage `<copropriete>/branding/…`, URL signée à la demande.
-  logoStoragePath                String?                   @map("logo_storage_path")
+  logoStoragePath                  String?                   @map("logo_storage_path")
   // Photos de la résidence (M20, personnalisation) — carte `{ cle: chemin storage }` : clés fixes
   // (accueil, entree, cour, salle, piscine) + `espace:<id>` par espace commun. Même périmètre
   // `<copropriete>/branding/…` que le logo ; URLs signées à la demande (jamais publiques).
-  photosJson                     Json?                     @map("photos_json")
+  photosJson                       Json?                     @map("photos_json")
   // M15 — Location courte durée (Doc A §10.2). Régime voté en AG ; paramètres uniquement si
   // ENCADREE (validés Zod, nullable en base — jamais de défaut deviné, LEGAL_QUESTIONS_BRIEF §7).
-  regimeLcd                      RegimeLocationCourteDuree @default(NON_DEFINI) @map("regime_lcd")
-  parametresLcdJson              Json?                     @map("parametres_lcd_json")
-  regimeLcdAgResolutionId        String?                   @map("regime_lcd_ag_resolution_id") @db.Uuid
-  regimeLcdAgResolution          AgResolution?             @relation("CoproprieteRegimeLcdResolution", fields: [regimeLcdAgResolutionId], references: [id])
+  regimeLcd                        RegimeLocationCourteDuree @default(NON_DEFINI) @map("regime_lcd")
+  parametresLcdJson                Json?                     @map("parametres_lcd_json")
+  regimeLcdAgResolutionId          String?                   @map("regime_lcd_ag_resolution_id") @db.Uuid
+  regimeLcdAgResolution            AgResolution?             @relation("CoproprieteRegimeLcdResolution", fields: [regimeLcdAgResolutionId], references: [id])
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
-  delaiConvocationJours          Int?                      @map("delai_convocation_jours")
+  delaiConvocationJours            Int?                      @map("delai_convocation_jours")
   // Total des tantièmes défini au règlement de copropriété (ex. 1000, 10000) — champ absent du
   // tableau Master Spec Partie 2.2 mais nécessaire pour appliquer la contrainte Partie 2.4 "somme
   // des tantièmes d'une copropriété = total défini au règlement" (trigger M3, voir migration).
   // Nullable : saisi par le syndic à la configuration ; tant que non renseigné, le trigger de
   // blocage sur `lot` ne s'applique pas (pas une valeur légale au sens LEGAL_QUESTIONS_BRIEF.md,
   // simple donnée opérationnelle propre à chaque copropriété — pas de valeur par défaut devinée).
-  totalTantiemes                 Decimal?                  @map("total_tantiemes") @db.Decimal(14, 2)
+  totalTantiemes                   Decimal?                  @map("total_tantiemes") @db.Decimal(14, 2)
   // Surcharge des délais d'escalade impayés par défaut (Master Spec Partie 6.3 : "les délais
   // exacts doivent être calés sur la politique de recouvrement propre à chaque copropriété").
   // Nullable : les délais de Doc A §3.3 (voir apps/api/lib/finances/escalade.ts) s'appliquent
   // par défaut tant que non surchargé.
-  politiqueRecouvrementJson      Json?                     @map("politique_recouvrement_json")
+  politiqueRecouvrementJson        Json?                     @map("politique_recouvrement_json")
   // Paramètres légaux AG (M6, Master Spec Partie 8.3/8.5) — NE JAMAIS mettre de valeur par défaut
   // avant confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §2, §4). Nullable : tant que non
   // renseigné, `POST /ag/:id/ouvrir` et `POST /ag/:id/procurations` refusent explicitement (422)
   // plutôt que d'appliquer un chiffre deviné (ex. les "50%"/"3 procurations" trouvés en sources
   // secondaires dans le brief, PAS confirmés par un avocat).
-  quorumPremiereConvocation      Decimal?                  @map("quorum_premiere_convocation") @db.Decimal(4, 3)
-  limiteProcurationsMandataire   Int?                      @map("limite_procurations_mandataire")
+  quorumPremiereConvocation        Decimal?                  @map("quorum_premiere_convocation") @db.Decimal(4, 3)
+  limiteProcurationsMandataire     Int?                      @map("limite_procurations_mandataire")
   // M13 — rétention avant anonymisation CNDP (Loi 09-08). LÉGALEMENT GATÉ
   // (LEGAL_QUESTIONS_BRIEF §5) : nullable sans défaut — le job d'anonymisation saute les
   // copropriétés non configurées, jamais de durée devinée.
-  retentionDesactivationMois     Int?                      @map("retention_desactivation_mois")
+  retentionDesactivationMois       Int?                      @map("retention_desactivation_mois")
   // M16 — Dépenses (Doc A §8.3 « toute dépense > seuil configurable doit être liée à une
   // résolution AG ou classée urgence », §3.6 fonds de réserve). Seuil au-delà duquel une dépense
   // exige l'approbation du CONSEIL_SYNDICAL — nullable : non configuré = toute dépense soumise
   // passe par A_APPROUVER (approbation syndic) et les rapports signalent « seuil non configuré »
   // (LEGAL_QUESTIONS_BRIEF §8 — jamais de montant deviné).
-  seuilApprobationConseil        Decimal?                  @map("seuil_approbation_conseil") @db.Decimal(14, 2)
+  seuilApprobationConseil          Decimal?                  @map("seuil_approbation_conseil") @db.Decimal(14, 2)
   // Décaissement du fonds de réserve SANS résolution d'AG liée (Doc A §3.6 : « décision AG
   // requise sauf urgence définie dans le règlement ») — false tant que le règlement ne le prévoit pas.
-  reserveSansResolutionAutorisee Boolean                   @default(false) @map("reserve_sans_resolution_autorisee")
+  reserveSansResolutionAutorisee   Boolean                   @default(false) @map("reserve_sans_resolution_autorisee")
   // Taux de TVA proposé à la saisie (valeur fiscale, PROVISOIRE — brief §8) : nullable, posé par
   // le seed à 20, jamais codé en dur ; simple pré-remplissage, le montant TTC saisi fait foi.
-  tvaParDefaut                   Decimal?                  @map("tva_par_defaut") @db.Decimal(5, 2)
-  creeLe                         DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe                      DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
+  tvaParDefaut                     Decimal?                  @map("tva_par_defaut") @db.Decimal(5, 2)
+  // M17 — Justificatifs de paiement (Doc A §3.3/§3.4). Comptes bancaires de la copropriété
+  // `[{ libelle, banque, rib }]` : le RIB complet n'est renvoyé qu'au syndic (lecture auditée) ;
+  // les résidents voient banque + RIB masqué sur l'écran « Payer par virement ».
+  comptesBancairesJson             Json?                     @map("comptes_bancaires_json")
+  // Rappel au syndic quand un justificatif reste EN_ATTENTE plus de N jours — nullable, jamais deviné.
+  delaiValidationJustificatifJours Int?                      @map("delai_validation_justificatif_jours")
+  creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
   rolesUtilisateur    RoleUtilisateur[]
   invitations         Invitation[]
@@ -276,6 +282,7 @@ model Copropriete {
   sessionsCmi         PaiementCmiSession[]
   depenses            Depense[]
   depenseLogs         DepenseLog[]
+  justificatifs       JustificatifPaiement[]
 
   @@map("copropriete")
 }
@@ -324,6 +331,9 @@ model Utilisateur {
   depensesCreees           Depense[]                 @relation("DepenseCreateur")
   depensesApprouvees       Depense[]                 @relation("DepenseApprobateur")
   depenseLogsActeur        DepenseLog[]              @relation("DepenseLogActeur")
+  justificatifsDeclares    JustificatifPaiement[]    @relation("JustificatifDeclarant")
+  justificatifsTraites     JustificatifPaiement[]    @relation("JustificatifTraitant")
+  paiementsEnregistres     Paiement[]                @relation("PaiementEnregistreur")
 
   @@map("utilisateur")
 }
@@ -409,6 +419,7 @@ model Lot {
   visites          Visite[]
   declarationsLcd  LotLocationCourteDuree[]
   sejoursLcd       SejourCourteDuree[]
+  justificatifs    JustificatifPaiement[]
 
   @@index([coproprieteId])
   @@map("lot")
@@ -518,7 +529,9 @@ model Document {
   // code (apps/api/lib/documents/types.ts : FACTURE, JUSTIFICATIF_DEPENSE, DEVIS…). ⚠️ Écart
   // signalé (ROADMAP M16) : pas de conversion en enum Postgres pour ne pas casser les données.
   factures           Facture[]
-  depensesJustifiees Depense[] @relation("DepenseJustificatifPaiement")
+  depensesJustifiees Depense[]              @relation("DepenseJustificatifPaiement")
+  justificatifs      JustificatifPaiement[] @relation("JustificatifPreuve")
+  paiementsPreuve    Paiement[]             @relation("PaiementPreuve")
 
   @@index([coproprieteId])
   @@map("document")
@@ -946,22 +959,33 @@ model PaiementCmiSession {
 // Append-only strict (Master Spec Partie 2.4 : "Pas de DELETE/UPDATE sur ... paiement" —
 // application_role n'a jamais UPDATE/DELETE, voir migration).
 model Paiement {
-  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lotId               String          @map("lot_id") @db.Uuid
-  lot                 Lot             @relation(fields: [lotId], references: [id])
-  appelDeFondsLotId   String          @map("appel_de_fonds_lot_id") @db.Uuid
-  appelDeFondsLot     AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
-  montant             Decimal         @db.Decimal(14, 2)
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId               String                @map("lot_id") @db.Uuid
+  lot                 Lot                   @relation(fields: [lotId], references: [id])
+  appelDeFondsLotId   String                @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot     AppelDeFondsLot       @relation(fields: [appelDeFondsLotId], references: [id])
+  montant             Decimal               @db.Decimal(14, 2)
   methode             MethodePaiement
-  referenceCmi        String?         @unique @map("reference_cmi")
-  statut              StatutPaiement  @default(VALIDE)
+  referenceCmi        String?               @unique @map("reference_cmi")
+  statut              StatutPaiement        @default(VALIDE)
   // Doc A §3.4 "Locataire paie à la place du propriétaire" — le payeur peut différer du
   // propriétaire du lot ; absent du tableau Master Spec littéral, ajouté pour ce cas explicite.
-  payeurUtilisateurId String?         @map("payeur_utilisateur_id") @db.Uuid
-  horodatage          DateTime        @default(now()) @db.Timestamptz
+  payeurUtilisateurId String?               @map("payeur_utilisateur_id") @db.Uuid
+  // M17 — provenance du paiement : justificatif validé, qui l'a saisi (syndic / gardien), date de
+  // valeur bancaire, preuve côté syndic (espèces / chèque reçus à la loge). Colonnes ajoutées à une
+  // table append-only : posées à l'INSERT, jamais d'UPDATE ; les lignes existantes restent NULL.
+  justificatifId      String?               @map("justificatif_id") @db.Uuid
+  justificatif        JustificatifPaiement? @relation(fields: [justificatifId], references: [id])
+  enregistreParId     String?               @map("enregistre_par_id") @db.Uuid
+  enregistrePar       Utilisateur?          @relation("PaiementEnregistreur", fields: [enregistreParId], references: [id])
+  dateValeur          DateTime?             @map("date_valeur") @db.Date
+  documentId          String?               @map("document_id") @db.Uuid
+  document            Document?             @relation("PaiementPreuve", fields: [documentId], references: [id])
+  horodatage          DateTime              @default(now()) @db.Timestamptz
 
   @@index([lotId])
   @@index([appelDeFondsLotId])
+  @@index([justificatifId])
   @@map("paiement")
 }
 
@@ -1690,4 +1714,69 @@ model DepenseLog {
   @@index([depenseId])
   @@index([coproprieteId])
   @@map("depense_log")
+}
+
+// ============================================================================
+// M17 — JUSTIFICATIFS DE PAIEMENT (Doc A §3.3 « paiement rejeté », §3.4 imputation FIFO,
+// « virement mal référencé » ; §12.3 confidentialité par lot)
+// Le résident déclare « j'ai payé » (virement, chèque, espèces) avec sa preuve ; le syndic
+// valide contre le relevé bancaire (aucune API bancaire — rapprochement manuel) : la validation
+// crée le(s) `paiement` VALIDE (FIFO si paiement « sur solde »), met à jour les lignes d'appel et
+// émet la quittance par le service existant. Le gardien saisit les espèces reçues à la loge : un
+// justificatif ESPECES EN_ATTENTE que le syndic confirme (la table `paiement` étant append-only,
+// aucun paiement n'est créé « en attente » puis modifié — écart signalé, ROADMAP M17).
+// ⚠️ Ajouts signalés au-delà du Master Spec : enum StatutJustificatif (+ ANNULE), table
+// justificatif_paiement, copropriete.comptes_bancaires_json / delai_validation_justificatif_jours,
+// paiement.justificatif_id / enregistre_par_id / date_valeur / document_id.
+// ============================================================================
+
+enum StatutJustificatif {
+  EN_ATTENTE
+  VALIDE
+  REJETE
+  ANNULE
+}
+
+model JustificatifPaiement {
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId        String             @map("copropriete_id") @db.Uuid
+  copropriete          Copropriete        @relation(fields: [coproprieteId], references: [id])
+  lotId                String             @map("lot_id") @db.Uuid
+  lot                  Lot                @relation(fields: [lotId], references: [id])
+  // NULL = paiement « sur solde » : imputation FIFO sur les lignes ouvertes à la validation.
+  appelDeFondsLotId    String?            @map("appel_de_fonds_lot_id") @db.Uuid
+  declareParId         String             @map("declare_par_id") @db.Uuid
+  declarePar           Utilisateur        @relation("JustificatifDeclarant", fields: [declareParId], references: [id])
+  montant              Decimal            @db.Decimal(14, 2)
+  // VIREMENT | CHEQUE | ESPECES — jamais CMI (le webhook porte ses propres preuves).
+  methode              MethodePaiement
+  datePaiementDeclaree DateTime           @map("date_paiement_declaree") @db.Date
+  banqueEmettrice      String?            @map("banque_emettrice")
+  // Compte de la copropriété visé (libellé choisi dans comptes_bancaires_json) ou texte libre.
+  beneficiaire         String
+  // N° de virement / de chèque — clé du rapprochement avec le relevé.
+  reference            String?
+  // Preuve (reçu de virement, photo du chèque / bordereau) : Document JUSTIFICATIF_PAIEMENT.
+  // Facultatif uniquement pour des espèces saisies par le syndic ou le gardien.
+  documentId           String?            @map("document_id") @db.Uuid
+  document             Document?          @relation("JustificatifPreuve", fields: [documentId], references: [id])
+  statut               StatutJustificatif @default(EN_ATTENTE)
+  traiteParId          String?            @map("traite_par_id") @db.Uuid
+  traitePar            Utilisateur?       @relation("JustificatifTraitant", fields: [traiteParId], references: [id])
+  traiteLe             DateTime?          @map("traite_le") @db.Timestamptz
+  motifRejet           String?            @map("motif_rejet")
+  // Premier paiement créé à la validation ; la répartition FIFO complète est dans details_json.
+  paiementId           String?            @map("paiement_id") @db.Uuid
+  detailsJson          Json?              @map("details_json")
+  // Job `justificatifs-relance-syndic` : rappel envoyé une seule fois.
+  relanceEnvoyeeLe     DateTime?          @map("relance_envoyee_le") @db.Timestamptz
+  creeLe               DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe            DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
+
+  paiements Paiement[]
+
+  @@index([coproprieteId, statut])
+  @@index([lotId])
+  @@index([declareParId])
+  @@map("justificatif_paiement")
 }

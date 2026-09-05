@@ -1,5 +1,5 @@
 /**
- * Seed de développement — couvre M1→M16 : copropriété, utilisateurs/rôles, invitation, lots
+ * Seed de développement — couvre M1→M17 : copropriété, utilisateurs/rôles, invitation, lots
  * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
  * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
  * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
@@ -612,11 +612,61 @@ async function main() {
     },
   });
 
+  // ── M17 — Justificatifs de paiement (Doc A §3.3/§3.4) ───────────────────────
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: {
+      comptesBancairesJson: [
+        { libelle: "Compte courant — Attijariwafa bank", banque: "Attijariwafa bank", rib: "007780000112233445566778" },
+        { libelle: "Fonds de réserve — BMCE", banque: "Bank of Africa", rib: "011780000998877665544332" },
+      ],
+      delaiValidationJustificatifJours: 5, // PROVISOIRE — rappel au syndic après 5 jours d'attente (brief §8.5)
+    },
+  });
+  const ligneA2 = appel.lignes.find((l) => l.lotId === lotA2.id)!;
+  const ligneA3 = appel.lignes.find((l) => l.lotId === lotA3.id)!;
+  // 1. Justificatif VALIDÉ : virement du propriétaire MRE (lot A2), paiement créé à la validation.
+  const preuveMre = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "JUSTIFICATIF_PAIEMENT", nom: "Reçu virement A2 janvier.pdf", visibilite: "SYNDIC_ONLY", storagePath: `${copro.id}/justificatifs/${randomUUID()}-recu-a2.pdf`, creePar: proprietaireMRE.id },
+  });
+  const justifValide = await prisma.justificatifPaiement.create({
+    data: {
+      coproprieteId: copro.id, lotId: lotA2.id, appelDeFondsLotId: ligneA2.id, declareParId: proprietaireMRE.id, montant: "1000.00", methode: "VIREMENT",
+      datePaiementDeclaree: new Date(`${exercice}-01-08`), banqueEmettrice: "Société Générale (France)", beneficiaire: "Compte courant — Attijariwafa bank", reference: "SG-INT-77120",
+      documentId: preuveMre.id, statut: "VALIDE", traiteParId: syndicUser.id, traiteLe: new Date(`${exercice}-01-12T10:00:00Z`),
+      creeLe: new Date(`${exercice}-01-09T18:30:00Z`),
+    },
+  });
+  const paiementMre = await prisma.paiement.create({
+    data: { lotId: lotA2.id, appelDeFondsLotId: ligneA2.id, montant: "1000.00", methode: "VIREMENT", statut: "VALIDE", payeurUtilisateurId: proprietaireMRE.id, justificatifId: justifValide.id, enregistreParId: syndicUser.id, dateValeur: new Date(`${exercice}-01-08`), horodatage: new Date(`${exercice}-01-12T10:00:00Z`) },
+  });
+  await prisma.appelDeFondsLot.update({ where: { id: ligneA2.id }, data: { montantPaye: "1000.00", statut: "PAYE" } });
+  await prisma.quittance.create({ data: { appelDeFondsLotId: ligneA2.id, numero: `QT-${ligneA2.id.slice(0, 8).toUpperCase()}-SEED` } });
+  await prisma.justificatifPaiement.update({ where: { id: justifValide.id }, data: { paiementId: paiementMre.id, detailsJson: { affectations: [{ appel_de_fonds_lot_id: ligneA2.id, montant: "1000.00", statut: "PAYE" }] } } });
+  // 2. Justificatif EN ATTENTE : chèque déposé par la représentante de l'indivision (lot A3), paiement sur solde.
+  const preuveA3 = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "JUSTIFICATIF_PAIEMENT", nom: "Photo chèque A3.jpg", visibilite: "SYNDIC_ONLY", storagePath: `${copro.id}/justificatifs/${randomUUID()}-cheque-a3.jpg`, creePar: indivisaire1.id },
+  });
+  const justifAttente = await prisma.justificatifPaiement.create({
+    data: {
+      coproprieteId: copro.id, lotId: lotA3.id, appelDeFondsLotId: null, declareParId: indivisaire1.id, montant: "600.00", methode: "CHEQUE",
+      datePaiementDeclaree: jour(-2), banqueEmettrice: "CIH Bank", beneficiaire: "Compte courant — Attijariwafa bank", reference: "CHQ 0098211", documentId: preuveA3.id, statut: "EN_ATTENTE",
+    },
+  });
+  // 3. Espèces reçues à la loge par le gardien (lot A1, sur solde) — en attente de confirmation du syndic.
+  const justifEspeces = await prisma.justificatifPaiement.create({
+    data: {
+      coproprieteId: copro.id, lotId: lotA1.id, appelDeFondsLotId: ligneA1.id, declareParId: gardienUser.id, montant: "200.00", methode: "ESPECES",
+      datePaiementDeclaree: jour(0), beneficiaire: "Espèces remises au gardien", statut: "EN_ATTENTE",
+    },
+  });
+
   console.log("Seed terminé :", {
     copropriete: copro.nom,
     utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },
     lots: 5,
+    justificatifs: { valide: justifValide.id, enAttente: justifAttente.id, especesGardien: justifEspeces.id },
     depenses: { payees: 3, approuvee: depReparation.id, aApprouver: depFacade.id, brouillon: depBrouillon.id, rejetee: depDeco.id, reserve: depPompe.id },
     appelDeFonds: periode,
     ag: ag.id,

@@ -11,8 +11,9 @@ import { agRappels } from "../../../inngest/functions/ag-rappels";
 import { appelDeFondsFanout } from "../../../inngest/functions/appel-de-fonds-fanout";
 import { lcdSejours } from "../../../inngest/functions/lcd-sejours";
 import { depensesFactures } from "../../../inngest/functions/depenses-factures";
+import { justificatifsRelance } from "../../../inngest/functions/justificatifs-relance";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures],
+  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance],
 });

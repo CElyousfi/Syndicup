@@ -253,10 +253,15 @@ export async function obtenirSoldeLot(ctx: TenantContext, lotId: string) {
       (acc, l) => acc.plus(money(l.montantDu).minus(money(l.montantPaye))),
       money(0)
     );
+    // M17 — paiements déclarés par le résident, pas encore validés par le syndic : affichés
+    // « en attente de validation », jamais déduits du solde dû tant que non validés.
+    const enAttente = await db.justificatifPaiement.aggregate({ where: { lotId, statut: "EN_ATTENTE" }, _sum: { montant: true }, _count: { _all: true } });
 
     return {
       lot_id: lotId,
       solde_du: toApiString(solde),
+      justificatifs_en_attente: toApiString(enAttente._sum.montant ?? 0),
+      nb_justificatifs_en_attente: enAttente._count._all,
       lignes: lignes.map((l) => ({
         appel_de_fonds_lot_id: l.id,
         montant_du: toApiString(l.montantDu),
@@ -307,7 +312,7 @@ async function notifierPaiementLot(
  * Un vrai FIFO multi-lignes nécessiterait soit une FK nullable + table de répartition, soit un
  * champ dédié — à construire explicitement si le produit le demande, pas deviné ici.
  */
-async function appliquerPaiement(
+export async function appliquerPaiement(
   db: TenantDb,
   ctx: TenantContext,
   params: {
@@ -324,6 +329,8 @@ async function appliquerPaiement(
     acteurId?: string | null;
     /** false = l'appelant notifie lui-même (FIFO : une notification pour tout le paiement). */
     notifier?: boolean;
+    /** M17 — provenance : justificatif validé, saisie (syndic/gardien), date de valeur, preuve syndic. */
+    provenance?: { justificatifId?: string | null; enregistreParId?: string | null; dateValeur?: Date | null; documentId?: string | null };
   }
 ) {
   // Idempotence AVANT toute autre vérification métier (Partie 6.4 étape 5) : un callback CMI
@@ -360,6 +367,10 @@ async function appliquerPaiement(
         referenceCmi: params.referenceCmi ?? null,
         statut: "VALIDE",
         payeurUtilisateurId: params.payeurUtilisateurId ?? null,
+        justificatifId: params.provenance?.justificatifId ?? null,
+        enregistreParId: params.provenance?.enregistreParId ?? null,
+        dateValeur: params.provenance?.dateValeur ?? null,
+        documentId: params.provenance?.documentId ?? null,
       },
     });
 
@@ -462,7 +473,7 @@ export async function enregistrerPaiementManuel(
  * prochain appel) n'est PAS implémenté : un montant dépassant le dû total du lot est rejeté 422
  * plutôt que silencieusement tronqué ou transformé en avance sans mécanisme d'avoir tracé.
  */
-async function appliquerPaiementFifo(
+export async function appliquerPaiementFifo(
   db: TenantDb,
   ctx: TenantContext,
   input: {
@@ -470,6 +481,7 @@ async function appliquerPaiementFifo(
     montant: string;
     methode: "VIREMENT" | "ESPECES" | "CHEQUE";
     payeurUtilisateurId: string | null;
+    provenance?: { justificatifId?: string | null; enregistreParId?: string | null; dateValeur?: Date | null; documentId?: string | null };
   }
 ) {
   const lot = await db.lot.findUnique({ where: { id: input.lotId } });
@@ -510,6 +522,7 @@ async function appliquerPaiementFifo(
       payeurUtilisateurId: input.payeurUtilisateurId,
       accepterTropPercu: false,
       notifier: false,
+      provenance: input.provenance,
     });
     affectations.push({
       appel_de_fonds_lot_id: ligne.id,

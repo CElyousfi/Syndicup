@@ -41,7 +41,11 @@ export type ErrorCode =
   | "BUDGET_TOTAL_DERIVE_DES_POSTES"
   | "BUDGET_POSTE_UTILISE"
   | "INCIDENT_NON_RESOLU"
-  | "INCIDENT_DEJA_EVALUE";
+  | "INCIDENT_DEJA_EVALUE"
+  // M17 — justificatifs de paiement.
+  | "JUSTIFICATIF_STATUT_INVALIDE"
+  | "JUSTIFICATIF_PREUVE_REQUISE"
+  | "JUSTIFICATIF_PARAMETRE_NON_CONFIGURE";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -71,6 +75,9 @@ const STATUS: Record<ErrorCode, number> = {
   BUDGET_POSTE_UTILISE: 409,
   INCIDENT_NON_RESOLU: 422,
   INCIDENT_DEJA_EVALUE: 409,
+  JUSTIFICATIF_STATUT_INVALIDE: 422,
+  JUSTIFICATIF_PREUVE_REQUISE: 422,
+  JUSTIFICATIF_PARAMETRE_NON_CONFIGURE: 422,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {

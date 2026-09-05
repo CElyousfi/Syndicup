@@ -411,6 +411,31 @@ const DEPENSES: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, DEPENSES);
 
+// ── M17 — Justificatifs de paiement (Doc A §3.3/§3.4) ───────────────────────────────────────
+const JUSTIFICATIFS: Record<string, Entree> = {
+  JUSTIFICATIF_DECLARE: {
+    FR: { titre: "Paiement déclaré à valider", corps: "Lot {{lot}} : {{montant}} MAD déclarés ({{methode}}). Vérifiez le relevé puis validez dans l'application." },
+    AR: { titre: "دفعة مُصرَّح بها تنتظر التحقق", corps: "الوحدة {{lot}}: تم التصريح بدفع {{montant}} درهم ({{methode}}). راجعوا الكشف البنكي ثم صادقوا في التطبيق." },
+  },
+  PAIEMENT_VALIDE: {
+    FR: { titre: "Paiement validé", corps: "Votre paiement de {{montant}} MAD (lot {{lot}}) a été validé par le syndic. Votre quittance est disponible dans l'application." },
+    AR: { titre: "تم التحقق من الدفع", corps: "تم التحقق من دفعتكم بقيمة {{montant}} درهم (الوحدة {{lot}}) من طرف السنديك. وصل الأداء متوفر في التطبيق." },
+  },
+  JUSTIFICATIF_REJETE: {
+    FR: { titre: "Paiement déclaré non validé", corps: "Votre déclaration de {{montant}} MAD (lot {{lot}}) n'a pas été validée : {{motif}}" },
+    AR: { titre: "لم يتم التحقق من الدفعة المصرَّح بها", corps: "لم يتم التحقق من تصريحكم بقيمة {{montant}} درهم (الوحدة {{lot}}): {{motif}}" },
+  },
+  JUSTIFICATIF_A_VALIDER_RELANCE: {
+    FR: { titre: "Justificatifs en attente", corps: "{{nb}} paiement(s) déclaré(s) attendent votre validation depuis plus de {{jours}} jours." },
+    AR: { titre: "إثباتات دفع قيد الانتظار", corps: "{{nb}} دفعة/دفعات مصرَّح بها تنتظر تحققكم منذ أكثر من {{jours}} يومًا." },
+  },
+  PAIEMENT_ESPECES_SAISI: {
+    FR: { titre: "Espèces reçues à la loge", corps: "Le gardien a enregistré {{montant}} MAD en espèces pour le lot {{lot}} : à confirmer dans l'application." },
+    AR: { titre: "نقود مستلمة بالحراسة", corps: "سجّل الحارس {{montant}} درهم نقدًا للوحدة {{lot}}: يُرجى التأكيد في التطبيق." },
+  },
+};
+Object.assign(TEMPLATES, JUSTIFICATIFS);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

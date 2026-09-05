@@ -33,6 +33,7 @@ tags:
   - name: Litiges
   - name: LCD
   - name: Dépenses
+  - name: Justificatifs
     description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
@@ -482,6 +483,8 @@ components:
     SoldeLot:
       type: object
       properties:
+        justificatifs_en_attente: { $ref: "#/components/schemas/Money", description: "M17 — paiements déclarés par le résident, en attente de validation du syndic (jamais déduits du solde dû)." }
+        nb_justificatifs_en_attente: { type: integer }
         lot_id: { type: string, format: uuid }
         solde_du: { $ref: "#/components/schemas/Money" }
         lignes:
@@ -980,6 +983,96 @@ components:
         telephone: { type: string, nullable: true }
         rib: { type: string, pattern: '^[0-9]{24}$', nullable: true, description: RIB marocain 24 chiffres — stocké, jamais renvoyé en clair hors /rib. }
         notes: { type: string, nullable: true }
+
+    # ── M17 — Justificatifs de paiement (Doc A §3.3/§3.4 — ⚠️ module absent du Master Spec, signalé ROADMAP M17) ──
+    StatutJustificatif:
+      type: string
+      enum: [EN_ATTENTE, VALIDE, REJETE, ANNULE]
+    PreuvePaiement:
+      type: object
+      required: [storage_path, nom]
+      description: Fichier téléversé via POST /finances/justificatifs/upload-url (préfixe `<copropriete>/justificatifs/`).
+      properties:
+        storage_path: { type: string }
+        nom: { type: string, maxLength: 200 }
+    Justificatif:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        lot_id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid, nullable: true, description: NULL = paiement sur solde (FIFO à la validation). }
+        declare_par_id: { type: string, format: uuid }
+        montant: { $ref: "#/components/schemas/Money" }
+        methode: { type: string, enum: [VIREMENT, CHEQUE, ESPECES] }
+        date_paiement_declaree: { type: string, format: date }
+        banque_emettrice: { type: string, nullable: true }
+        beneficiaire: { type: string }
+        reference: { type: string, nullable: true }
+        document_id: { type: string, format: uuid, nullable: true }
+        statut: { $ref: "#/components/schemas/StatutJustificatif" }
+        traite_par_id: { type: string, format: uuid, nullable: true }
+        traite_le: { type: string, format: date-time, nullable: true }
+        motif_rejet: { type: string, nullable: true }
+        paiement_id: { type: string, format: uuid, nullable: true }
+        details_json: { type: object, nullable: true, description: "Répartition FIFO `affectations`, `date_valeur`, `quittance_id` après validation." }
+        cree_le: { type: string, format: date-time }
+    JustificatifCreate:
+      type: object
+      required: [montant, methode, date_paiement, beneficiaire]
+      description: "`lot_id` pour le résident (un de ses lots), `pour_lot_id` pour le syndic / gardien. Preuve obligatoire sauf ESPECES saisies par le syndic ou le gardien (422 JUSTIFICATIF_PREUVE_REQUISE)."
+      properties:
+        lot_id: { type: string, format: uuid }
+        pour_lot_id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid, nullable: true }
+        montant: { $ref: "#/components/schemas/Money" }
+        methode: { type: string, enum: [VIREMENT, CHEQUE, ESPECES] }
+        date_paiement: { type: string, format: date }
+        banque_emettrice: { type: string, nullable: true }
+        beneficiaire: { type: string, description: Libellé du compte de la copropriété choisi (comptes bancaires) ou texte libre. }
+        reference: { type: string, nullable: true }
+        preuve: { allOf: [{ $ref: "#/components/schemas/PreuvePaiement" }], nullable: true }
+    JustificatifValider:
+      type: object
+      properties:
+        date_valeur: { type: string, format: date, nullable: true, description: Date de valeur lue sur le relevé (défaut = date déclarée). }
+    JustificatifRejeter:
+      type: object
+      required: [motif]
+      properties:
+        motif: { type: string, minLength: 1, maxLength: 1000 }
+    PaiementEspecesCreate:
+      type: object
+      required: [lot_id, montant]
+      properties:
+        lot_id: { type: string, format: uuid }
+        appel_de_fonds_lot_id: { type: string, format: uuid, nullable: true }
+        montant: { $ref: "#/components/schemas/Money" }
+        date_paiement: { type: string, format: date }
+        payeur_utilisateur_id: { type: string, format: uuid, nullable: true }
+        preuve: { allOf: [{ $ref: "#/components/schemas/PreuvePaiement" }], nullable: true }
+        commentaire: { type: string, nullable: true }
+    CompteBancaire:
+      type: object
+      properties:
+        index: { type: integer }
+        libelle: { type: string }
+        banque: { type: string }
+        rib_masque: { type: string, example: "•••• 6778" }
+    ComptesBancairesUpdate:
+      type: object
+      required: [comptes]
+      properties:
+        comptes:
+          type: array
+          maxItems: 10
+          items:
+            type: object
+            required: [libelle, banque, rib]
+            properties:
+              libelle: { type: string }
+              banque: { type: string }
+              rib: { type: string, pattern: '^[0-9]{24}$' }
 
     # ── M16 — Dépenses, factures, postes budgétaires (Doc A §3, §6, §8 — ⚠️ module absent du
     #    Master Spec Partie 2.2/3.2, ajouts signalés dans ROADMAP M16) ──
@@ -4559,5 +4652,169 @@ paths:
                       prestataire_id: { type: string, format: uuid }
                       nom: { type: string }
                       rib: { type: string, nullable: true }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── M17 — Justificatifs de paiement ──
+  /finances/justificatifs:
+    get:
+      tags: [Justificatifs]
+      summary: Déclarations de paiement — syndic / conseil (toutes, EN_ATTENTE d'abord), résident (ses lots), gardien (ce qu'il a saisi). `meta.par_statut` = compteurs.
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutJustificatif" } }
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: methode, in: query, schema: { type: string, enum: [VIREMENT, CHEQUE, ESPECES] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Justificatif" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Justificatifs]
+      summary: Déclare « j'ai payé » (virement / chèque / espèces) avec preuve — résident pour son lot, syndic / gardien au nom d'un lot. Notification JUSTIFICATIF_DECLARE au syndic. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JustificatifCreate" }
+            example:
+              lot_id: "0198c2f3-7b3a-7c1e-9f11-1a2b3c4d5e6f"
+              montant: "1200.00"
+              methode: VIREMENT
+              date_paiement: "2026-09-05"
+              banque_emettrice: "CIH Bank"
+              beneficiaire: "Compte courant — Attijariwafa bank"
+              reference: "VIR 2026-09-05 88213"
+              preuve: { storage_path: "caac2f41-1af9-4094-a651-81d97a5abdae/justificatifs/0198…-recu.pdf", nom: "Reçu de virement.pdf" }
+      responses:
+        "201": { description: Créé (EN_ATTENTE). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /finances/justificatifs/upload-url:
+    post:
+      tags: [Justificatifs]
+      summary: URL signée d'upload (2 h) de la preuve — préfixe `<copropriete>/justificatifs/`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, maxLength: 180 }
+                content_type: { type: string, description: image/jpeg|png|webp|heic|heif ou application/pdf. }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /finances/justificatifs/{id}:
+    get:
+      tags: [Justificatifs]
+      summary: Détail + `preuve` (URL signée 15 min) + `lignes_ouvertes` du lot (validation côte à côte).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /finances/justificatifs/{id}/valider:
+    post:
+      tags: [Justificatifs]
+      summary: "Syndic — rapprochement fait : crée le(s) paiement(s) VALIDE (ciblé ou FIFO sur solde), met à jour les lignes, émet la quittance, notifie PAIEMENT_VALIDE. Atomique. Probant — Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JustificatifValider" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /finances/justificatifs/{id}/rejeter:
+    post:
+      tags: [Justificatifs]
+      summary: Syndic — rejet motivé (rien n'est touché sur le lot), notification JUSTIFICATIF_REJETE. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JustificatifRejeter" }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /finances/justificatifs/{id}/annuler:
+    post:
+      tags: [Justificatifs]
+      summary: Déclarant (ou syndic) — annule une déclaration EN_ATTENTE. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /finances/paiements/especes:
+    post:
+      tags: [Justificatifs]
+      summary: Espèces reçues — gardien → justificatif ESPECES EN_ATTENTE (`type=JUSTIFICATIF`, le syndic confirme) ; syndic → paiement VALIDE immédiat (`type=PAIEMENT`). Idempotency-Key (file hors-ligne mobile).
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PaiementEspecesCreate" }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /finances/paiements/{id}/confirmer:
+    post:
+      tags: [Justificatifs]
+      summary: Syndic — confirme les espèces saisies par le gardien ({id} = justificatif ESPECES) ; équivaut à /valider. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /coproprietes/{id}/comptes-bancaires:
+    get:
+      tags: [Copropriétés]
+      summary: Comptes bancaires de la copropriété — banque + RIB masqué (tout membre) pour l'écran « Payer par virement ».
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/CompteBancaire" } }
+    put:
+      tags: [Copropriétés]
+      summary: Remplace la liste des comptes (syndic) — audit COMPTES_BANCAIRES_MODIFIES (RIB jamais en clair dans l'audit).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ComptesBancairesUpdate" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /coproprietes/{id}/comptes-bancaires/{index}/rib:
+    get:
+      tags: [Copropriétés]
+      summary: RIB complet d'un compte — syndic seul, chaque lecture est auditée (RIB_CONSULTE).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: index, in: path, required: true, schema: { type: integer, minimum: 0 } }
+      responses:
+        "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }

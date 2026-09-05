@@ -123,10 +123,22 @@ export async function executerEscaladeImpayes(coproprieteId: string): Promise<Re
       },
     });
 
+    // M17 — un lot dont un justificatif EN_ATTENTE couvre le reste dû de la ligne n'est pas
+    // escaladé tant que le syndic ne l'a pas traité (Doc A §3.3 : le résident a payé, la preuve
+    // attend le rapprochement — relancer serait abusif). Reprise dès validation ou rejet.
+    const enAttente = await db.justificatifPaiement.groupBy({
+      by: ["lotId"],
+      where: { coproprieteId, statut: "EN_ATTENTE" },
+      _sum: { montant: true },
+    });
+    const couvertureParLot = new Map(enAttente.map((j) => [j.lotId, j._sum.montant]));
+
     const maintenant = Date.now();
     const escalades: ResultatEscalade["escalades"] = [];
 
     for (const ligne of lignes) {
+      const couverture = couvertureParLot.get(ligne.lotId);
+      if (couverture && couverture.greaterThanOrEqualTo(ligne.montantDu.minus(ligne.montantPaye))) continue;
       const joursRetard = Math.floor(
         (maintenant - ligne.appelDeFonds.dateEcheance.getTime()) / (24 * 60 * 60 * 1000)
       );
