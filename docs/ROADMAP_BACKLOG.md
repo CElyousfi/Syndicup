@@ -224,6 +224,60 @@ fil de l'eau plutôt qu'en bloc à la fin, pour rester testable en continu. Rapp
 - [ ] Déclaration préalable du traitement déposée sur portail.cndp.ma (démarche administrative, pas du code — cf. brief juridique §6)
 - [ ] CGU + politique de confidentialité FR/AR publiées et liées
 
+## M15 — Location courte durée (côté copropriété)
+
+*Réf. Doc A §10.2 (« location_courte_duree = AUTORISEE / INTERDITE / ENCADREE », « signalement
+facilité »), §2.1/§2.2 (propriétaire absent, propriétaire seul redevable), §9.2 (contrôle d'accès
+gardien). Domaine : `docs/domain-reference/13-location-courte-duree.md`. Juridique :
+`docs/LEGAL_QUESTIONS_BRIEF.md` §7 (tout PROVISOIRE). Branche `feature/lcd-location-courte-duree`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec (CLAUDE.md §2)** : `RoleType.GESTIONNAIRE_LCD`
+(scopé aux lots via `lot_location_courte_duree.gestionnaire_id`, jamais à la copropriété) ;
+enums `RegimeLocationCourteDuree`, `StatutDeclarationLcd`, `StatutSejour`, `TypePieceIdentite`,
+`TypeEvenementSejour` ; tables `lot_location_courte_duree`, `sejour_courte_duree`,
+`sejour_evenement` (append-only) ; colonnes `copropriete.regime_lcd / parametres_lcd_json /
+regime_lcd_ag_resolution_id`, `incident.sejour_id`. `TypeUsageLot` **non modifié** (la
+déclaration porte l'usage LCD — aucun schéma Zod/test existant touché).
+
+- [x] **Livré (05/09)** — Schéma + migration `20260905100000_m15_location_courte_duree` + RLS
+  (propriétaire actif du lot, gestionnaire désigné, gardien = déclarations VALIDEES + tous les
+  séjours, syndic/conseil ; locataires et voisins : rien ; aucune policy existante assouplie),
+  fonctions SECURITY DEFINER dédiées, seed Al Amal (ENCADREE, lot A1 VALIDEE + gestionnaire,
+  séjours PREVU/EN_COURS), tests RLS `tests/lcd-rls.test.ts`.
+- [x] **Livré (05/09)** — API tag `LCD` (14 opérations, exemples `POST /lcd/sejours` et
+  `POST /lcd/declarations/{id}/decision`), permissions `lcd.*`, codes explicites
+  `LCD_REGIME_NON_DEFINI` / `LCD_INTERDITE` / `LCD_PARAMETRE_NON_CONFIGURE` /
+  `LCD_GESTIONNAIRE_REQUIS` / `LCD_DECLARATION_NON_VALIDEE` / `LCD_VOYAGEURS_MAX` /
+  `LCD_DELAI_DECLARATION` / `LCD_QUOTA_NUITS_DEPASSE` (422) / `LCD_SEJOUR_CHEVAUCHEMENT` (409),
+  Idempotency-Key sur décision / séjour / annulation / arrivée / départ, audit
+  `LCD_REGLEMENT_MODIFIE`, `LCD_DECLARATION_CREEE/MODIFIEE/DECISION/CLOTUREE`,
+  `LCD_GESTIONNAIRE_DESIGNE`, `LCD_SEJOUR_DECLARE/MODIFIE/ANNULE/ARRIVEE/DEPART` ; incidents
+  `sejour_id` (EN_COURS ou TERMINE ≤ 7 j) → événement `INCIDENT_LIE`. Gestionnaire : compte de la
+  copropriété (rôle créé) ou invitation M2 `GESTIONNAIRE_LCD` liée à l'acceptation.
+- [x] **Livré (05/09)** — Notifications FR/AR (`LCD_DECLARATION_A_VALIDER`,
+  `LCD_DECLARATION_DECISION`, `LCD_SEJOUR_DECLARE`, `LCD_SEJOUR_GARDIEN`, `LCD_SEJOUR_ANNULE`,
+  `LCD_ARRIVEE_AUJOURDHUI`), job Inngest `lcd-sejours-quotidien` (rappel gardien le jour J une
+  seule fois, clôture automatique EN_COURS→TERMINE le lendemain du départ, jamais
+  PREVU→EN_COURS, idempotent), anonymisation CNDP des voyageurs par le job M13 (étendu, pas
+  forké).
+- [x] **Livré (05/09)** — Web `location-courte-duree/` (landing par rôle, règlement syndic,
+  détail déclaration + décision + gestionnaire, séjour nouveau/détail), section LCD sur la fiche
+  lot, « lier à un séjour » sur le signalement d'incident, navigation, FR/AR.
+- [x] **Livré (05/09)** — Mobile `features/lcd/` (propriétaire, gestionnaire, syndic, gardien),
+  confirmations gardien hors-ligne (file de sync M10, même Idempotency-Key rejouée), section
+  fiche lot, lien incident ↔ séjour, FR/AR, `docs/PARITE_WEB_MOBILE.md` à jour.
+- [x] Tests API (`tests/lcd.test.ts`, `tests/lcd-rls.test.ts`) : régimes, gestionnaire requis,
+  déclaration non validée, chevauchement, quota, délai, transitions + journal append-only, job
+  idempotent, RLS, incident lié, anonymisation.
+- [ ] **Hors périmètre (décisions AG / juridiques en attente — §7 du brief)** : redevance LCD
+  votée en AG (le propriétaire reste seul débiteur, aucune ligne financière créée).
+- [ ] Suspension automatique après N incidents liés (aujourd'hui : décision manuelle du syndic,
+  motif obligatoire).
+- [ ] Auto-check-in voyageur par QR (le voyageur n'a jamais de compte dans cette version).
+- [ ] Scan / OCR de pièce d'identité (interdit par la minimisation CNDP retenue : 4 caractères).
+- [ ] Durée de rétention propre aux séjours (aujourd'hui = `retention_desactivation_mois`).
+- [ ] Exécution en arrière-plan OS de la file hors-ligne gardien (comme les visites M10).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

@@ -18,3 +18,4 @@ Objectif : qu'un agent de codage ne charge en contexte que le domaine sur lequel
 | [`10-types-residences.md`](./10-types-residences.md) | Types de Résidences — Règles Spécifiques Complètes | Partie 2 (copropriete.type_residence, config_json) |
 | [`11-onboarding-cycle-vie.md`](./11-onboarding-cycle-vie.md) | Onboarding & Cycle de Vie Utilisateur | Partie 5 (Onboarding & Cycle de Vie Utilisateur — remplace ce §11) |
 | [`12-conflits-litiges-confidentialite.md`](./12-conflits-litiges-confidentialite.md) | Conflits, Litiges & Cas Limites | Partie 2.3 (RLS), Partie 4 (RBAC), Partie 10 (Sécurité) |
+| [`13-location-courte-duree.md`](./13-location-courte-duree.md) | Location courte durée (côté copropriété : régime, déclarations, séjours, gardien, nuisances) — dérivé de Doc A §10.2, module M15 | Partie 2 (copropriete.regime_lcd, lot_location_courte_duree, sejour_courte_duree, sejour_evenement), Partie 4 (rôle GESTIONNAIRE_LCD) |

@@ -23,6 +23,8 @@ et remises à « non configuré » (null) si l'avocat infirme.
 | `quorum_premiere_convocation` | **0.5** | §2 — art. 18, moitié des voix (guide institutionnel) |
 | `limite_procurations_mandataire` | **3** | §4 — maximum 3 mandants par mandataire |
 | `retention_desactivation_mois` | **24** | §5 — « durée légale + 2 ans », base prudente 24 mois |
+| `regime_lcd` (M15) | **NON_DEFINI** (rien de déclarable tant que non fixé) | §7 — Doc A §10.2, régime voté en AG |
+| Rétention données voyageur (M15) | **= `retention_desactivation_mois`** | §7.3 — valeur propre aux séjours à confirmer |
 
 **À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
 d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
@@ -136,6 +138,79 @@ seulement avant l'anonymisation des comptes désactivés.
 **Action :** déterminer avec l'avocat si un traitement couvrant finances/identité/vote nécessite
 une déclaration simple ou une autorisation préalable (régime renforcé pour données sensibles,
 article 21), et lancer la démarche suffisamment tôt — elle est indépendante du calendrier de dev.
+
+---
+
+## 7. Location courte durée — régime, déclaration des voyageurs, données voyageur (module M15)
+
+**Ni le Master Spec ni Doc A ne développent le sujet** au-delà de Doc A §10.2 (« Règlement
+intérieur peut interdire la location courte durée (nuisances). À voter en AG. Paramètre
+règlement : location_courte_duree = AUTORISEE / INTERDITE / ENCADREE. Si incident Airbnb =
+signalement facilité »). Le module M15 implémente ce paramètre **sans coder aucune valeur
+légale** : tout est configuration de copropriété (`copropriete.regime_lcd`,
+`copropriete.parametres_lcd_json`, `PUT /lcd/reglement`, audit `LCD_REGLEMENT_MODIFIE`),
+nullable, 422 explicite tant que non configuré — même discipline que `delai_convocation_jours`.
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `regime_lcd` | **NON_DEFINI** (aucune déclaration possible tant que l'AG / le syndic n'a pas fixé le régime) | PROVISOIRE |
+| `parametres_lcd_json.*` (ENCADREE) | **aucune valeur par défaut** — le syndic saisit celles votées ; une limite `null` n'est pas appliquée | PROVISOIRE |
+| Rétention des données voyageur | **= `retention_desactivation_mois`** de la copropriété (§5), comptée depuis la date de départ ; copropriété non configurée = séjours jamais anonymisés automatiquement | PROVISOIRE |
+| Données voyageur collectées | nom du voyageur principal, nombre, téléphone (opt.), nationalité (opt.), type de pièce + **4 derniers caractères** (opt.), plaque (opt.) — jamais de numéro complet ni de scan | PROVISOIRE (minimisation prudente) |
+
+### 7.1 — Un règlement de copropriété peut-il interdire ou limiter la LCD ? (Loi 18-00, Loi 30-24)
+
+**Indication trouvée** : Doc A §10.2 tient pour acquis qu'un règlement intérieur peut interdire
+la LCD « à voter en AG ». Des sources secondaires évoquent la destination de l'immeuble
+(habitation) et l'article 8/9 de la Loi 18-00 (règlement de copropriété, destination des parties
+privatives), sans jurisprudence consolidée sur les locations meublées de courte durée.
+
+**À confirmer :**
+1. Le règlement de copropriété (ou intérieur) peut-il **interdire** purement la LCD, ou seulement
+   l'**encadrer** (nuisances, sécurité) ? Avec quelle majorité d'AG (grille §3) la clause est-elle
+   valablement adoptée / modifiée ? La Loi 30-24 change-t-elle ce point ?
+2. La **suspension** d'une déclaration par le syndic après incidents répétés (décision manuelle,
+   motif obligatoire — `POST /lcd/declarations/{id}/decision` SUSPENDUE) est-elle opposable au
+   propriétaire sans décision d'AG ni conciliation préalable (§0, Loi 30-24) ?
+3. Une **redevance LCD** (participation aux charges accrues : sécurité, nettoyage) est-elle licite
+   si votée en AG ? Hors périmètre de cette version — le module ne modifie aucune ligne
+   financière tant que ce point n'est pas confirmé (roadmap M15).
+
+### 7.2 — Déclaration des voyageurs : obligation du propriétaire vs de la copropriété
+
+**Indication trouvée** : l'obligation de déclaration des voyageurs (fiches de police /
+plateforme dédiée des autorités) pèse en principe sur l'**hébergeur** (propriétaire ou
+gestionnaire), pas sur la copropriété. La plateforme SyndicUp n'est **pas** ce canal de
+déclaration officiel et ne prétend pas s'y substituer.
+
+**À confirmer :**
+1. La copropriété (syndic, gardien) a-t-elle une base légale pour **exiger** du propriétaire une
+   déclaration préalable des séjours (`declaration_prealable_obligatoire`) et un délai
+   (`delai_declaration_heures`) ? Ou seulement une **information** du gardien pour le contrôle
+   d'accès (Doc A §9.2) ?
+2. Le gardien peut-il légitimement **confirmer l'arrivée / le départ** et consigner un nombre de
+   voyageurs constaté (`sejour_evenement`, append-only) ? Quelle valeur probante de ce journal en
+   cas de litige ?
+
+### 7.3 — CNDP : quelles données voyageur la copropriété peut-elle détenir, et combien de temps ?
+
+**Indication trouvée** : Loi 09-08 — finalité, proportionnalité, durée limitée. Le voyageur n'est
+pas membre de la copropriété ; la finalité retenue est la **sécurité de l'immeuble et la
+gestion des nuisances**, pas l'identification administrative.
+
+**À confirmer :**
+1. Les données retenues (nom du voyageur principal, nombre, téléphone facultatif, nationalité
+   facultative, type de pièce + 4 derniers caractères, plaque) sont-elles proportionnées à cette
+   finalité ? Faut-il retirer la nationalité et/ou la pièce d'identité ?
+2. Durée de conservation : la valeur provisoire réutilise `retention_desactivation_mois` (§5).
+   Faut-il une durée **propre aux séjours**, probablement plus courte (ex. quelques mois après
+   le départ) ? Le job `anonymisation-cndp-mensuelle` efface alors nom, téléphone, nationalité,
+   pièce, plaque (les dates, le lot et le nombre restent pour les statistiques de quota).
+3. Information du voyageur : qui l'informe du traitement (l'hébergeur ?) et la déclaration CNDP
+   de la plateforme (§6) doit-elle mentionner cette catégorie de personnes ?
+4. Le gestionnaire LCD (conciergerie) est-il un **sous-traitant** au sens de la loi 09-08 ?
+   Conséquences contractuelles (le rôle `GESTIONNAIRE_LCD` lui donne accès aux séjours de ses
+   lots uniquement).
 
 ---
 
