@@ -27,6 +27,7 @@ import { PaiementModal } from "../../../../../components/finances/paiement-modal
 import { ConfirmDelete } from "../../../../../components/ui/confirm-delete";
 import { supprimerLot } from "../actions";
 import { ContesterModal } from "../../../../../components/finances/contester-modal";
+import { LotLcdCard } from "../../../../../components/lcd/lot-lcd-card";
 
 type Onglet = "propriete" | "occupation" | "finances" | "historique";
 
@@ -186,6 +187,8 @@ export default async function LotDetailPage({
               </Table>
             </TableCard>
           )}
+          {/* M15 — location courte durée : rendu seulement si l'API autorise la lecture (200). */}
+          <LotLcdCard lotId={id} dict={dict} locale={ctx.locale} />
         </div>
       ) : null}
 

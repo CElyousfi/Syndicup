@@ -39,6 +39,9 @@ export default async function DashboardPage({
       return <DashboardResident ctx={ctx} locataire={false} />;
     case "LOCATAIRE":
       return <DashboardResident ctx={ctx} locataire />;
+    case "GESTIONNAIRE_LCD":
+      // Gestionnaire de location courte durée : vue résident sans finances ni AG (M15).
+      return <DashboardResident ctx={ctx} locataire />;
     case "GARDIEN":
       return <DashboardGardien ctx={ctx} />;
     case "PRESTATAIRE":

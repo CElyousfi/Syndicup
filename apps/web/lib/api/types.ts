@@ -46,7 +46,8 @@ export type RoleType =
   | "INDIVISAIRE"
   | "GARDIEN"
   | "PRESTATAIRE"
-  | "PERSONNE_MORALE_REPRESENTANT";
+  | "PERSONNE_MORALE_REPRESENTANT"
+  | "GESTIONNAIRE_LCD";
 
 export type StatutCompte =
   | "INVITE"
@@ -126,6 +127,18 @@ export type VisibiliteDocument = "PUBLIC_COPROPRIETE" | "SYNDIC_ONLY" | "CONSEIL
 export type TypePropriete = "PLEIN" | "INDIVISION" | "SCI";
 export type TypeOccupation = "PROPRIETAIRE_OCCUPANT" | "LOCATAIRE";
 export type Langue = "FR" | "AR";
+export type RegimeLcd = "NON_DEFINI" | "AUTORISEE" | "ENCADREE" | "INTERDITE";
+export type StatutDeclarationLcd = "EN_ATTENTE" | "VALIDEE" | "REFUSEE" | "SUSPENDUE" | "CLOTUREE";
+export type StatutSejour = "PREVU" | "EN_COURS" | "TERMINE" | "ANNULE";
+export type TypePieceIdentite = "CIN" | "PASSEPORT" | "TITRE_SEJOUR" | "AUTRE";
+export type TypeEvenementSejour =
+  | "DECLARE"
+  | "MODIFIE"
+  | "ARRIVEE_CONFIRMEE"
+  | "DEPART_CONFIRME"
+  | "ANNULE"
+  | "INCIDENT_LIE"
+  | "GARDIEN_NOTIFIE";
 
 // ── Auth ────────────────────────────────────────────────────────────────────
 export interface SessionTokens {
@@ -472,6 +485,8 @@ export interface Incident {
   slaDeadline: string | null;
   /** Chemins storage des photos du signalement (lecture via GET /incidents/:id/photos). */
   photos: string[];
+  /** M15 — séjour de location courte durée lié (nuisance pendant un séjour). */
+  sejourId: string | null;
   creeLe: string;
   modifieLe: string;
 }
@@ -613,6 +628,110 @@ export interface Litige {
   creePar: string;
   creeLe: string;
   modifieLe: string;
+}
+
+// ── M15 — Location courte durée ─────────────────────────────────────────────
+/** Paramètres du régime ENCADREE — `null` = non configuré (jamais deviné, LEGAL_QUESTIONS_BRIEF §7). */
+export interface LcdParametres {
+  declaration_prealable_obligatoire: boolean;
+  delai_declaration_heures: number | null;
+  nb_nuits_max_par_an: number | null;
+  nb_voyageurs_max_par_lot: number | null;
+  gestionnaire_obligatoire_si_proprietaire_absent: boolean;
+  contact_gardien_obligatoire: boolean;
+}
+
+export interface LcdReglement {
+  regimeLcd: RegimeLcd;
+  parametresLcdJson: LcdParametres | null;
+  regimeLcdAgResolutionId: string | null;
+  agResolution: { id: string; texte: string; resultat: ResultatResolution; agId: string } | null;
+}
+
+export interface LcdLotRef {
+  id: string;
+  numero: string;
+  typeLot: TypeLot;
+}
+
+export interface LcdDeclaration {
+  id: string;
+  coproprieteId: string;
+  lotId: string;
+  lot: LcdLotRef;
+  declareParId: string;
+  gestionnaireId: string | null;
+  plateformesJson: string[] | null;
+  contactUrgenceNom: string | null;
+  contactUrgenceTelephone: string | null;
+  statut: StatutDeclarationLcd;
+  motifDecision: string | null;
+  decideParId: string | null;
+  decideLe: string | null;
+  dateDebut: string;
+  dateFin: string | null;
+  creeLe: string;
+  modifieLe: string;
+}
+
+export interface LcdSejour {
+  id: string;
+  coproprieteId: string;
+  lotId: string;
+  lot: LcdLotRef;
+  declarationLcdId: string;
+  declareParId: string;
+  /** Date (minuit UTC). */
+  dateArrivee: string;
+  dateDepart: string;
+  heureArriveePrevue: string | null;
+  nbVoyageurs: number;
+  voyageurPrincipalNom: string;
+  voyageurTelephone: string | null;
+  voyageurNationalite: string | null;
+  pieceIdentiteType: TypePieceIdentite | null;
+  /** 4 derniers caractères au plus — jamais le numéro complet (CNDP). */
+  pieceIdentiteFin: string | null;
+  plaqueVehicule: string | null;
+  statut: StatutSejour;
+  annuleLe: string | null;
+  motifAnnulation: string | null;
+  gardienInformeLe: string | null;
+  creeLe: string;
+  modifieLe: string;
+}
+
+export interface LcdSejourEvenement {
+  id: string;
+  sejourId: string;
+  type: TypeEvenementSejour;
+  acteurId: string | null;
+  detailsJson: Record<string, unknown> | null;
+  horodatage: string;
+}
+
+export interface LcdSynthese {
+  lot: { id: string; numero: string };
+  regimeLcd: RegimeLcd;
+  declaration: LcdDeclaration | null;
+  annee: number;
+  nuitsUtilisees: number;
+  nuitsQuota: number | null;
+  derniersSejours: LcdSejour[];
+  incidentsLies: number;
+}
+
+export interface LcdDuJour {
+  date: string;
+  arrivees: LcdSejour[];
+  departs: LcdSejour[];
+  enCours: LcdSejour[];
+}
+
+/** POST /lcd/declarations/{id}/gestionnaire — invitation générée quand la personne n'a pas de compte. */
+export interface LcdGestionnaireResult {
+  declaration: LcdDeclaration;
+  invitation: { id: string; code: string; expireLe: string; canal: CanalInvitation } | null;
 }
 
 // ── Export CNDP ─────────────────────────────────────────────────────────────

@@ -91,3 +91,25 @@ export const lotVariant = map({
 export const envoiVariant = map({ EN_ATTENTE: "neutral", ENVOYE: "ok", ECHOUE: "danger" });
 
 export const coproVariant = map({ ACTIVE: "ok", ARCHIVEE: "outline" });
+
+export const declarationLcdVariant = map({
+  EN_ATTENTE: "warn",
+  VALIDEE: "ok",
+  REFUSEE: "danger",
+  SUSPENDUE: "danger",
+  CLOTUREE: "neutral",
+});
+
+export const sejourVariant = map({
+  PREVU: "info",
+  EN_COURS: "ok",
+  TERMINE: "neutral",
+  ANNULE: "neutral",
+});
+
+export const regimeLcdVariant = map({
+  NON_DEFINI: "outline",
+  AUTORISEE: "ok",
+  ENCADREE: "info",
+  INTERDITE: "danger",
+});

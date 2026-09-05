@@ -286,3 +286,11 @@ export const IconWallet = (p: SVGProps<SVGSVGElement>) => (
     <path d="M15.5 13.7v.01" strokeWidth={2.4} />
   </svg>
 );
+
+/** Valise — location courte durée (M15). */
+export const IconSuitcase = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="3" y="7" width="18" height="13" rx="2" />
+    <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M8 7v13M16 7v13" />
+  </svg>
+);

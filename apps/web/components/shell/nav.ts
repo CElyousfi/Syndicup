@@ -22,7 +22,8 @@ export type IconKey =
   | "home"
   | "shield"
   | "send"
-  | "chart";
+  | "chart"
+  | "suitcase";
 
 export interface NavItem {
   href: string;
@@ -81,6 +82,12 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const invitations: NavItem = { href: p("/invitations"), label: d.invitations, icon: "key" };
   const membres: NavItem = { href: p("/membres"), label: d.membres, icon: "users" };
   const parametres: NavItem = { href: p("/parametres"), label: d.parametres, icon: "settings" };
+  // M15 — location courte durée : régime, déclarations de lots, séjours (Doc A §10.2).
+  const lcd: NavItem = {
+    href: p("/location-courte-duree"),
+    label: d.locationCourteDuree,
+    icon: "suitcase",
+  };
 
   const s = d.sections;
 
@@ -110,7 +117,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, prestataires, documents],
+          items: [lots(), espaces, personnel, visites, lcd, prestataires, documents],
         },
         { label: s.administration, items: [membres, invitations, parametres] },
       ];
@@ -121,7 +128,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, prestataires, documents],
+          items: [lots(), espaces, personnel, visites, lcd, prestataires, documents],
         },
       ];
     case "PROPRIETAIRE":
@@ -131,7 +138,14 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         { label: s.finances, items: [lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
         { label: s.vieCollective, items: [ag, incidents(dict.incidents.mesSignalements), litiges] },
-        { label: s.quotidien, items: [espaces, reservations, visites, documents] },
+        { label: s.quotidien, items: [espaces, reservations, visites, lcd, documents] },
+      ];
+    case "GESTIONNAIRE_LCD":
+      // Gestionnaire désigné sur un lot : le module LCD, les incidents (nuisances pendant un
+      // séjour) et les documents — jamais les finances, l'AG ni les lots.
+      return [
+        { label: null, items: [dashboard] },
+        { label: s.quotidien, items: [lcd, incidents(dict.incidents.mesSignalements), documents] },
       ];
     case "LOCATAIRE":
       return [
@@ -147,7 +161,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [visites, incidents(), lots(), espaces, personnel, prestataires, documents],
+          items: [visites, lcd, incidents(), lots(), espaces, personnel, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":
@@ -169,6 +183,7 @@ const TABS_PAR_ROLE: Record<RoleType, IconKey[]> = {
   PROPRIETAIRE: ["grid", "chart", "wrench", "home"],
   INDIVISAIRE: ["grid", "chart", "wrench", "home"],
   PERSONNE_MORALE_REPRESENTANT: ["grid", "chart", "wrench", "home"],
+  GESTIONNAIRE_LCD: ["grid", "suitcase", "wrench", "file"],
   LOCATAIRE: ["grid", "wrench", "calendar", "file"],
   GARDIEN: ["grid", "door", "wrench", "building"],
   PRESTATAIRE: ["grid", "wrench"],

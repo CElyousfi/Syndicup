@@ -59,6 +59,7 @@ export async function signalerIncident(_prev: FormState, fd: FormData): Promise<
   const locale = champ(fd, "locale");
   const lotId = champ(fd, "lot_id");
   const description = champ(fd, "description");
+  const sejourId = champ(fd, "sejour_id");
 
   const photos = await televerserPhotos(fd);
   if (!Array.isArray(photos)) return photos.erreur;
@@ -73,6 +74,7 @@ export async function signalerIncident(_prev: FormState, fd: FormData): Promise<
       partie: champ(fd, "partie"),
       urgence: champ(fd, "urgence"),
       ...(photos.length > 0 ? { photos } : {}),
+      ...(sejourId !== "" ? { sejour_id: sejourId } : {}),
     },
   });
   if (!res.ok) return fromApiError(res);

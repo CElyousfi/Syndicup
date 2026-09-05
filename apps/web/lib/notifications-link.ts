@@ -35,6 +35,11 @@ export function lienNotification(
   if (templateCode.startsWith("VISITE_")) return p("/visites");
   if (templateCode.startsWith("RESERVATION_")) return p("/reservations");
   if (templateCode.startsWith("LITIGE_")) return p("/litiges");
+  if (templateCode.startsWith("LCD_")) {
+    if (id("sejour_id")) return p(`/location-courte-duree/sejours/${id("sejour_id")}`);
+    if (id("declaration_id")) return p(`/location-courte-duree/declarations/${id("declaration_id")}`);
+    return p("/location-courte-duree");
+  }
   return p("/notifications");
 }
 

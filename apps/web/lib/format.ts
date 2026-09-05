@@ -56,12 +56,17 @@ export function formatDateCourte(iso: string | null | undefined, locale: Locale)
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
+  // ar-MA insère des marques RLM (U+200F) entre les segments : elles brisent l'ordre visuel
+  // d'une date numérique dans une plage « 04/09 → 06/09 ». Les chiffres et « / » se rendent
+  // correctement sans elles, en LTR comme en RTL.
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
     numberingSystem: "latn",
-  }).format(d);
+  })
+    .format(d)
+    .replace(/\u200f/g, "");
 }
 
 export function formatDateHeure(iso: string | null | undefined, locale: Locale): string {

@@ -33,6 +33,7 @@ import {
   IconUsers,
   IconVote,
   IconWallet,
+  IconSuitcase,
   IconWrench,
   IconX,
 } from "../ui/icons";
@@ -55,6 +56,7 @@ const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>>
   shield: IconShield,
   send: IconSend,
   chart: IconChart,
+  suitcase: IconSuitcase,
 };
 
 export interface FrameLabels {

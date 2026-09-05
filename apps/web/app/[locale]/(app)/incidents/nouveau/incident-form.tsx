@@ -15,13 +15,22 @@ export function IncidentForm({
   dict,
   locale,
   lots,
+  sejours = [],
+  sejourInitial,
 }: {
   dict: Dict;
   locale: Locale;
   lots: Array<{ id: string; numero: string }>;
+  /** M15 — séjours de location courte durée en cours (vide = sélecteur masqué). */
+  sejours?: Array<{ id: string; lotId: string; libelle: string }>;
+  sejourInitial?: string;
 }) {
   const i = dict.incidents;
   const [state, action] = useActionState(signalerIncident, IDLE);
+  const [sejourId, setSejourId] = useState(
+    sejourInitial && sejours.some((s) => s.id === sejourInitial) ? sejourInitial : ""
+  );
+  const sejourChoisi = sejours.find((s) => s.id === sejourId);
   const [categorie, setCategorie] = useState<CategorieIncident>("PLOMBERIE");
   const [urgence, setUrgence] = useState<UrgenceIncident>("NORMALE");
   const [partie, setPartie] = useState<PartieIncident>("COMMUNE");
@@ -160,11 +169,35 @@ export function IncidentForm({
           hint={i.lotConcerneAide}
           optionalLabel={dict.common.optional}
         >
-          <Select id="lot_id" name="lot_id" defaultValue="">
+          <Select
+            id="lot_id"
+            name="lot_id"
+            key={sejourChoisi?.lotId ?? "libre"}
+            defaultValue={sejourChoisi?.lotId ?? ""}
+          >
             <option value="">{dict.common.none}</option>
             {lots.map((l) => (
               <option key={l.id} value={l.id}>
                 {l.numero}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+
+      {sejours.length > 0 ? (
+        <Field
+          label={i.lierSejour}
+          htmlFor="sejour_id"
+          hint={i.lierSejourAide}
+          optionalLabel={dict.common.optional}
+          error={fieldError(state, "sejour_id")}
+        >
+          <Select id="sejour_id" name="sejour_id" value={sejourId} onChange={(e) => setSejourId(e.target.value)}>
+            <option value="">{dict.common.none}</option>
+            {sejours.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.libelle}
               </option>
             ))}
           </Select>
