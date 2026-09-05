@@ -55,7 +55,10 @@ final soldeLotProvider = FutureProvider.autoDispose.family<SoldeLot, String>((re
 final syntheseProvider = FutureProvider.autoDispose<SyntheseFinanciere>((ref) async {
   final r = await ref.watch(apiClientProvider).get<SyntheseFinanciere>('/finances/synthese', parse: (j) => SyntheseFinanciere.fromJson(asMap(j)));
   // Rôles sans lecture financière (gardien, prestataire) : synthèse vide plutôt qu'une erreur.
-  return r.dataOrNull ?? const SyntheseFinanciere();
+  // Toute autre erreur (réseau, 401, 500) remonte : jamais un état « aucun appel » mensonger mis
+  // en cache — AsyncView affiche alors « Réessayer ».
+  if (r is ApiFail<SyntheseFinanciere> && r.status == 403) return const SyntheseFinanciere();
+  return unwrap(r);
 });
 
 final budgetsProvider = FutureProvider.autoDispose<List<BudgetAg>>((ref) async {
