@@ -16,7 +16,7 @@ import type { RoleClaim } from "../tenant/jwt";
 import { ecrireAuditLog } from "../audit/audit";
 import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
 import { randomUUID } from "node:crypto";
-import type { LogoUploadUrlInput } from "./schemas";
+import type { LogoUploadUrlInput, PhotoUploadUrlInput } from "./schemas";
 import type { CoproprieteCreateInput, CoproprieteUpdateInput } from "./schemas";
 
 export class PermissionRefuseeError extends Error {}
@@ -241,6 +241,15 @@ export async function modifierCopropriete(
       }
       data.logoStoragePath = input.logo_storage_path ?? null;
     }
+    if (input.photos_json !== undefined) {
+      // Même périmètre que le logo : chaque chemin appartient au dossier branding de CETTE copropriété.
+      for (const chemin of Object.values(input.photos_json ?? {})) {
+        if (!chemin.startsWith(`${coproprieteId}/branding/`)) {
+          throw new PermissionRefuseeError("Photo hors du périmètre de la copropriété.");
+        }
+      }
+      data.photosJson = (input.photos_json ?? Prisma.DbNull) as Prisma.InputJsonValue;
+    }
     if (input.delai_convocation_jours !== undefined)
       data.delaiConvocationJours = input.delai_convocation_jours;
     if (input.quorum_premiere_convocation !== undefined)
@@ -307,4 +316,45 @@ export async function urlLogo(ctx: TenantContext, coproprieteId: string) {
   if (!copro) throw new CoproprieteIntrouvableError("Copropriété introuvable.");
   if (!copro.logoStoragePath) return { url: null };
   return { url: await creerUrlSignee(copro.logoStoragePath) };
+}
+
+/**
+ * POST /coproprietes/:id/photos/upload-url — téléversement direct d'une photo de la résidence
+ * (syndic). Le chemin porte l'emplacement (`photo-accueil-…`) pour rester lisible dans le bucket ;
+ * il est ensuite enregistré dans `photos_json` via PATCH.
+ */
+export async function preparerUploadPhoto(ctx: TenantContext, coproprieteId: string, input: PhotoUploadUrlInput) {
+  if (can("coproprietes.modifier", ctx.role) !== true) {
+    throw new PermissionRefuseeError("Seul le syndic peut modifier les photos de la résidence.");
+  }
+  if (coproprieteId !== ctx.coproprieteId && ctx.role !== "SUPER_ADMIN") {
+    throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  }
+  const ext = input.content_type === "image/png" ? "png" : input.content_type === "image/webp" ? "webp" : input.content_type === "image/svg+xml" ? "svg" : "jpg";
+  const cle = input.cle.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const storagePath = `${coproprieteId}/branding/photo-${cle}-${randomUUID()}.${ext}`;
+  const { url, token } = await creerUrlUploadSignee(storagePath);
+  return { storage_path: storagePath, upload_url: url, token };
+}
+
+/**
+ * GET /coproprietes/:id/photos — URLs signées courtes de toutes les photos personnalisées
+ * (tout membre) : `{ photos: { cle: url } }`, carte vide sans personnalisation.
+ */
+export async function urlsPhotos(ctx: TenantContext, coproprieteId: string) {
+  if (can("coproprietes.lire", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé.");
+  }
+  if (coproprieteId !== ctx.coproprieteId && ctx.role !== "SUPER_ADMIN") {
+    throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  }
+  const copro = await withTenant(ctx, (db) => db.copropriete.findUnique({ where: { id: coproprieteId }, select: { photosJson: true } }));
+  if (!copro) throw new CoproprieteIntrouvableError("Copropriété introuvable.");
+  const chemins = (copro.photosJson ?? {}) as Record<string, string>;
+  const entrees = await Promise.all(
+    Object.entries(chemins)
+      .filter(([, chemin]) => typeof chemin === "string" && chemin.startsWith(`${coproprieteId}/branding/`))
+      .map(async ([cle, chemin]) => [cle, await creerUrlSignee(chemin)] as const)
+  );
+  return { photos: Object.fromEntries(entrees) as Record<string, string> };
 }

@@ -26,6 +26,20 @@ export const coproprieteCreateSchema = z.object({
 });
 export type CoproprieteCreateInput = z.infer<typeof coproprieteCreateSchema>;
 
+/**
+ * Emplacements photo personnalisables (M20). Clés fixes + `espace:<uuid>` (photo d'un espace
+ * commun). Les clients affichent leur image par défaut pour tout emplacement absent.
+ */
+export const CLES_PHOTO = ["accueil", "entree", "cour", "salle", "piscine"] as const;
+export type ClePhoto = (typeof CLES_PHOTO)[number];
+const UUID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+export const clePhotoSchema = z
+  .string()
+  .regex(new RegExp(`^(${CLES_PHOTO.join("|")}|espace:${UUID})$`, "i"), "Emplacement photo inconnu.");
+const cheminBrandingSchema = z
+  .string()
+  .regex(new RegExp(`^${UUID}/branding/[A-Za-z0-9._-]{1,120}$`, "i"), "Chemin d'image invalide.");
+
 export const coproprieteUpdateSchema = z
   .object({
     nom: z.string().min(1).max(200).optional(),
@@ -34,10 +48,9 @@ export const coproprieteUpdateSchema = z
     nb_lots: z.number().int().min(1).max(10000).optional(),
     config_json: z.record(z.unknown()).nullish(),
     // Logo (M18) : chemin `<copropriete>/branding/…` du bucket privé ; null = retirer le logo.
-    logo_storage_path: z
-      .string()
-      .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\/branding\/[A-Za-z0-9._-]{1,120}$/i, "Chemin de logo invalide.")
-      .nullish(),
+    logo_storage_path: cheminBrandingSchema.nullish(),
+    // Photos de la résidence (M20) : `{ cle: chemin }`, même périmètre que le logo ; null = tout retirer.
+    photos_json: z.record(clePhotoSchema, cheminBrandingSchema).nullish(),
     politique_recouvrement_json: z.record(z.unknown()).nullish(),
     total_tantiemes: decimalString(
       /^\d{1,12}(\.\d{1,2})?$/,
@@ -61,3 +74,7 @@ export const logoUploadUrlSchema = z.object({
   content_type: z.string().regex(/^image\/(jpeg|png|webp|svg\+xml)$/, "Seules les images sont acceptées."),
 });
 export type LogoUploadUrlInput = z.infer<typeof logoUploadUrlSchema>;
+
+/** POST /coproprietes/:id/photos/upload-url — même contrat que le logo, plus l'emplacement visé. */
+export const photoUploadUrlSchema = logoUploadUrlSchema.extend({ cle: clePhotoSchema });
+export type PhotoUploadUrlInput = z.infer<typeof photoUploadUrlSchema>;

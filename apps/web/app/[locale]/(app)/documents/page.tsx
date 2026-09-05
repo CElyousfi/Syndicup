@@ -4,6 +4,8 @@ import { apiFetch } from "../../../../lib/api/client";
 import type { DocumentCopro } from "../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDate } from "../../../../lib/format";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { EmptyState } from "../../../../components/ui/empty-state";
@@ -51,6 +53,8 @@ export default async function DocumentsPage({
         subtitle={d.subtitle}
         actions={gestion ? <DocumentModal dict={dict} locale={ctx.locale} /> : undefined}
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} className="mb-4" />
 
       {documents.length === 0 ? (
         <EmptyState

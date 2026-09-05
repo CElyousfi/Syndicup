@@ -110,6 +110,25 @@ components:
       pattern: '^-?\d+\.\d{2}$'
       example: "1800.00"
 
+    # ── Domaine : Appareils push (Master Spec Partie 13.4 — M19) ─────────────
+    AppareilPushCreate:
+      type: object
+      required: [token, plateforme]
+      properties:
+        token: { type: string, minLength: 20, maxLength: 4096, description: Jeton FCM opaque de l'appareil. }
+        plateforme: { type: string, enum: [ANDROID, IOS] }
+        langue: { type: string, enum: [FR, AR] }
+        version_app: { type: string, maxLength: 40, nullable: true }
+    AppareilPush:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        plateforme: { type: string, enum: [ANDROID, IOS] }
+        langue: { type: string, enum: [FR, AR] }
+        version_app: { type: string, nullable: true }
+        cree_le: { type: string, format: date-time }
+        dernier_vu_le: { type: string, format: date-time }
+
     # ── Domaine : Lots (Master Spec Partie 2.2, Doc A §1, §2 — M3) ───────────
     Lot:
       type: object
@@ -1318,6 +1337,41 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
 
+  /coproprietes/{id}/photos:
+    get:
+      tags: [Copropriétés]
+      summary: >
+        URLs signées (15 min) des photos personnalisées de la résidence (M20) — `{ photos: { cle: url } }`,
+        carte vide sans personnalisation. Clés : accueil, entree, cour, salle, piscine, espace:<id>.
+        Tout membre ; les clients affichent leur image par défaut pour toute clé absente.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK — `{ data: { photos } }`." }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /coproprietes/{id}/photos/upload-url:
+    post:
+      tags: [Copropriétés]
+      summary: >
+        Prépare le téléversement d'une photo de la résidence pour un emplacement (`cle`), chemin
+        `<copropriete>/branding/…`, URL signée PUT. Rôle autorisé — syndic. Le chemin est ensuite
+        enregistré via PATCH /coproprietes/{id} (`photos_json`, carte complète ; null pour tout retirer).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cle, nom_fichier, content_type]
+              properties:
+                cle: { type: string, description: "accueil | entree | cour | salle | piscine | espace:<uuid>" }
+                nom_fichier: { type: string }
+                content_type: { type: string, enum: [image/jpeg, image/png, image/webp, image/svg+xml] }
+      responses:
+        "200": { description: "`{ data: { storage_path, upload_url, token } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
   /coproprietes/{id}/config:
     get:
       tags: [Copropriétés]
@@ -1730,6 +1784,53 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/UtilisateurExport" }
+
+  /users/me/appareils:
+    post:
+      tags: [Utilisateurs]
+      summary: >
+        Enregistre le jeton push (FCM) de l'appareil de l'appelant (Master Spec Partie 13.4 —
+        client mobile, M19). Idempotent par jeton : un même jeton ré-enregistré rafraîchit la
+        ligne ; un jeton connu sous un AUTRE compte est déplacé vers l'appelant (le téléphone a
+        changé d'utilisateur — l'ancien compte ne reçoit plus rien). Tout rôle authentifié.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AppareilPushCreate" }
+      responses:
+        "201":
+          description: Appareil enregistré (ou rafraîchi).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AppareilPush" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/me/appareils/{token}:
+    delete:
+      tags: [Utilisateurs]
+      summary: Retire le jeton push de l'appareil (déconnexion / désinstallation) — ses propres appareils uniquement.
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Retiré.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      supprime: { type: boolean }
+        "404": { $ref: "#/components/responses/NotFound" }
 
   # ══════════════════════════════════════════════════════════════════════
   # FINANCES — syndic (write), résident (read scopé à son lot)

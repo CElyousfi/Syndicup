@@ -13,10 +13,12 @@ import {
   obtenirConfig,
   creerCopropriete,
   modifierCopropriete,
+  preparerUploadPhoto,
+  urlsPhotos,
   PermissionRefuseeError,
   CoproprieteIntrouvableError,
 } from "../lib/coproprietes/coproprietes";
-import { coproprieteUpdateSchema } from "../lib/coproprietes/schemas";
+import { coproprieteUpdateSchema, photoUploadUrlSchema } from "../lib/coproprietes/schemas";
 
 const admin = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
 
@@ -174,5 +176,41 @@ describe("Modification (syndic, sa copropriété)", () => {
       coproprieteUpdateSchema.safeParse({ quorum_premiere_convocation: "1.5" }).success
     ).toBe(false);
     expect(coproprieteUpdateSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe("Photos de la résidence (M20 — personnalisation par le syndic)", () => {
+  it("Zod : emplacements connus (fixes + espace:<uuid>) et chemins branding uniquement", () => {
+    const uuid = "11111111-2222-4333-8444-555555555555";
+    expect(coproprieteUpdateSchema.safeParse({ photos_json: { accueil: `${uuid}/branding/photo-accueil-x.jpg` } }).success).toBe(true);
+    expect(coproprieteUpdateSchema.safeParse({ photos_json: { [`espace:${uuid}`]: `${uuid}/branding/p.webp` } }).success).toBe(true);
+    expect(coproprieteUpdateSchema.safeParse({ photos_json: { inconnu: `${uuid}/branding/p.jpg` } }).success).toBe(false);
+    expect(coproprieteUpdateSchema.safeParse({ photos_json: { accueil: `${uuid}/documents/p.jpg` } }).success).toBe(false);
+    expect(coproprieteUpdateSchema.safeParse({ photos_json: { accueil: "https://evil.example/p.jpg" } }).success).toBe(false);
+    expect(photoUploadUrlSchema.safeParse({ cle: "salle", nom_fichier: "s.jpg", content_type: "image/jpeg" }).success).toBe(true);
+    expect(photoUploadUrlSchema.safeParse({ cle: "salle", nom_fichier: "s.pdf", content_type: "application/pdf" }).success).toBe(false);
+  });
+
+  it("PATCH syndic : enregistre la carte, refuse un chemin hors périmètre, null retire tout", async () => {
+    const chemin = `${coproA}/branding/photo-accueil-test.jpg`;
+    const maj = await modifierCopropriete(ctxSyndicA(), coproA, { photos_json: { accueil: chemin } });
+    expect(maj.photosJson).toEqual({ accueil: chemin });
+
+    await expect(
+      modifierCopropriete(ctxSyndicA(), coproA, { photos_json: { accueil: `${coproB}/branding/photo-accueil-x.jpg` } })
+    ).rejects.toBeInstanceOf(PermissionRefuseeError);
+
+    const vide = await modifierCopropriete(ctxSyndicA(), coproA, { photos_json: null });
+    expect(vide.photosJson).toBeNull();
+    expect(await urlsPhotos(ctxSyndicA(), coproA)).toEqual({ photos: {} });
+  });
+
+  it("upload-url : réservé au syndic de la copropriété, chemin nommé par emplacement", async () => {
+    await expect(
+      preparerUploadPhoto({ utilisateurId: syndicAId, coproprieteId: coproA, role: "PROPRIETAIRE" }, coproA, { cle: "accueil", nom_fichier: "a.jpg", content_type: "image/jpeg" })
+    ).rejects.toBeInstanceOf(PermissionRefuseeError);
+    await expect(
+      preparerUploadPhoto(ctxSyndicA(), coproB, { cle: "accueil", nom_fichier: "a.jpg", content_type: "image/jpeg" })
+    ).rejects.toBeInstanceOf(CoproprieteIntrouvableError);
   });
 });

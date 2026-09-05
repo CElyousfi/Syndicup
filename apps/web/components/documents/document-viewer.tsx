@@ -23,21 +23,44 @@ export interface ViewerLabels {
 
 export function DocumentViewerButton({
   documentId,
-  nom,
-  labels,
-  size = "sm",
-  variant = "secondary",
-  iconOnly = false,
+  ...props
 }: {
   documentId: string;
   nom: string;
   labels: ViewerLabels;
   size?: "sm" | "md";
-  variant?: "secondary" | "ghost";
+  variant?: "secondary" | "ghost" | "primary";
   iconOnly?: boolean;
 }) {
+  return <FileViewerButton src={`/api/document-inline?id=${encodeURIComponent(documentId)}`} {...props} />;
+}
+
+/**
+ * Visionneuse générique pour tout fichier servi par un proxy même-origine (document GED,
+ * PV d'AG, quittance…) : `src` accepte `download=1` pour la variante téléchargement.
+ * Tout reste dans l'application — jamais un nouvel onglet vers le stockage.
+ */
+export function FileViewerButton({
+  src,
+  nom,
+  labels,
+  size = "sm",
+  variant = "secondary",
+  iconOnly = false,
+  label,
+  tour = "doc-view",
+}: {
+  src: string;
+  nom: string;
+  labels: ViewerLabels;
+  size?: "sm" | "md";
+  variant?: "secondary" | "ghost" | "primary";
+  iconOnly?: boolean;
+  /** Libellé du bouton (défaut : labels.see). */
+  label?: string;
+  tour?: string;
+}) {
   const [open, setOpen] = useState(false);
-  const src = `/api/document-inline?id=${encodeURIComponent(documentId)}`;
 
   return (
     <>
@@ -46,19 +69,19 @@ export function DocumentViewerButton({
         variant={variant}
         size={size}
         onClick={() => setOpen(true)}
-        aria-label={`${labels.see} · ${nom}`}
-        title={labels.see}
-        data-tour="doc-view"
+        aria-label={`${label ?? labels.see} · ${nom}`}
+        title={label ?? labels.see}
+        data-tour={tour}
       >
         <IconEye width={15} height={15} />
-        {iconOnly ? null : labels.see}
+        {iconOnly ? null : label ?? labels.see}
       </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title={nom} wide closeLabel={labels.close}>
         {open ? <DocumentPreview src={src} nom={nom} downloadLabel={labels.download} /> : null}
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <a
-            href={`${src}&download=1`}
+            href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
             className="inline-flex h-9 items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover"
           >
             <IconDownload width={15} height={15} />
@@ -177,7 +200,7 @@ function DocumentPreview({
       <div className="flex h-[40vh] flex-col items-center justify-center gap-3 rounded-field bg-ground px-6 text-center">
         <p className="text-sm text-soft">{nom}</p>
         <a
-          href={`${src}&download=1`}
+          href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
           className="inline-flex h-10 items-center gap-2 rounded-btn bg-ink px-5 text-sm font-medium text-white"
         >
           <IconDownload width={15} height={15} />

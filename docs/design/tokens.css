@@ -1,0 +1,146 @@
+/* Property Management App — design tokens (web)
+   Import once at the app root. Do not introduce values outside this file. */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* ---- Brand ---- */
+  --blue-700: #0844C4;
+  --blue-600: #0B5FFF;
+  --blue-500: #2E7BE8;
+  --blue-400: #59A5F0;
+  --blue-300: #8CC8FA;
+  --blue-100: #B9CFF2;
+
+  /* ---- Accent ---- */
+  --amber-600: #E4740B;
+  --amber-500: #F7941D;
+  --amber-400: #FBC02D;
+  --yellow-400: #FFC93C;
+  --cream-100: #FCEFCD;
+
+  /* ---- Semantic ---- */
+  --green-500: #17B26A;
+  --red-500: #F2453D;
+
+  /* ---- Neutrals ---- */
+  --bg: #FFFFFF;
+  --bg-alt: #FAFAFC;
+  --surface: #F5F5F7;
+  --surface-hover: #EFEFF2;
+  --border: #E4E4E8;
+  --text: #111113;
+  --text-muted: #8E8E93;
+  --text-faint: #B0B0B5;
+  --on-brand: #FFFFFF;
+
+  /* ---- Gradients ---- */
+  --grad-hero: linear-gradient(135deg, #2E7BE8 0%, #0844C4 100%);
+  --grad-sky: linear-gradient(135deg, #8CC8FA 0%, #2E7BE8 100%);
+  --grad-amber: linear-gradient(135deg, #F7BE2B 0%, #E4740B 100%);
+
+  /* ---- Type ---- */
+  --font: 'Plus Jakarta Sans', Manrope, 'SF Pro Display', system-ui, sans-serif;
+
+  --text-display: 1.75rem;   /* 28 / 700 */
+  --text-stat-xl: 2rem;      /* 32 / 800 */
+  --text-stat-lg: 1.875rem;  /* 30 / 800 */
+  --text-stat-donut: 1.625rem;
+  --text-title: 1.25rem;     /* 20 / 700 */
+  --text-section: 1.125rem;  /* 18 / 700 */
+  --text-card-title: 1.0625rem;
+  --text-tab: 1rem;
+  --text-body: 0.9375rem;    /* 15 / 500 */
+  --text-meta: 0.875rem;     /* 14 / 400 */
+  --text-pill: 0.8125rem;
+  --text-label: 0.75rem;
+  --text-nav: 0.6875rem;
+
+  /* ---- Radius ---- */
+  --radius-hero: 24px;
+  --radius-card: 20px;
+  --radius-row: 16px;
+  --radius-nav: 24px;
+  --radius-pill: 999px;
+
+  /* ---- Space ---- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --gutter: 16px;
+
+  /* ---- Elevation (only one) ---- */
+  --nav-shadow: 0 -4px 24px rgba(17, 17, 19, 0.06);
+
+  /* ---- Motion ---- */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur: 120ms;
+}
+
+@media (min-width: 768px)  { :root { --gutter: 24px; } }
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 32px;
+    --text-display: 2rem;
+    --text-title: 1.5rem;
+    --text-section: 1.25rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  font-size: var(--text-body);
+  font-weight: 500;
+  -webkit-font-smoothing: antialiased;
+  font-variant-numeric: tabular-nums;
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--blue-600);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------
+   Tailwind v4 equivalent — drop into your CSS instead of the above
+   if the project uses Tailwind:
+
+   @theme {
+     --color-blue-600: #0B5FFF;
+     --color-surface:  #F5F5F7;
+     --color-cream:    #FCEFCD;
+     --color-money-up: #17B26A;
+     --color-money-dn: #F2453D;
+     --radius-row:     16px;
+     --radius-card:    20px;
+     --radius-hero:    24px;
+     --font-sans:      'Plus Jakarta Sans', system-ui, sans-serif;
+   }
+
+   Tailwind v3 (tailwind.config.js theme.extend):
+   colors: {
+     blue: { 100:'#B9CFF2', 300:'#8CC8FA', 400:'#59A5F0', 500:'#2E7BE8', 600:'#0B5FFF', 700:'#0844C4' },
+     amber:{ 400:'#FBC02D', 500:'#F7941D', 600:'#E4740B' },
+     yellow:{ 400:'#FFC93C' },
+     cream:'#FCEFCD', surface:'#F5F5F7', border:'#E4E4E8',
+     ink:'#111113', muted:'#8E8E93', faint:'#B0B0B5',
+     up:'#17B26A', down:'#F2453D',
+   },
+   borderRadius: { row:'16px', card:'20px', hero:'24px', pill:'999px' },
+   boxShadow:    { nav:'0 -4px 24px rgba(17,17,19,0.06)', none:'none' },
+   backgroundImage: {
+     'grad-hero':'linear-gradient(135deg,#2E7BE8 0%,#0844C4 100%)',
+     'grad-sky':'linear-gradient(135deg,#8CC8FA 0%,#2E7BE8 100%)',
+     'grad-amber':'linear-gradient(135deg,#F7BE2B 0%,#E4740B 100%)',
+   },
+   --------------------------------------------------------------- */

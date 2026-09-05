@@ -154,6 +154,10 @@ model Copropriete {
   configJson            Json?             @map("config_json")
   // Logo de la résidence (M18) — chemin storage `<copropriete>/branding/…`, URL signée à la demande.
   logoStoragePath       String?           @map("logo_storage_path")
+  // Photos de la résidence (M20, personnalisation) — carte `{ cle: chemin storage }` : clés fixes
+  // (accueil, entree, cour, salle, piscine) + `espace:<id>` par espace commun. Même périmètre
+  // `<copropriete>/branding/…` que le logo ; URLs signées à la demande (jamais publiques).
+  photosJson            Json?             @map("photos_json")
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
   delaiConvocationJours Int?              @map("delai_convocation_jours")
@@ -240,6 +244,7 @@ model Utilisateur {
   fichesPersonnel          Personnel[]
   visitesGardien           Visite[]              @relation("VisiteGardien")
   litigesCrees             ConflitLitige[]       @relation("LitigeCreateur")
+  appareilsPush            AppareilPush[]
 
   @@map("utilisateur")
 }
@@ -456,6 +461,29 @@ model Notification {
   @@index([coproprieteId])
   @@index([utilisateurId])
   @@map("notification")
+}
+
+// M19 — Appareils push (Master Spec Partie 13.4) : jeton FCM par appareil, rattaché à UN compte
+// à la fois (présenter le jeton vaut preuve de possession de l'appareil). Non tenant-scopé :
+// un utilisateur multi-copropriétés reçoit ses push sur le même téléphone.
+enum PlateformeAppareil {
+  ANDROID
+  IOS
+}
+
+model AppareilPush {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateurId String             @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  token         String             @unique
+  plateforme    PlateformeAppareil
+  langue        LanguePreferee     @default(FR)
+  versionApp    String?            @map("version_app")
+  creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  dernierVuLe   DateTime           @default(now()) @map("dernier_vu_le") @db.Timestamptz
+
+  @@index([utilisateurId])
+  @@map("appareil_push")
 }
 
 // ============================================================================

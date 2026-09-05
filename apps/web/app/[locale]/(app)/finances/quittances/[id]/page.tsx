@@ -6,6 +6,7 @@ import { getLots, getSynthese } from "../../../../../../lib/finances-data";
 import { fill } from "../../../../../../lib/i18n";
 import { formatDate, formatMAD, formatPeriode } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
+import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { Brand } from "../../../../../../components/brand";
 import { CFile, IconCircle } from "../../../../../../components/ui/color-icons";
 import { PrintButton } from "./print-button";
@@ -51,12 +52,15 @@ export default async function QuittancePage({
           actions={
             <>
               <PrintButton label={f.imprimer} />
-              <a
-                href={`/api/quittance-pdf?id=${quittance.id}`}
-                className="inline-flex h-10 items-center gap-2 whitespace-nowrap rounded-btn bg-ink px-5 text-sm font-medium text-white shadow-[0_10px_20px_-10px_rgb(18_18_18/0.45)] transition-colors hover:bg-[#2e3230]"
-              >
-                {ctx.dict.ag.pvTelecharger}
-              </a>
+              <FileViewerButton
+                src={`/api/quittance-pdf?id=${quittance.id}`}
+                nom={fill(f.quittanceNumero, { numero: quittance.numero })}
+                label={ctx.dict.ag.pvTelecharger}
+                size="md"
+                variant="primary"
+                tour="quittance-pdf"
+                labels={{ see: ctx.dict.common.see, close: ctx.dict.common.close, download: ctx.dict.common.download }}
+              />
             </>
           }
         />

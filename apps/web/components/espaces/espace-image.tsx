@@ -1,40 +1,28 @@
 /**
- * Illustration d'un espace commun — image choisie par mots-clés du nom/type (le champ
- * `type` est libre côté produit). Toujours décorative (alt vide) : l'information reste
- * portée par le texte de la carte. Repli : la cour de la résidence.
+ * Illustration d'un espace commun — photo propre à l'espace si le syndic l'a personnalisée
+ * (`espace:<id>`), sinon l'emplacement déduit des mots-clés du nom/type (le champ `type` est
+ * libre côté produit), lui-même personnalisable. Toujours décorative (alt vide) : l'information
+ * reste portée par le texte de la carte. Repli : l'entrée de la résidence.
  */
-import Image from "next/image";
+import type { ClePhoto } from "../../lib/photos";
 
-const IMAGES: Array<{ motifs: RegExp; src: string }> = [
-  { motifs: /piscine|pool|natation|مسبح/i, src: "/images/espace-piscine.jpg" },
-  { motifs: /salle|f[eê]te|r[eé]union|r[eé]ception|قاعة/i, src: "/images/espace-salle.jpg" },
-  { motifs: /jardin|espace vert|parc|cour|حديقة/i, src: "/images/residence-courtyard.jpg" },
-  { motifs: /terrasse|toit|rooftop|سطح/i, src: "/images/residence-courtyard.jpg" },
+const CLES: Array<{ motifs: RegExp; cle: ClePhoto }> = [
+  { motifs: /piscine|pool|natation|مسبح/i, cle: "piscine" },
+  { motifs: /salle|f[eê]te|r[eé]union|r[eé]ception|قاعة/i, cle: "salle" },
+  { motifs: /jardin|espace vert|parc|cour|حديقة/i, cle: "cour" },
+  { motifs: /terrasse|toit|rooftop|سطح/i, cle: "cour" },
 ];
 
-export function espaceImageSrc(nom: string, type: string): string {
+/** Emplacement photo par défaut d'un espace (mots-clés du nom/type). */
+export function espaceImageCle(nom: string, type: string): ClePhoto {
   const texte = `${nom} ${type}`;
-  return IMAGES.find((i) => i.motifs.test(texte))?.src ?? "/images/residence-entrance.jpg";
+  return CLES.find((i) => i.motifs.test(texte))?.cle ?? "entree";
 }
 
-export function EspaceImage({
-  nom,
-  type,
-  className = "",
-}: {
-  nom: string;
-  type: string;
-  className?: string;
-}) {
+export function EspaceImage({ src, className = "" }: { src: string; className?: string }) {
   return (
     <div className={`relative overflow-hidden ${className}`}>
-      <Image
-        src={espaceImageSrc(nom, type)}
-        alt=""
-        fill
-        sizes="(max-width: 640px) 100vw, 33vw"
-        className="object-cover transition-transform duration-500 hover:scale-105"
-      />
+      <img src={src} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
     </div>
   );
 }

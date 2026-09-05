@@ -17,11 +17,18 @@ justification — jamais implicite. Une ligne absente de ce registre = parité t
 
 | Module | Fonctionnalité | Web | Mobile | Statut | Justification |
 |---|---|---|---|---|---|
-| M2, M3… | Tous les écrans (login/OTP/invite, lots, etc.) | ✗ | ✗ | confirmé | Décision explicite du propriétaire du projet (17/08/2026) : construire le backend complet (schéma, RLS, API, tests) module par module avant d'attaquer l'UI, plutôt que livrer écran par écran au fil de l'eau. Rattrapage prévu en bloc une fois le backend jugé complet — voir `docs/ROADMAP_BACKLOG.md`. Ne dispense pas de tenir ce registre à jour ensuite. |
-| M10 | Sync offline des visites (queue Drift/SQLite, écriture optimiste) | ✗ | ✓ | proposé | Cas d'usage gardien sur le terrain sans connexion ; Master Spec 13.3 ne prévoit l'offline que côté mobile, et jamais pour les finances. |
+| M2, M3… | Tous les écrans (login/OTP/invite, lots, etc.) | ✓ | ✓ | proposé (écart résorbé) | Écart historique (décision du 17/08/2026, backend-first). Web livré le 28–29/08/2026, mobile Flutter livré le 04/09/2026 (`apps/mobile`, ~45 écrans, tous les rôles, FR/AR RTL). |
+| M10 | Sync offline des visites (queue Drift/SQLite, écriture optimiste) | ✗ | ✓ | proposé | Cas d'usage gardien sur le terrain sans connexion ; Master Spec 13.3 ne prévoit l'offline que côté mobile, et jamais pour les finances. Livré : file locale visible, retry au retour du réseau et périodique tant que l'app est ouverte ; l'exécution en arrière-plan OS (WorkManager/BGTask) reste à brancher. |
+| M10 | Cache de lecture des lots pour le formulaire visiteur hors-ligne | ✗ | ✓ | proposé | Conséquence directe de l'écart précédent : le gardien doit pouvoir choisir le lot sans réseau. Lecture seule, aucune donnée financière. |
 | M12 | Résolution du rôle côté serveur dans le layout `(dashboard)` | ✓ | ✗ (équivalent : guard Riverpod côté client + API qui refuse) | proposé | Mécanisme structurel propre au rendu serveur Next.js ; la sécurité réelle reste l'API + RLS, identique pour les deux clients. |
 | M2 | OTP par SMS comme canal principal de connexion | ✓ (aussi email/mot de passe) | ✓ | proposé | Pas un écart fonctionnel — noté pour mémoire : les deux clients passent par Supabase Auth, aucun accès direct base. |
-| M9 | Réception des notifications push (FCM) | ✗ (web : centre de notifications in-app + email) | ✓ | proposé | Push natif = mobile ; le web reçoit les mêmes événements via la matrice événement→canal (Master Spec 7.1), aucun événement perdu. |
+| M9 | Réception des notifications push (FCM) | ✗ (web : centre de notifications in-app + email) | ✓ | proposé | Push natif = mobile ; le web reçoit les mêmes événements via la matrice événement→canal (Master Spec 7.1), aucun événement perdu. Livré (M19) : `POST/DELETE /users/me/appareils`, transport FCM HTTP v1, deep-links identiques aux liens du web. |
+| M9 | Flux temps réel des notifications (SSE) | ✓ | ✓ | proposé | Même endpoint `GET /notifications/stream` consommé par les deux clients (cloche + toast). |
+| M12 | Console super admin | ✓ complète | ◐ liste, fiche, création + invitation du 1er syndic | proposé | L'opérateur plateforme travaille sur desktop ; le mobile couvre le geste de terrain (créer une résidence chez le client, transmettre le code). |
+| M4 | Rattachement propriétaires/occupants, transfert de propriété | ✓ | ✓ | proposé | Même API, feuilles du bas sur mobile (indivision saisie d'un bloc avec jauge 100 %). |
+| M20 | Visionneuse de documents intégrée (documents, PV, quittances) | ✓ modale pdf.js / image | ✓ écran `/visionneuse` (pdfx / image) + partage | proposé | Pas un écart fonctionnel — noté pour mémoire : le web télécharge via `?download=1`, le mobile partage le fichier (feuille système) ; aucun des deux n'ouvre le stockage dans un navigateur externe. |
+| M20 | Photos de la résidence personnalisables (Paramètres → Photos) | ✓ | ✓ | proposé | Même API (`photos_json`, URLs signées) et mêmes emplacements sur les deux clients ; image par défaut identique. |
+| M12 | Paiement CMI (WebView) | ✗ désactivé | ✗ désactivé | proposé | Backend prêt mais volontairement inactif (brief §9) : emplacement « bientôt disponible » sur les deux clients. |
 
 ## Écarts interdits d'office (ne pas proposer)
 

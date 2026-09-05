@@ -3,6 +3,7 @@ import { apiFetch } from "../../../../../../lib/api/client";
 import type { AgPv } from "../../../../../../lib/api/types";
 import { formatDateHeure, formatPourcent } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
+import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Brand } from "../../../../../../components/brand";
 import { EmptyState } from "../../../../../../components/ui/empty-state";
@@ -44,14 +45,15 @@ export default async function PvPage({
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={a.pvTitre}
         actions={
-          <a
-            href={`/api/pv-pdf?ag=${id}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-10 items-center gap-2 rounded-btn bg-action px-4 text-sm font-medium text-white transition-colors hover:bg-action-deep"
-          >
-            {a.pvTelecharger}
-          </a>
+          <FileViewerButton
+            src={`/api/pv-pdf?ag=${id}`}
+            nom={a.pvTitre}
+            label={a.pvTelecharger}
+            size="md"
+            variant="primary"
+            tour="pv-pdf"
+            labels={{ see: dict.common.see, close: dict.common.close, download: dict.common.download }}
+          />
         }
       />
 

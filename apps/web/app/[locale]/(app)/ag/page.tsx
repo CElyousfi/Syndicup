@@ -5,6 +5,8 @@ import { apiFetch } from "../../../../lib/api/client";
 import type { AssembleeGenerale } from "../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure, formatPourcent } from "../../../../lib/format";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
@@ -55,6 +57,8 @@ export default async function AgListPage({
           ) : undefined
         }
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "salle")} title={ctx.copropriete?.nom} className="mb-4" />
 
       {ags.length === 0 ? (
         <EmptyState

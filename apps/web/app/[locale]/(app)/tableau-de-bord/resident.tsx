@@ -13,6 +13,8 @@ import { DocumentsCard } from "../../../../components/documents/documents-card";
 import { fill } from "../../../../lib/i18n";
 import { lienNotification } from "../../../../lib/notifications-link";
 import { formatDateHeure, formatMAD, nomComplet } from "../../../../lib/format";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
@@ -92,6 +94,8 @@ export async function DashboardResident({
           </ButtonLink>
         }
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
 
       {/* Indicateurs personnels */}
       <div

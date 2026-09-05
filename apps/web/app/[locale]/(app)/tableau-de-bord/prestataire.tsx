@@ -4,6 +4,8 @@ import type { AppContext } from "../../../../lib/app-context";
 import type { Incident } from "../../../../lib/api/types";
 import { fill } from "../../../../lib/i18n";
 import { formatDateHeure, nomComplet } from "../../../../lib/format";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
@@ -26,6 +28,8 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
         title={fill(dict.dash.greeting, { prenom })}
         subtitle={dict.dash.mesTickets}
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6" />
       {tickets.length === 0 ? (
         <EmptyState title={dict.incidents.aucunIncident} hint={dict.incidents.aucunIncidentAide} />
       ) : (

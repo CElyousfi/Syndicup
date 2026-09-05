@@ -8,7 +8,8 @@ import { Badge } from "../../../../components/ui/badge";
 import { Card } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { CHome, IconCircle } from "../../../../components/ui/color-icons";
-import { EspaceImage } from "../../../../components/espaces/espace-image";
+import { EspaceImage, espaceImageCle } from "../../../../components/espaces/espace-image";
+import { photoSrc } from "../../../../lib/photos";
 import { CreerEspaceModal, ModifierEspaceModal, ReserverModal } from "./espace-modals";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { supprimerEspace } from "./actions";
@@ -74,7 +75,7 @@ export default async function EspacesPage({
             <Card key={esp.id} padded={false} className="flex flex-col overflow-hidden">
               {/* Photo de l'espace — la carte devient un lieu, pas une ligne de texte. */}
               <div className="relative">
-                <EspaceImage nom={esp.nom} type={esp.type} className="h-36 w-full" />
+                <EspaceImage src={photoSrc(ctx.copropriete, `espace:${esp.id}`, photoSrc(ctx.copropriete, espaceImageCle(esp.nom, esp.type)))} className="h-36 w-full" />
                 <span className="absolute end-3 top-3">
                   <Badge variant={esp.reservable ? "ok" : "neutral"}>
                     {esp.reservable ? e.reservable : e.nonReservable}

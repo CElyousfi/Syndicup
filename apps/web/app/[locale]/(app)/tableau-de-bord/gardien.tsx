@@ -5,6 +5,8 @@ import type { DocumentCopro, Incident, Visite } from "../../../../lib/api/types"
 import { DocumentsCard } from "../../../../components/documents/documents-card";
 import { fill } from "../../../../lib/i18n";
 import { formatHeure, nomComplet } from "../../../../lib/format";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
@@ -41,6 +43,8 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
   return (
     <div className="animate-fade">
       <PageHeader title={fill(dict.dash.greeting, { prenom })} subtitle={ctx.copropriete?.nom ?? undefined} />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6" />
 
       {/* Deux gestes du quotidien, en très grand */}
       <div className="grid gap-4 sm:grid-cols-2">

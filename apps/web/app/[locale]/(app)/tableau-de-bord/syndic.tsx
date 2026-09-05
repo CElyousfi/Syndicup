@@ -26,6 +26,8 @@ import {
   nomComplet,
 } from "../../../../lib/format";
 import { versCentimes, versChaine } from "../../../../lib/centimes";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
@@ -136,6 +138,8 @@ export async function DashboardSyndic({
           )
         }
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
 
       {/* Indicateurs clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">

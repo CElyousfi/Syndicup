@@ -5,6 +5,10 @@ import { getDict, isLocale } from "../../../../lib/i18n";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { LogoForm } from "./logo-form";
+import { PhotosForm } from "./photos-form";
+import { apiFetch } from "../../../../lib/api/client";
+import type { EspaceCommun } from "../../../../lib/api/types";
+import { espaceImageCle } from "../../../../components/espaces/espace-image";
 import {
   IdentiteForm,
   LegauxForm,
@@ -33,6 +37,8 @@ export default async function ParametresPage({
   const { dict, copropriete } = ctx;
   if (!copropriete) notFound();
   const pa = dict.parametres;
+  const espacesRes = await apiFetch<EspaceCommun[]>("/espaces-communs");
+  const espaces = (espacesRes.ok ? espacesRes.data : []).map((e) => ({ id: e.id, nom: e.nom, cleDefaut: espaceImageCle(e.nom, e.type) }));
 
   return (
     <div className="animate-fade">
@@ -42,6 +48,11 @@ export default async function ParametresPage({
         <Card>
           <SectionHeader title={pa.logo} className="mb-5" />
           <LogoForm dict={dict} locale={ctx.locale} coproId={copropriete.id} logoActuel={copropriete.logoStoragePath ?? null} />
+        </Card>
+
+        <Card>
+          <SectionHeader title={pa.photos} className="mb-5" />
+          <PhotosForm dict={dict} locale={ctx.locale} coproId={copropriete.id} photos={copropriete.photosJson ?? {}} espaces={espaces} />
         </Card>
 
         <Card>

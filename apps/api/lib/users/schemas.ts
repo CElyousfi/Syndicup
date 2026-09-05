@@ -12,3 +12,12 @@ export const profilUpdateSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, "Aucun champ à modifier.");
 export type ProfilUpdateInput = z.infer<typeof profilUpdateSchema>;
+
+// M19 — appareils push (Master Spec Partie 13.4) : jeton FCM opaque, plateforme fermée.
+export const appareilPushCreateSchema = z.object({
+  token: z.string().min(20).max(4096),
+  plateforme: z.enum(["ANDROID", "IOS"]),
+  langue: z.enum(["FR", "AR"]).optional(),
+  version_app: z.string().max(40).nullish(),
+});
+export type AppareilPushCreateInput = z.infer<typeof appareilPushCreateSchema>;

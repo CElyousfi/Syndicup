@@ -198,6 +198,8 @@ export interface Copropriete {
   configJson: Record<string, unknown> | null;
   /** Logo de la résidence (chemin storage, servi via /api/copro-logo). */
   logoStoragePath?: string | null;
+  /** Photos personnalisées de la résidence (M20) : `{ cle: chemin storage }`, servies via /api/copro-photo. */
+  photosJson?: Record<string, string> | null;
   delaiConvocationJours: number | null;
   totalTantiemes: string | null;
   politiqueRecouvrementJson: Record<string, unknown> | null;

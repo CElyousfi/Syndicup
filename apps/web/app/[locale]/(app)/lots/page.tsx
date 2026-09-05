@@ -7,6 +7,8 @@ import { getDict, isLocale, fill } from "../../../../lib/i18n";
 import { formatEntier, formatMAD, nomComplet } from "../../../../lib/format";
 import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
+import { photoSrc } from "../../../../lib/photos";
+import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
@@ -102,6 +104,8 @@ export default async function LotsPage({
           ) : undefined
         }
       />
+
+      <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-4" />
 
       {!estResident ? (
         <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

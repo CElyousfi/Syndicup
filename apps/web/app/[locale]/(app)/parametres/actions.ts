@@ -122,3 +122,61 @@ export async function retirerLogo(_prev: FormState, fd: FormData): Promise<FormS
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
 }
+
+/**
+ * Photos de la résidence (M20) : URL signée → PUT direct au stockage → PATCH de la carte
+ * `photos_json` (fusionnée avec l'existant : un emplacement à la fois).
+ */
+async function photosActuelles(coproprieteId: string): Promise<Record<string, string>> {
+  const copro = await apiFetch<{ photosJson?: Record<string, string> | null }>(`/coproprietes/${coproprieteId}`, { coproprieteId });
+  return copro.ok ? { ...(copro.data.photosJson ?? {}) } : {};
+}
+
+export async function televerserPhoto(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const cle = champ(fd, "cle");
+  const fichier = fd.get("fichier");
+  if (!/^(accueil|entree|cour|salle|piscine|espace:[0-9a-f-]{36})$/i.test(cle)) {
+    return { status: "error", code: "VALIDATION_ERROR", message: "Emplacement inconnu." };
+  }
+  if (!(fichier instanceof File) || fichier.size === 0) {
+    return { status: "error", code: "VALIDATION_ERROR", message: "Image manquante.", fields: { fichier: "Image manquante." } };
+  }
+  if (fichier.size > 5 * 1024 * 1024) {
+    return { status: "error", code: "VALIDATION_ERROR", message: "Image trop lourde (5 Mo max).", fields: { fichier: "5 Mo max." } };
+  }
+  const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
+  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+
+  const prep = await apiFetch<{ storage_path: string; upload_url: string }>(`/coproprietes/${coproprieteId}/photos/upload-url`, {
+    method: "POST",
+    body: { cle, nom_fichier: fichier.name, content_type: fichier.type || "image/jpeg" },
+  });
+  if (!prep.ok) return fromApiError(prep);
+  const upload = await fetch(prep.data.upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": fichier.type || "image/jpeg", "x-upsert": "true" },
+    body: await fichier.arrayBuffer(),
+  });
+  if (!upload.ok) {
+    return { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` };
+  }
+  const photos = { ...(await photosActuelles(coproprieteId)), [cle]: prep.data.storage_path };
+  const res = await patchCopro(locale, { photos_json: photos }, coproprieteId);
+  if (res.status !== "success") return res;
+  revalidatePath(`/${locale}`, "layout");
+  return success(champ(fd, "message_succes") || undefined);
+}
+
+export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const cle = champ(fd, "cle");
+  const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
+  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  const photos = await photosActuelles(coproprieteId);
+  delete photos[cle];
+  const res = await patchCopro(locale, { photos_json: Object.keys(photos).length ? photos : null }, coproprieteId);
+  if (res.status !== "success") return res;
+  revalidatePath(`/${locale}`, "layout");
+  return success(champ(fd, "message_succes") || undefined);
+}

@@ -17,6 +17,7 @@ import { uuidv7 } from "uuidv7";
 import { render, templateExiste } from "./templates";
 import { transportPour } from "./transports";
 import { logger } from "../logging/logger";
+import { retirerTokensInvalides, tokensPushDe } from "../users/appareils";
 
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
@@ -65,6 +66,15 @@ export async function envoyerNotification(
     canal = "SMS";
   }
 
+  // PUSH (M19) : les jetons FCM des appareils du destinataire — lus sous la policy RLS m19
+  // (membres de la copropriété courante). Sans appareil, le transport répond EN_ATTENTE.
+  const tokensPush = canal === "PUSH" ? await tokensPushDe(db, params.utilisateurId).catch(() => []) : undefined;
+  const donnees: Record<string, string> = {};
+  for (const [k, v] of Object.entries((params.contenuJson ?? {}) as Record<string, unknown>)) {
+    if (v === null || v === undefined) continue;
+    donnees[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+
   let statutEnvoi: "EN_ATTENTE" | "ENVOYE" | "ECHOUE" = "EN_ATTENTE";
   try {
     const rendu = templateExiste(params.templateCode)
@@ -83,12 +93,20 @@ export async function envoyerNotification(
         utilisateurId: params.utilisateurId,
         email: destinataire?.email ?? null,
         telephone: destinataire?.telephone ?? null,
+        tokensPush,
       },
       titre: rendu.titre,
       corps: rendu.corps,
       langue,
+      templateCode: params.templateCode,
+      donnees,
     });
     statutEnvoi = resultat.statut;
+    if (resultat.tokensInvalides?.length) {
+      await retirerTokensInvalides(db, resultat.tokensInvalides).catch((e) =>
+        logger.warn("Nettoyage des jetons push invalides impossible", { erreur: String(e) })
+      );
+    }
   } catch (e) {
     // Un transport défaillant ne doit jamais faire échouer l'écriture métier appelante —
     // la ligne notification trace l'échec (ECHOUE) pour reprise.
