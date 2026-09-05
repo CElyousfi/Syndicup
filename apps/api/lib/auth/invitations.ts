@@ -298,6 +298,13 @@ export async function accepterInvitation(params: {
   if (!resultat) {
     throw new Error("invitation_accepter n'a rien retourné — anomalie DB.");
   }
+  // M15 — invitation GESTIONNAIRE_LCD : le nouveau compte devient le gestionnaire de la
+  // déclaration ouverte du lot (fonction SECURITY DEFINER, best-effort : l'acceptation prime).
+  if (resultat.statut === "OK" && resultat.role === "GESTIONNAIRE_LCD") {
+    await rpcClient
+      .$queryRaw`SELECT public.lcd_lier_gestionnaire_invitation(${code}, ${params.utilisateurId}::uuid)`
+      .catch(() => undefined);
+  }
   if (resultat.statut === "OK") {
     // Probant : le rattachement compte↔rôle↔lot vient d'être créé. Le contexte tenant n'existe
     // qu'à partir du résultat de la RPC — audit dans la copropriété rejointe.

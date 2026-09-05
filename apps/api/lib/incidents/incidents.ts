@@ -10,6 +10,7 @@ import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
 import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
+import { verifierSejourPourIncident, lierIncidentAuSejour, LcdError, IntrouvableError as SejourIntrouvableError } from "../lcd/lcd";
 import type {
   IncidentCreateInput,
   IncidentChangerStatutInput,
@@ -80,10 +81,21 @@ export async function creerIncident(ctx: TenantContext, input: IncidentCreateInp
       const lot = await db.lot.findUnique({ where: { id: input.lot_id } });
       if (!lot) throw new IncidentIntrouvableError("Lot introuvable.");
     }
+    // M15 — lien au séjour LCD : EN_COURS (ou TERMINE ≤ 7 jours), même lot ; vérifié sous RLS
+    // (un résident ne peut lier qu'un séjour qu'il a le droit de voir).
+    let sejourId: string | null = null;
+    if (input.sejour_id) {
+      const sejour = await verifierSejourPourIncident(db, input.sejour_id, input.lot_id).catch((e) => {
+        if (e instanceof SejourIntrouvableError) throw new IncidentIntrouvableError("Séjour introuvable.");
+        throw e;
+      });
+      sejourId = sejour.id;
+    }
     const incident = await db.incident.create({
       data: {
         coproprieteId: ctx.coproprieteId,
-        lotId: input.lot_id ?? null,
+        lotId: input.lot_id ?? (sejourId ? (await db.sejourCourteDuree.findUnique({ where: { id: sejourId }, select: { lotId: true } }))?.lotId ?? null : null),
+        sejourId,
         categorie: input.categorie,
         sousCategorie: input.sous_categorie,
         description: input.description ?? null,
@@ -107,9 +119,11 @@ export async function creerIncident(ctx: TenantContext, input: IncidentCreateInp
     // /notifications/stream le pousse à l'écran sans rechargement) ; l'urgence maximale garde
     // son template dédié (Doc A §5.3), sans doublon.
     await notifierNouveauSignalement(db, ctx, incident);
+    if (sejourId) await lierIncidentAuSejour(db, ctx, sejourId, incident.id);
     return incident;
   });
 }
+export { LcdError };
 
 /**
  * Notification mass-push sur urgence maximale (Doc A §5.3) — le champ M9 marqué "Non livré" dans
@@ -146,15 +160,16 @@ async function notifierNouveauSignalement(
 }
 
 
-export async function listerIncidents(ctx: TenantContext, page: number, limit: number) {
+export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: { sejourId?: string } = {}) {
   if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
   }
+  const where = { coproprieteId: ctx.coproprieteId, ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}) };
   return withTenant(ctx, async (db) => {
     const [total, rows] = await Promise.all([
-      db.incident.count({ where: { coproprieteId: ctx.coproprieteId } }),
+      db.incident.count({ where }),
       db.incident.findMany({
-        where: { coproprieteId: ctx.coproprieteId },
+        where,
         orderBy: { creeLe: "desc" },
         skip: (page - 1) * limit,
         take: limit,

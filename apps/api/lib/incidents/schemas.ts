@@ -43,6 +43,8 @@ export const incidentCreateSchema = z.object({
   partie: z.enum(PARTIES_INCIDENT),
   urgence: z.enum(URGENCES_INCIDENT),
   photos: z.array(cheminPhotoIncident).max(5).optional(),
+  // M15 — « signalement facilité » : nuisance liée au séjour LCD en cours (ou terminé ≤ 7 j).
+  sejour_id: z.string().uuid().nullish(),
 });
 export type IncidentCreateInput = z.infer<typeof incidentCreateSchema>;
 

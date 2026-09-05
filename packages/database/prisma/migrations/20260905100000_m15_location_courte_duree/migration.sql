@@ -317,3 +317,29 @@ CREATE POLICY tenant_insert ON "sejour_evenement"
       )
     )
   );
+
+-- ════════════════════════════════════════════════════════════════════════════
+-- Liaison du gestionnaire invité (M2) à la déclaration : à l'acceptation d'une invitation
+-- GESTIONNAIRE_LCD (lot_id porté par l'invitation), le nouveau compte devient le gestionnaire de
+-- la déclaration OUVERTE du lot si aucun n'est encore désigné. SECURITY DEFINER comme
+-- invitation_accepter : le nouvel utilisateur ne voit pas encore la déclaration sous RLS.
+-- ════════════════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.lcd_lier_gestionnaire_invitation(p_code text, p_utilisateur_id uuid)
+RETURNS boolean
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_lot_id uuid;
+  v_n integer;
+BEGIN
+  SELECT lot_id INTO v_lot_id FROM "invitation"
+   WHERE code = p_code AND role_cible = 'GESTIONNAIRE_LCD' AND statut = 'ACCEPTEE' AND lot_id IS NOT NULL;
+  IF v_lot_id IS NULL THEN RETURN false; END IF;
+  UPDATE "lot_location_courte_duree"
+     SET gestionnaire_id = p_utilisateur_id, modifie_le = now()
+   WHERE lot_id = v_lot_id AND date_fin IS NULL AND gestionnaire_id IS NULL;
+  GET DIAGNOSTICS v_n = ROW_COUNT;
+  RETURN v_n > 0;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.lcd_lier_gestionnaire_invitation FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.lcd_lier_gestionnaire_invitation TO application_role;

@@ -8,6 +8,7 @@ import {
   listerIncidents,
   PermissionRefuseeError,
   IncidentIntrouvableError,
+  LcdError,
 } from "../../../lib/incidents/incidents";
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
@@ -18,7 +19,10 @@ async function handleGET(req: Request) {
     const url = new URL(req.url);
     const page = Math.max(1, Number(url.searchParams.get("page") ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 20) || 20));
-    const { total, rows } = await listerIncidents(ctx, page, limit);
+    const sejourId = url.searchParams.get("sejour_id");
+    const { total, rows } = await listerIncidents(ctx, page, limit, {
+      sejourId: sejourId && /^[0-9a-f-]{36}$/i.test(sejourId) ? sejourId : undefined,
+    });
     return ok(rows, { meta: { total, page, has_more: page * limit < total } });
   } catch (e) {
     const mapped = mapAuthError(e);
@@ -41,6 +45,7 @@ async function handlePOST(req: Request) {
     if (mapped) return mapped;
     if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
     if (e instanceof IncidentIntrouvableError) return fail("NOT_FOUND", e.message);
+    if (e instanceof LcdError) return fail(e.code, e.message);
     throw e;
   }
 }

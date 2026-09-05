@@ -22,7 +22,17 @@ export type ErrorCode =
   | "CONFLICT"
   | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  // M15 — location courte durée : codes métier explicites (Doc A §10.2), 422 sauf chevauchement.
+  | "LCD_REGIME_NON_DEFINI"
+  | "LCD_INTERDITE"
+  | "LCD_PARAMETRE_NON_CONFIGURE"
+  | "LCD_GESTIONNAIRE_REQUIS"
+  | "LCD_DECLARATION_NON_VALIDEE"
+  | "LCD_QUOTA_NUITS_DEPASSE"
+  | "LCD_DELAI_DECLARATION"
+  | "LCD_VOYAGEURS_MAX"
+  | "LCD_SEJOUR_CHEVAUCHEMENT";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -35,6 +45,15 @@ const STATUS: Record<ErrorCode, number> = {
   UNPROCESSABLE_ENTITY: 422,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  LCD_REGIME_NON_DEFINI: 422,
+  LCD_INTERDITE: 422,
+  LCD_PARAMETRE_NON_CONFIGURE: 422,
+  LCD_GESTIONNAIRE_REQUIS: 422,
+  LCD_DECLARATION_NON_VALIDEE: 422,
+  LCD_QUOTA_NUITS_DEPASSE: 422,
+  LCD_DELAI_DECLARATION: 422,
+  LCD_VOYAGEURS_MAX: 422,
+  LCD_SEJOUR_CHEVAUCHEMENT: 409,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {

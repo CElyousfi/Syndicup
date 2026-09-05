@@ -31,6 +31,8 @@ tags:
   - name: Documents
   - name: Notifications
   - name: Litiges
+  - name: LCD
+    description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
   securitySchemes:
@@ -926,6 +928,149 @@ components:
         contact: { type: string, minLength: 1 }
         utilisateur_id: { type: string, format: uuid, nullable: true }
 
+    # ── M15 — Location courte durée ──
+    RegimeLocationCourteDuree:
+      type: string
+      enum: [NON_DEFINI, AUTORISEE, ENCADREE, INTERDITE]
+    StatutDeclarationLcd:
+      type: string
+      enum: [EN_ATTENTE, VALIDEE, REFUSEE, SUSPENDUE, CLOTUREE]
+    StatutSejour:
+      type: string
+      enum: [PREVU, EN_COURS, TERMINE, ANNULE]
+    TypePieceIdentite:
+      type: string
+      enum: [CIN, PASSEPORT, TITRE_SEJOUR, AUTRE]
+    LcdParametres:
+      type: object
+      description: Paramètres du régime ENCADREE — valeurs de règlement propres à la copropriété, jamais devinées (null = limite non configurée = non appliquée).
+      required: [declaration_prealable_obligatoire, delai_declaration_heures, nb_nuits_max_par_an, nb_voyageurs_max_par_lot, gestionnaire_obligatoire_si_proprietaire_absent, contact_gardien_obligatoire]
+      properties:
+        declaration_prealable_obligatoire: { type: boolean }
+        delai_declaration_heures: { type: integer, nullable: true }
+        nb_nuits_max_par_an: { type: integer, nullable: true }
+        nb_voyageurs_max_par_lot: { type: integer, nullable: true }
+        gestionnaire_obligatoire_si_proprietaire_absent: { type: boolean }
+        contact_gardien_obligatoire: { type: boolean }
+    LcdReglement:
+      type: object
+      properties:
+        regimeLcd: { $ref: "#/components/schemas/RegimeLocationCourteDuree" }
+        parametresLcdJson: { $ref: "#/components/schemas/LcdParametres", nullable: true }
+        regimeLcdAgResolutionId: { type: string, format: uuid, nullable: true }
+        agResolution: { type: object, nullable: true }
+    LcdReglementUpdate:
+      type: object
+      required: [regime_lcd]
+      properties:
+        regime_lcd: { $ref: "#/components/schemas/RegimeLocationCourteDuree" }
+        parametres_lcd_json: { $ref: "#/components/schemas/LcdParametres", nullable: true }
+        ag_resolution_id: { type: string, format: uuid, nullable: true }
+    LcdDeclaration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        lot: { type: object, properties: { id: { type: string }, numero: { type: string }, typeLot: { type: string } } }
+        declareParId: { type: string, format: uuid }
+        gestionnaireId: { type: string, format: uuid, nullable: true }
+        plateformesJson: { type: array, items: { type: string }, nullable: true }
+        contactUrgenceNom: { type: string, nullable: true }
+        contactUrgenceTelephone: { type: string, nullable: true }
+        statut: { $ref: "#/components/schemas/StatutDeclarationLcd" }
+        motifDecision: { type: string, nullable: true }
+        decideParId: { type: string, format: uuid, nullable: true }
+        decideLe: { type: string, format: date-time, nullable: true }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date, nullable: true }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    LcdDeclarationCreate:
+      type: object
+      required: [lot_id]
+      properties:
+        lot_id: { type: string, format: uuid }
+        gestionnaire_id: { type: string, format: uuid, nullable: true }
+        plateformes: { type: array, items: { type: string }, nullable: true }
+        contact_urgence_nom: { type: string, nullable: true }
+        contact_urgence_telephone: { type: string, nullable: true }
+        date_debut: { type: string, format: date }
+    LcdDeclarationUpdate:
+      type: object
+      properties:
+        plateformes: { type: array, items: { type: string }, nullable: true }
+        contact_urgence_nom: { type: string, nullable: true }
+        contact_urgence_telephone: { type: string, nullable: true }
+        gestionnaire_id: { type: string, format: uuid, nullable: true }
+    LcdDeclarationDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision: { type: string, enum: [VALIDEE, REFUSEE, SUSPENDUE] }
+        motif: { type: string, description: "Obligatoire pour REFUSEE / SUSPENDUE." }
+    LcdGestionnaireDesignation:
+      type: object
+      properties:
+        utilisateur_id: { type: string, format: uuid, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        telephone: { type: string, nullable: true }
+        canal: { type: string, enum: [EMAIL, SMS, WHATSAPP, QR_CODE], default: SMS }
+    LcdSejour:
+      type: object
+      description: Données voyageur minimales (CNDP) — jamais de numéro de pièce complet ni de scan.
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        lot: { type: object, properties: { id: { type: string }, numero: { type: string }, typeLot: { type: string } } }
+        declarationLcdId: { type: string, format: uuid }
+        declareParId: { type: string, format: uuid }
+        dateArrivee: { type: string, format: date }
+        dateDepart: { type: string, format: date }
+        heureArriveePrevue: { type: string, nullable: true, example: "16:00" }
+        nbVoyageurs: { type: integer }
+        voyageurPrincipalNom: { type: string }
+        voyageurTelephone: { type: string, nullable: true }
+        voyageurNationalite: { type: string, nullable: true }
+        pieceIdentiteType: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
+        pieceIdentiteFin: { type: string, nullable: true, maxLength: 4 }
+        plaqueVehicule: { type: string, nullable: true }
+        statut: { $ref: "#/components/schemas/StatutSejour" }
+        annuleLe: { type: string, format: date-time, nullable: true }
+        motifAnnulation: { type: string, nullable: true }
+        gardienInformeLe: { type: string, format: date-time, nullable: true }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    LcdSejourCreate:
+      type: object
+      required: [lot_id, date_arrivee, date_depart, nb_voyageurs, voyageur_principal_nom]
+      properties:
+        lot_id: { type: string, format: uuid }
+        date_arrivee: { type: string, format: date }
+        date_depart: { type: string, format: date }
+        heure_arrivee_prevue: { type: string, nullable: true, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        nb_voyageurs: { type: integer, minimum: 1 }
+        voyageur_principal_nom: { type: string }
+        voyageur_telephone: { type: string, nullable: true }
+        voyageur_nationalite: { type: string, nullable: true, description: "Code pays ISO (MA, FR…)." }
+        piece_identite_type: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
+        piece_identite_fin: { type: string, nullable: true, maxLength: 4, description: "4 derniers caractères au plus — jamais le numéro complet." }
+        plaque_vehicule: { type: string, nullable: true }
+    LcdSejourUpdate:
+      type: object
+      properties:
+        date_arrivee: { type: string, format: date }
+        date_depart: { type: string, format: date }
+        heure_arrivee_prevue: { type: string, nullable: true }
+        nb_voyageurs: { type: integer, minimum: 1 }
+        voyageur_principal_nom: { type: string }
+        voyageur_telephone: { type: string, nullable: true }
+        voyageur_nationalite: { type: string, nullable: true }
+        piece_identite_type: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
+        piece_identite_fin: { type: string, nullable: true, maxLength: 4 }
+        plaque_vehicule: { type: string, nullable: true }
+
   responses:
     ValidationError:
       description: Payload invalide.
@@ -1309,7 +1454,7 @@ paths:
   /coproprietes/{id}/logo:
     get:
       tags: [Copropriétés]
-      summary: URL signée (15 min) du logo de la résidence — `{ url: null }` sans logo. Tout membre.
+      summary: "URL signée (15 min) du logo de la résidence — `{ url: null }` sans logo. Tout membre."
       parameters: [{ $ref: "#/components/parameters/LotId" }]
       responses:
         "200": { description: "OK — `{ data: { url } }`." }
@@ -3421,3 +3566,268 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
+
+  # ── M15 — Location courte durée (tag lcd) ──────────────────────────────────
+  /lcd/reglement:
+    get:
+      tags: [LCD]
+      summary: Régime de location courte durée de la copropriété (NON_DEFINI / AUTORISEE / ENCADREE / INTERDITE), paramètres ENCADREE et résolution d'AG liée. Tout membre autorisé à lire les déclarations.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/LcdReglement" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      tags: [LCD]
+      summary: >
+        Fixe le régime (syndic seul — décision d'AG, Doc A §10.2). ENCADREE exige `parametres_lcd_json`
+        complet (Zod, aucun défaut) ; `ag_resolution_id` facultatif doit appartenir à la copropriété et
+        être ADOPTEE. Audit LCD_REGLEMENT_MODIFIE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdReglementUpdate" }
+      responses:
+        "200": { description: "Régime enregistré." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/declarations:
+    get:
+      tags: [LCD]
+      summary: Déclarations « lot exploité en LCD », EN_ATTENTE d'abord. Filtres lot_id, statut. Visibilité RLS (propriétaire actif, gestionnaire désigné, syndic/conseil, gardien VALIDEES).
+      parameters:
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutDeclarationLcd" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/LcdDeclaration" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [LCD]
+      summary: >
+        Le propriétaire (ou le syndic au nom de) déclare un lot en LCD. 422 LCD_REGIME_NON_DEFINI /
+        LCD_INTERDITE / LCD_PARAMETRE_NON_CONFIGURE / LCD_GESTIONNAIRE_REQUIS (propriétaire absent sans
+        gestionnaire, régime ENCADREE) ; 409 si une déclaration est déjà ouverte. AUTORISEE → VALIDEE
+        d'office ; ENCADREE → EN_ATTENTE. Audit LCD_DECLARATION_CREEE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdDeclarationCreate" }
+      responses:
+        "201": { description: "Créée." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/declarations/{id}:
+    get:
+      tags: [LCD]
+      summary: Détail d'une déclaration (+ 20 derniers séjours).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [LCD]
+      summary: Le propriétaire (ou le gestionnaire, sauf pour se remplacer) modifie contacts, plateformes, gestionnaire. Audit LCD_DECLARATION_MODIFIEE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdDeclarationUpdate" }
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/declarations/{id}/decision:
+    post:
+      tags: [LCD]
+      summary: Syndic — VALIDEE / REFUSEE / SUSPENDUE (motif obligatoire hors validation). Probant — Idempotency-Key. Audit LCD_DECLARATION_DECISION ; propriétaire et gestionnaire notifiés.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdDeclarationDecision" }
+            example: { decision: "REFUSEE", motif: "Règlement intérieur art. 12 : nuisances répétées signalées sur ce lot en 2025." }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/declarations/{id}/cloturer:
+    post:
+      tags: [LCD]
+      summary: Propriétaire ou syndic — fin de l'activité LCD (date_fin). 409 si un séjour est PREVU ou EN_COURS. Audit LCD_DECLARATION_CLOTUREE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date_fin: { type: string, format: date }
+      responses:
+        "200": { description: OK }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /lcd/declarations/{id}/gestionnaire:
+    post:
+      tags: [LCD]
+      summary: >
+        Désigne / remplace le gestionnaire LCD : compte connu (`utilisateur_id`) → rôle GESTIONNAIRE_LCD
+        créé si absent ; sinon invitation M2 (rôle GESTIONNAIRE_LCD, lot de la déclaration) liée à la
+        déclaration à l'acceptation. Audit LCD_GESTIONNAIRE_DESIGNE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdGestionnaireDesignation" }
+      responses:
+        "200": { description: "`{ data: { declaration, invitation | null } }`." }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours:
+    get:
+      tags: [LCD]
+      summary: Séjours (filtres lot_id, statut, date_from, date_to). Le gardien voit tous les séjours de sa copropriété ; les autres résidents ne voient jamais l'identité d'un voyageur d'un autre lot.
+      parameters:
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutSejour" } }
+        - { name: date_from, in: query, schema: { type: string, format: date } }
+        - { name: date_to, in: query, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/LcdSejour" }
+    post:
+      tags: [LCD]
+      summary: >
+        Déclare un séjour (propriétaire actif, gestionnaire désigné, syndic). Exige une déclaration
+        VALIDEE (422 LCD_DECLARATION_NON_VALIDEE) ; règles ENCADREE : nb_voyageurs_max_par_lot (422
+        LCD_VOYAGEURS_MAX), delai_declaration_heures (422 LCD_DELAI_DECLARATION), nb_nuits_max_par_an
+        (422 LCD_QUOTA_NUITS_DEPASSE) ; chevauchement sur le lot → 409 LCD_SEJOUR_CHEVAUCHEMENT.
+        Événement DECLARE, audit LCD_SEJOUR_DECLARE, syndic notifié (+ gardien si ENCADREE ou
+        contact_gardien_obligatoire). Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdSejourCreate" }
+            example:
+              lot_id: "b6a4c0e2-1f3d-4c5e-9a7b-2d8e4f6a1c3b"
+              date_arrivee: "2026-10-12"
+              date_depart: "2026-10-15"
+              heure_arrivee_prevue: "16:00"
+              nb_voyageurs: 2
+              voyageur_principal_nom: "Sara El Idrissi"
+              voyageur_telephone: "+212661000000"
+              voyageur_nationalite: "MA"
+              piece_identite_type: "CIN"
+              piece_identite_fin: "12AB"
+              plaque_vehicule: "12345-A-6"
+      responses:
+        "201": { description: "Créé, statut PREVU." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours/du-jour:
+    get:
+      tags: [LCD]
+      summary: "Tableau de bord gardien — `{ date, arrivees, departs, enCours }` du jour."
+      responses:
+        "200": { description: OK }
+  /lcd/sejours/{id}:
+    get:
+      tags: [LCD]
+      summary: Détail d'un séjour + journal append-only `evenements`.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [LCD]
+      summary: Modification (uniquement PREVU) — mêmes règles qu'à la création ; événement MODIFIE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LcdSejourUpdate" }
+      responses:
+        "200": { description: OK }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours/{id}/annuler:
+    post:
+      tags: [LCD]
+      summary: PREVU → ANNULE (événement ANNULE, audit LCD_SEJOUR_ANNULE, gardien prévenu s'il l'avait été). Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motif: { type: string }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours/{id}/arrivee:
+    post:
+      tags: [LCD]
+      summary: Gardien / syndic confirme l'arrivée — PREVU → EN_COURS, événement ARRIVEE_CONFIRMEE (nb_voyageurs_constate dans details_json, jamais sur la déclaration). Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nb_voyageurs_constate: { type: integer, minimum: 0 }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours/{id}/depart:
+    post:
+      tags: [LCD]
+      summary: Gardien / syndic confirme le départ — EN_COURS → TERMINE, événement DEPART_CONFIRME. Probant — Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/lots/{id}/synthese:
+    get:
+      tags: [LCD]
+      summary: Synthèse LCD d'un lot — déclaration courante, nuits utilisées dans l'année vs quota, 10 derniers séjours, incidents liés.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }

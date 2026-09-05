@@ -386,6 +386,92 @@ export const PERMISSIONS: PermissionMatrix = {
   // Doc A §9.2 "Module visites : Gardien enregistre" — le syndic peut aussi enregistrer en
   // backup (il supervise le personnel), jamais les résidents (ils autorisent/refusent, cf.
   // "personnel.autoriser_visiteur" ci-dessus).
+  // ── M15 — Location courte durée (Doc A §10.2 — ⚠️ module absent du Master Spec 4.2, entrées
+  //    dérivées de Doc A §10.2 « règlement intérieur peut interdire la LCD, à voter en AG » et
+  //    §2.2 « le propriétaire reste redevable » ; signalées dans ROADMAP M15) ──
+  // Régime + paramètres LCD de la copropriété : décision de règlement → syndic seul.
+  "lcd.reglement.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Déclarer qu'un lot est exploité en LCD : le propriétaire (ou indivisaire représentant /
+  // représentant de personne morale) de SON lot ; le syndic peut saisir au nom d'un
+  // propriétaire peu digital (Doc A §2.1). Le gestionnaire n'existe qu'une fois désigné.
+  "lcd.declaration.creer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Valider / refuser / suspendre une déclaration (régime ENCADREE) : syndic seul.
+  "lcd.declaration.decider": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Lire les déclarations : syndic/conseil (toutes), propriétaire/gestionnaire (les leurs —
+  // RLS), gardien (VALIDEES — besoin opérationnel). Locataires et voisins : rien (Doc A §12.3).
+  "lcd.declaration.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    GESTIONNAIRE_LCD: "scoped",
+    GARDIEN: "scoped",
+    LOCATAIRE: false,
+    PRESTATAIRE: false,
+  },
+  // Déclarer un séjour : propriétaire du lot, gestionnaire désigné, syndic (au nom de).
+  "lcd.sejour.declarer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    GESTIONNAIRE_LCD: "scoped",
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  // Lire les séjours : mêmes règles que les déclarations ; le gardien voit tous les séjours de
+  // sa copropriété (il doit savoir qui arrive — Doc A §9.2 contrôle d'accès).
+  "lcd.sejour.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    GESTIONNAIRE_LCD: "scoped",
+    GARDIEN: true,
+    LOCATAIRE: false,
+    PRESTATAIRE: false,
+  },
+  // Confirmer arrivée / départ (valeur probante : qui est dans l'immeuble) : gardien, syndic.
+  "lcd.sejour.confirmer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: true,
+    PROPRIETAIRE: false,
+    GESTIONNAIRE_LCD: false,
+    LOCATAIRE: false,
+    PRESTATAIRE: false,
+  },
   "visites.creer": {
     SUPER_ADMIN: true,
     SYNDIC: true,
