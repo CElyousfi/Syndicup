@@ -91,6 +91,14 @@ Règles à la création / modification (régime ENCADREE, chaque limite ignorée
 | Incidents répétés sur les séjours d'un lot | Le syndic décide, **manuellement**, une SUSPENSION de la déclaration (motif obligatoire) ou une clôture. | `POST /lcd/declarations/{id}/decision` `SUSPENDUE`. La synthèse du lot (`GET /lcd/lots/{id}/synthese`) affiche `incidents_lies` pour éclairer la décision. Aucune suspension automatique (roadmap M15 : hors périmètre, à décider en AG). |
 | Contact d'urgence | La déclaration porte `contact_urgence_nom/telephone` (gestionnaire ou proche) pour le gardien et le syndic. | Visible dans le détail de la déclaration. |
 
+## 13.8 — Pièces jointes d'un séjour
+
+| Cas | Règle | Gestion plateforme |
+| --- | --- | --- |
+| Confirmation de réservation, photo d'arrivée, état des lieux | Le déclarant (propriétaire, gestionnaire, syndic) joint des images ou des PDF au séjour ; le gardien peut joindre une photo à l'arrivée. 10 pièces max par séjour. | `POST /lcd/sejours/upload-url` (URL signée, bucket privé `<copropriete>/lcd/sejours/`), chemins envoyés à la création/modification ou via `POST /lcd/sejours/{id}/pieces-jointes` ; lecture par URL signée 15 min (`GET …/pieces-jointes`), même visibilité que le séjour ; retrait par le déclarant/syndic (`DELETE`, fichier effacé). Événement `MODIFIE`, audit `LCD_SEJOUR_PIECE_JOINTE(_RETIREE)`. |
+| Pièce d'identité du voyageur | **Jamais** (minimisation CNDP, §7.3 du brief) — seuls le type et 4 caractères sont saisis. | L'écran le rappelle sous le bouton d'ajout ; aucun contrôle automatique du contenu n'est possible, c'est une règle d'usage. |
+| Fin de rétention | Les pièces suivent les données voyageur. | Effacées du stockage et de la ligne par le job CNDP en même temps que le nom/téléphone. |
+
 ## 13.7 — Quota et synthèse par lot
 
 | Élément | Source | Note |

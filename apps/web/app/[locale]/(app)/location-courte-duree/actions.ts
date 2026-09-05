@@ -173,13 +173,49 @@ function corpsSejour(fd: FormData): Record<string, unknown> {
   };
 }
 
+/**
+ * Téléverse les pièces jointes (photo prise, image, PDF) : URL signée par fichier (API) → PUT
+ * direct vers le Storage → chemins renvoyés. Le fichier ne touche jamais le disque du serveur.
+ * Jamais de pièce d'identité (règle d'usage rappelée à l'écran).
+ */
+async function televerserPieces(fd: FormData): Promise<string[] | { erreur: FormState }> {
+  const fichiers = fd
+    .getAll("pieces_jointes")
+    .filter((f): f is File => f instanceof File && f.size > 0)
+    .slice(0, 10);
+  const chemins: string[] = [];
+  for (const fichier of fichiers) {
+    if (fichier.size > 15 * 1024 * 1024) {
+      return { erreur: { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (15 Mo max).", fields: { pieces_jointes: "15 Mo max." } } };
+    }
+    const contentType = fichier.type || (fichier.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
+    const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/lcd/sejours/upload-url", {
+      method: "POST",
+      body: { nom_fichier: fichier.name || "photo.jpg", content_type: contentType },
+    });
+    if (!prep.ok) return { erreur: fromApiError(prep) };
+    const upload = await fetch(prep.data.upload_url, {
+      method: "PUT",
+      headers: { "Content-Type": contentType, "x-upsert": "true" },
+      body: await fichier.arrayBuffer(),
+    });
+    if (!upload.ok) {
+      return { erreur: { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` } };
+    }
+    chemins.push(prep.data.storage_path);
+  }
+  return chemins;
+}
+
 /** Déclaration d'un séjour — le gardien est notifié : écriture probante, idempotente. */
 export async function declarerSejour(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
+  const pieces = await televerserPieces(fd);
+  if (!Array.isArray(pieces)) return pieces.erreur;
   const res = await apiFetch<LcdSejour>("/lcd/sejours", {
     method: "POST",
     idempotent: true,
-    body: { lot_id: champ(fd, "lot_id"), ...corpsSejour(fd) },
+    body: { lot_id: champ(fd, "lot_id"), ...corpsSejour(fd), ...(pieces.length > 0 ? { pieces_jointes: pieces } : {}) },
   });
   if (!res.ok) return fromApiError(res);
   revalider(locale, "/sejours");
@@ -194,8 +230,36 @@ export async function modifierSejour(_prev: FormState, fd: FormData): Promise<Fo
     body: corpsSejour(fd),
   });
   if (!res.ok) return fromApiError(res);
+  const pieces = await televerserPieces(fd);
+  if (!Array.isArray(pieces)) return pieces.erreur;
+  if (pieces.length > 0) {
+    const ajout = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
+    if (!ajout.ok) return fromApiError(ajout);
+  }
   revalider(locale, `/sejours/${id}`);
   redirect(`/${locale}${BASE}/sejours/${id}?modifie=1`);
+}
+
+/** Ajout de pièces jointes sur un séjour existant (déclarant, gestionnaire, syndic, gardien). */
+export async function ajouterPiecesJointes(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const id = champ(fd, "sejour_id");
+  const pieces = await televerserPieces(fd);
+  if (!Array.isArray(pieces)) return pieces.erreur;
+  if (pieces.length === 0) return { status: "error", code: "VALIDATION_ERROR", message: "Aucun fichier sélectionné.", fields: { pieces_jointes: "Aucun fichier sélectionné." } };
+  const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
+  if (!res.ok) return fromApiError(res);
+  revalider(locale, `/sejours/${id}`);
+  return success(champ(fd, "message_succes") || undefined);
+}
+
+export async function retirerPieceJointe(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const id = champ(fd, "sejour_id");
+  const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "DELETE", body: { chemin: champ(fd, "chemin") } });
+  if (!res.ok) return fromApiError(res);
+  revalider(locale, `/sejours/${id}`);
+  return success(champ(fd, "message_succes") || undefined);
 }
 
 export async function annulerSejour(_prev: FormState, fd: FormData): Promise<FormState> {

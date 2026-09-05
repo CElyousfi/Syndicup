@@ -19,6 +19,7 @@ import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
 import { withTenantIdempotent } from "../http/idempotency";
+import { creerUrlSignee, creerUrlUploadSignee, supprimerObjet } from "../storage/supabase-storage";
 import { genererCode, expiration } from "../auth/invitations";
 import type { ErrorCode } from "../http/respond";
 import {
@@ -36,6 +37,10 @@ import {
   type SejourCreateInput,
   type SejourUpdateInput,
   type SejoursFiltres,
+  type SejourUploadUrlInput,
+  type SejourPiecesJointesInput,
+  type SejourPieceJointeSupprimerInput,
+  MAX_PIECES_JOINTES_SEJOUR,
 } from "./schemas";
 
 export class PermissionRefuseeError extends Error {}
@@ -502,6 +507,13 @@ async function notifierRoles(
   return cibles.length;
 }
 
+/** Défense en profondeur : chaque pièce jointe vit dans le périmètre storage du tenant courant. */
+function assertPiecesDansPerimetre(ctx: TenantContext, chemins: string[] | undefined) {
+  for (const c of chemins ?? []) {
+    if (!c.startsWith(`${ctx.coproprieteId}/lcd/sejours/`)) throw new PermissionRefuseeError("Pièce jointe hors du périmètre de la copropriété.");
+  }
+}
+
 /** Règles ENCADREE + chevauchement — partagées par création et modification. */
 async function verifierReglesSejour(
   db: TenantDb,
@@ -640,6 +652,7 @@ export async function creerSejour(ctx: TenantContext, input: SejourCreateInput, 
     const arrivee = dateUtc(input.date_arrivee);
     const depart = dateUtc(input.date_depart);
     await verifierReglesSejour(db, { parametres, lotId: input.lot_id, arrivee, depart, heure: input.heure_arrivee_prevue ?? null, nbVoyageurs: input.nb_voyageurs, now });
+    assertPiecesDansPerimetre(ctx, input.pieces_jointes);
 
     const sejour = await db.sejourCourteDuree.create({
       data: {
@@ -657,6 +670,7 @@ export async function creerSejour(ctx: TenantContext, input: SejourCreateInput, 
         pieceIdentiteType: input.piece_identite_type ?? null,
         pieceIdentiteFin: input.piece_identite_fin?.toUpperCase() ?? null,
         plaqueVehicule: input.plaque_vehicule ?? null,
+        piecesJointes: input.pieces_jointes ?? [],
       },
       include: sejourInclude,
     });
@@ -701,6 +715,7 @@ export async function modifierSejour(ctx: TenantContext, id: string, input: Sejo
     const nbVoyageurs = input.nb_voyageurs ?? avant.nbVoyageurs;
     const heure = input.heure_arrivee_prevue === undefined ? avant.heureArriveePrevue : (input.heure_arrivee_prevue ?? null);
     await verifierReglesSejour(db, { parametres, lotId: avant.lotId, arrivee, depart, heure, nbVoyageurs, exclureSejourId: id, now });
+    assertPiecesDansPerimetre(ctx, input.pieces_jointes);
 
     const apres = await db.sejourCourteDuree.update({
       where: { id },
@@ -715,6 +730,7 @@ export async function modifierSejour(ctx: TenantContext, id: string, input: Sejo
         ...(input.piece_identite_type !== undefined ? { pieceIdentiteType: input.piece_identite_type ?? null } : {}),
         ...(input.piece_identite_fin !== undefined ? { pieceIdentiteFin: input.piece_identite_fin?.toUpperCase() ?? null } : {}),
         ...(input.plaque_vehicule !== undefined ? { plaqueVehicule: input.plaque_vehicule ?? null } : {}),
+        ...(input.pieces_jointes !== undefined ? { piecesJointes: input.pieces_jointes } : {}),
       },
       include: sejourInclude,
     });
@@ -806,6 +822,95 @@ export async function confirmerDepart(ctx: TenantContext, id: string, cle?: stri
     });
     return apres;
   });
+}
+
+// ── Pièces jointes (photos prises / fichiers) ──────────────────────────────
+
+function nomFichierSur(nom: string): string {
+  return nom.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^[-.]+|[-.]+$/g, "").slice(0, 120) || "piece";
+}
+
+/** Qui peut ajouter une pièce : qui déclare (propriétaire, gestionnaire, syndic) + le gardien (photo à l'arrivée). */
+function peutJoindre(ctx: TenantContext): boolean {
+  return can("lcd.sejour.declarer", ctx.role) !== false || can("lcd.sejour.confirmer", ctx.role) === true;
+}
+
+/** POST /lcd/sejours/upload-url — URL signée d'upload (image ou PDF) dans `<copropriete>/lcd/sejours/`. */
+export async function preparerUploadPieceJointe(ctx: TenantContext, input: SejourUploadUrlInput) {
+  if (!peutJoindre(ctx)) throw new PermissionRefuseeError("Rôle non autorisé à joindre une pièce à un séjour.");
+  const storagePath = `${ctx.coproprieteId}/lcd/sejours/${randomUUID()}-${nomFichierSur(input.nom_fichier)}`;
+  const { url, token } = await creerUrlUploadSignee(storagePath);
+  return { storage_path: storagePath, upload_url: url, token };
+}
+
+/** GET /lcd/sejours/:id/pieces-jointes — URLs signées 15 min (même visibilité que le séjour). */
+export async function urlsPiecesJointes(ctx: TenantContext, id: string) {
+  const s = await obtenirSejour(ctx, id);
+  const urls = await Promise.all(s.piecesJointes.map((p) => creerUrlSignee(p)));
+  return s.piecesJointes.map((path, i) => ({
+    path,
+    url: urls[i]!,
+    nom: path.split("/").pop()!.replace(/^[0-9a-f-]{36}-/i, ""),
+    type: /\.pdf$/i.test(path) ? "PDF" : "IMAGE",
+  }));
+}
+
+/** POST /lcd/sejours/:id/pieces-jointes — ajoute des pièces (10 max, séjour non annulé). */
+export async function ajouterPiecesJointes(ctx: TenantContext, id: string, input: SejourPiecesJointesInput) {
+  if (!peutJoindre(ctx)) throw new PermissionRefuseeError("Rôle non autorisé à joindre une pièce à un séjour.");
+  assertPiecesDansPerimetre(ctx, input.chemins);
+  return withTenant(ctx, async (db) => {
+    const s = await db.sejourCourteDuree.findUnique({ where: { id }, include: sejourInclude });
+    if (!s) throw new IntrouvableError("Séjour introuvable.");
+    if (s.statut === "ANNULE") throw new LcdError("UNPROCESSABLE_ENTITY", "Séjour annulé : aucune pièce jointe possible.");
+    if (ctx.role !== "SYNDIC" && ctx.role !== "SUPER_ADMIN" && ctx.role !== "GARDIEN") {
+      const declaration = await db.lotLocationCourteDuree.findUnique({ where: { id: s.declarationLcdId }, select: { gestionnaireId: true } });
+      await assertPeutDeclarerSejour(db, ctx, s.lotId, { gestionnaireId: declaration?.gestionnaireId ?? null });
+    }
+    const chemins = [...new Set([...s.piecesJointes, ...input.chemins])];
+    if (chemins.length > MAX_PIECES_JOINTES_SEJOUR) {
+      throw new LcdError("UNPROCESSABLE_ENTITY", `${MAX_PIECES_JOINTES_SEJOUR} pièces jointes au maximum par séjour.`);
+    }
+    const apres = await db.sejourCourteDuree.update({ where: { id }, data: { piecesJointes: chemins }, include: sejourInclude });
+    await evenement(db, ctx, id, "MODIFIE", { pieces_jointes_ajoutees: chemins.length - s.piecesJointes.length });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "LCD_SEJOUR_PIECE_JOINTE",
+      entite: "sejour_courte_duree",
+      entiteId: id,
+      apres: { pieces_jointes: chemins.length, ajoutees: chemins.length - s.piecesJointes.length },
+    });
+    return apres;
+  });
+}
+
+/** DELETE /lcd/sejours/:id/pieces-jointes — retire une pièce (déclarant / gestionnaire / syndic) et l'efface du stockage. */
+export async function retirerPieceJointe(ctx: TenantContext, id: string, input: SejourPieceJointeSupprimerInput) {
+  if (can("lcd.sejour.declarer", ctx.role) === false) throw new PermissionRefuseeError("Rôle non autorisé.");
+  const apres = await withTenant(ctx, async (db) => {
+    const s = await db.sejourCourteDuree.findUnique({ where: { id }, include: sejourInclude });
+    if (!s) throw new IntrouvableError("Séjour introuvable.");
+    if (ctx.role !== "SYNDIC" && ctx.role !== "SUPER_ADMIN") {
+      const declaration = await db.lotLocationCourteDuree.findUnique({ where: { id: s.declarationLcdId }, select: { gestionnaireId: true } });
+      await assertPeutDeclarerSejour(db, ctx, s.lotId, { gestionnaireId: declaration?.gestionnaireId ?? null });
+    }
+    if (!s.piecesJointes.includes(input.chemin)) throw new IntrouvableError("Pièce jointe introuvable.");
+    const maj = await db.sejourCourteDuree.update({ where: { id }, data: { piecesJointes: s.piecesJointes.filter((c) => c !== input.chemin) }, include: sejourInclude });
+    await evenement(db, ctx, id, "MODIFIE", { piece_jointe_retiree: true });
+    await ecrireAuditLog(db, {
+      coproprieteId: ctx.coproprieteId,
+      acteurId: ctx.utilisateurId,
+      action: "LCD_SEJOUR_PIECE_JOINTE_RETIREE",
+      entite: "sejour_courte_duree",
+      entiteId: id,
+      apres: { pieces_jointes: maj.piecesJointes.length },
+    });
+    return maj;
+  });
+  // Effacement du stockage hors transaction (best-effort : la ligne fait foi).
+  await supprimerObjet(input.chemin).catch(() => undefined);
+  return apres;
 }
 
 // ── Synthèse par lot ───────────────────────────────────────────────────────

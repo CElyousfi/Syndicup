@@ -57,7 +57,7 @@ class ApiClient {
   Future<ApiResult<T>> patch<T>(String path, {Object? body, Parse<T>? parse, String? coproprieteId}) =>
       request<T>('PATCH', path, body: body, parse: parse, coproprieteId: coproprieteId);
 
-  Future<ApiResult<T>> delete<T>(String path, {Parse<T>? parse}) => request<T>('DELETE', path, parse: parse);
+  Future<ApiResult<T>> delete<T>(String path, {Object? body, Parse<T>? parse}) => request<T>('DELETE', path, body: body, parse: parse);
 
   Future<ApiResult<T>> request<T>(
     String method,

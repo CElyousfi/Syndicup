@@ -674,7 +674,16 @@ export interface LcdDeclaration {
   modifieLe: string;
 }
 
+export interface LcdPieceJointe {
+  path: string;
+  url: string;
+  nom: string;
+  type: "IMAGE" | "PDF";
+}
+
 export interface LcdSejour {
+  /** Chemins storage des pièces jointes (lecture via /lcd/sejours/{id}/pieces-jointes). */
+  piecesJointes: string[];
   id: string;
   coproprieteId: string;
   lotId: string;

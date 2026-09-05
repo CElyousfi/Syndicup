@@ -15,6 +15,7 @@
  *     jamais de durée devinée — même discipline que les 422 du module AG.
  */
 import { can } from "../auth/permissions";
+import { supprimerObjet } from "../storage/supabase-storage";
 import { withTenant, type TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
@@ -219,13 +220,15 @@ export async function executerAnonymisationCndp(): Promise<ResultatAnonymisation
         const n = await withTenant(ctxSysteme, async (db) => {
           const cibles = await db.sejourCourteDuree.findMany({
             where: { coproprieteId: c.id, statut: { in: ["TERMINE", "ANNULE"] }, dateDepart: { lt: limite }, voyageurPrincipalNom: { not: ANONYME_VOYAGEUR } },
-            select: { id: true },
+            select: { id: true, piecesJointes: true },
           });
           if (cibles.length === 0) return 0;
           await db.sejourCourteDuree.updateMany({
             where: { id: { in: cibles.map((s) => s.id) } },
-            data: { voyageurPrincipalNom: ANONYME_VOYAGEUR, voyageurTelephone: null, voyageurNationalite: null, pieceIdentiteType: null, pieceIdentiteFin: null, plaqueVehicule: null },
+            data: { voyageurPrincipalNom: ANONYME_VOYAGEUR, voyageurTelephone: null, voyageurNationalite: null, pieceIdentiteType: null, pieceIdentiteFin: null, plaqueVehicule: null, piecesJointes: [] },
           });
+          // Pièces jointes (photos, PDF) effacées du stockage — best-effort, la ligne fait foi.
+          for (const s of cibles) for (const chemin of s.piecesJointes) await supprimerObjet(chemin).catch(() => undefined);
           for (const s of cibles) {
             await ecrireAuditLog(db, {
               coproprieteId: c.id,

@@ -283,3 +283,8 @@ final lcdSyntheseProvider = FutureProvider.autoDispose.family<LcdSynthese?, Stri
     ApiFail<LcdSynthese>() => unwrap(r),
   };
 });
+
+/// Pièces jointes d'un séjour LCD (URLs signées 15 min) — vide si le séjour n'en a pas.
+final lcdPiecesJointesProvider = FutureProvider.autoDispose.family<List<LcdPieceJointe>, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/sejours/$id/pieces-jointes', parse: (j) => parseList(j, LcdPieceJointe.fromJson)));
+});

@@ -21,7 +21,8 @@ import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { CCalendar, CUsers, CWrench, IconCircle } from "../../../../../../components/ui/color-icons";
 import { incidentVariant, sejourVariant } from "../../../../../../lib/status";
 import { ConfirmerArriveeForm, ConfirmerDepartForm } from "../../lcd-modals";
-import { AnnulerSejourModal } from "./sejour-actions";
+import { AnnulerSejourModal, PiecesJointesCard } from "./sejour-actions";
+import type { LcdPieceJointe } from "../../../../../../lib/api/types";
 
 type SejourDetail = LcdSejour & { evenements?: LcdSejourEvenement[] };
 
@@ -73,6 +74,11 @@ export default async function SejourDetailPage({
   ]);
   const declaration = declRes.ok ? declRes.data : null;
   const incidents = incidentsRes?.ok ? incidentsRes.data : [];
+  const piecesRes = s.piecesJointes?.length ? await apiFetch<LcdPieceJointe[]>(`/lcd/sejours/${id}/pieces-jointes`) : null;
+  const pieces = (piecesRes?.ok ? piecesRes.data : []).map((pj, n) => ({ ...pj, src: `/api/lcd-piece?sejour=${encodeURIComponent(id)}&n=${n}` }));
+  const rolesJoint = ["SYNDIC", "SUPER_ADMIN", "PROPRIETAIRE", "INDIVISAIRE", "PERSONNE_MORALE_REPRESENTANT", "GESTIONNAIRE_LCD"];
+  const peutRetirer = ctx.roles.some((r) => rolesJoint.includes(r)) && s.statut !== "ANNULE";
+  const peutJoindre = (peutRetirer || ctx.roles.includes("GARDIEN")) && s.statut !== "ANNULE";
   const nom = (uid: string | null) => {
     if (!uid) return null;
     if (uid === ctx.profil.id) return [ctx.profil.prenom, ctx.profil.nom].filter(Boolean).join(" ") || null;
@@ -201,6 +207,8 @@ export default async function SejourDetailPage({
               </div>
             </dl>
           </Card>
+
+          <PiecesJointesCard dict={dict} locale={ctx.locale} sejourId={s.id} pieces={pieces} peutJoindre={peutJoindre} peutRetirer={peutRetirer} />
 
           <Card>
             <SectionHeader title={l.journal} />

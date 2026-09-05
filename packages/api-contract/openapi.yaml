@@ -1036,6 +1036,7 @@ components:
         pieceIdentiteType: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
         pieceIdentiteFin: { type: string, nullable: true, maxLength: 4 }
         plaqueVehicule: { type: string, nullable: true }
+        piecesJointes: { type: array, items: { type: string }, description: "Chemins storage (lecture via GET /lcd/sejours/{id}/pieces-jointes)." }
         statut: { $ref: "#/components/schemas/StatutSejour" }
         annuleLe: { type: string, format: date-time, nullable: true }
         motifAnnulation: { type: string, nullable: true }
@@ -1057,6 +1058,7 @@ components:
         piece_identite_type: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
         piece_identite_fin: { type: string, nullable: true, maxLength: 4, description: "4 derniers caractères au plus — jamais le numéro complet." }
         plaque_vehicule: { type: string, nullable: true }
+        pieces_jointes: { type: array, maxItems: 10, items: { type: string }, description: "Chemins obtenus via POST /lcd/sejours/upload-url." }
     LcdSejourUpdate:
       type: object
       properties:
@@ -1070,6 +1072,7 @@ components:
         piece_identite_type: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
         piece_identite_fin: { type: string, nullable: true, maxLength: 4 }
         plaque_vehicule: { type: string, nullable: true }
+        pieces_jointes: { type: array, maxItems: 10, items: { type: string } }
 
   responses:
     ValidationError:
@@ -3828,6 +3831,67 @@ paths:
       tags: [LCD]
       summary: Synthèse LCD d'un lot — déclaration courante, nuits utilisées dans l'année vs quota, 10 derniers séjours, incidents liés.
       parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /lcd/sejours/upload-url:
+    post:
+      tags: [LCD]
+      summary: >
+        URL signée d'upload d'UNE pièce jointe de séjour (image prise/choisie ou PDF — jamais une
+        pièce d'identité, minimisation CNDP) vers le bucket privé `documents`, préfixe
+        `<copropriete_id>/lcd/sejours/`. Rôles : qui déclare un séjour + gardien (photo à l'arrivée).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, minLength: 1, maxLength: 180 }
+                content_type: { type: string, description: "image/jpeg|png|webp|heic|heif ou application/pdf" }
+      responses:
+        "201": { description: "`{ data: { storage_path, upload_url, token } }`." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /lcd/sejours/{id}/pieces-jointes:
+    get:
+      tags: [LCD]
+      summary: "Pièces jointes du séjour — `[{ path, url (signée 15 min), nom, type: IMAGE|PDF }]`, même visibilité que le séjour."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [LCD]
+      summary: Ajoute des pièces (chemins issus de upload-url, 10 max par séjour, séjour non annulé). Événement MODIFIE, audit LCD_SEJOUR_PIECE_JOINTE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chemins]
+              properties:
+                chemins: { type: array, minItems: 1, maxItems: 10, items: { type: string } }
+      responses:
+        "200": { description: OK }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [LCD]
+      summary: Retire une pièce (déclarant, gestionnaire, syndic) et l'efface du stockage. Audit LCD_SEJOUR_PIECE_JOINTE_RETIREE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chemin]
+              properties:
+                chemin: { type: string }
       responses:
         "200": { description: OK }
         "404": { $ref: "#/components/responses/NotFound" }

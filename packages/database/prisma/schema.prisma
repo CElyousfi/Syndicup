@@ -1394,6 +1394,10 @@ model SejourCourteDuree {
   // 4 derniers caractères uniquement (CNDP — minimisation).
   pieceIdentiteFin      String?                @map("piece_identite_fin") @db.VarChar(4)
   plaqueVehicule        String?                @map("plaque_vehicule")
+  // Pièces jointes (confirmation de réservation, photos d'arrivée / d'état des lieux) — chemins
+  // storage `<copropriete>/lcd/sejours/…` dans le bucket privé, URL signée 15 min, 10 max.
+  // JAMAIS une pièce d'identité (minimisation CNDP — LEGAL_QUESTIONS_BRIEF §7.3).
+  piecesJointes         String[]               @default([]) @map("pieces_jointes")
   statut                StatutSejour           @default(PREVU)
   annuleLe              DateTime?              @map("annule_le") @db.Timestamptz
   motifAnnulation       String?                @map("motif_annulation")

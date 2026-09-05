@@ -7,7 +7,17 @@
  *
  * Prérequis : Supabase local + migration m15 + rôle app_local.
  */
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+// Storage Supabase non provisionné en test (même limite que M9) : URLs signées simulées, la
+// logique métier (périmètre, plafond, droits, journal) reste réellement exercée.
+vi.mock("../lib/storage/supabase-storage", () => ({
+  ensureBucketDocuments: async () => undefined,
+  creerUrlSignee: async (chemin: string) => `http://127.0.0.1:54321/storage/v1/object/sign/documents/${chemin}`,
+  creerUrlUploadSignee: async (chemin: string) => ({ url: `http://127.0.0.1:54321/storage/v1/object/upload/sign/documents/${chemin}`, token: "test" }),
+  supprimerObjet: async () => undefined,
+  televerserDocument: async () => undefined,
+}));
 import { PrismaClient } from "@prisma/client";
 import { withTenant, disconnectTenantDb } from "../lib/tenant/db";
 import type { TenantContext } from "../lib/tenant/context";
@@ -26,13 +36,17 @@ import {
   sejoursDuJour,
   obtenirSejour,
   syntheseLot,
+  preparerUploadPieceJointe,
+  ajouterPiecesJointes,
+  retirerPieceJointe,
+  urlsPiecesJointes,
   executerSejoursQuotidien,
   LcdError,
   PermissionRefuseeError,
 } from "../lib/lcd/lcd";
 import { executerSejoursQuotidienCopropriete } from "../lib/lcd/jobs";
 import { creerIncident } from "../lib/incidents/incidents";
-import { sejourCreateSchema, reglementLcdUpdateSchema, declarationLcdDecisionSchema } from "../lib/lcd/schemas";
+import { sejourCreateSchema, reglementLcdUpdateSchema, declarationLcdDecisionSchema, sejourUploadUrlSchema } from "../lib/lcd/schemas";
 import { executerAnonymisationCndp, ANONYME_VOYAGEUR } from "../lib/users/anonymisation";
 
 const admin = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
@@ -334,6 +348,44 @@ describe("Séjours", () => {
   });
 });
 
+describe("Pièces jointes de séjour", () => {
+  it("upload-url : image ou PDF uniquement, chemin dans le périmètre du tenant ; ajout par le gardien, cap à 10, retrait par le déclarant", async () => {
+    expect(sejourUploadUrlSchema.safeParse({ nom_fichier: "cin.jpg", content_type: "image/jpeg" }).success).toBe(true);
+    expect(sejourUploadUrlSchema.safeParse({ nom_fichier: "resa.pdf", content_type: "application/pdf" }).success).toBe(true);
+    expect(sejourUploadUrlSchema.safeParse({ nom_fichier: "x.zip", content_type: "application/zip" }).success).toBe(false);
+    await expect(preparerUploadPieceJointe(ctx(locataire, "LOCATAIRE"), { nom_fichier: "a.jpg", content_type: "image/jpeg" })).rejects.toBeInstanceOf(PermissionRefuseeError);
+
+    // La déclaration précédente a été clôturée par le test de synthèse : on en rouvre une.
+    const decl = await admin.lotLocationCourteDuree.create({ data: { coproprieteId: copro, lotId: lotA1, declareParId: amina, statut: "VALIDEE", dateDebut: new Date("2026-02-01") } });
+    const s = await admin.sejourCourteDuree.create({
+      data: { coproprieteId: copro, lotId: lotA1, declarationLcdId: decl.id, declareParId: amina, dateArrivee: new Date(jour(30)), dateDepart: new Date(jour(32)), nbVoyageurs: 1, voyageurPrincipalNom: "Avec pièces" },
+    });
+    const chemin = (i: number) => `${copro}/lcd/sejours/${"00000000-0000-4000-8000-00000000000".slice(0, 35)}${i}-photo-${i}.jpg`;
+    // Hors périmètre → refus.
+    await expect(ajouterPiecesJointes(ctxAmina(), s.id, { chemins: [`00000000-0000-4000-8000-000000000000/lcd/sejours/x.jpg`] })).rejects.toBeInstanceOf(PermissionRefuseeError);
+    // Le gardien joint une photo à l'arrivée ; le propriétaire complète.
+    const g = await ajouterPiecesJointes(ctxGardien(), s.id, { chemins: [chemin(1)] });
+    expect(g.piecesJointes).toEqual([chemin(1)]);
+    const a = await ajouterPiecesJointes(ctxAmina(), s.id, { chemins: [chemin(1), chemin(2)] });
+    expect(a.piecesJointes).toHaveLength(2); // dédoublonné
+    await expect(ajouterPiecesJointes(ctxAmina(), s.id, { chemins: Array.from({ length: 9 }, (_, i) => chemin(3 + i)) })).rejects.toMatchObject({ code: "UNPROCESSABLE_ENTITY" });
+    // Le gardien ne retire pas ; le propriétaire oui (fichier effacé best-effort, ligne mise à jour).
+    await expect(retirerPieceJointe(ctxGardien(), s.id, { chemin: chemin(1) })).rejects.toBeInstanceOf(PermissionRefuseeError);
+    const r = await retirerPieceJointe(ctxAmina(), s.id, { chemin: chemin(1) });
+    expect(r.piecesJointes).toEqual([chemin(2)]);
+    // Lecture : URLs signées, type déduit du nom ; un locataire ne voit rien.
+    const urls = await urlsPiecesJointes(ctxGardien(), s.id);
+    expect(urls).toHaveLength(1);
+    expect(urls[0]!.type).toBe("IMAGE");
+    expect(urls[0]!.url).toContain("/storage/");
+    await expect(urlsPiecesJointes(ctx(locataire, "LOCATAIRE"), s.id)).rejects.toThrow();
+    const evs = await admin.sejourEvenement.findMany({ where: { sejourId: s.id, type: "MODIFIE" } });
+    expect(evs.length).toBe(3);
+    await annulerSejour(ctxAmina(), s.id, {});
+    await expect(ajouterPiecesJointes(ctxAmina(), s.id, { chemins: [chemin(9)] })).rejects.toMatchObject({ code: "UNPROCESSABLE_ENTITY" });
+  });
+});
+
 describe("Job quotidien lcd-sejours-quotidien", () => {
   it("rappelle l'arrivée du jour au gardien une seule fois et clôture automatiquement les départs passés", async () => {
     await purgerLcd();
@@ -373,7 +425,7 @@ describe("Anonymisation CNDP des voyageurs (M13 étendu)", () => {
     await admin.copropriete.update({ where: { id: copro }, data: { retentionDesactivationMois: 6 } });
     const decl = await admin.lotLocationCourteDuree.findFirstOrThrow({ where: { coproprieteId: copro, dateFin: null } });
     const ancien = await admin.sejourCourteDuree.create({
-      data: { coproprieteId: copro, lotId: lotA1, declarationLcdId: decl.id, declareParId: amina, dateArrivee: new Date("2025-01-02"), dateDepart: new Date("2025-01-05"), nbVoyageurs: 1, voyageurPrincipalNom: "Ancien Voyageur", voyageurTelephone: "+212600000099", pieceIdentiteType: "CIN", pieceIdentiteFin: "ZZ99", statut: "TERMINE" },
+      data: { coproprieteId: copro, lotId: lotA1, declarationLcdId: decl.id, declareParId: amina, dateArrivee: new Date("2025-01-02"), dateDepart: new Date("2025-01-05"), nbVoyageurs: 1, voyageurPrincipalNom: "Ancien Voyageur", voyageurTelephone: "+212600000099", pieceIdentiteType: "CIN", pieceIdentiteFin: "ZZ99", statut: "TERMINE", piecesJointes: [`${copro}/lcd/sejours/ancien.jpg`] },
     });
     const resultat = await executerAnonymisationCndp();
     expect(resultat.sejoursAnonymises).toBeGreaterThanOrEqual(1);
@@ -381,6 +433,7 @@ describe("Anonymisation CNDP des voyageurs (M13 étendu)", () => {
     expect(apres.voyageurPrincipalNom).toBe(ANONYME_VOYAGEUR);
     expect(apres.voyageurTelephone).toBeNull();
     expect(apres.pieceIdentiteFin).toBeNull();
+    expect(apres.piecesJointes).toEqual([]);
     // Un séjour récent n'est pas touché.
     const recent = await admin.sejourCourteDuree.findFirst({ where: { coproprieteId: copro, voyageurPrincipalNom: "Arrivant" } });
     expect(recent).not.toBeNull();

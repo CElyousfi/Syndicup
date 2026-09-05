@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import type { LcdSejour, TypePieceIdentite } from "../../../../../lib/api/types";
 import { dateInput } from "../../../../../lib/lcd";
 import { declarerSejour, modifierSejour } from "../actions";
@@ -33,6 +33,7 @@ export function SejourForm({
 }) {
   const l = dict.lcd;
   const [state, action] = useActionState(sejour ? modifierSejour : declarerSejour, IDLE);
+  const [nbFichiers, setNbFichiers] = useState(0);
   const lotChoisi = lotInitial && lots.some((x) => x.id === lotInitial) ? lotInitial : lots[0]?.id;
 
   return (
@@ -109,6 +110,23 @@ export function SejourForm({
         <Field label={l.plaqueVehicule} htmlFor="s_plaque" optionalLabel={dict.common.optional} error={fieldError(state, "plaque_vehicule")}>
           <Input id="s_plaque" name="plaque_vehicule" dir="ltr" maxLength={20} className="uppercase" defaultValue={sejour?.plaqueVehicule ?? ""} />
         </Field>
+      </fieldset>
+
+      <fieldset className="space-y-3">
+        <legend className="text-[13px] font-semibold text-ink">{l.piecesJointes}</legend>
+        <p className="text-[13px] leading-relaxed text-soft">{l.piecesJointesAide}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+            {l.prendrePhoto}
+            <input type="file" name="pieces_jointes" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setNbFichiers((n) => n + (e.target.files?.length ?? 0))} />
+          </label>
+          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+            {l.choisirFichier}
+            <input type="file" name="pieces_jointes" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf" multiple className="sr-only" onChange={(e) => setNbFichiers((n) => n + (e.target.files?.length ?? 0))} />
+          </label>
+          {nbFichiers > 0 ? <span className="text-[13px] text-soft">{fill(l.fichiersSelectionnes, { n: nbFichiers })}</span> : null}
+        </div>
+        {fieldError(state, "pieces_jointes") ? <p className="text-[13px] text-danger">{fieldError(state, "pieces_jointes")}</p> : null}
       </fieldset>
 
       <FormAlert state={state} />

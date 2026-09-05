@@ -1,5 +1,9 @@
+import 'dart:io';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -18,6 +22,7 @@ import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/local_db/database.dart';
 import '../../offline/sync_queue/lcd_sync.dart';
+import '../documents/document_viewer_screen.dart';
 
 /// M15 Location courte durée (Doc A §10.2) — séjours : formulaire (déclarer / modifier),
 /// fiche (détail + chronologie des événements + actions), confirmations gardien hors-ligne.
@@ -197,6 +202,8 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
   final _plaque = TextEditingController();
   bool _loading = false, _prefilled = false;
   ApiFail? _fail;
+  /// Pièces jointes choisies (photo prise, galerie, fichier) — téléversées à l'envoi.
+  final List<PieceLocale> _pieces = [];
 
   bool get _edition => widget.sejourId != null;
 
@@ -309,6 +316,8 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
           if (_fail != null) const SizedBox(height: 12),
           Text(md.retryHint, style: t.labelSmall),
           const SizedBox(height: 10),
+          PiecesPicker(pieces: _pieces, onChanged: () => setState(() {})),
+          const SizedBox(height: 14),
           SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: _lot == null || _arrivee == null || _depart == null ? null : _submit),
         ],
       ],
@@ -332,8 +341,18 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
       _fail = null;
     });
     final api = ref.read(apiClientProvider);
+    final chemins = await televerserPieces(api, _pieces);
+    if (!mounted) return;
+    if (chemins == null) {
+      setState(() {
+        _loading = false;
+        _fail = ApiFail(const ApiError(code: 'INTERNAL_ERROR', message: 'Téléversement impossible.'), 502);
+      });
+      return;
+    }
     final body = <String, Object?>{
       if (!_edition) 'lot_id': _lot,
+      if (!_edition && chemins.isNotEmpty) 'pieces_jointes': chemins,
       'date_arrivee': _arrivee,
       'date_depart': _depart,
       'heure_arrivee_prevue': _heure,
@@ -351,6 +370,11 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
     if (!mounted) return;
     switch (r) {
       case ApiOk<LcdSejour>(:final data):
+        if (_edition && chemins.isNotEmpty) {
+          await api.post<dynamic>('/lcd/sejours/${data.id}/pieces-jointes', body: {'chemins': chemins});
+          ref.invalidate(lcdPiecesJointesProvider(data.id));
+        }
+        if (!mounted) return;
         ref.invalidate(lcdSejoursProvider);
         ref.invalidate(lcdDuJourProvider);
         ref.invalidate(lcdSejourProvider(data.id));
@@ -520,6 +544,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                 const SizedBox(height: 10),
                 SubmitButton(label: d.lcd.signalerNuisance, icon: Icons.build_rounded, secondary: true, onPressed: () => context.push('/incidents/nouveau?sejour=${s.id}')),
               ],
+              PiecesJointesSection(sejourId: s.id, peutJoindre: (ctx.declareSejoursLcd || ctx.isGardien || ctx.isGestion) && s.statut != 'ANNULE', peutRetirer: (ctx.declareSejoursLcd || ctx.isGestion) && s.statut != 'ANNULE'),
               SectionHeader(d.lcd.journal),
               if (s.evenements.isEmpty)
                 SuCard(child: Text(d.common.emptyDefault, style: t.bodySmall))
@@ -626,4 +651,218 @@ Future<String?> demanderMotif(BuildContext context, {required String title, requ
 List<LcdSejour> trierSejours(List<LcdSejour> list) {
   final l = [...list]..sort((a, b) => b.jourArrivee.compareTo(a.jourArrivee));
   return l;
+}
+
+// ── Pièces jointes (photo prise, galerie, fichier) ─────────────────────────
+
+/// Fichier choisi localement avant téléversement.
+class PieceLocale {
+  const PieceLocale({required this.nom, required this.chemin, required this.contentType});
+  final String nom, chemin, contentType;
+  bool get estImage => contentType.startsWith('image/');
+}
+
+String _contentTypeDe(String nom, String? mime) {
+  if (mime != null && mime.isNotEmpty) return mime;
+  final n = nom.toLowerCase();
+  if (n.endsWith('.pdf')) return 'application/pdf';
+  if (n.endsWith('.png')) return 'image/png';
+  if (n.endsWith('.webp')) return 'image/webp';
+  if (n.endsWith('.heic')) return 'image/heic';
+  return 'image/jpeg';
+}
+
+/// Sélection : caméra, galerie ou fichier (image / PDF). 10 pièces au plus.
+Future<PieceLocale?> choisirPiece(BuildContext context) async {
+  final d = context.dict;
+  final choix = await showModalBottomSheet<String>(
+    context: context,
+    builder: (ctx) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(leading: const Icon(Icons.photo_camera_rounded, color: SuColors.action), title: Text(d.lcd.prendrePhoto), onTap: () => Navigator.pop(ctx, 'camera')),
+          ListTile(leading: const Icon(Icons.photo_library_rounded, color: SuColors.action), title: Text(d.incidents.choisirGalerie), onTap: () => Navigator.pop(ctx, 'galerie')),
+          ListTile(leading: const Icon(Icons.attach_file_rounded, color: SuColors.action), title: Text(d.lcd.choisirFichier), onTap: () => Navigator.pop(ctx, 'fichier')),
+          const SizedBox(height: 8),
+        ],
+      ),
+    ),
+  );
+  if (choix == null) return null;
+  if (choix == 'fichier') {
+    final r = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'], withData: false);
+    final f = r?.files.single;
+    if (f == null || f.path == null) return null;
+    return PieceLocale(nom: f.name, chemin: f.path!, contentType: _contentTypeDe(f.name, null));
+  }
+  final x = await ImagePicker().pickImage(source: choix == 'camera' ? ImageSource.camera : ImageSource.gallery, imageQuality: 82, maxWidth: 2000);
+  if (x == null) return null;
+  return PieceLocale(nom: x.name, chemin: x.path, contentType: _contentTypeDe(x.name, x.mimeType));
+}
+
+/// URL signée par pièce → PUT direct → chemins ; null si un téléversement a échoué.
+Future<List<String>?> televerserPieces(ApiClient api, List<PieceLocale> pieces) async {
+  final chemins = <String>[];
+  for (final p in pieces) {
+    final prep = await api.post<Map<String, dynamic>>('/lcd/sejours/upload-url', body: {'nom_fichier': p.nom, 'content_type': p.contentType}, parse: asMap);
+    if (prep is! ApiOk<Map<String, dynamic>>) return null;
+    final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(p.chemin).readAsBytes(), p.contentType);
+    if (!ok) return null;
+    chemins.add(prep.data['storage_path'] as String);
+  }
+  return chemins;
+}
+
+/// Bloc « Pièces jointes » du formulaire : liste des fichiers choisis + bouton d'ajout.
+class PiecesPicker extends StatelessWidget {
+  const PiecesPicker({super.key, required this.pieces, required this.onChanged});
+  final List<PieceLocale> pieces;
+  final VoidCallback onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = context.dict;
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(d.lcd.piecesJointes, style: t.labelMedium?.copyWith(color: SuColors.ink)),
+        const SizedBox(height: 4),
+        Text(d.lcd.piecesJointesAide, style: t.bodySmall),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final p in pieces)
+              Chip(
+                avatar: Icon(p.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.action),
+                label: Text(p.nom, overflow: TextOverflow.ellipsis),
+                onDeleted: () {
+                  pieces.remove(p);
+                  onChanged();
+                },
+              ),
+            if (pieces.length < 10)
+              ActionChip(
+                avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.action),
+                label: Text(d.lcd.ajouterPieces),
+                onPressed: () async {
+                  final p = await choisirPiece(context);
+                  if (p == null) return;
+                  pieces.add(p);
+                  onChanged();
+                },
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+/// Galerie des pièces d'un séjour existant : aperçu, ouverture dans la visionneuse intégrée,
+/// ajout (photo / galerie / fichier) et retrait.
+class PiecesJointesSection extends ConsumerStatefulWidget {
+  const PiecesJointesSection({super.key, required this.sejourId, required this.peutJoindre, required this.peutRetirer});
+  final String sejourId;
+  final bool peutJoindre, peutRetirer;
+  @override
+  ConsumerState<PiecesJointesSection> createState() => _PiecesJointesSectionState();
+}
+
+class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
+  bool _busy = false;
+
+  Future<void> _ajouter() async {
+    final p = await choisirPiece(context);
+    if (p == null || !mounted) return;
+    setState(() => _busy = true);
+    final api = ref.read(apiClientProvider);
+    final chemins = await televerserPieces(api, [p]);
+    if (!mounted) return;
+    if (chemins == null) {
+      setState(() => _busy = false);
+      showToast(context, context.mdict.networkError, error: true);
+      return;
+    }
+    final r = await api.post<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemins': chemins});
+    if (!mounted) return;
+    setState(() => _busy = false);
+    if (r is ApiFail) {
+      showToast(context, r.error.message, error: true);
+      return;
+    }
+    ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
+    ref.invalidate(lcdSejourProvider(widget.sejourId));
+    showToast(context, context.dict.lcd.pieceAjoutee);
+  }
+
+  Future<void> _retirer(LcdPieceJointe pj) async {
+    final d = context.dict;
+    final ok = await confirmDialog(context, title: d.lcd.retirerPiece, body: pj.nom, confirmLabel: d.lcd.retirerPiece, danger: true);
+    if (!ok || !mounted) return;
+    final r = await ref.read(apiClientProvider).delete<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemin': pj.path});
+    if (!mounted) return;
+    if (r is ApiFail) {
+      showToast(context, r.error.message, error: true);
+      return;
+    }
+    ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
+    ref.invalidate(lcdSejourProvider(widget.sejourId));
+    showToast(context, d.lcd.pieceRetiree);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = context.dict;
+    final t = Theme.of(context).textTheme;
+    final pieces = ref.watch(lcdPiecesJointesProvider(widget.sejourId));
+    final liste = pieces.valueOrNull ?? const <LcdPieceJointe>[];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SectionHeader(d.lcd.piecesJointes, subtitle: d.lcd.piecesJointesAide, actionLabel: widget.peutJoindre && liste.length < 10 ? d.lcd.ajouterPieces : null, onAction: widget.peutJoindre && liste.length < 10 && !_busy ? _ajouter : null),
+        SuCard(
+          child: liste.isEmpty
+              ? Text(pieces.isLoading ? context.mdict.loading : d.lcd.aucunePiece, style: t.bodySmall)
+              : GridView.count(
+                  crossAxisCount: 3,
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  mainAxisSpacing: 8,
+                  crossAxisSpacing: 8,
+                  children: [
+                    for (final pj in liste)
+                      Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          InkWell(
+                            borderRadius: BorderRadius.circular(14),
+                            onTap: () => ouvrirVisionneuse(context, titre: pj.nom, url: pj.url),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: pj.estImage
+                                  ? Image.network(pj.url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: SuColors.ground, child: const Icon(Icons.broken_image_outlined, color: SuColors.faint)))
+                                  : Container(color: SuColors.ground, padding: const EdgeInsets.all(8), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.picture_as_pdf_rounded, color: SuColors.action, size: 28), const SizedBox(height: 4), Text(pj.nom, style: t.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, textDirection: TextDirection.ltr)])),
+                            ),
+                          ),
+                          if (widget.peutRetirer)
+                            PositionedDirectional(
+                              end: 4,
+                              top: 4,
+                              child: GestureDetector(
+                                onTap: () => _retirer(pj),
+                                child: Container(decoration: const BoxDecoration(color: SuColors.ink, shape: BoxShape.circle), padding: const EdgeInsets.all(3), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)),
+                              ),
+                            ),
+                        ],
+                      ),
+                  ],
+                ),
+        ),
+      ],
+    );
+  }
 }

@@ -701,8 +701,11 @@ class LcdSejour {
   final int nbVoyageurs;
   final String? heureArriveePrevue, voyageurTelephone, voyageurNationalite, pieceIdentiteType, pieceIdentiteFin, plaqueVehicule, annuleLe, motifAnnulation, gardienInformeLe;
   final List<LcdSejourEvenement> evenements;
-  const LcdSejour({required this.id, required this.lotId, this.lot, required this.declarationLcdId, required this.declareParId, required this.dateArrivee, required this.dateDepart, this.heureArriveePrevue, required this.nbVoyageurs, required this.voyageurPrincipalNom, this.voyageurTelephone, this.voyageurNationalite, this.pieceIdentiteType, this.pieceIdentiteFin, this.plaqueVehicule, required this.statut, this.annuleLe, this.motifAnnulation, this.gardienInformeLe, required this.creeLe, required this.modifieLe, this.evenements = const []});
+  /// Chemins storage des pièces jointes (lecture via /lcd/sejours/{id}/pieces-jointes).
+  final List<String> piecesJointes;
+  const LcdSejour({required this.id, required this.lotId, this.lot, required this.declarationLcdId, required this.declareParId, required this.dateArrivee, required this.dateDepart, this.heureArriveePrevue, required this.nbVoyageurs, required this.voyageurPrincipalNom, this.voyageurTelephone, this.voyageurNationalite, this.pieceIdentiteType, this.pieceIdentiteFin, this.plaqueVehicule, required this.statut, this.annuleLe, this.motifAnnulation, this.gardienInformeLe, required this.creeLe, required this.modifieLe, this.evenements = const [], this.piecesJointes = const []});
   factory LcdSejour.fromJson(Map<String, dynamic> j) => LcdSejour(
+        piecesJointes: (j['piecesJointes'] is List) ? (j['piecesJointes'] as List).whereType<String>().toList() : const [],
         id: _s(j, 'id'), lotId: _s(j, 'lotId'), lot: _map(j['lot']) == null ? null : LcdLotRef.fromJson(_map(j['lot'])!),
         declarationLcdId: _s(j, 'declarationLcdId'), declareParId: _s(j, 'declareParId'),
         dateArrivee: _s(j, 'dateArrivee'), dateDepart: _s(j, 'dateDepart'), heureArriveePrevue: _sn(j, 'heureArriveePrevue'),
@@ -772,4 +775,12 @@ class LcdGestionnaireResult {
         declaration: LcdDeclaration.fromJson(_map(j['declaration']) ?? const {}),
         invitation: _map(j['invitation']) == null ? null : Invitation.fromJson(_map(j['invitation'])!),
       );
+}
+
+/// Pièce jointe d'un séjour LCD — URL signée 15 min (image ou PDF).
+class LcdPieceJointe {
+  final String path, url, nom, type;
+  const LcdPieceJointe({required this.path, required this.url, required this.nom, required this.type});
+  factory LcdPieceJointe.fromJson(Map<String, dynamic> j) => LcdPieceJointe(path: _s(j, 'path'), url: _s(j, 'url'), nom: _s(j, 'nom'), type: _s(j, 'type'));
+  bool get estImage => type == 'IMAGE';
 }

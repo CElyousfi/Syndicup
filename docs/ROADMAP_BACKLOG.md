@@ -266,6 +266,11 @@ déclaration porte l'usage LCD — aucun schéma Zod/test existant touché).
 - [x] **Livré (05/09)** — Mobile `features/lcd/` (propriétaire, gestionnaire, syndic, gardien),
   confirmations gardien hors-ligne (file de sync M10, même Idempotency-Key rejouée), section
   fiche lot, lien incident ↔ séjour, FR/AR, `docs/PARITE_WEB_MOBILE.md` à jour.
+- [x] **Livré (05/09)** — Pièces jointes de séjour (photo prise / galerie / PDF) : colonne
+  `sejour_courte_duree.pieces_jointes`, `POST /lcd/sejours/upload-url`, `GET/POST/DELETE
+  /lcd/sejours/{id}/pieces-jointes` (URL signée 15 min, 10 max, jamais de pièce d'identité),
+  web (formulaire + galerie + visionneuse intégrée) et mobile (caméra, galerie, fichier),
+  effacement par le job CNDP.
 - [x] Tests API (`tests/lcd.test.ts`, `tests/lcd-rls.test.ts`) : régimes, gestionnaire requis,
   déclaration non validée, chevauchement, quota, délai, transitions + journal append-only, job
   idempotent, RLS, incident lié, anonymisation.
