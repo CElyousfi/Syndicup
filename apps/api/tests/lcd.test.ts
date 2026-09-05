@@ -24,6 +24,7 @@ import {
   confirmerArrivee,
   confirmerDepart,
   sejoursDuJour,
+  obtenirSejour,
   syntheseLot,
   executerSejoursQuotidien,
   LcdError,
@@ -292,9 +293,11 @@ describe("Séjours", () => {
     expect(enCours.statut).toBe("EN_COURS");
     expect(enCours.nbVoyageurs).toBe(3); // le déclaré n'est jamais écrasé
     await expect(modifierSejour(ctxAmina(), sejourId, { nb_voyageurs: 1 })).rejects.toMatchObject({ code: "UNPROCESSABLE_ENTITY" });
-    // Le gardien voit le séjour du jour.
+    // Le gardien voit le séjour du jour ; le détail porte le journal.
     const dj = await sejoursDuJour(ctxGardien());
     expect(dj.enCours.map((s) => s.id)).toContain(sejourId);
+    const detail = await obtenirSejour(ctxGardien(), sejourId);
+    expect(detail.evenements.map((e) => e.type)).toContain("ARRIVEE_CONFIRMEE");
 
     // Incident lié au séjour en cours → événement INCIDENT_LIE.
     const inc = await creerIncident(ctxGardien(), { categorie: "NUISANCES", sous_categorie: "Bruit nocturne", partie: "PRIVATIVE", urgence: "NORMALE", lot_id: lotA1, sejour_id: sejourId });

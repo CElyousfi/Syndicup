@@ -30,6 +30,7 @@ class DashboardScreen extends ConsumerWidget {
       'GARDIEN' => const _DashGardien(),
       'PRESTATAIRE' => const _DashPrestataire(),
       'LOCATAIRE' => const _DashResident(locataire: true),
+      'GESTIONNAIRE_LCD' => const _DashResident(locataire: true),
       _ => const _DashResident(locataire: false),
     };
     return Scaffold(appBar: const ShellHeader(), body: body);
@@ -343,9 +344,12 @@ class _DashResident extends ConsumerWidget {
     final visites = ref.watch(visitesProvider);
     final notifs = ref.watch(notificationsProvider);
     final documents = ref.watch(documentsProvider);
+    // M15 : séjours LCD (propriétaires, gestionnaire) — liste vide pour les autres.
+    final sejoursLcd = ctx.declareSejoursLcd ? (ref.watch(lcdSejoursProvider).valueOrNull ?? const <LcdSejour>[]) : const <LcdSejour>[];
 
     Future<void> refresh() async {
       ref.invalidate(lotsProvider);
+      if (ctx.declareSejoursLcd) ref.invalidate(lcdSejoursProvider);
       ref.invalidate(syntheseProvider);
       ref.invalidate(agListProvider);
       ref.invalidate(incidentsProvider);
@@ -371,7 +375,7 @@ class _DashResident extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          _Greeting(ctx: ctx, subtitle: '${d.roles[ctx.role] ?? ctx.role}${mesLots.isNotEmpty ? ' · ${mesLots.map((x) => x.numero).join(', ')}' : ''}'),
+          _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)}${mesLots.isNotEmpty ? ' · ${mesLots.map((x) => x.numero).join(', ')}' : ''}'),
           HeroCard(
             imageWidget: const CoproPhoto('accueil'),
             label: ctx.copropriete?.nom ?? d.lots.mesLots,
@@ -398,6 +402,7 @@ class _DashResident extends ConsumerWidget {
           TwoCols([
             StatTile(label: d.nav.incidents, value: '${mesIncidents.length}', tone: Tone.sand, hint: d.dash.signalerIncident, onTap: () => context.push('/incidents/nouveau')),
             StatTile(label: d.dash.mesReservations, value: '${mesResas.length}', tone: Tone.lilac, hint: d.espaces.reserver, onTap: () => context.push('/espaces-communs')),
+            if (ctx.declareSejoursLcd) StatTile(label: d.lcd.titre, value: '${sejoursLcd.where((s) => s.actif).length}', tone: Tone.tosca, hint: d.lcd.declarerSejour, onTap: () => context.push('/location-courte-duree')),
             if (!locataire) StatTile(label: d.dash.prochaineAg, value: prochaine.isEmpty ? '—' : formatDateCourte(prochaine.first.dateAg, l), tone: Tone.sage, hint: prochaine.isEmpty ? d.dash.aucuneAg : d.enums.statutAg[prochaine.first.statut], onTap: () => context.push(prochaine.isEmpty ? '/ag' : '/ag/${prochaine.first.id}')),
             StatTile(label: d.nav.documents, value: '${(documents.valueOrNull ?? const []).length}', tone: Tone.neutral, hint: d.documents.subtitle, onTap: () => context.push('/documents')),
           ]),
@@ -508,8 +513,8 @@ class _DashGardien extends ConsumerWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          _Greeting(ctx: ctx, subtitle: '${d.roles[ctx.role] ?? ctx.role} · ${ctx.copropriete?.nom ?? ''}'),
-          PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: d.roles[ctx.role]),
+          _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
+          PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: libelleRole(context, ctx.role)),
           SuCard(
             onTap: () => context.push('/visites?enregistrer=1'),
             padding: const EdgeInsets.all(22),
@@ -592,7 +597,7 @@ class _DashPrestataire extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: d.dash.mesTickets),
-          PhotoBanner('cour', title: ctx.copropriete?.nom, subtitle: d.roles[ctx.role]),
+          PhotoBanner('cour', title: ctx.copropriete?.nom, subtitle: libelleRole(context, ctx.role)),
           TwoCols([
             StatTile(label: d.dash.mesTickets, value: '${tickets.length}', tone: Tone.sage),
             StatTile(label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand),

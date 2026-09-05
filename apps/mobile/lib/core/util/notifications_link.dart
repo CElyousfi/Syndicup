@@ -19,5 +19,10 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('VISITE_')) return id('visite_id') != null ? '/visites/${id('visite_id')}' : '/visites';
   if (templateCode.startsWith('RESERVATION_')) return '/reservations';
   if (templateCode.startsWith('LITIGE_')) return '/litiges';
+  if (templateCode.startsWith('LCD_')) {
+    if (id('sejour_id') != null) return '/location-courte-duree/sejours/${id('sejour_id')}';
+    if (id('declaration_id') != null) return '/location-courte-duree/declarations/${id('declaration_id')}';
+    return '/location-courte-duree';
+  }
   return '/notifications';
 }

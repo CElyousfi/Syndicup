@@ -89,7 +89,9 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
 
 // ── F2 Signalement guidé ──────────────────────────────────────────────────────
 class IncidentFormScreen extends ConsumerStatefulWidget {
-  const IncidentFormScreen({super.key});
+  const IncidentFormScreen({super.key, this.sejourId});
+  /// Séjour LCD à lier (deep-link depuis la fiche séjour — M15).
+  final String? sejourId;
   @override
   ConsumerState<IncidentFormScreen> createState() => _IncidentFormScreenState();
 }
@@ -99,11 +101,18 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
   String _partie = 'COMMUNE';
   String _urgence = 'NORMALE';
   String? _lot;
+  String? _sejour;
   final _sous = TextEditingController();
   final _desc = TextEditingController();
   final List<XFile> _photos = [];
   bool _loading = false;
   ApiFail? _fail;
+
+  @override
+  void initState() {
+    super.initState();
+    _sejour = widget.sejourId;
+  }
 
   Future<void> _pick(ImageSource src) async {
     if (_photos.length >= 5) return;
@@ -118,6 +127,9 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
     final t = Theme.of(context).textTheme;
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final mesLots = ctx.isResident ? lots.where((x) => x.concerne(ctx.profil.id)).toList() : lots;
+    // Séjours LCD en cours (M15) : sélecteur affiché seulement s'il y en a (ou si un séjour est pré-lié).
+    final sejoursEnCours = ref.watch(lcdSejoursEnCoursProvider).valueOrNull ?? const <LcdSejour>[];
+    final sejourOptions = [...sejoursEnCours, if (_sejour != null && !sejoursEnCours.any((s) => s.id == _sejour)) null];
     return SuPage(
       title: d.incidents.signaler,
       children: [
@@ -180,6 +192,22 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         const SizedBox(height: 14),
         if (mesLots.isNotEmpty) ...[
           SuSelect<String?>(label: d.incidents.lotConcerne, value: _lot, options: [null, ...mesLots.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : mesLots.firstWhere((x) => x.id == v).numero, onChanged: (v) => setState(() => _lot = v), help: d.incidents.lotConcerneAide),
+          const SizedBox(height: 14),
+        ],
+        if (sejoursEnCours.isNotEmpty || _sejour != null) ...[
+          SuSelect<String?>(
+            label: d.incidents.lierSejour,
+            value: _sejour,
+            options: [null, ...sejourOptions.map((s) => s?.id ?? _sejour)],
+            labelOf: (v) => v == null ? d.common.none : sejoursEnCours.where((s) => s.id == v).map((s) => '${s.voyageurPrincipalNom} → ${s.lotNumero}').firstOrNull ?? '${d.incidents.sejourLie} ${v.substring(0, 8)}',
+            onChanged: (v) => setState(() {
+              _sejour = v;
+              final s = sejoursEnCours.where((x) => x.id == v).firstOrNull;
+              if (s != null && mesLots.any((x) => x.id == s.lotId)) _lot = s.lotId;
+            }),
+            help: d.incidents.lierSejourAide,
+            error: fieldError(_fail, 'sejour_id'),
+          ),
           const SizedBox(height: 14),
         ],
         Text(d.incidents.photos, style: t.labelMedium?.copyWith(color: SuColors.ink)),
@@ -245,6 +273,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
       'description': _desc.text.trim().isEmpty ? null : _desc.text.trim(),
       'partie': _partie,
       'urgence': _urgence,
+      if (_sejour != null) 'sejour_id': _sejour,
       if (chemins.isNotEmpty) 'photos': chemins,
     }, parse: (j) => Incident.fromJson(asMap(j)));
     if (!mounted) return;

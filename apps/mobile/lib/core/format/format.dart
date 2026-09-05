@@ -114,6 +114,29 @@ String formatDateLongue(String? iso, Locale locale) {
   return latn('${DateFormat.yMMMMEEEEd(l).format(d)} · ${DateFormat.Hm(l).format(d)}');
 }
 
+/// Jour civil « YYYY-MM-DD » (sans heure, sans fuseau) → « 5 sept. 2026 ». Les dates de
+/// séjour LCD sont des dates pures : jamais converties en heure locale (pas de décalage).
+String formatJour(String? jour, Locale locale) {
+  if (jour == null || jour.length < 10) return '—';
+  final y = int.tryParse(jour.substring(0, 4));
+  final m = int.tryParse(jour.substring(5, 7));
+  final d = int.tryParse(jour.substring(8, 10));
+  if (y == null || m == null || d == null) return jour;
+  return latn(DateFormat.MMMd(_intlLocale(locale)).format(DateTime(y, m, d)));
+}
+
+String formatJourAnnee(String? jour, Locale locale) {
+  if (jour == null || jour.length < 10) return '—';
+  final y = int.tryParse(jour.substring(0, 4));
+  final m = int.tryParse(jour.substring(5, 7));
+  final d = int.tryParse(jour.substring(8, 10));
+  if (y == null || m == null || d == null) return jour;
+  return latn(DateFormat.yMMMd(_intlLocale(locale)).format(DateTime(y, m, d)));
+}
+
+/// Aujourd'hui en « YYYY-MM-DD » (jour local).
+String jourIso(DateTime d) => '${d.year.toString().padLeft(4, '0')}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
 /// Téléphone +212612345678 → +212 6 12 34 56 78.
 String formatTelephone(String? tel) {
   if (tel == null || tel.isEmpty) return '—';

@@ -39,6 +39,10 @@ void main() {
       expect(normaliserTelephone('12345'), isNull);
       expect(formatTelephone('+212600000002'), '+212 6 00 00 00 02');
     });
+    test('jour civil LCD sans décalage de fuseau', () {
+      expect(formatJourAnnee('abcd', const Locale('fr')), '—');
+      expect(jourIso(DateTime(2026, 1, 3)), '2026-01-03');
+    });
     test('chiffres latins en arabe', () {
       expect(latn('٢٠٢٦'), '2026');
     });
@@ -52,6 +56,9 @@ void main() {
       expect(lienNotification('PV_DISPONIBLE', {'ag_id': 'a1'}), '/ag/a1/pv');
       expect(lienNotification('APPEL_DE_FONDS_EMIS', {'lot_id': 'l1'}), '/lots/l1?onglet=finances');
       expect(lienNotification('INCONNU', null), '/notifications');
+      expect(lienNotification('LCD_SEJOUR_DECLARE', {'sejour_id': 's1'}), '/location-courte-duree/sejours/s1');
+      expect(lienNotification('LCD_DECLARATION_A_VALIDER', {'declaration_id': 'd1'}), '/location-courte-duree/declarations/d1');
+      expect(lienNotification('LCD_REGIME_MODIFIE', null), '/location-courte-duree');
     });
   });
 }

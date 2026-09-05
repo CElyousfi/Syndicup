@@ -22,10 +22,11 @@ lib/
 │   ├── util/         navigation par rôle (4 onglets + Plus), badges de statut, liens de notification
 │   └── widgets/      kit : cartes, badges, formulaires, feuilles, ConfirmDialog, états vide/erreur
 ├── features/         un dossier par module : auth, dashboard, lots, finances, ag, incidents,
-│                     espaces, visites, personnel, documents, notifications, litiges, profil,
-│                     membres, invitations, parametres, admin, shell
-└── offline/          Drift/SQLite : file de sync des VISITES uniquement (écriture optimiste,
-                      retry au retour du réseau, Idempotency-Key = id local → jamais de doublon)
+│                     espaces, visites, lcd (location courte durée), personnel, documents,
+│                     notifications, litiges, profil, membres, invitations, parametres, admin, shell
+└── offline/          Drift/SQLite : files de sync gardien — VISITES et confirmations LCD
+                      (arrivée / départ d'un séjour, M15) : écriture optimiste, retry au retour
+                      du réseau, Idempotency-Key = id local → jamais de doublon
 ```
 
 ## Lancer en local

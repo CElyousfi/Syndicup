@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'i18n.dart';
+
 /// Chaînes propres au mobile (hors-ligne, file de sync, accueil, push) — absentes du
 /// dictionnaire web. FR + AR, même discipline de ton (vouvoiement, langage courant).
 class MobileDict {
@@ -63,6 +65,19 @@ class MobileDict {
     required this.viewerError,
     required this.viewerUnsupported,
     required this.photoChanger,
+    required this.lcdGestionnaireDesigne,
+    required this.lcdInviter,
+    required this.lcdDeclareLe,
+    required this.lcdDecider,
+    required this.lcdQueueTitle,
+    required this.lcdGardienInforme,
+    required this.lcdAucunLotDeclarable,
+    required this.lcdOfflineConfirm,
+    required this.lcdVoirLot,
+    required this.lcdDeclarationDeLot,
+    required this.lcdSejourDe,
+    required this.lcdStatutNonDeclare,
+    required this.lcdConseilLecture,
   });
 
   final String welcomeTitle, welcomeBody, haveCode, offline, online, queueTitle, queueLocal, queueHint, pendingSend, synced, worksOffline,
@@ -70,6 +85,9 @@ class MobileDict {
       doorBody, registeredBy, loading, newNotification, open, today, tabPlus, menuTitle, sessionTitle, noFinancesTitle, noFinancesBody,
       cloisonnement, startScan, scanOrType, calculNote, pdfFr, addToCalendar, cannotAttend, chooseSlot, conflictNote, contactSyndic, copied,
       retryHint, selectLot, selectIdentity, liveResults, tantiemesExprimes, pupitreRule, pending, pushPermission, langue, networkError, timeoutError, offlineCached, viewerError, viewerUnsupported, photoChanger;
+
+  // ── M15 Location courte durée (Doc A §10.2) — chaînes propres au mobile (file hors-ligne, libellés courts) ; le reste vient de `dict.lcd`.
+  final String lcdQueueTitle, lcdOfflineConfirm, lcdStatutNonDeclare, lcdConseilLecture, lcdDeclareLe, lcdDecider, lcdInviter, lcdGestionnaireDesigne, lcdAucunLotDeclarable, lcdVoirLot, lcdDeclarationDeLot, lcdSejourDe, lcdGardienInforme;
 
   static const fr = MobileDict(
     welcomeTitle: 'Votre copropriété,\nenfin lisible.',
@@ -131,6 +149,19 @@ class MobileDict {
     viewerError: 'Impossible de charger le fichier — réessayez.',
     viewerUnsupported: 'Aperçu indisponible pour ce type de fichier : partagez-le pour l\'ouvrir avec une autre application.',
     photoChanger: 'Changer la photo',
+    lcdGestionnaireDesigne: 'Gestionnaire désigné',
+    lcdInviter: 'Inviter',
+    lcdDeclareLe: 'Déclaré le',
+    lcdDecider: 'Décider',
+    lcdQueueTitle: '{n} confirmation(s) en attente d\'envoi',
+    lcdGardienInforme: 'Gardien informé',
+    lcdAucunLotDeclarable: 'Aucun lot à déclarer : tous vos lots sont déjà déclarés ou vous n\'êtes propriétaire d\'aucun lot.',
+    lcdOfflineConfirm: 'Les confirmations fonctionnent sans réseau et sont envoyées dès que la connexion revient.',
+    lcdVoirLot: 'Voir le lot',
+    lcdDeclarationDeLot: 'Déclaration du lot {lot}',
+    lcdSejourDe: 'Séjour · lot {lot}',
+    lcdStatutNonDeclare: 'Non déclaré',
+    lcdConseilLecture: 'Lecture seule : le conseil syndical consulte les déclarations et les séjours.',
   );
 
   static const ar = MobileDict(
@@ -193,6 +224,19 @@ class MobileDict {
     viewerError: 'تعذّر تحميل الملف — أعيدوا المحاولة.',
     viewerUnsupported: 'المعاينة غير متاحة لهذا النوع من الملفات: شاركوه لفتحه بتطبيق آخر.',
     photoChanger: 'تغيير الصورة',
+    lcdGestionnaireDesigne: 'المسيّر معيَّن',
+    lcdInviter: 'دعوة',
+    lcdDeclareLe: 'صُرِّح به في',
+    lcdDecider: 'اتخاذ القرار',
+    lcdQueueTitle: '{n} تأكيد في انتظار الإرسال',
+    lcdGardienInforme: 'تم إخطار الحارس',
+    lcdAucunLotDeclarable: 'لا توجد وحدة للتصريح: جميع وحداتكم مصرَّح بها بالفعل أو لستم مالكين لأي وحدة.',
+    lcdOfflineConfirm: 'تعمل التأكيدات بدون شبكة وتُرسَل فور عودة الاتصال.',
+    lcdVoirLot: 'عرض الوحدة',
+    lcdDeclarationDeLot: 'تصريح الوحدة {lot}',
+    lcdSejourDe: 'إقامة · الوحدة {lot}',
+    lcdStatutNonDeclare: 'غير مصرَّح به',
+    lcdConseilLecture: 'قراءة فقط: يطّلع مجلس السنديك على التصريحات والإقامات.',
   );
 
   static MobileDict of(Locale l) => l.languageCode == 'ar' ? ar : fr;
@@ -201,3 +245,6 @@ class MobileDict {
 extension MobileDictContext on BuildContext {
   MobileDict get mdict => MobileDict.of(Localizations.localeOf(this));
 }
+
+/// Libellé d'un rôle (dictionnaire web, repli sur le code brut).
+String libelleRole(BuildContext context, String role) => context.dict.roles[role] ?? role;

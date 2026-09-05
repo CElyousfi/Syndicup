@@ -9,6 +9,9 @@ void main() {
     expect(dictAr.enums.statutAg.keys, dictFr.enums.statutAg.keys);
     expect(dictAr.roles.keys, dictFr.roles.keys);
     expect(dictAr.enums.categorieIncident.length, 11);
+    expect(dictAr.enums.regimeLcd.keys, dictFr.enums.regimeLcd.keys);
+    expect(dictAr.enums.statutSejour.keys, dictFr.enums.statutSejour.keys);
+    expect(dictFr.roles.containsKey('GESTIONNAIRE_LCD'), isTrue);
   });
   test('interpolation', () {
     expect(fill('Bonjour {prenom}', {'prenom': 'Amina'}), 'Bonjour Amina');
@@ -18,5 +21,7 @@ void main() {
     expect(MobileDict.fr.offline, isNotEmpty);
     expect(MobileDict.ar.offline, isNotEmpty);
     expect(MobileDict.ar.queueTitle, contains('{n}'));
+    expect(MobileDict.ar.lcdQueueTitle, contains('{n}'));
+    expect(MobileDict.fr.lcdOfflineConfirm, isNotEmpty);
   });
 }

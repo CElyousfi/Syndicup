@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../auth/session.dart';
 import '../format/centimes.dart';
 import 'api_client.dart';
+import 'api_result.dart';
 import 'models.dart';
 
 /// Lectures (server state) — un provider par ressource, invalidé de façon ciblée après chaque
@@ -235,3 +236,47 @@ List<MembreOption> annuaireDepuisLots(List<Lot> lots) {
   final l = parId.values.toList()..sort((a, b) => a.nom.compareTo(b.nom));
   return l;
 }
+
+// ── M15 Location courte durée ─────────────────────────────────────────────────
+
+final lcdReglementProvider = FutureProvider.autoDispose<LcdReglement>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/reglement', parse: (j) => LcdReglement.fromJson(asMap(j))));
+});
+
+final lcdDeclarationsProvider = FutureProvider.autoDispose<List<LcdDeclaration>>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/declarations', parse: (j) => parseList(j, LcdDeclaration.fromJson)));
+});
+
+final lcdDeclarationProvider = FutureProvider.autoDispose.family<LcdDeclaration, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/declarations/$id', parse: (j) => LcdDeclaration.fromJson(asMap(j))));
+});
+
+final lcdSejoursProvider = FutureProvider.autoDispose<List<LcdSejour>>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/sejours', parse: (j) => parseList(j, LcdSejour.fromJson)));
+});
+
+/// Séjours en cours — sélecteur « lier à un séjour » du formulaire d'incident. Rôles sans
+/// lecture LCD (locataire, prestataire) : liste vide, jamais une erreur.
+final lcdSejoursEnCoursProvider = FutureProvider.autoDispose<List<LcdSejour>>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<LcdSejour>>('/lcd/sejours', query: {'statut': 'EN_COURS'}, parse: (j) => parseList(j, LcdSejour.fromJson));
+  return r.dataOrNull ?? const [];
+});
+
+final lcdSejourProvider = FutureProvider.autoDispose.family<LcdSejour, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/sejours/$id', parse: (j) => LcdSejour.fromJson(asMap(j))));
+});
+
+final lcdDuJourProvider = FutureProvider.autoDispose<LcdDuJour>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/lcd/sejours/du-jour', parse: (j) => LcdDuJour.fromJson(asMap(j))));
+});
+
+/// Synthèse LCD d'un lot (fiche lot) — `null` si le rôle n'y a pas accès (403) ou si le lot
+/// est inconnu (404) : la section est alors simplement absente.
+final lcdSyntheseProvider = FutureProvider.autoDispose.family<LcdSynthese?, String>((ref, lotId) async {
+  final r = await ref.watch(apiClientProvider).get<LcdSynthese>('/lcd/lots/$lotId/synthese', parse: (j) => LcdSynthese.fromJson(asMap(j)));
+  return switch (r) {
+    ApiOk<LcdSynthese>(:final data) => data,
+    ApiFail<LcdSynthese>(:final status) when status == 403 || status == 404 => null,
+    ApiFail<LcdSynthese>() => unwrap(r),
+  };
+});

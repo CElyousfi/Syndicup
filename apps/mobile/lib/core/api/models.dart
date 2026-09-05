@@ -619,3 +619,157 @@ class Litige {
         escaladeNiveau: _in(j, 'escaladeNiveau') ?? 0, creePar: _s(j, 'creePar'), creeLe: _s(j, 'creeLe'), modifieLe: _s(j, 'modifieLe'),
       );
 }
+
+// ── M15 Location courte durée (Doc A §10.2) ─────────────────────────────────
+/// Paramètres du régime ENCADREE — clés snake_case dans le JSON (règlement de la copropriété).
+class LcdParametres {
+  final bool declarationPrealableObligatoire, gestionnaireObligatoireSiProprietaireAbsent, contactGardienObligatoire;
+  final int? delaiDeclarationHeures, nbNuitsMaxParAn, nbVoyageursMaxParLot;
+  const LcdParametres({this.declarationPrealableObligatoire = true, this.delaiDeclarationHeures, this.nbNuitsMaxParAn, this.nbVoyageursMaxParLot, this.gestionnaireObligatoireSiProprietaireAbsent = false, this.contactGardienObligatoire = true});
+  factory LcdParametres.fromJson(Map<String, dynamic> j) => LcdParametres(
+        declarationPrealableObligatoire: _b(j, 'declaration_prealable_obligatoire', true),
+        delaiDeclarationHeures: _in(j, 'delai_declaration_heures'),
+        nbNuitsMaxParAn: _in(j, 'nb_nuits_max_par_an'),
+        nbVoyageursMaxParLot: _in(j, 'nb_voyageurs_max_par_lot'),
+        gestionnaireObligatoireSiProprietaireAbsent: _b(j, 'gestionnaire_obligatoire_si_proprietaire_absent'),
+        contactGardienObligatoire: _b(j, 'contact_gardien_obligatoire', true),
+      );
+  Map<String, dynamic> toJson() => {
+        'declaration_prealable_obligatoire': declarationPrealableObligatoire,
+        'delai_declaration_heures': delaiDeclarationHeures,
+        'nb_nuits_max_par_an': nbNuitsMaxParAn,
+        'nb_voyageurs_max_par_lot': nbVoyageursMaxParLot,
+        'gestionnaire_obligatoire_si_proprietaire_absent': gestionnaireObligatoireSiProprietaireAbsent,
+        'contact_gardien_obligatoire': contactGardienObligatoire,
+      };
+}
+
+class LcdReglement {
+  final String regimeLcd; // NON_DEFINI | AUTORISEE | ENCADREE | INTERDITE
+  final LcdParametres? parametres;
+  final String? regimeLcdAgResolutionId;
+  final Map<String, dynamic>? agResolution;
+  const LcdReglement({required this.regimeLcd, this.parametres, this.regimeLcdAgResolutionId, this.agResolution});
+  factory LcdReglement.fromJson(Map<String, dynamic> j) => LcdReglement(
+        regimeLcd: j['regimeLcd'] == null ? 'NON_DEFINI' : _s(j, 'regimeLcd'),
+        parametres: _map(j['parametresLcdJson']) == null ? null : LcdParametres.fromJson(_map(j['parametresLcdJson'])!),
+        regimeLcdAgResolutionId: _sn(j, 'regimeLcdAgResolutionId'),
+        agResolution: _map(j['agResolution']),
+      );
+  bool get autorise => regimeLcd == 'AUTORISEE' || regimeLcd == 'ENCADREE';
+}
+
+class LcdLotRef {
+  final String id, numero, typeLot;
+  const LcdLotRef({required this.id, required this.numero, required this.typeLot});
+  factory LcdLotRef.fromJson(Map<String, dynamic> j) => LcdLotRef(id: _s(j, 'id'), numero: _s(j, 'numero'), typeLot: _s(j, 'typeLot'));
+}
+
+class LcdDeclaration {
+  final String id, coproprieteId, lotId, declareParId, statut, dateDebut, creeLe, modifieLe;
+  final LcdLotRef? lot;
+  final String? gestionnaireId, contactUrgenceNom, contactUrgenceTelephone, motifDecision, decideParId, decideLe, dateFin;
+  final List<String>? plateformes;
+  final List<LcdSejour> sejours;
+  const LcdDeclaration({required this.id, required this.coproprieteId, required this.lotId, this.lot, required this.declareParId, this.gestionnaireId, this.plateformes, this.contactUrgenceNom, this.contactUrgenceTelephone, required this.statut, this.motifDecision, this.decideParId, this.decideLe, required this.dateDebut, this.dateFin, required this.creeLe, required this.modifieLe, this.sejours = const []});
+  factory LcdDeclaration.fromJson(Map<String, dynamic> j) => LcdDeclaration(
+        id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), lotId: _s(j, 'lotId'),
+        lot: _map(j['lot']) == null ? null : LcdLotRef.fromJson(_map(j['lot'])!),
+        declareParId: _s(j, 'declareParId'), gestionnaireId: _sn(j, 'gestionnaireId'),
+        plateformes: (j['plateformesJson'] as List?)?.map((e) => e.toString()).toList(),
+        contactUrgenceNom: _sn(j, 'contactUrgenceNom'), contactUrgenceTelephone: _sn(j, 'contactUrgenceTelephone'),
+        statut: _s(j, 'statut'), motifDecision: _sn(j, 'motifDecision'), decideParId: _sn(j, 'decideParId'), decideLe: _sn(j, 'decideLe'),
+        dateDebut: _s(j, 'dateDebut'), dateFin: _sn(j, 'dateFin'), creeLe: _s(j, 'creeLe'), modifieLe: _s(j, 'modifieLe'),
+        sejours: _list(j['sejours'], LcdSejour.fromJson),
+      );
+  bool get ouverte => statut == 'EN_ATTENTE' || statut == 'VALIDEE' || statut == 'SUSPENDUE';
+  String get lotNumero => lot?.numero ?? lotId.substring(0, 8);
+}
+
+class LcdSejourEvenement {
+  final String id, type, horodatage;
+  final String? acteurId;
+  final Map<String, dynamic>? detailsJson;
+  const LcdSejourEvenement({required this.id, required this.type, this.acteurId, this.detailsJson, required this.horodatage});
+  factory LcdSejourEvenement.fromJson(Map<String, dynamic> j) =>
+      LcdSejourEvenement(id: _s(j, 'id'), type: _s(j, 'type'), acteurId: _sn(j, 'acteurId'), detailsJson: _map(j['detailsJson']), horodatage: _s(j, 'horodatage'));
+}
+
+class LcdSejour {
+  final String id, lotId, declarationLcdId, declareParId, dateArrivee, dateDepart, voyageurPrincipalNom, statut, creeLe, modifieLe;
+  final LcdLotRef? lot;
+  final int nbVoyageurs;
+  final String? heureArriveePrevue, voyageurTelephone, voyageurNationalite, pieceIdentiteType, pieceIdentiteFin, plaqueVehicule, annuleLe, motifAnnulation, gardienInformeLe;
+  final List<LcdSejourEvenement> evenements;
+  const LcdSejour({required this.id, required this.lotId, this.lot, required this.declarationLcdId, required this.declareParId, required this.dateArrivee, required this.dateDepart, this.heureArriveePrevue, required this.nbVoyageurs, required this.voyageurPrincipalNom, this.voyageurTelephone, this.voyageurNationalite, this.pieceIdentiteType, this.pieceIdentiteFin, this.plaqueVehicule, required this.statut, this.annuleLe, this.motifAnnulation, this.gardienInformeLe, required this.creeLe, required this.modifieLe, this.evenements = const []});
+  factory LcdSejour.fromJson(Map<String, dynamic> j) => LcdSejour(
+        id: _s(j, 'id'), lotId: _s(j, 'lotId'), lot: _map(j['lot']) == null ? null : LcdLotRef.fromJson(_map(j['lot'])!),
+        declarationLcdId: _s(j, 'declarationLcdId'), declareParId: _s(j, 'declareParId'),
+        dateArrivee: _s(j, 'dateArrivee'), dateDepart: _s(j, 'dateDepart'), heureArriveePrevue: _sn(j, 'heureArriveePrevue'),
+        nbVoyageurs: _in(j, 'nbVoyageurs') ?? 1, voyageurPrincipalNom: _s(j, 'voyageurPrincipalNom'), voyageurTelephone: _sn(j, 'voyageurTelephone'),
+        voyageurNationalite: _sn(j, 'voyageurNationalite'), pieceIdentiteType: _sn(j, 'pieceIdentiteType'), pieceIdentiteFin: _sn(j, 'pieceIdentiteFin'),
+        plaqueVehicule: _sn(j, 'plaqueVehicule'), statut: _s(j, 'statut'), annuleLe: _sn(j, 'annuleLe'), motifAnnulation: _sn(j, 'motifAnnulation'),
+        gardienInformeLe: _sn(j, 'gardienInformeLe'), creeLe: _s(j, 'creeLe'), modifieLe: _s(j, 'modifieLe'),
+        evenements: _list(j['evenements'], LcdSejourEvenement.fromJson),
+      );
+  /// Jour civil « YYYY-MM-DD » (les dates de séjour sont des dates sans heure côté API).
+  String get jourArrivee => dateArrivee.length >= 10 ? dateArrivee.substring(0, 10) : dateArrivee;
+  String get jourDepart => dateDepart.length >= 10 ? dateDepart.substring(0, 10) : dateDepart;
+  String get lotNumero => lot?.numero ?? lotId.substring(0, 8);
+  bool get actif => statut == 'PREVU' || statut == 'EN_COURS';
+  int get nuits {
+    final a = DateTime.tryParse(jourArrivee);
+    final d = DateTime.tryParse(jourDepart);
+    if (a == null || d == null) return 0;
+    final n = d.difference(a).inDays;
+    return n < 0 ? 0 : n;
+  }
+  Map<String, dynamic> toJson() => {
+        'id': id, 'lotId': lotId, 'lot': lot == null ? null : {'id': lot!.id, 'numero': lot!.numero, 'typeLot': lot!.typeLot},
+        'declarationLcdId': declarationLcdId, 'declareParId': declareParId, 'dateArrivee': dateArrivee, 'dateDepart': dateDepart,
+        'heureArriveePrevue': heureArriveePrevue, 'nbVoyageurs': nbVoyageurs, 'voyageurPrincipalNom': voyageurPrincipalNom,
+        'voyageurTelephone': voyageurTelephone, 'voyageurNationalite': voyageurNationalite, 'pieceIdentiteType': pieceIdentiteType,
+        'pieceIdentiteFin': pieceIdentiteFin, 'plaqueVehicule': plaqueVehicule, 'statut': statut, 'annuleLe': annuleLe,
+        'motifAnnulation': motifAnnulation, 'gardienInformeLe': gardienInformeLe, 'creeLe': creeLe, 'modifieLe': modifieLe,
+      };
+}
+
+/// Tableau du jour (gardien / syndic) : arrivées prévues, départs attendus, séjours en cours.
+class LcdDuJour {
+  final String date;
+  final List<LcdSejour> arrivees, departs, enCours;
+  const LcdDuJour({required this.date, this.arrivees = const [], this.departs = const [], this.enCours = const []});
+  factory LcdDuJour.fromJson(Map<String, dynamic> j) => LcdDuJour(
+        date: _s(j, 'date'), arrivees: _list(j['arrivees'], LcdSejour.fromJson), departs: _list(j['departs'], LcdSejour.fromJson), enCours: _list(j['enCours'], LcdSejour.fromJson),
+      );
+  Map<String, dynamic> toJson() => {'date': date, 'arrivees': arrivees.map((s) => s.toJson()).toList(), 'departs': departs.map((s) => s.toJson()).toList(), 'enCours': enCours.map((s) => s.toJson()).toList()};
+  bool get vide => arrivees.isEmpty && departs.isEmpty && enCours.isEmpty;
+}
+
+class LcdSynthese {
+  final LcdLotRef lot;
+  final String regimeLcd;
+  final LcdDeclaration? declaration;
+  final int annee, nuitsUtilisees, incidentsLies;
+  final int? nuitsQuota;
+  final List<LcdSejour> derniersSejours;
+  const LcdSynthese({required this.lot, required this.regimeLcd, this.declaration, required this.annee, required this.nuitsUtilisees, this.nuitsQuota, this.derniersSejours = const [], required this.incidentsLies});
+  factory LcdSynthese.fromJson(Map<String, dynamic> j) => LcdSynthese(
+        lot: LcdLotRef.fromJson(_map(j['lot']) ?? const {}), regimeLcd: _s(j, 'regimeLcd'),
+        declaration: _map(j['declaration']) == null ? null : LcdDeclaration.fromJson(_map(j['declaration'])!),
+        annee: _in(j, 'annee') ?? DateTime.now().year, nuitsUtilisees: _in(j, 'nuitsUtilisees') ?? 0, nuitsQuota: _in(j, 'nuitsQuota'),
+        derniersSejours: _list(j['derniersSejours'], LcdSejour.fromJson), incidentsLies: _in(j, 'incidentsLies') ?? 0,
+      );
+}
+
+/// Résultat de la désignation d'un gestionnaire : déclaration mise à jour + invitation M2 (si
+/// la personne n'a pas encore de compte).
+class LcdGestionnaireResult {
+  final LcdDeclaration declaration;
+  final Invitation? invitation;
+  const LcdGestionnaireResult({required this.declaration, this.invitation});
+  factory LcdGestionnaireResult.fromJson(Map<String, dynamic> j) => LcdGestionnaireResult(
+        declaration: LcdDeclaration.fromJson(_map(j['declaration']) ?? const {}),
+        invitation: _map(j['invitation']) == null ? null : Invitation.fromJson(_map(j['invitation'])!),
+      );
+}

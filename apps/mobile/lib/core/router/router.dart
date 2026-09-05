@@ -17,6 +17,8 @@ import '../../features/espaces/espaces_screens.dart';
 import '../../features/finances/finances_screens.dart';
 import '../../features/incidents/incidents_screens.dart';
 import '../../features/invitations/invitations_screen.dart';
+import '../../features/lcd/lcd_screens.dart';
+import '../../features/lcd/lcd_sejour_screens.dart';
 import '../../features/litiges/litiges_screen.dart';
 import '../../features/lots/lots_screens.dart';
 import '../../features/membres/membres_screens.dart';
@@ -107,7 +109,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/ag/:id/pv', builder: (_, s) => AgPvScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/ag/:id/resolutions/:rid/votes', builder: (_, s) => AgVotesScreen(agId: s.pathParameters['id']!, resolutionId: s.pathParameters['rid']!)),
           GoRoute(path: '/incidents', builder: (_, __) => const IncidentsScreen()),
-          GoRoute(path: '/incidents/nouveau', builder: (_, __) => const IncidentFormScreen()),
+          GoRoute(path: '/incidents/nouveau', builder: (_, s) => IncidentFormScreen(sejourId: s.uri.queryParameters['sejour'])),
           GoRoute(path: '/incidents/:id', builder: (_, s) => IncidentDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/prestataires', builder: (_, __) => const PrestatairesScreen()),
           GoRoute(path: '/espaces-communs', builder: (_, __) => const EspacesScreen()),
@@ -115,6 +117,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/visites', builder: (_, s) => VisitesScreen(enregistrer: s.uri.queryParameters['enregistrer'] == '1')),
           GoRoute(path: '/visites/:id', builder: (_, s) => VisiteRepondreScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/personnel', builder: (_, __) => const PersonnelScreen()),
+          GoRoute(path: '/location-courte-duree', builder: (_, __) => const LcdScreen()),
+          GoRoute(path: '/location-courte-duree/reglement', builder: (_, __) => const LcdReglementScreen()),
+          GoRoute(path: '/location-courte-duree/declarations/:id', builder: (_, s) => LcdDeclarationScreen(id: s.pathParameters['id']!)),
+          GoRoute(path: '/location-courte-duree/sejours/nouveau', builder: (_, s) => LcdSejourFormScreen(sejourId: s.uri.queryParameters['sejour'], lotId: s.uri.queryParameters['lot'])),
+          GoRoute(path: '/location-courte-duree/sejours/:id', builder: (_, s) => LcdSejourScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
           GoRoute(
             path: '/visionneuse',

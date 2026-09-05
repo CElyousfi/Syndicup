@@ -9,7 +9,7 @@ import 'session.dart';
 /// Rôles du système (Master Spec 4.1) — priorité descendante pour le rôle principal.
 const List<String> rolePriorite = [
   'SUPER_ADMIN', 'SYNDIC', 'CONSEIL_SYNDICAL', 'PROPRIETAIRE', 'INDIVISAIRE',
-  'PERSONNE_MORALE_REPRESENTANT', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE',
+  'PERSONNE_MORALE_REPRESENTANT', 'GESTIONNAIRE_LCD', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE',
 ];
 
 /// Contexte applicatif d'une session prête — équivalent mobile de apps/web/lib/app-context.ts.
@@ -34,11 +34,17 @@ class AppContext {
   bool get isPrestataire => role == 'PRESTATAIRE';
   bool get isLocataire => role == 'LOCATAIRE';
   bool get isProprietaire => has('PROPRIETAIRE') || has('INDIVISAIRE') || has('PERSONNE_MORALE_REPRESENTANT');
+  /// Gestionnaire de location courte durée désigné par un propriétaire (M15, Doc A §10.2).
+  bool get isGestionnaireLcd => has('GESTIONNAIRE_LCD');
+  /// Accès au module LCD : syndic, conseil (lecture), propriétaires, gestionnaire, gardien (terrain).
+  bool get voitLcd => isGestion || isConseil || isProprietaire || isGestionnaireLcd || isGardien;
+  /// Peut déclarer un séjour : propriétaire de son lot, gestionnaire désigné, syndic (au nom de).
+  bool get declareSejoursLcd => isGestion || isProprietaire || isGestionnaireLcd;
   /// Résident (propriétaire, indivisaire, personne morale, locataire) sans casquette de gestion.
   bool get isResident => !isGestion && !isConseil && !isGardien && !isPrestataire;
   /// Lecture financière étendue : syndic, conseil, super admin.
   bool get voitFinancesGlobales => isGestion || isConseil;
-  bool get voitAg => !isLocataire && !isGardien && !isPrestataire;
+  bool get voitAg => !isLocataire && !isGardien && !isPrestataire && role != 'GESTIONNAIRE_LCD';
   bool get multiCopro => profil.roles.where((r) => r.actif).map((r) => r.coproprieteId).toSet().length > 1;
 
   String get prenom => profil.prenom ?? [profil.prenom, profil.nom].whereType<String>().join(' ');

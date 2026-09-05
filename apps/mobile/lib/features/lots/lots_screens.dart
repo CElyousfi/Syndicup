@@ -16,6 +16,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../lcd/lcd_screens.dart';
 import '../shell/app_shell.dart';
 
 /// C1 — liste des lots (résident : ses lots ; syndic : tous, avec solde).
@@ -263,6 +264,8 @@ class _Occupation extends StatelessWidget {
                     trailing: o.actif ? null : StatusBadge(d.common.hide, variant: BadgeVariant.outline, small: true),
                   ),
               ]),
+        // M15 : synthèse location courte durée (absente si le rôle n'y a pas accès).
+        LcdLotSection(lotId: lot.id),
       ],
     );
   }

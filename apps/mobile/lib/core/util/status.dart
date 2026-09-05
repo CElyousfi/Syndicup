@@ -20,3 +20,6 @@ const Map<String, BadgeVariant> contestationVariant = {'OUVERTE': BadgeVariant.w
 const Map<String, BadgeVariant> lotVariant = {'OCCUPE': BadgeVariant.ok, 'VACANT': BadgeVariant.neutral, 'ORPHELIN': BadgeVariant.warn, 'EN_SUCCESSION': BadgeVariant.outline, 'SINISTRE': BadgeVariant.danger, 'TANTIEME_A_REGULARISER': BadgeVariant.warn};
 const Map<String, BadgeVariant> envoiVariant = {'EN_ATTENTE': BadgeVariant.neutral, 'ENVOYE': BadgeVariant.ok, 'ECHOUE': BadgeVariant.danger};
 const Map<String, BadgeVariant> coproVariant = {'ACTIVE': BadgeVariant.ok, 'ARCHIVEE': BadgeVariant.outline};
+const Map<String, BadgeVariant> regimeLcdVariant = {'NON_DEFINI': BadgeVariant.neutral, 'AUTORISEE': BadgeVariant.ok, 'ENCADREE': BadgeVariant.info, 'INTERDITE': BadgeVariant.danger};
+const Map<String, BadgeVariant> declarationLcdVariant = {'EN_ATTENTE': BadgeVariant.warn, 'VALIDEE': BadgeVariant.ok, 'REFUSEE': BadgeVariant.danger, 'SUSPENDUE': BadgeVariant.ink, 'CLOTUREE': BadgeVariant.outline};
+const Map<String, BadgeVariant> sejourVariant = {'PREVU': BadgeVariant.info, 'EN_COURS': BadgeVariant.ok, 'TERMINE': BadgeVariant.outline, 'ANNULE': BadgeVariant.neutral};

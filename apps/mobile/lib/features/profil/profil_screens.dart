@@ -78,7 +78,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
           children: [
             Avatar(nomCompletProfil(ctx) ?? p.email ?? '?', size: 64),
             const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nomCompletProfil(ctx) ?? '—', style: t.titleLarge), Text('${d.roles[ctx.role] ?? ctx.role}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodySmall), const SizedBox(height: 4), StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral, small: true)])),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nomCompletProfil(ctx) ?? '—', style: t.titleLarge), Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodySmall), const SizedBox(height: 4), StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral, small: true)])),
           ],
         ),
         const SizedBox(height: 20),
@@ -100,7 +100,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
         SectionHeader(d.profil.mesRoles),
         CardList([
           for (final r in p.roles)
-            ListRow(leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac, size: 36), title: d.roles[r.role] ?? r.role, subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
+            ListRow(leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac, size: 36), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
         ]),
         SectionHeader(d.profil.donnees),
         SuCard(onTap: () => context.push('/profil/donnees'), child: Row(children: [const IconCircle(Icons.shield_outlined, tone: Tone.sage, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.profil.donneesTitre, style: t.titleSmall), Text(d.profil.donneesCorps, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)])), const ChevronEnd()])),

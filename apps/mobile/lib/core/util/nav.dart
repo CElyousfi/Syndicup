@@ -40,6 +40,7 @@ IconData navIcon(String key) => switch (key) {
       'chart' => Icons.insights_rounded,
       'bell' => Icons.notifications_rounded,
       'person' => Icons.person_rounded,
+      'suitcase' => Icons.luggage_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -64,6 +65,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final invitations = NavItem('/invitations', d.invitations, 'key');
   final membres = NavItem('/membres', d.membres, 'users');
   final parametres = NavItem('/parametres', d.parametres, 'settings');
+  final lcd = NavItem('/location-courte-duree', d.locationCourteDuree, 'suitcase');
+  final notifications = NavItem('/notifications', d.notifications, 'bell');
 
   switch (ctx.role) {
     case 'SUPER_ADMIN':
@@ -78,7 +81,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [budgets, appels, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, prestataires, documents]),
+        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
       ];
     case 'CONSEIL_SYNDICAL':
@@ -86,7 +89,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [budgets, appels, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, prestataires, documents]),
+        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
       ];
     case 'PROPRIETAIRE':
     case 'INDIVISAIRE':
@@ -95,7 +98,13 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets]),
         NavSection(s.vieCollective, [ag, incidents(dict.incidents.mesSignalements), litiges]),
-        NavSection(s.quotidien, [espaces, reservations, visites, documents]),
+        NavSection(s.quotidien, [espaces, reservations, visites, lcd, documents]),
+      ];
+    case 'GESTIONNAIRE_LCD':
+      return [
+        NavSection(null, [dashboard, lcd]),
+        NavSection(s.vieCollective, [incidents(dict.incidents.mesSignalements)]),
+        NavSection(s.quotidien, [documents, notifications]),
       ];
     case 'LOCATAIRE':
       return [
@@ -106,7 +115,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'GARDIEN':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.quotidien, [visites, incidents(), lots(), espaces, personnel, prestataires, documents]),
+        NavSection(s.quotidien, [visites, lcd, incidents(), lots(), espaces, personnel, prestataires, documents]),
       ];
     default: // PRESTATAIRE
       return [
@@ -123,7 +132,8 @@ const Map<String, List<String>> _tabsParRole = {
   'INDIVISAIRE': ['grid', 'chart', 'wrench', 'home'],
   'PERSONNE_MORALE_REPRESENTANT': ['grid', 'chart', 'wrench', 'home'],
   'LOCATAIRE': ['grid', 'wrench', 'calendar', 'file'],
-  'GARDIEN': ['grid', 'door', 'wrench', 'building'],
+  'GARDIEN': ['grid', 'door', 'suitcase', 'wrench'],
+  'GESTIONNAIRE_LCD': ['grid', 'suitcase', 'wrench', 'file'],
   'PRESTATAIRE': ['grid', 'wrench'],
 };
 
@@ -135,6 +145,7 @@ List<NavItem> buildTabs(List<NavSection> nav, AppContext ctx, Dict dict) {
     'chart': dict.nav.court.chart, 'home': dict.nav.court.home, 'calendar': dict.nav.court.calendar, 'file': dict.nav.court.file,
     'door': dict.nav.court.door, 'shield': dict.nav.court.shield, 'wallet': dict.nav.court.wallet, 'vote': dict.nav.court.vote,
     'users': dict.nav.court.users, 'key': dict.nav.court.key, 'scale': dict.nav.court.scale, 'settings': dict.nav.court.settings, 'send': dict.nav.court.send,
+    'suitcase': dict.nav.court.suitcase,
   };
   final tabs = <NavItem>[];
   for (final icon in _tabsParRole[ctx.role] ?? const ['grid']) {
