@@ -191,77 +191,91 @@ enum StatutSuccession {
 // ============================================================================
 
 model Copropriete {
-  id                    String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nom                   String
-  adresse               String
-  ville                 String
-  typeResidence         TypeResidence     @map("type_residence")
-  nbLots                Int               @map("nb_lots")
-  dateCreation          DateTime          @default(now()) @map("date_creation") @db.Timestamptz
-  statut                StatutCopropriete @default(ACTIVE)
-  configJson            Json?             @map("config_json")
+  id                             String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom                            String
+  adresse                        String
+  ville                          String
+  typeResidence                  TypeResidence             @map("type_residence")
+  nbLots                         Int                       @map("nb_lots")
+  dateCreation                   DateTime                  @default(now()) @map("date_creation") @db.Timestamptz
+  statut                         StatutCopropriete         @default(ACTIVE)
+  configJson                     Json?                     @map("config_json")
   // Logo de la résidence (M18) — chemin storage `<copropriete>/branding/…`, URL signée à la demande.
-  logoStoragePath       String?           @map("logo_storage_path")
+  logoStoragePath                String?                   @map("logo_storage_path")
   // Photos de la résidence (M20, personnalisation) — carte `{ cle: chemin storage }` : clés fixes
   // (accueil, entree, cour, salle, piscine) + `espace:<id>` par espace commun. Même périmètre
   // `<copropriete>/branding/…` que le logo ; URLs signées à la demande (jamais publiques).
-  photosJson            Json?             @map("photos_json")
+  photosJson                     Json?                     @map("photos_json")
   // M15 — Location courte durée (Doc A §10.2). Régime voté en AG ; paramètres uniquement si
   // ENCADREE (validés Zod, nullable en base — jamais de défaut deviné, LEGAL_QUESTIONS_BRIEF §7).
-  regimeLcd                RegimeLocationCourteDuree @default(NON_DEFINI) @map("regime_lcd")
-  parametresLcdJson        Json?                     @map("parametres_lcd_json")
-  regimeLcdAgResolutionId  String?                   @map("regime_lcd_ag_resolution_id") @db.Uuid
-  regimeLcdAgResolution    AgResolution?             @relation("CoproprieteRegimeLcdResolution", fields: [regimeLcdAgResolutionId], references: [id])
+  regimeLcd                      RegimeLocationCourteDuree @default(NON_DEFINI) @map("regime_lcd")
+  parametresLcdJson              Json?                     @map("parametres_lcd_json")
+  regimeLcdAgResolutionId        String?                   @map("regime_lcd_ag_resolution_id") @db.Uuid
+  regimeLcdAgResolution          AgResolution?             @relation("CoproprieteRegimeLcdResolution", fields: [regimeLcdAgResolutionId], references: [id])
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
-  delaiConvocationJours Int?              @map("delai_convocation_jours")
+  delaiConvocationJours          Int?                      @map("delai_convocation_jours")
   // Total des tantièmes défini au règlement de copropriété (ex. 1000, 10000) — champ absent du
   // tableau Master Spec Partie 2.2 mais nécessaire pour appliquer la contrainte Partie 2.4 "somme
   // des tantièmes d'une copropriété = total défini au règlement" (trigger M3, voir migration).
   // Nullable : saisi par le syndic à la configuration ; tant que non renseigné, le trigger de
   // blocage sur `lot` ne s'applique pas (pas une valeur légale au sens LEGAL_QUESTIONS_BRIEF.md,
   // simple donnée opérationnelle propre à chaque copropriété — pas de valeur par défaut devinée).
-  totalTantiemes        Decimal?          @map("total_tantiemes") @db.Decimal(14, 2)
+  totalTantiemes                 Decimal?                  @map("total_tantiemes") @db.Decimal(14, 2)
   // Surcharge des délais d'escalade impayés par défaut (Master Spec Partie 6.3 : "les délais
   // exacts doivent être calés sur la politique de recouvrement propre à chaque copropriété").
   // Nullable : les délais de Doc A §3.3 (voir apps/api/lib/finances/escalade.ts) s'appliquent
   // par défaut tant que non surchargé.
-  politiqueRecouvrementJson Json?         @map("politique_recouvrement_json")
+  politiqueRecouvrementJson      Json?                     @map("politique_recouvrement_json")
   // Paramètres légaux AG (M6, Master Spec Partie 8.3/8.5) — NE JAMAIS mettre de valeur par défaut
   // avant confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §2, §4). Nullable : tant que non
   // renseigné, `POST /ag/:id/ouvrir` et `POST /ag/:id/procurations` refusent explicitement (422)
   // plutôt que d'appliquer un chiffre deviné (ex. les "50%"/"3 procurations" trouvés en sources
   // secondaires dans le brief, PAS confirmés par un avocat).
-  quorumPremiereConvocation      Decimal? @map("quorum_premiere_convocation") @db.Decimal(4, 3)
-  limiteProcurationsMandataire   Int?     @map("limite_procurations_mandataire")
+  quorumPremiereConvocation      Decimal?                  @map("quorum_premiere_convocation") @db.Decimal(4, 3)
+  limiteProcurationsMandataire   Int?                      @map("limite_procurations_mandataire")
   // M13 — rétention avant anonymisation CNDP (Loi 09-08). LÉGALEMENT GATÉ
   // (LEGAL_QUESTIONS_BRIEF §5) : nullable sans défaut — le job d'anonymisation saute les
   // copropriétés non configurées, jamais de durée devinée.
-  retentionDesactivationMois     Int?     @map("retention_desactivation_mois")
-  creeLe                DateTime          @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe             DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+  retentionDesactivationMois     Int?                      @map("retention_desactivation_mois")
+  // M16 — Dépenses (Doc A §8.3 « toute dépense > seuil configurable doit être liée à une
+  // résolution AG ou classée urgence », §3.6 fonds de réserve). Seuil au-delà duquel une dépense
+  // exige l'approbation du CONSEIL_SYNDICAL — nullable : non configuré = toute dépense soumise
+  // passe par A_APPROUVER (approbation syndic) et les rapports signalent « seuil non configuré »
+  // (LEGAL_QUESTIONS_BRIEF §8 — jamais de montant deviné).
+  seuilApprobationConseil        Decimal?                  @map("seuil_approbation_conseil") @db.Decimal(14, 2)
+  // Décaissement du fonds de réserve SANS résolution d'AG liée (Doc A §3.6 : « décision AG
+  // requise sauf urgence définie dans le règlement ») — false tant que le règlement ne le prévoit pas.
+  reserveSansResolutionAutorisee Boolean                   @default(false) @map("reserve_sans_resolution_autorisee")
+  // Taux de TVA proposé à la saisie (valeur fiscale, PROVISOIRE — brief §8) : nullable, posé par
+  // le seed à 20, jamais codé en dur ; simple pré-remplissage, le montant TTC saisi fait foi.
+  tvaParDefaut                   Decimal?                  @map("tva_par_defaut") @db.Decimal(5, 2)
+  creeLe                         DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                      DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
-  rolesUtilisateur RoleUtilisateur[]
-  invitations      Invitation[]
-  lots             Lot[]
-  espacesCommuns   EspaceCommun[]
-  auditLogs        AuditLog[]
-  budgetsAg        BudgetAg[]
-  appelsDeFonds    AppelDeFonds[]
-  fondsReserve     FondsReserve?
-  prestataires     Prestataire[]
-  incidents        Incident[]
+  rolesUtilisateur    RoleUtilisateur[]
+  invitations         Invitation[]
+  lots                Lot[]
+  espacesCommuns      EspaceCommun[]
+  auditLogs           AuditLog[]
+  budgetsAg           BudgetAg[]
+  appelsDeFonds       AppelDeFonds[]
+  fondsReserve        FondsReserve?
+  prestataires        Prestataire[]
+  incidents           Incident[]
   assembleesGenerales AssembleeGenerale[]
-  documents        Document[]
-  notifications    Notification[]
-  personnel        Personnel[]
-  visites          Visite[]
-  litiges          ConflitLitige[]
-  declarationsLcd  LotLocationCourteDuree[]
-  sejoursLcd       SejourCourteDuree[]
-  sejourEvenements SejourEvenement[]
-  idempotencyKeys  IdempotencyKey[]
-  sessionsCmi      PaiementCmiSession[]
+  documents           Document[]
+  notifications       Notification[]
+  personnel           Personnel[]
+  visites             Visite[]
+  litiges             ConflitLitige[]
+  declarationsLcd     LotLocationCourteDuree[]
+  sejoursLcd          SejourCourteDuree[]
+  sejourEvenements    SejourEvenement[]
+  idempotencyKeys     IdempotencyKey[]
+  sessionsCmi         PaiementCmiSession[]
+  depenses            Depense[]
+  depenseLogs         DepenseLog[]
 
   @@map("copropriete")
 }
@@ -284,29 +298,32 @@ model Utilisateur {
   creeLe         DateTime                @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe      DateTime                @updatedAt @map("modifie_le") @db.Timestamptz
 
-  roles             RoleUtilisateur[]
-  invitationsEmises Invitation[]      @relation("InvitationEmetteur")
-  lotsProprietaire  LotProprietaire[]
-  lotsOccupant      LotOccupant[]
-  auditLogsActeur   AuditLog[]
-  incidentsCrees    Incident[]        @relation("IncidentCreateur")
-  incidentLogsActeur IncidentLog[]    @relation("IncidentLogActeur")
-  agVotes                  AgVote[]              @relation("AgVoteVotant")
-  agProcurationsMandant    AgProcuration[]       @relation("AgProcurationMandant")
-  agProcurationsMandataire AgProcuration[]       @relation("AgProcurationMandataire")
-  agNotificationsRecues    AgNotificationLog[]   @relation("AgNotificationLogDestinataire")
+  roles                    RoleUtilisateur[]
+  invitationsEmises        Invitation[]              @relation("InvitationEmetteur")
+  lotsProprietaire         LotProprietaire[]
+  lotsOccupant             LotOccupant[]
+  auditLogsActeur          AuditLog[]
+  incidentsCrees           Incident[]                @relation("IncidentCreateur")
+  incidentLogsActeur       IncidentLog[]             @relation("IncidentLogActeur")
+  agVotes                  AgVote[]                  @relation("AgVoteVotant")
+  agProcurationsMandant    AgProcuration[]           @relation("AgProcurationMandant")
+  agProcurationsMandataire AgProcuration[]           @relation("AgProcurationMandataire")
+  agNotificationsRecues    AgNotificationLog[]       @relation("AgNotificationLogDestinataire")
   reservationsEspaceCommun ReservationEspaceCommun[]
   documentsCrees           Document[]
   notifications            Notification[]
   fichesPersonnel          Personnel[]
-  visitesGardien           Visite[]              @relation("VisiteGardien")
-  litigesCrees             ConflitLitige[]       @relation("LitigeCreateur")
+  visitesGardien           Visite[]                  @relation("VisiteGardien")
+  litigesCrees             ConflitLitige[]           @relation("LitigeCreateur")
   appareilsPush            AppareilPush[]
-  lcdDeclarations          LotLocationCourteDuree[] @relation("LcdDeclarant")
-  lcdGestions              LotLocationCourteDuree[] @relation("LcdGestionnaire")
-  lcdDecisions             LotLocationCourteDuree[] @relation("LcdDecideur")
-  sejoursDeclares          SejourCourteDuree[]      @relation("SejourDeclarant")
-  sejourEvenementsActeur   SejourEvenement[]        @relation("SejourEvenementActeur")
+  lcdDeclarations          LotLocationCourteDuree[]  @relation("LcdDeclarant")
+  lcdGestions              LotLocationCourteDuree[]  @relation("LcdGestionnaire")
+  lcdDecisions             LotLocationCourteDuree[]  @relation("LcdDecideur")
+  sejoursDeclares          SejourCourteDuree[]       @relation("SejourDeclarant")
+  sejourEvenementsActeur   SejourEvenement[]         @relation("SejourEvenementActeur")
+  depensesCreees           Depense[]                 @relation("DepenseCreateur")
+  depensesApprouvees       Depense[]                 @relation("DepenseApprobateur")
+  depenseLogsActeur        DepenseLog[]              @relation("DepenseLogActeur")
 
   @@map("utilisateur")
 }
@@ -320,12 +337,12 @@ model RoleUtilisateur {
   role          RoleType
   actif         Boolean     @default(true)
   creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  // Contrainte Master Spec 2.4 : un seul role='SYNDIC' actif=true par copropriété —
+  // index unique partiel en SQL brut dans la migration M1 (non supporté par Prisma).
 
   @@index([coproprieteId])
   @@index([utilisateurId])
   @@map("role_utilisateur")
-  // Contrainte Master Spec 2.4 : un seul role='SYNDIC' actif=true par copropriété —
-  // index unique partiel en SQL brut dans la migration M1 (non supporté par Prisma).
 }
 
 // ============================================================================
@@ -333,24 +350,24 @@ model RoleUtilisateur {
 // ============================================================================
 
 model Invitation {
-  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String           @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete      @relation(fields: [coproprieteId], references: [id])
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId      String           @map("copropriete_id") @db.Uuid
+  copropriete        Copropriete      @relation(fields: [coproprieteId], references: [id])
   // Nullable : gardien/prestataire/syndic sont rattachés directement à la copropriété (Partie
   // 5.3). FK vers `lot` ajoutée ici (M3 — la table lot existe désormais, voir migration M3).
-  lotId         String?          @map("lot_id") @db.Uuid
-  lot           Lot?             @relation(fields: [lotId], references: [id])
-  roleCible     RoleType         @map("role_cible")
-  emetteurId    String           @map("emetteur_id") @db.Uuid
-  emetteur      Utilisateur      @relation("InvitationEmetteur", fields: [emetteurId], references: [id])
-  canal         CanalInvitation
-  code          String           @unique
-  statut        StatutInvitation @default(EN_ATTENTE)
-  expireLe      DateTime         @map("expire_le") @db.Timestamptz
+  lotId              String?          @map("lot_id") @db.Uuid
+  lot                Lot?             @relation(fields: [lotId], references: [id])
+  roleCible          RoleType         @map("role_cible")
+  emetteurId         String           @map("emetteur_id") @db.Uuid
+  emetteur           Utilisateur      @relation("InvitationEmetteur", fields: [emetteurId], references: [id])
+  canal              CanalInvitation
+  code               String           @unique
+  statut             StatutInvitation @default(EN_ATTENTE)
+  expireLe           DateTime         @map("expire_le") @db.Timestamptz
   // Usage unique (M17) : premier scan → lié à l'appareil (jeton haché) ; les autres sont refusés.
-  ouverteLe          DateTime? @map("ouverte_le") @db.Timestamptz
-  jetonOuvertureHash String?   @map("jeton_ouverture_hash")
-  creeLe        DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+  ouverteLe          DateTime?        @map("ouverte_le") @db.Timestamptz
+  jetonOuvertureHash String?          @map("jeton_ouverture_hash")
+  creeLe             DateTime         @default(now()) @map("cree_le") @db.Timestamptz
 
   @@index([coproprieteId])
   @@map("invitation")
@@ -361,22 +378,22 @@ model Invitation {
 // ============================================================================
 
 model Lot {
-  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String         @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
-  typeLot       TypeLot        @map("type_lot")
+  id            String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String        @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete   @relation(fields: [coproprieteId], references: [id])
+  typeLot       TypeLot       @map("type_lot")
   // Doc A §1.1 — voir commentaire de l'enum TypeUsageLot. Nullable, non renseigné par défaut.
-  typeUsage     TypeUsageLot?  @map("type_usage")
+  typeUsage     TypeUsageLot? @map("type_usage")
   numero        String
   etage         Int?
-  tantiemes     Decimal        @db.Decimal(14, 2)
-  superficie    Decimal?       @db.Decimal(10, 2)
-  statut        StatutLot      @default(VACANT)
-  lotParentId   String?        @map("lot_parent_id") @db.Uuid
-  lotParent     Lot?           @relation("LotParentEnfant", fields: [lotParentId], references: [id])
-  lotsEnfants   Lot[]          @relation("LotParentEnfant")
-  creeLe        DateTime       @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe     DateTime       @updatedAt @map("modifie_le") @db.Timestamptz
+  tantiemes     Decimal       @db.Decimal(14, 2)
+  superficie    Decimal?      @db.Decimal(10, 2)
+  statut        StatutLot     @default(VACANT)
+  lotParentId   String?       @map("lot_parent_id") @db.Uuid
+  lotParent     Lot?          @relation("LotParentEnfant", fields: [lotParentId], references: [id])
+  lotsEnfants   Lot[]         @relation("LotParentEnfant")
+  creeLe        DateTime      @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
 
   proprietaires    LotProprietaire[]
   occupants        LotOccupant[]
@@ -398,18 +415,18 @@ model Lot {
 }
 
 model EspaceCommun {
-  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId         String   @map("copropriete_id") @db.Uuid
+  id                    String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId         String      @map("copropriete_id") @db.Uuid
   copropriete           Copropriete @relation(fields: [coproprieteId], references: [id])
   nom                   String
   type                  String
   capacite              Int?
-  reservable            Boolean  @default(false)
-  reglesReservationJson Json?    @map("regles_reservation_json")
+  reservable            Boolean     @default(false)
+  reglesReservationJson Json?       @map("regles_reservation_json")
   // Doc A §7.2 : "Validation manuelle ou auto selon paramètre" — absent du tableau Master Spec
   // littéral (qui ne liste que espace_commun/reservation_espace_commun sans détail de workflow),
   // ajouté par nécessité pour distinguer les deux modes explicitement demandés par Doc A.
-  validationAutomatique Boolean  @default(false) @map("validation_automatique")
+  validationAutomatique Boolean     @default(false) @map("validation_automatique")
 
   reservations ReservationEspaceCommun[]
 
@@ -429,21 +446,21 @@ enum StatutReservationEspaceCommun {
 // systématiquement du "résident" qui réserve, pas seulement du lot, et l'auteur peut différer du
 // propriétaire du lot (locataire réservant pour son lot, par exemple).
 model ReservationEspaceCommun {
-  id            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  espaceId      String                         @map("espace_id") @db.Uuid
-  espace        EspaceCommun                   @relation(fields: [espaceId], references: [id])
-  lotId         String                         @map("lot_id") @db.Uuid
-  lot           Lot                            @relation(fields: [lotId], references: [id])
-  utilisateurId String                         @map("utilisateur_id") @db.Uuid
-  utilisateur   Utilisateur                    @relation(fields: [utilisateurId], references: [id])
-  dateDebut     DateTime                       @map("date_debut") @db.Timestamptz
-  dateFin       DateTime                       @map("date_fin") @db.Timestamptz
-  statut        StatutReservationEspaceCommun  @default(EN_ATTENTE)
+  id            String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  espaceId      String                        @map("espace_id") @db.Uuid
+  espace        EspaceCommun                  @relation(fields: [espaceId], references: [id])
+  lotId         String                        @map("lot_id") @db.Uuid
+  lot           Lot                           @relation(fields: [lotId], references: [id])
+  utilisateurId String                        @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur                   @relation(fields: [utilisateurId], references: [id])
+  dateDebut     DateTime                      @map("date_debut") @db.Timestamptz
+  dateFin       DateTime                      @map("date_fin") @db.Timestamptz
+  statut        StatutReservationEspaceCommun @default(EN_ATTENTE)
   // Doc A §7.2 "Champ nombre_invites sur réservation" — extension explicitement nommée par Doc A.
-  nombreInvites Int?                           @map("nombre_invites")
-  motifRejet    String?                        @map("motif_rejet")
-  creeLe        DateTime                       @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe     DateTime                       @updatedAt @map("modifie_le") @db.Timestamptz
+  nombreInvites Int?                          @map("nombre_invites")
+  motifRejet    String?                       @map("motif_rejet")
+  creeLe        DateTime                      @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime                      @updatedAt @map("modifie_le") @db.Timestamptz
 
   @@index([espaceId])
   @@index([lotId])
@@ -496,6 +513,13 @@ model Document {
   createur      Utilisateur?       @relation(fields: [creePar], references: [id])
   creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
 
+  // M16 — `type` reste un TEXT libre (les documents téléversés par le syndic portent un type
+  // saisi librement dans l'UI existante) ; les types SYSTÈME sont des constantes fermées côté
+  // code (apps/api/lib/documents/types.ts : FACTURE, JUSTIFICATIF_DEPENSE, DEVIS…). ⚠️ Écart
+  // signalé (ROADMAP M16) : pas de conversion en enum Postgres pour ne pas casser les données.
+  factures           Facture[]
+  depensesJustifiees Depense[] @relation("DepenseJustificatifPaiement")
+
   @@index([coproprieteId])
   @@map("document")
 }
@@ -508,19 +532,19 @@ model Document {
 // `lu`/`lu_le` absents du tableau littéral, ajoutés par nécessité pour `PATCH
 // /notifications/:id/read` (Master Spec Partie 3.2) qui n'aurait sinon aucun état à modifier.
 model Notification {
-  id              String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId   String                   @map("copropriete_id") @db.Uuid
-  copropriete     Copropriete              @relation(fields: [coproprieteId], references: [id])
-  utilisateurId   String                   @map("utilisateur_id") @db.Uuid
-  utilisateur     Utilisateur              @relation(fields: [utilisateurId], references: [id])
-  templateCode    String                   @map("template_code")
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId   String                  @map("copropriete_id") @db.Uuid
+  copropriete     Copropriete             @relation(fields: [coproprieteId], references: [id])
+  utilisateurId   String                  @map("utilisateur_id") @db.Uuid
+  utilisateur     Utilisateur             @relation(fields: [utilisateurId], references: [id])
+  templateCode    String                  @map("template_code")
   canal           CanalNotification
-  statutEnvoi     StatutEnvoiNotification  @default(EN_ATTENTE) @map("statut_envoi")
-  contenuJson     Json?                    @map("contenu_json")
-  accuseReception DateTime?                @map("accuse_reception") @db.Timestamptz
-  lu              Boolean                  @default(false)
-  luLe            DateTime?                @map("lu_le") @db.Timestamptz
-  horodatageEnvoi DateTime                 @default(now()) @map("horodatage_envoi") @db.Timestamptz
+  statutEnvoi     StatutEnvoiNotification @default(EN_ATTENTE) @map("statut_envoi")
+  contenuJson     Json?                   @map("contenu_json")
+  accuseReception DateTime?               @map("accuse_reception") @db.Timestamptz
+  lu              Boolean                 @default(false)
+  luLe            DateTime?               @map("lu_le") @db.Timestamptz
+  horodatageEnvoi DateTime                @default(now()) @map("horodatage_envoi") @db.Timestamptz
 
   @@index([coproprieteId])
   @@index([utilisateurId])
@@ -583,6 +607,8 @@ model Personnel {
   logementLotId String?         @map("logement_lot_id") @db.Uuid
   logementLot   Lot?            @relation(fields: [logementLotId], references: [id])
   creeLe        DateTime        @default(now()) @map("cree_le") @db.Timestamptz
+
+  depenses Depense[]
 
   @@unique([utilisateurId, coproprieteId])
   @@index([coproprieteId])
@@ -652,16 +678,16 @@ model ConflitLitige {
 // migration M3), pas exprimable en Prisma. S'applique aussi bien au plein propriétaire unique
 // (une seule ligne à 100%) qu'à l'indivision (Doc A §2.4).
 model LotProprietaire {
-  id                         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lotId                      String        @map("lot_id") @db.Uuid
-  lot                        Lot           @relation(fields: [lotId], references: [id])
-  utilisateurId              String        @map("utilisateur_id") @db.Uuid
-  utilisateur                Utilisateur   @relation(fields: [utilisateurId], references: [id])
-  quotePart                  Decimal       @map("quote_part") @db.Decimal(5, 2)
-  typePropriete              TypePropriete @map("type_propriete")
-  estRepresentantIndivision  Boolean       @default(false) @map("est_representant_indivision")
-  dateDebut                  DateTime      @map("date_debut") @db.Date
-  dateFin                    DateTime?     @map("date_fin") @db.Date
+  id                        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId                     String        @map("lot_id") @db.Uuid
+  lot                       Lot           @relation(fields: [lotId], references: [id])
+  utilisateurId             String        @map("utilisateur_id") @db.Uuid
+  utilisateur               Utilisateur   @relation(fields: [utilisateurId], references: [id])
+  quotePart                 Decimal       @map("quote_part") @db.Decimal(5, 2)
+  typePropriete             TypePropriete @map("type_propriete")
+  estRepresentantIndivision Boolean       @default(false) @map("est_representant_indivision")
+  dateDebut                 DateTime      @map("date_debut") @db.Date
+  dateFin                   DateTime?     @map("date_fin") @db.Date
 
   @@index([lotId])
   @@index([utilisateurId])
@@ -669,16 +695,16 @@ model LotProprietaire {
 }
 
 model LotOccupant {
-  id                     String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lotId                  String         @map("lot_id") @db.Uuid
-  lot                    Lot            @relation(fields: [lotId], references: [id])
-  utilisateurId          String         @map("utilisateur_id") @db.Uuid
-  utilisateur            Utilisateur    @relation(fields: [utilisateurId], references: [id])
-  typeOccupation         TypeOccupation @map("type_occupation")
-  dateDebut              DateTime       @map("date_debut") @db.Date
-  dateFin                DateTime?      @map("date_fin") @db.Date
-  accesFinancesAccorde   Boolean        @default(false) @map("acces_finances_accorde")
-  recoitConvocations     Boolean        @default(false) @map("recoit_convocations")
+  id                   String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId                String         @map("lot_id") @db.Uuid
+  lot                  Lot            @relation(fields: [lotId], references: [id])
+  utilisateurId        String         @map("utilisateur_id") @db.Uuid
+  utilisateur          Utilisateur    @relation(fields: [utilisateurId], references: [id])
+  typeOccupation       TypeOccupation @map("type_occupation")
+  dateDebut            DateTime       @map("date_debut") @db.Date
+  dateFin              DateTime?      @map("date_fin") @db.Date
+  accesFinancesAccorde Boolean        @default(false) @map("acces_finances_accorde")
+  recoitConvocations   Boolean        @default(false) @map("recoit_convocations")
 
   @@index([lotId])
   @@index([utilisateurId])
@@ -713,18 +739,18 @@ model Succession {
 // négociable (CLAUDE.md §1.8) et qu'il n'existe aucune autre colonne fixe pour la dériver — la
 // jointure via entite/entite_id dépend du type d'entité et ne peut pas servir de policy générique.
 model AuditLog {
-  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String    @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String       @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete  @relation(fields: [coproprieteId], references: [id])
   // Nullable : action système (job Inngest) sans acteur humain (Master Spec Partie 2.2).
-  acteurId      String?   @map("acteur_id") @db.Uuid
+  acteurId      String?      @map("acteur_id") @db.Uuid
   acteur        Utilisateur? @relation(fields: [acteurId], references: [id])
   action        String
   entite        String
-  entiteId      String    @map("entite_id") @db.Uuid
-  avantJson     Json?     @map("avant_json")
-  apresJson     Json?     @map("apres_json")
-  horodatage    DateTime  @default(now()) @db.Timestamptz
+  entiteId      String       @map("entite_id") @db.Uuid
+  avantJson     Json?        @map("avant_json")
+  apresJson     Json?        @map("apres_json")
+  horodatage    DateTime     @default(now()) @db.Timestamptz
   ip            String?
 
   @@index([coproprieteId])
@@ -823,16 +849,22 @@ enum TypeMouvementFondsReserve {
 // remplacé par une révision sans étendre l'enum — pas fait ici pour ne pas dévier du schéma
 // littéral sans confirmation produit.
 model BudgetAg {
-  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String              @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete         @relation(fields: [coproprieteId], references: [id])
-  agId          String?             @map("ag_id") @db.Uuid
+  id                String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId     String             @map("copropriete_id") @db.Uuid
+  copropriete       Copropriete        @relation(fields: [coproprieteId], references: [id])
+  agId              String?            @map("ag_id") @db.Uuid
   assembleeGenerale AssembleeGenerale? @relation(fields: [agId], references: [id])
-  exercice      String
-  montantTotal  Decimal             @map("montant_total") @db.Decimal(14, 2)
-  statut        StatutBudgetAg      @default(PROPOSE)
-  creeLe        DateTime            @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe     DateTime            @updatedAt @map("modifie_le") @db.Timestamptz
+  exercice          String
+  montantTotal      Decimal            @map("montant_total") @db.Decimal(14, 2)
+  statut            StatutBudgetAg     @default(PROPOSE)
+  creeLe            DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe         DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
+
+  // M16 — `montantTotal` = Σ budget_poste.montant_prevu, tenu à jour par le trigger
+  // `budget_ag_recalculer_total` (migration m16) — jamais modifié directement quand des lignes
+  // existent (service : 422 BUDGET_TOTAL_DERIVE_DES_POSTES).
+  postes   BudgetPoste[]
+  depenses Depense[]
 
   @@index([coproprieteId])
   @@index([agId])
@@ -860,25 +892,25 @@ model AppelDeFonds {
 }
 
 model AppelDeFondsLot {
-  id             String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  appelDeFondsId String                @map("appel_de_fonds_id") @db.Uuid
-  appelDeFonds   AppelDeFonds          @relation(fields: [appelDeFondsId], references: [id])
-  lotId          String                @map("lot_id") @db.Uuid
-  lot            Lot                   @relation(fields: [lotId], references: [id])
-  montantDu      Decimal               @map("montant_du") @db.Decimal(14, 2)
-  montantPaye    Decimal               @default(0) @map("montant_paye") @db.Decimal(14, 2)
-  statut         StatutAppelDeFondsLot @default(IMPAYE)
+  id                 String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  appelDeFondsId     String                @map("appel_de_fonds_id") @db.Uuid
+  appelDeFonds       AppelDeFonds          @relation(fields: [appelDeFondsId], references: [id])
+  lotId              String                @map("lot_id") @db.Uuid
+  lot                Lot                   @relation(fields: [lotId], references: [id])
+  montantDu          Decimal               @map("montant_du") @db.Decimal(14, 2)
+  montantPaye        Decimal               @default(0) @map("montant_paye") @db.Decimal(14, 2)
+  statut             StatutAppelDeFondsLot @default(IMPAYE)
   // Master Spec Partie 2.4 : "montant_paye ≤ montant_du sauf trop-perçu explicitement flaggé" —
   // CHECK conditionnel appliqué en migration ; ce flag est la condition d'exception.
-  tropPercuAutorise  Boolean          @default(false) @map("trop_percu_autorise")
+  tropPercuAutorise  Boolean               @default(false) @map("trop_percu_autorise")
   // Doc A §3.3 "Cas Particuliers" : "Flag CONTESTE sur la ligne d'appel fonds".
-  conteste           Boolean          @default(false)
+  conteste           Boolean               @default(false)
   // Suivi de l'escalade impayés (Doc A §3.3) — absent du tableau Master Spec littéral, ajouté
   // pour ne jamais renotifier deux fois le même palier (apps/api/lib/finances/escalade.ts).
-  niveauEscalade     NiveauEscalade   @default(N0) @map("niveau_escalade")
-  derniereEscaladeLe DateTime?        @map("derniere_escalade_le") @db.Timestamptz
-  creeLe             DateTime         @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe          DateTime         @updatedAt @map("modifie_le") @db.Timestamptz
+  niveauEscalade     NiveauEscalade        @default(N0) @map("niveau_escalade")
+  derniereEscaladeLe DateTime?             @map("derniere_escalade_le") @db.Timestamptz
+  creeLe             DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe          DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
 
   paiements     Paiement[]
   quittance     Quittance?
@@ -914,19 +946,19 @@ model PaiementCmiSession {
 // Append-only strict (Master Spec Partie 2.4 : "Pas de DELETE/UPDATE sur ... paiement" —
 // application_role n'a jamais UPDATE/DELETE, voir migration).
 model Paiement {
-  id                String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lotId             String          @map("lot_id") @db.Uuid
-  lot               Lot             @relation(fields: [lotId], references: [id])
-  appelDeFondsLotId String          @map("appel_de_fonds_lot_id") @db.Uuid
-  appelDeFondsLot   AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
-  montant           Decimal         @db.Decimal(14, 2)
-  methode           MethodePaiement
-  referenceCmi      String?         @unique @map("reference_cmi")
-  statut            StatutPaiement  @default(VALIDE)
+  id                  String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lotId               String          @map("lot_id") @db.Uuid
+  lot                 Lot             @relation(fields: [lotId], references: [id])
+  appelDeFondsLotId   String          @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot     AppelDeFondsLot @relation(fields: [appelDeFondsLotId], references: [id])
+  montant             Decimal         @db.Decimal(14, 2)
+  methode             MethodePaiement
+  referenceCmi        String?         @unique @map("reference_cmi")
+  statut              StatutPaiement  @default(VALIDE)
   // Doc A §3.4 "Locataire paie à la place du propriétaire" — le payeur peut différer du
   // propriétaire du lot ; absent du tableau Master Spec littéral, ajouté pour ce cas explicite.
-  payeurUtilisateurId String?       @map("payeur_utilisateur_id") @db.Uuid
-  horodatage          DateTime      @default(now()) @db.Timestamptz
+  payeurUtilisateurId String?         @map("payeur_utilisateur_id") @db.Uuid
+  horodatage          DateTime        @default(now()) @db.Timestamptz
 
   @@index([lotId])
   @@index([appelDeFondsLotId])
@@ -960,9 +992,15 @@ model FondsReserveMouvement {
   // vers `ag_resolution`, cette table n'existe pas encore (M6). À ajouter quand M6 sera construit.
   resolutionAgId String?                   @map("resolution_ag_id") @db.Uuid
   description    String?
+  // M16 — décaissement lié au paiement d'une dépense `source = FONDS_RESERVE` (type DEPENSE,
+  // montant négatif, inséré dans la MÊME transaction que le passage en PAYEE). Le solde ne peut
+  // jamais devenir négatif : trigger `fonds_reserve_solde_non_negatif` + 422 FONDS_RESERVE_INSUFFISANT.
+  depenseId      String?                   @map("depense_id") @db.Uuid
+  depense        Depense?                  @relation(fields: [depenseId], references: [id])
   horodatage     DateTime                  @default(now()) @db.Timestamptz
 
   @@index([fondsReserveId])
+  @@index([depenseId])
   @@map("fonds_reserve_mouvement")
 }
 
@@ -1063,69 +1101,95 @@ model Prestataire {
   contact       String
   actif         Boolean     @default(true)
   utilisateurId String?     @unique @map("utilisateur_id") @db.Uuid
+  // M16 — fiche fournisseur (Doc A §8.3 transparence prestataires, §3.6 devis). `contact`
+  // conservé pour compatibilité ; la migration m16 recopie sa valeur dans `telephone` quand
+  // elle ressemble à un numéro.
+  ice           String? // Identifiant Commun de l'Entreprise
+  rc            String? // Registre du commerce
+  adresse       String?
+  email         String?
+  telephone     String?
+  // RIB : JAMAIS renvoyé en clair par la liste/fiche (4 derniers caractères seulement) —
+  // lecture complète réservée au syndic via GET /prestataires/{id}/rib, auditée
+  // (PRESTATAIRE_RIB_CONSULTE).
+  rib           String?
+  notes         String?
+  // Moyenne des notes 1–5 laissées sur les incidents résolus (incident.note_prestataire),
+  // recalculée à chaque évaluation — jamais saisie directement.
+  noteMoyenne   Decimal?    @map("note_moyenne") @db.Decimal(3, 2)
   creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
 
   incidentsAssignes Incident[]
+  depenses          Depense[]
+  factures          Facture[]
 
   @@index([coproprieteId])
   @@map("prestataire")
 }
 
 model Incident {
-  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String            @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete       @relation(fields: [coproprieteId], references: [id])
+  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId          String             @map("copropriete_id") @db.Uuid
+  copropriete            Copropriete        @relation(fields: [coproprieteId], references: [id])
   // Nullable : incident en partie commune, pas rattaché à un lot précis (Master Spec Partie 2.2).
-  lotId         String?           @map("lot_id") @db.Uuid
-  lot           Lot?              @relation(fields: [lotId], references: [id])
-  categorie     CategorieIncident
-  sousCategorie String            @map("sous_categorie")
+  lotId                  String?            @map("lot_id") @db.Uuid
+  lot                    Lot?               @relation(fields: [lotId], references: [id])
+  categorie              CategorieIncident
+  sousCategorie          String             @map("sous_categorie")
   // Doc A §5 assume un signalement en texte libre en plus de la catégorie ("Signalement…") —
   // absent du tableau Master Spec littéral, ajouté comme complément nécessaire (nullable, la
   // catégorie/sous-catégorie suffisent déjà à qualifier l'incident).
-  description   String?
-  partie        PartieIncident
-  urgence       UrgenceIncident
-  statut        StatutIncident    @default(OUVERT)
-  creePar       String            @map("cree_par") @db.Uuid
-  createur      Utilisateur       @relation("IncidentCreateur", fields: [creePar], references: [id])
-  assigneAId    String?           @map("assigne_a") @db.Uuid
-  assigneA      Prestataire?      @relation(fields: [assigneAId], references: [id])
+  description            String?
+  partie                 PartieIncident
+  urgence                UrgenceIncident
+  statut                 StatutIncident     @default(OUVERT)
+  creePar                String             @map("cree_par") @db.Uuid
+  createur               Utilisateur        @relation("IncidentCreateur", fields: [creePar], references: [id])
+  assigneAId             String?            @map("assigne_a") @db.Uuid
+  assigneA               Prestataire?       @relation(fields: [assigneAId], references: [id])
   // Calculé à la création à partir de `urgence` (voir apps/api/lib/incidents/incidents.ts —
   // simplification signalée : delai par palier d'urgence, pas la grille fine par
   // catégorie/sous-catégorie de Doc A §5.1 qui va de 30 min à 1 semaine selon le cas précis).
-  slaDeadline   DateTime?         @map("sla_deadline") @db.Timestamptz
+  slaDeadline            DateTime?          @map("sla_deadline") @db.Timestamptz
   // Photos du signalement (Doc A §5 : signalement illustré) — chemins storage dans le bucket
   // privé `documents` sous `<copropriete_id>/incidents/…`, max 5, accès via URL signée 15 min
   // (même règle que les documents, Master Spec Partie 9.3). Ajout signalé : champ absent du
   // tableau Master Spec littéral, nécessaire au signalement photo mobile.
-  photos        String[]          @default([])
+  photos                 String[]           @default([])
   // M15 — « signalement facilité » (Doc A §10.2) : nuisance liée au séjour LCD en cours.
-  sejourId      String?           @map("sejour_id") @db.Uuid
-  sejour        SejourCourteDuree? @relation(fields: [sejourId], references: [id])
-  creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe     DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+  sejourId               String?            @map("sejour_id") @db.Uuid
+  sejour                 SejourCourteDuree? @relation(fields: [sejourId], references: [id])
+  // M16 — évaluation du prestataire après RESOLU/FERME (Doc A §8.3 « syndic favorise certains
+  // prestataires » → transparence) : note 1–5 + commentaire, une seule fois, par le créateur du
+  // ticket ou le syndic ; alimente prestataire.note_moyenne. CHECK 1..5 en migration.
+  notePrestataire        Int?               @map("note_prestataire")
+  commentairePrestataire String?            @map("commentaire_prestataire")
+  evalueLe               DateTime?          @map("evalue_le") @db.Timestamptz
+  creeLe                 DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe              DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
 
-  logs IncidentLog[]
+  logs     IncidentLog[]
+  depenses Depense[]
 
   @@index([coproprieteId])
   @@index([lotId])
+  @@index([sejourId])
   @@map("incident")
 }
 
 // Append-only (même discipline que audit_log — Master Spec Partie 2.2 : "historique complet").
 model IncidentLog {
-  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  incidentId   String          @map("incident_id") @db.Uuid
-  incident     Incident        @relation(fields: [incidentId], references: [id])
+  id          String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  incidentId  String          @map("incident_id") @db.Uuid
+  incident    Incident        @relation(fields: [incidentId], references: [id])
   // Nullable : première ligne créée à l'ouverture du ticket, pas de statut "avant".
-  statutAvant  StatutIncident? @map("statut_avant")
-  statutApres  StatutIncident  @map("statut_apres")
+  statutAvant StatutIncident? @map("statut_avant")
+  statutApres StatutIncident  @map("statut_apres")
   // Nullable : action système (aucune prévue aujourd'hui, gardé pour cohérence avec audit_log).
-  acteurId     String?         @map("acteur_id") @db.Uuid
-  acteur       Utilisateur?    @relation("IncidentLogActeur", fields: [acteurId], references: [id])
-  commentaire  String?
-  horodatage   DateTime        @default(now()) @db.Timestamptz
+  acteurId    String?         @map("acteur_id") @db.Uuid
+  acteur      Utilisateur?    @relation("IncidentLogActeur", fields: [acteurId], references: [id])
+  commentaire String?
+  horodatage  DateTime        @default(now()) @db.Timestamptz
 
   @@index([incidentId])
   @@map("incident_log")
@@ -1191,26 +1255,26 @@ enum ValeurVoteAg {
 // ============================================================================
 
 model AssembleeGenerale {
-  id                String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId     String      @map("copropriete_id") @db.Uuid
-  copropriete       Copropriete @relation(fields: [coproprieteId], references: [id])
-  type              TypeAg
-  dateConvocation   DateTime?   @map("date_convocation") @db.Timestamptz
-  dateAg            DateTime    @map("date_ag") @db.Timestamptz
-  statut            StatutAg    @default(PLANIFIEE)
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId   String      @map("copropriete_id") @db.Uuid
+  copropriete     Copropriete @relation(fields: [coproprieteId], references: [id])
+  type            TypeAg
+  dateConvocation DateTime?   @map("date_convocation") @db.Timestamptz
+  dateAg          DateTime    @map("date_ag") @db.Timestamptz
+  statut          StatutAg    @default(PLANIFIEE)
   // Snapshot au moment de `ouvrirAg` — capture la valeur de copropriete.quorumPremiereConvocation
   // utilisée pour CETTE AG (traçabilité si la config change ensuite). Nullable tant que non ouverte.
-  quorumRequis      Decimal?    @map("quorum_requis") @db.Decimal(4, 3)
-  quorumAtteint     Decimal?    @map("quorum_atteint") @db.Decimal(4, 3)
-  motifAnnulation   String?     @map("motif_annulation")
-  creeLe            DateTime    @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe         DateTime    @updatedAt @map("modifie_le") @db.Timestamptz
+  quorumRequis    Decimal?    @map("quorum_requis") @db.Decimal(4, 3)
+  quorumAtteint   Decimal?    @map("quorum_atteint") @db.Decimal(4, 3)
+  motifAnnulation String?     @map("motif_annulation")
+  creeLe          DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe       DateTime    @updatedAt @map("modifie_le") @db.Timestamptz
 
-  resolutions       AgResolution[]
-  procurations      AgProcuration[]
-  pv                AgPv?
-  notificationLogs  AgNotificationLog[]
-  budgets           BudgetAg[]
+  resolutions      AgResolution[]
+  procurations     AgProcuration[]
+  pv               AgPv?
+  notificationLogs AgNotificationLog[]
+  budgets          BudgetAg[]
 
   @@index([coproprieteId])
   @@map("assemblee_generale")
@@ -1227,8 +1291,9 @@ model AgResolution {
   creeLe       DateTime             @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe    DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
-  votes AgVote[]
+  votes                 AgVote[]
   coproprietesRegimeLcd Copropriete[] @relation("CoproprieteRegimeLcdResolution")
+  depenses              Depense[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1261,17 +1326,17 @@ model AgVote {
 // aucune procuration créée par erreur ne pourrait jamais être neutralisée sans DELETE (interdit
 // sur l'esprit append-only du reste du module AG).
 model AgProcuration {
-  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agId          String            @map("ag_id") @db.Uuid
-  ag            AssembleeGenerale @relation(fields: [agId], references: [id])
-  lotId         String            @map("lot_id") @db.Uuid
-  lot           Lot               @relation(fields: [lotId], references: [id])
-  mandantId     String            @map("mandant_id") @db.Uuid
-  mandant       Utilisateur       @relation("AgProcurationMandant", fields: [mandantId], references: [id])
-  mandataireId  String            @map("mandataire_id") @db.Uuid
-  mandataire    Utilisateur       @relation("AgProcurationMandataire", fields: [mandataireId], references: [id])
-  revoqueeLe    DateTime?         @map("revoquee_le") @db.Timestamptz
-  creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId         String            @map("ag_id") @db.Uuid
+  ag           AssembleeGenerale @relation(fields: [agId], references: [id])
+  lotId        String            @map("lot_id") @db.Uuid
+  lot          Lot               @relation(fields: [lotId], references: [id])
+  mandantId    String            @map("mandant_id") @db.Uuid
+  mandant      Utilisateur       @relation("AgProcurationMandant", fields: [mandantId], references: [id])
+  mandataireId String            @map("mandataire_id") @db.Uuid
+  mandataire   Utilisateur       @relation("AgProcurationMandataire", fields: [mandataireId], references: [id])
+  revoqueeLe   DateTime?         @map("revoquee_le") @db.Timestamptz
+  creeLe       DateTime          @default(now()) @map("cree_le") @db.Timestamptz
 
   @@index([agId])
   @@index([mandataireId])
@@ -1313,16 +1378,16 @@ model AgNotificationLog {
 // transport (pas de valeur probante) : UPDATE autorisé pour stocker la réponse.
 // ────────────────────────────────────────────────────────────────────────────
 model IdempotencyKey {
-  cle           String   @db.Uuid
+  cle           String      @db.Uuid
   endpoint      String
-  coproprieteId String   @map("copropriete_id") @db.Uuid
+  coproprieteId String      @map("copropriete_id") @db.Uuid
   copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
-  utilisateurId String?  @map("utilisateur_id") @db.Uuid
-  payloadHash   String   @map("payload_hash")
-  statut        String   @default("EN_COURS")
-  reponseStatus Int?     @map("reponse_status")
-  reponseJson   Json?    @map("reponse_json")
-  creeLe        DateTime @default(now()) @map("cree_le") @db.Timestamptz
+  utilisateurId String?     @map("utilisateur_id") @db.Uuid
+  payloadHash   String      @map("payload_hash")
+  statut        String      @default("EN_COURS")
+  reponseStatus Int?        @map("reponse_status")
+  reponseJson   Json?       @map("reponse_json")
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
 
   @@id([cle, endpoint])
   @@index([coproprieteId])
@@ -1338,31 +1403,31 @@ model IdempotencyKey {
 
 /// Déclaration « ce lot est exploité en location courte durée » — une ligne par (lot, période).
 model LotLocationCourteDuree {
-  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id                      String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   // copropriete_id porté pour la policy RLS (même justification que `visite`).
-  coproprieteId            String               @map("copropriete_id") @db.Uuid
-  copropriete              Copropriete          @relation(fields: [coproprieteId], references: [id])
-  lotId                    String               @map("lot_id") @db.Uuid
-  lot                      Lot                  @relation(fields: [lotId], references: [id])
-  declareParId             String               @map("declare_par_id") @db.Uuid
-  declarePar               Utilisateur          @relation("LcdDeclarant", fields: [declareParId], references: [id])
+  coproprieteId           String               @map("copropriete_id") @db.Uuid
+  copropriete             Copropriete          @relation(fields: [coproprieteId], references: [id])
+  lotId                   String               @map("lot_id") @db.Uuid
+  lot                     Lot                  @relation(fields: [lotId], references: [id])
+  declareParId            String               @map("declare_par_id") @db.Uuid
+  declarePar              Utilisateur          @relation("LcdDeclarant", fields: [declareParId], references: [id])
   // Gestionnaire LCD (rôle GESTIONNAIRE_LCD, scopé à cette déclaration).
-  gestionnaireId           String?              @map("gestionnaire_id") @db.Uuid
-  gestionnaire             Utilisateur?         @relation("LcdGestionnaire", fields: [gestionnaireId], references: [id])
+  gestionnaireId          String?              @map("gestionnaire_id") @db.Uuid
+  gestionnaire            Utilisateur?         @relation("LcdGestionnaire", fields: [gestionnaireId], references: [id])
   // Liste libre de plateformes (Airbnb, Booking, direct…) — informatif uniquement.
-  plateformesJson          Json?                @map("plateformes_json")
-  contactUrgenceNom        String?              @map("contact_urgence_nom")
-  contactUrgenceTelephone  String?              @map("contact_urgence_telephone")
-  statut                   StatutDeclarationLcd @default(EN_ATTENTE)
-  motifDecision            String?              @map("motif_decision")
-  decideParId              String?              @map("decide_par_id") @db.Uuid
-  decidePar                Utilisateur?         @relation("LcdDecideur", fields: [decideParId], references: [id])
-  decideLe                 DateTime?            @map("decide_le") @db.Timestamptz
-  dateDebut                DateTime             @map("date_debut") @db.Date
+  plateformesJson         Json?                @map("plateformes_json")
+  contactUrgenceNom       String?              @map("contact_urgence_nom")
+  contactUrgenceTelephone String?              @map("contact_urgence_telephone")
+  statut                  StatutDeclarationLcd @default(EN_ATTENTE)
+  motifDecision           String?              @map("motif_decision")
+  decideParId             String?              @map("decide_par_id") @db.Uuid
+  decidePar               Utilisateur?         @relation("LcdDecideur", fields: [decideParId], references: [id])
+  decideLe                DateTime?            @map("decide_le") @db.Timestamptz
+  dateDebut               DateTime             @map("date_debut") @db.Date
   // NULL = déclaration ouverte ; au plus une ouverte par lot (index unique partiel en SQL).
-  dateFin                  DateTime?            @map("date_fin") @db.Date
-  creeLe                   DateTime             @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe                DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
+  dateFin                 DateTime?            @map("date_fin") @db.Date
+  creeLe                  DateTime             @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe               DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
   sejours SejourCourteDuree[]
 
@@ -1374,36 +1439,36 @@ model LotLocationCourteDuree {
 
 /// Séjour d'un voyageur — données minimales (CNDP) : jamais de numéro de pièce complet ni de scan.
 model SejourCourteDuree {
-  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId         String                 @map("copropriete_id") @db.Uuid
-  copropriete           Copropriete            @relation(fields: [coproprieteId], references: [id])
-  lotId                 String                 @map("lot_id") @db.Uuid
-  lot                   Lot                    @relation(fields: [lotId], references: [id])
-  declarationLcdId      String                 @map("declaration_lcd_id") @db.Uuid
-  declarationLcd        LotLocationCourteDuree @relation(fields: [declarationLcdId], references: [id])
-  declareParId          String                 @map("declare_par_id") @db.Uuid
-  declarePar            Utilisateur            @relation("SejourDeclarant", fields: [declareParId], references: [id])
-  dateArrivee           DateTime               @map("date_arrivee") @db.Date
-  dateDepart            DateTime               @map("date_depart") @db.Date
-  heureArriveePrevue    String?                @map("heure_arrivee_prevue")
-  nbVoyageurs           Int                    @map("nb_voyageurs")
-  voyageurPrincipalNom  String                 @map("voyageur_principal_nom")
-  voyageurTelephone     String?                @map("voyageur_telephone")
-  voyageurNationalite   String?                @map("voyageur_nationalite")
-  pieceIdentiteType     TypePieceIdentite?     @map("piece_identite_type")
+  id                   String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId        String                 @map("copropriete_id") @db.Uuid
+  copropriete          Copropriete            @relation(fields: [coproprieteId], references: [id])
+  lotId                String                 @map("lot_id") @db.Uuid
+  lot                  Lot                    @relation(fields: [lotId], references: [id])
+  declarationLcdId     String                 @map("declaration_lcd_id") @db.Uuid
+  declarationLcd       LotLocationCourteDuree @relation(fields: [declarationLcdId], references: [id])
+  declareParId         String                 @map("declare_par_id") @db.Uuid
+  declarePar           Utilisateur            @relation("SejourDeclarant", fields: [declareParId], references: [id])
+  dateArrivee          DateTime               @map("date_arrivee") @db.Date
+  dateDepart           DateTime               @map("date_depart") @db.Date
+  heureArriveePrevue   String?                @map("heure_arrivee_prevue")
+  nbVoyageurs          Int                    @map("nb_voyageurs")
+  voyageurPrincipalNom String                 @map("voyageur_principal_nom")
+  voyageurTelephone    String?                @map("voyageur_telephone")
+  voyageurNationalite  String?                @map("voyageur_nationalite")
+  pieceIdentiteType    TypePieceIdentite?     @map("piece_identite_type")
   // 4 derniers caractères uniquement (CNDP — minimisation).
-  pieceIdentiteFin      String?                @map("piece_identite_fin") @db.VarChar(4)
-  plaqueVehicule        String?                @map("plaque_vehicule")
+  pieceIdentiteFin     String?                @map("piece_identite_fin") @db.VarChar(4)
+  plaqueVehicule       String?                @map("plaque_vehicule")
   // Pièces jointes (confirmation de réservation, photos d'arrivée / d'état des lieux) — chemins
   // storage `<copropriete>/lcd/sejours/…` dans le bucket privé, URL signée 15 min, 10 max.
   // JAMAIS une pièce d'identité (minimisation CNDP — LEGAL_QUESTIONS_BRIEF §7.3).
-  piecesJointes         String[]               @default([]) @map("pieces_jointes")
-  statut                StatutSejour           @default(PREVU)
-  annuleLe              DateTime?              @map("annule_le") @db.Timestamptz
-  motifAnnulation       String?                @map("motif_annulation")
-  gardienInformeLe      DateTime?              @map("gardien_informe_le") @db.Timestamptz
-  creeLe                DateTime               @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe             DateTime               @updatedAt @map("modifie_le") @db.Timestamptz
+  piecesJointes        String[]               @default([]) @map("pieces_jointes")
+  statut               StatutSejour           @default(PREVU)
+  annuleLe             DateTime?              @map("annule_le") @db.Timestamptz
+  motifAnnulation      String?                @map("motif_annulation")
+  gardienInformeLe     DateTime?              @map("gardien_informe_le") @db.Timestamptz
+  creeLe               DateTime               @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe            DateTime               @updatedAt @map("modifie_le") @db.Timestamptz
 
   evenements SejourEvenement[]
   incidents  Incident[]
@@ -1433,4 +1498,196 @@ model SejourEvenement {
   @@index([sejourId])
   @@index([coproprieteId])
   @@map("sejour_evenement")
+}
+
+// ============================================================================
+// M16 — DÉPENSES, FACTURES, FOURNISSEURS, POSTES BUDGÉTAIRES
+// Doc A §3 (charges, §3.6 fonds de réserve, §3.7 dépassement budget), §8 (obligations du
+// syndic : comptes, approbation, §8.3 « dépense > seuil configurable »), §6 (approbation des
+// comptes en AG). « L'argent qui sort » : une Depense est à la copropriété ce qu'un
+// AppelDeFondsLot est à un lot — cycle de vie, paiement, preuve, mêmes rapports (M18).
+// ⚠️ Ajouts signalés au-delà du Master Spec Partie 2.2 (CLAUDE.md §2) : les 5 enums ci-dessous,
+// les tables budget_poste / depense / facture / depense_log, les colonnes copropriete.seuil_
+// approbation_conseil / reserve_sans_resolution_autorisee / tva_par_defaut, prestataire.*
+// (ice, rc, adresse, email, telephone, rib, notes, note_moyenne), incident.note_prestataire /
+// commentaire_prestataire / evalue_le, fonds_reserve_mouvement.depense_id.
+// ============================================================================
+
+// Doc A §3.5 (postes de charge) + §8 : liste fermée, jamais de valeur libre.
+enum CategorieDepense {
+  ENTRETIEN_COURANT
+  REPARATIONS
+  TRAVAUX
+  PERSONNEL
+  ENERGIE_EAU
+  ASSURANCE
+  HONORAIRES_SYNDIC
+  ADMINISTRATIF
+  IMPOTS_TAXES
+  AUTRE
+}
+
+// BROUILLON → A_APPROUVER → APPROUVEE → PAYEE ; REJETEE (modifiable puis re-soumise) ; ANNULEE
+// (tant que non PAYEE). Une dépense PAYEE ne se modifie ni ne s'annule : correction = nouvelle
+// dépense (même discipline append-only que paiement).
+enum StatutDepense {
+  BROUILLON
+  A_APPROUVER
+  APPROUVEE
+  REJETEE
+  PAYEE
+  ANNULEE
+}
+
+// Doc A §3.6 : le fonds de réserve est un compte séparé — décaissement lié à une décision AG.
+enum SourceFinancement {
+  COMPTE_COURANT
+  FONDS_RESERVE
+}
+
+enum StatutFacture {
+  RECUE
+  VERIFIEE
+  CONTESTEE
+  REGLEE
+}
+
+enum TypeDepenseLog {
+  CREEE
+  SOUMISE
+  APPROUVEE
+  REJETEE
+  PAYEE
+  ANNULEE
+  FACTURE_AJOUTEE
+  FACTURE_CONTESTEE
+  MODIFIEE
+}
+
+/// Ligne de budget (Doc A §10.2 « détail budget par poste visible dans l'app », §3.7 dépassement
+/// par poste). Invariant : budget_ag.montant_total = Σ montant_prevu (trigger + service + test).
+model BudgetPoste {
+  id           String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  budgetAgId   String           @map("budget_ag_id") @db.Uuid
+  budgetAg     BudgetAg         @relation(fields: [budgetAgId], references: [id])
+  categorie    CategorieDepense
+  libelle      String
+  montantPrevu Decimal          @map("montant_prevu") @db.Decimal(14, 2)
+  ordre        Int              @default(0)
+  creeLe       DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe    DateTime         @updatedAt @map("modifie_le") @db.Timestamptz
+
+  depenses Depense[]
+
+  @@unique([budgetAgId, categorie, libelle])
+  @@index([budgetAgId])
+  @@map("budget_poste")
+}
+
+/// Dépense de la copropriété — « l'argent qui sort ». Montants TTC en numeric(14,2) ;
+/// CHECK montant_ttc > 0 en migration. `source = FONDS_RESERVE` exige une résolution d'AG
+/// (ou copropriete.reserve_sans_resolution_autorisee) — vérifié au service (422).
+model Depense {
+  id                             String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId                  String            @map("copropriete_id") @db.Uuid
+  copropriete                    Copropriete       @relation(fields: [coproprieteId], references: [id])
+  budgetAgId                     String?           @map("budget_ag_id") @db.Uuid
+  budgetAg                       BudgetAg?         @relation(fields: [budgetAgId], references: [id])
+  budgetPosteId                  String?           @map("budget_poste_id") @db.Uuid
+  budgetPoste                    BudgetPoste?      @relation(fields: [budgetPosteId], references: [id])
+  prestataireId                  String?           @map("prestataire_id") @db.Uuid
+  prestataire                    Prestataire?      @relation(fields: [prestataireId], references: [id])
+  categorie                      CategorieDepense
+  libelle                        String
+  description                    String?
+  montantHt                      Decimal?          @map("montant_ht") @db.Decimal(14, 2)
+  tva                            Decimal?          @db.Decimal(14, 2)
+  montantTtc                     Decimal           @map("montant_ttc") @db.Decimal(14, 2)
+  dateDepense                    DateTime          @map("date_depense") @db.Date
+  statut                         StatutDepense     @default(BROUILLON)
+  source                         SourceFinancement @default(COMPTE_COURANT)
+  // Dépense née d'un incident (POST /incidents/{id}/depense).
+  incidentId                     String?           @map("incident_id") @db.Uuid
+  incident                       Incident?         @relation(fields: [incidentId], references: [id])
+  // Rempli par M19 (contrats) — colonne posée sans FK : la table `contrat` n'existe pas encore,
+  // la FK est ajoutée dans la migration M19 (même approche que fonds_reserve_mouvement.resolution_ag_id en M5).
+  contratId                      String?           @map("contrat_id") @db.Uuid
+  // Rempli par M20 (paie) : personnel + période "YYYY-MM".
+  personnelId                    String?           @map("personnel_id") @db.Uuid
+  personnel                      Personnel?        @relation(fields: [personnelId], references: [id])
+  periodePaie                    String?           @map("periode_paie")
+  creeParId                      String            @map("cree_par_id") @db.Uuid
+  creePar                        Utilisateur       @relation("DepenseCreateur", fields: [creeParId], references: [id])
+  approuveParId                  String?           @map("approuve_par_id") @db.Uuid
+  approuvePar                    Utilisateur?      @relation("DepenseApprobateur", fields: [approuveParId], references: [id])
+  approuveLe                     DateTime?         @map("approuve_le") @db.Timestamptz
+  motifRejet                     String?           @map("motif_rejet")
+  payeLe                         DateTime?         @map("paye_le") @db.Date
+  methodePaiement                MethodePaiement?  @map("methode_paiement")
+  // N° de chèque / référence de virement (rapprochement manuel avec le relevé bancaire — aucune
+  // API bancaire, décision projet).
+  referencePaiement              String?           @map("reference_paiement")
+  // Preuve du paiement sortant : Document.type = JUSTIFICATIF_DEPENSE.
+  justificatifPaiementDocumentId String?           @map("justificatif_paiement_document_id") @db.Uuid
+  justificatifPaiementDocument   Document?         @relation("DepenseJustificatifPaiement", fields: [justificatifPaiementDocumentId], references: [id])
+  // Travaux votés en AG (Doc A §3.6) — obligatoire pour un décaissement du fonds de réserve.
+  resolutionAgId                 String?           @map("resolution_ag_id") @db.Uuid
+  resolutionAg                   AgResolution?     @relation(fields: [resolutionAgId], references: [id])
+  creeLe                         DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                      DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+
+  factures               Facture[]
+  logs                   DepenseLog[]
+  mouvementsFondsReserve FondsReserveMouvement[]
+
+  @@index([coproprieteId, statut])
+  @@index([coproprieteId, dateDepense])
+  @@index([budgetPosteId])
+  @@index([prestataireId])
+  @@index([incidentId])
+  @@map("depense")
+}
+
+/// Facture fournisseur rattachée à une dépense (plusieurs par dépense : acomptes). Le fichier
+/// (PDF/photo) est un Document de type FACTURE.
+model Facture {
+  id                     String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  depenseId              String        @map("depense_id") @db.Uuid
+  depense                Depense       @relation(fields: [depenseId], references: [id])
+  prestataireId          String?       @map("prestataire_id") @db.Uuid
+  prestataire            Prestataire?  @relation(fields: [prestataireId], references: [id])
+  numero                 String?
+  dateFacture            DateTime      @map("date_facture") @db.Date
+  dateEcheance           DateTime?     @map("date_echeance") @db.Date
+  montantTtc             Decimal       @map("montant_ttc") @db.Decimal(14, 2)
+  statut                 StatutFacture @default(RECUE)
+  documentId             String        @map("document_id") @db.Uuid
+  document               Document      @relation(fields: [documentId], references: [id])
+  // Job `depenses-factures-echeances` : rappel J-7 envoyé une seule fois (idempotence).
+  rappelEcheanceEnvoyeLe DateTime?     @map("rappel_echeance_envoye_le") @db.Timestamptz
+  creeLe                 DateTime      @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([depenseId])
+  @@index([dateEcheance])
+  @@map("facture")
+}
+
+/// Journal APPEND-ONLY d'une dépense (même discipline que incident_log / sejour_evenement :
+/// ni modifie_le, ni UPDATE, ni DELETE — GRANT SELECT, INSERT uniquement).
+model DepenseLog {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String         @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
+  depenseId     String         @map("depense_id") @db.Uuid
+  depense       Depense        @relation(fields: [depenseId], references: [id])
+  type          TypeDepenseLog
+  // NULL = système (job).
+  acteurId      String?        @map("acteur_id") @db.Uuid
+  acteur        Utilisateur?   @relation("DepenseLogActeur", fields: [acteurId], references: [id])
+  detailsJson   Json?          @map("details_json")
+  horodatage    DateTime       @default(now()) @db.Timestamptz
+
+  @@index([depenseId])
+  @@index([coproprieteId])
+  @@map("depense_log")
 }

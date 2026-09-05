@@ -1,5 +1,5 @@
 /**
- * Seed de développement — couvre M1→M11 : copropriété, utilisateurs/rôles, invitation, lots
+ * Seed de développement — couvre M1→M16 : copropriété, utilisateurs/rôles, invitation, lots
  * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
  * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
  * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
@@ -12,6 +12,7 @@
  * Usage : npm run seed --workspace=@copropriete-maroc/database
  */
 
+import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 const directUrl = process.env.DIRECT_URL;
@@ -118,6 +119,18 @@ async function main() {
     },
   });
 
+  // M16 — membre du conseil syndical (approuve les dépenses au-dessus du seuil, Doc A §8.3).
+  const conseilUser = await prisma.utilisateur.create({
+    data: {
+      email: "l.berrada@example.ma",
+      telephone: "+212600000007",
+      nom: "Berrada",
+      prenom: "Leila",
+      languePreferee: "FR",
+      statutCompte: "ACTIF",
+    },
+  });
+
   // ── Rôles ────────────────────────────────────────────────────────────────
   await prisma.roleUtilisateur.createMany({
     data: [
@@ -128,6 +141,7 @@ async function main() {
       { utilisateurId: indivisaire2.id, coproprieteId: copro.id, role: "INDIVISAIRE", actif: true },
       { utilisateurId: locataire.id, coproprieteId: copro.id, role: "LOCATAIRE", actif: true },
       { utilisateurId: gardienUser.id, coproprieteId: copro.id, role: "GARDIEN", actif: true },
+      { utilisateurId: conseilUser.id, coproprieteId: copro.id, role: "CONSEIL_SYNDICAL", actif: true },
     ],
   });
 
@@ -202,9 +216,16 @@ async function main() {
     data: { coproprieteId: copro.id, utilisateurId: gardienUser.id, statut: "PRESENT", logementLotId: loge.id },
   });
 
+  const jour = (delta: number) => {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d;
+  };
+
   // ── M5 — Budget ACTIF + appel de fonds EMIS + un paiement partiel ────────
   const exercice = String(new Date().getFullYear());
-  await prisma.budgetAg.create({
+  const budget = await prisma.budgetAg.create({
     data: { coproprieteId: copro.id, exercice, montantTotal: "48000.00", statut: "ACTIF" },
   });
   const periode = `${exercice}-01`;
@@ -278,9 +299,23 @@ async function main() {
 
   // ── M7 — Prestataire + incident en cours ─────────────────────────────────
   const prestataire = await prisma.prestataire.create({
-    data: { coproprieteId: copro.id, nom: "Plomberie Atlas", specialite: "Plomberie", contact: "+212522000000" },
+    data: {
+      coproprieteId: copro.id,
+      nom: "Plomberie Atlas",
+      specialite: "Plomberie",
+      contact: "+212522000000",
+      // M16 — fiche fournisseur (le RIB n'est jamais renvoyé en clair par l'API : 4 derniers caractères).
+      telephone: "+212522000000",
+      email: "contact@plomberie-atlas.ma",
+      ice: "001234567000089",
+      rc: "RC 45678 Casablanca",
+      adresse: "Zone industrielle Aïn Sebaâ, Casablanca",
+      rib: "007780000123456789012345",
+      notes: "Intervient sous 4 h en urgence. Devis systématique au-delà de 2 000 MAD.",
+      noteMoyenne: "4.00",
+    },
   });
-  await prisma.incident.create({
+  const incidentAtlas = await prisma.incident.create({
     data: {
       coproprieteId: copro.id,
       lotId: null,
@@ -341,12 +376,6 @@ async function main() {
       dateDebut: new Date("2026-01-01"),
     },
   });
-  const jour = (delta: number) => {
-    const d = new Date();
-    d.setUTCHours(0, 0, 0, 0);
-    d.setUTCDate(d.getUTCDate() + delta);
-    return d;
-  };
   const sejourEnCours = await prisma.sejourCourteDuree.create({
     data: {
       coproprieteId: copro.id,
@@ -395,11 +424,200 @@ async function main() {
     ],
   });
 
+  // ── M16 — Dépenses, factures, fournisseurs, postes budgétaires (Doc A §3, §8) ──────────
+  // Paramètres de copropriété (LEGAL_QUESTIONS_BRIEF §8 — PROVISOIRES, configuration, pas du code).
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: { seuilApprobationConseil: "5000.00", tvaParDefaut: "20.00", reserveSansResolutionAutorisee: false },
+  });
+  // Postes du budget ACTIF (Σ = 48 000 — le trigger budget_poste_recalculer_total tient le total).
+  const postesData = [
+    { categorie: "ENTRETIEN_COURANT", libelle: "Nettoyage des parties communes", montantPrevu: "12000.00", ordre: 1 },
+    { categorie: "PERSONNEL", libelle: "Salaire du gardien", montantPrevu: "15000.00", ordre: 2 },
+    { categorie: "ENERGIE_EAU", libelle: "Électricité et eau des communs", montantPrevu: "9000.00", ordre: 3 },
+    { categorie: "REPARATIONS", libelle: "Petites réparations", montantPrevu: "5000.00", ordre: 4 },
+    { categorie: "ASSURANCE", libelle: "Assurance de l'immeuble", montantPrevu: "4000.00", ordre: 5 },
+    { categorie: "HONORAIRES_SYNDIC", libelle: "Honoraires du syndic", montantPrevu: "3000.00", ordre: 6 },
+  ] as const;
+  const postes: Record<string, string> = {};
+  for (const p of postesData) {
+    const poste = await prisma.budgetPoste.create({ data: { budgetAgId: budget.id, ...p } });
+    postes[p.categorie] = poste.id;
+  }
+  const proprete = await prisma.prestataire.create({
+    data: {
+      coproprieteId: copro.id,
+      nom: "Propreté Maroc",
+      specialite: "Nettoyage",
+      contact: "+212661000111",
+      telephone: "+212661000111",
+      email: "devis@proprete-maroc.ma",
+      ice: "002233445000067",
+    },
+  });
+  // AG passée CLOTUREE avec une résolution ADOPTEE : décaissement du fonds de réserve autorisé.
+  const agPassee = await prisma.assembleeGenerale.create({
+    data: {
+      coproprieteId: copro.id,
+      type: "EXTRAORDINAIRE",
+      dateAg: new Date(Date.now() - 180 * 24 * 3600 * 1000),
+      dateConvocation: new Date(Date.now() - 200 * 24 * 3600 * 1000),
+      statut: "CLOTUREE",
+      quorumRequis: "0.500",
+      quorumAtteint: "0.750",
+      resolutions: {
+        create: [{ ordre: 1, texte: "Remplacement de la pompe du surpresseur, financé par le fonds de réserve.", typeMajorite: "SIMPLE", resultat: "ADOPTEE" }],
+      },
+    },
+    include: { resolutions: true },
+  });
+  const resolutionPompe = agPassee.resolutions[0]!;
+  // Fonds de réserve : cotisation puis décaissement lié à la dépense payée ci-dessous.
+  const fondsReserve = await prisma.fondsReserve.create({ data: { coproprieteId: copro.id } });
+  await prisma.fondsReserveMouvement.create({
+    data: { fondsReserveId: fondsReserve.id, type: "COTISATION", montant: "20000.00", description: `Cotisations fonds de réserve ${Number(exercice) - 1}`, horodatage: new Date(`${Number(exercice) - 1}-12-15T10:00:00Z`) },
+  });
+  const docPath = (nom: string) => `${copro.id}/depenses/${randomUUID()}-${nom}`;
+  const journal = async (depenseId: string, entrees: { type: "CREEE" | "SOUMISE" | "APPROUVEE" | "REJETEE" | "PAYEE" | "FACTURE_AJOUTEE" | "MODIFIEE"; acteurId: string | null; details?: object; il?: number }[]) => {
+    await prisma.depenseLog.createMany({
+      data: entrees.map((e, i) => ({
+        coproprieteId: copro.id,
+        depenseId,
+        type: e.type,
+        acteurId: e.acteurId,
+        detailsJson: e.details ?? undefined,
+        horodatage: new Date(Date.now() - (e.il ?? 10 - i) * 24 * 3600 * 1000),
+      })),
+    });
+  };
+  // 1. PAYEE (compte courant) — électricité, preuve de virement jointe.
+  const justifLydec = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "JUSTIFICATIF_DEPENSE", nom: "Reçu virement Lydec janvier.pdf", visibilite: "CONSEIL_SYNDICAL", storagePath: docPath("recu-virement-lydec.pdf"), creePar: syndicUser.id },
+  });
+  const depLydec = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, budgetPosteId: postes.ENERGIE_EAU, categorie: "ENERGIE_EAU",
+      libelle: "Électricité des communs — janvier", montantHt: "650.42", tva: "130.08", montantTtc: "780.50",
+      dateDepense: new Date(`${exercice}-01-20`), statut: "PAYEE", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+      approuveParId: syndicUser.id, approuveLe: new Date(`${exercice}-01-21T09:00:00Z`), payeLe: new Date(`${exercice}-01-25`),
+      methodePaiement: "VIREMENT", referencePaiement: `VIR-${exercice}-0114`, justificatifPaiementDocumentId: justifLydec.id,
+    },
+  });
+  await journal(depLydec.id, [
+    { type: "CREEE", acteurId: syndicUser.id, il: 40 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "SYNDIC" }, il: 39 },
+    { type: "APPROUVEE", acteurId: syndicUser.id, il: 39 },
+    { type: "PAYEE", acteurId: syndicUser.id, details: { methode: "VIREMENT", reference: `VIR-${exercice}-0114` }, il: 35 },
+  ]);
+  // 2. PAYEE — nettoyage mensuel (prestataire Propreté Maroc), payé par chèque.
+  const depNettoyage = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, budgetPosteId: postes.ENTRETIEN_COURANT, categorie: "ENTRETIEN_COURANT",
+      prestataireId: proprete.id, libelle: "Nettoyage des parties communes — janvier", montantHt: "833.33", tva: "166.67", montantTtc: "1000.00",
+      dateDepense: new Date(`${exercice}-01-31`), statut: "PAYEE", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+      approuveParId: syndicUser.id, approuveLe: new Date(`${exercice}-02-01T09:00:00Z`), payeLe: new Date(`${exercice}-02-03`),
+      methodePaiement: "CHEQUE", referencePaiement: "CHQ 0451233",
+    },
+  });
+  await journal(depNettoyage.id, [
+    { type: "CREEE", acteurId: syndicUser.id, il: 30 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "SYNDIC" }, il: 30 },
+    { type: "APPROUVEE", acteurId: syndicUser.id, il: 29 },
+    { type: "PAYEE", acteurId: syndicUser.id, details: { methode: "CHEQUE", reference: "CHQ 0451233" }, il: 27 },
+  ]);
+  // 3. APPROUVEE non payée — réparation issue de l'incident (Plomberie Atlas), facture RECUE à échéance J+5.
+  const docFactureAtlas = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "FACTURE", nom: "Facture Plomberie Atlas FA-0231.pdf", visibilite: "CONSEIL_SYNDICAL", storagePath: docPath("facture-atlas-FA-0231.pdf"), creePar: syndicUser.id },
+  });
+  const depReparation = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, budgetPosteId: postes.REPARATIONS, categorie: "REPARATIONS",
+      prestataireId: prestataire.id, incidentId: incidentAtlas.id, libelle: "Réparation fuite colonne montante (sous-sol)",
+      description: "Remplacement d'un tronçon de colonne et reprise de l'étanchéité.", montantHt: "2000.00", tva: "400.00", montantTtc: "2400.00",
+      dateDepense: jour(-3), statut: "APPROUVEE", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+      approuveParId: syndicUser.id, approuveLe: new Date(Date.now() - 2 * 24 * 3600 * 1000),
+    },
+  });
+  await prisma.facture.create({
+    data: {
+      depenseId: depReparation.id, prestataireId: prestataire.id, numero: "FA-0231", dateFacture: jour(-3), dateEcheance: jour(5),
+      montantTtc: "2400.00", statut: "RECUE", documentId: docFactureAtlas.id,
+    },
+  });
+  await journal(depReparation.id, [
+    { type: "CREEE", acteurId: syndicUser.id, details: { origine: "incident", incident_id: incidentAtlas.id }, il: 3 },
+    { type: "FACTURE_AJOUTEE", acteurId: syndicUser.id, details: { numero: "FA-0231", montant_ttc: "2400.00" }, il: 3 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "SYNDIC" }, il: 2 },
+    { type: "APPROUVEE", acteurId: syndicUser.id, il: 2 },
+  ]);
+  // 4. A_APPROUVER — travaux au-dessus du seuil (5 000) : en attente du conseil syndical.
+  const depFacade = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, categorie: "TRAVAUX", libelle: "Ravalement de la façade — acompte 30 %",
+      description: "Acompte à la commande, devis n° DV-2026-018 (3 devis comparés).", montantHt: "15000.00", tva: "3000.00", montantTtc: "18000.00",
+      dateDepense: jour(-1), statut: "A_APPROUVER", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+    },
+  });
+  await journal(depFacade.id, [
+    { type: "CREEE", acteurId: syndicUser.id, il: 1 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "CONSEIL", seuil: "5000.00" }, il: 1 },
+  ]);
+  // 5. BROUILLON — fournitures administratives.
+  const depBrouillon = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, categorie: "ADMINISTRATIF", libelle: "Fournitures de bureau et affichage",
+      montantTtc: "350.00", dateDepense: jour(0), statut: "BROUILLON", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+    },
+  });
+  await journal(depBrouillon.id, [{ type: "CREEE", acteurId: syndicUser.id, il: 0 }]);
+  // 6. REJETEE par le conseil — motif tracé.
+  const depDeco = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, categorie: "AUTRE", libelle: "Décoration du hall d'entrée",
+      montantTtc: "6500.00", dateDepense: jour(-12), statut: "REJETEE", source: "COMPTE_COURANT", creeParId: syndicUser.id,
+      motifRejet: "Dépense non prioritaire : à représenter à la prochaine AG avec trois devis.",
+    },
+  });
+  await journal(depDeco.id, [
+    { type: "CREEE", acteurId: syndicUser.id, il: 12 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "CONSEIL", seuil: "5000.00" }, il: 12 },
+    { type: "REJETEE", acteurId: conseilUser.id, details: { motif: "Dépense non prioritaire : à représenter à la prochaine AG avec trois devis." }, il: 10 },
+  ]);
+  // 7. PAYEE depuis le FONDS DE RÉSERVE — résolution d'AG ADOPTEE, mouvement DEPENSE dans le grand livre de la réserve.
+  const depPompe = await prisma.depense.create({
+    data: {
+      coproprieteId: copro.id, budgetAgId: budget.id, categorie: "TRAVAUX", prestataireId: prestataire.id,
+      libelle: "Remplacement de la pompe du surpresseur", montantHt: "5000.00", tva: "1000.00", montantTtc: "6000.00",
+      dateDepense: new Date(Date.now() - 60 * 24 * 3600 * 1000), statut: "PAYEE", source: "FONDS_RESERVE", resolutionAgId: resolutionPompe.id,
+      creeParId: syndicUser.id, approuveParId: conseilUser.id, approuveLe: new Date(Date.now() - 58 * 24 * 3600 * 1000),
+      payeLe: new Date(Date.now() - 55 * 24 * 3600 * 1000), methodePaiement: "VIREMENT", referencePaiement: `VIR-${exercice}-0098`,
+    },
+  });
+  await prisma.fondsReserveMouvement.create({
+    data: { fondsReserveId: fondsReserve.id, type: "DEPENSE", montant: "-6000.00", resolutionAgId: resolutionPompe.id, depenseId: depPompe.id, description: "Remplacement de la pompe du surpresseur", horodatage: new Date(Date.now() - 55 * 24 * 3600 * 1000) },
+  });
+  await journal(depPompe.id, [
+    { type: "CREEE", acteurId: syndicUser.id, il: 60 },
+    { type: "SOUMISE", acteurId: syndicUser.id, details: { niveau: "CONSEIL", seuil: "5000.00" }, il: 60 },
+    { type: "APPROUVEE", acteurId: conseilUser.id, il: 58 },
+    { type: "PAYEE", acteurId: syndicUser.id, details: { methode: "VIREMENT", reference: `VIR-${exercice}-0098`, source: "FONDS_RESERVE", mouvement: "-6000.00" }, il: 55 },
+  ]);
+  // Incident RESOLU évalué par le résident (Doc A §8.3 transparence prestataires) → note_moyenne 4.00.
+  await prisma.incident.create({
+    data: {
+      coproprieteId: copro.id, lotId: lotA1.id, categorie: "PLOMBERIE", sousCategorie: "Robinetterie commune",
+      description: "Robinet du local poubelles qui fuit.", partie: "COMMUNE", urgence: "NORMALE", statut: "RESOLU",
+      creePar: proprietaireA.id, assigneAId: prestataire.id, notePrestataire: 4, commentairePrestataire: "Rapide et propre, un peu cher.",
+      evalueLe: new Date(Date.now() - 20 * 24 * 3600 * 1000), creeLe: new Date(Date.now() - 25 * 24 * 3600 * 1000),
+    },
+  });
+
   console.log("Seed terminé :", {
     copropriete: copro.nom,
-    utilisateurs: 8,
+    utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },
     lots: 5,
+    depenses: { payees: 3, approuvee: depReparation.id, aApprouver: depFacade.id, brouillon: depBrouillon.id, rejetee: depDeco.id, reserve: depPompe.id },
     appelDeFonds: periode,
     ag: ag.id,
     invitationEnAttente: invitation.code,
