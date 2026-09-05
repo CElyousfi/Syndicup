@@ -61,6 +61,8 @@ export const ROLES_INVITABLES = [
   "GARDIEN",
   "PRESTATAIRE",
   "PERSONNE_MORALE_REPRESENTANT",
+  // M15 — gestionnaire LCD : invité par le propriétaire pour UN lot (lot_id obligatoire).
+  "GESTIONNAIRE_LCD",
 ] as const;
 
 // Rôles rattachés directement à la copropriété — lot_id interdit (Partie 5.3) ; pour tous les

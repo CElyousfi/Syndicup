@@ -80,6 +80,54 @@ enum RoleType {
   GARDIEN
   PRESTATAIRE
   PERSONNE_MORALE_REPRESENTANT
+  // M15 (LCD) — ⚠️ valeur ABSENTE du Master Spec Partie 2.5 / Doc A, ajoutée et signalée (CLAUDE.md
+  // §2) : gestionnaire de location courte durée (conciergerie, proche) désigné par le propriétaire,
+  // scopé aux lots via lot_location_courte_duree.gestionnaire_id — jamais à toute la copropriété.
+  GESTIONNAIRE_LCD
+}
+
+// ============================================================================
+// ENUMS — M15 LOCATION COURTE DURÉE (Doc A §10.2 : location_courte_duree = AUTORISEE /
+// INTERDITE / ENCADREE ; les autres enums sont des ajouts signalés — voir PR / ROADMAP M15)
+// ============================================================================
+
+enum RegimeLocationCourteDuree {
+  NON_DEFINI
+  AUTORISEE
+  ENCADREE
+  INTERDITE
+}
+
+enum StatutDeclarationLcd {
+  EN_ATTENTE
+  VALIDEE
+  REFUSEE
+  SUSPENDUE
+  CLOTUREE
+}
+
+enum StatutSejour {
+  PREVU
+  EN_COURS
+  TERMINE
+  ANNULE
+}
+
+enum TypePieceIdentite {
+  CIN
+  PASSEPORT
+  TITRE_SEJOUR
+  AUTRE
+}
+
+enum TypeEvenementSejour {
+  DECLARE
+  MODIFIE
+  ARRIVEE_CONFIRMEE
+  DEPART_CONFIRME
+  ANNULE
+  INCIDENT_LIE
+  GARDIEN_NOTIFIE
 }
 
 // ============================================================================
@@ -158,6 +206,12 @@ model Copropriete {
   // (accueil, entree, cour, salle, piscine) + `espace:<id>` par espace commun. Même périmètre
   // `<copropriete>/branding/…` que le logo ; URLs signées à la demande (jamais publiques).
   photosJson            Json?             @map("photos_json")
+  // M15 — Location courte durée (Doc A §10.2). Régime voté en AG ; paramètres uniquement si
+  // ENCADREE (validés Zod, nullable en base — jamais de défaut deviné, LEGAL_QUESTIONS_BRIEF §7).
+  regimeLcd                RegimeLocationCourteDuree @default(NON_DEFINI) @map("regime_lcd")
+  parametresLcdJson        Json?                     @map("parametres_lcd_json")
+  regimeLcdAgResolutionId  String?                   @map("regime_lcd_ag_resolution_id") @db.Uuid
+  regimeLcdAgResolution    AgResolution?             @relation("CoproprieteRegimeLcdResolution", fields: [regimeLcdAgResolutionId], references: [id])
   // Paramètres légaux configurables — NE JAMAIS mettre de valeur par défaut ici avant
   // confirmation juridique (docs/LEGAL_QUESTIONS_BRIEF.md §1). Nullable tant que non confirmé.
   delaiConvocationJours Int?              @map("delai_convocation_jours")
@@ -203,6 +257,9 @@ model Copropriete {
   personnel        Personnel[]
   visites          Visite[]
   litiges          ConflitLitige[]
+  declarationsLcd  LotLocationCourteDuree[]
+  sejoursLcd       SejourCourteDuree[]
+  sejourEvenements SejourEvenement[]
   idempotencyKeys  IdempotencyKey[]
   sessionsCmi      PaiementCmiSession[]
 
@@ -245,6 +302,11 @@ model Utilisateur {
   visitesGardien           Visite[]              @relation("VisiteGardien")
   litigesCrees             ConflitLitige[]       @relation("LitigeCreateur")
   appareilsPush            AppareilPush[]
+  lcdDeclarations          LotLocationCourteDuree[] @relation("LcdDeclarant")
+  lcdGestions              LotLocationCourteDuree[] @relation("LcdGestionnaire")
+  lcdDecisions             LotLocationCourteDuree[] @relation("LcdDecideur")
+  sejoursDeclares          SejourCourteDuree[]      @relation("SejourDeclarant")
+  sejourEvenementsActeur   SejourEvenement[]        @relation("SejourEvenementActeur")
 
   @@map("utilisateur")
 }
@@ -328,6 +390,8 @@ model Lot {
   reservations     ReservationEspaceCommun[]
   personnelLoges   Personnel[]
   visites          Visite[]
+  declarationsLcd  LotLocationCourteDuree[]
+  sejoursLcd       SejourCourteDuree[]
 
   @@index([coproprieteId])
   @@map("lot")
@@ -1036,6 +1100,9 @@ model Incident {
   // (même règle que les documents, Master Spec Partie 9.3). Ajout signalé : champ absent du
   // tableau Master Spec littéral, nécessaire au signalement photo mobile.
   photos        String[]          @default([])
+  // M15 — « signalement facilité » (Doc A §10.2) : nuisance liée au séjour LCD en cours.
+  sejourId      String?           @map("sejour_id") @db.Uuid
+  sejour        SejourCourteDuree? @relation(fields: [sejourId], references: [id])
   creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe     DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
 
@@ -1161,6 +1228,7 @@ model AgResolution {
   modifieLe    DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
   votes AgVote[]
+  coproprietesRegimeLcd Copropriete[] @relation("CoproprieteRegimeLcdResolution")
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1259,4 +1327,106 @@ model IdempotencyKey {
   @@id([cle, endpoint])
   @@index([coproprieteId])
   @@map("idempotency_key")
+}
+
+// ============================================================================
+// M15 — LOCATION COURTE DURÉE (Doc A §10.2)
+// Périmètre copropriété uniquement : conformité au règlement, sécurité (qui est dans
+// l'immeuble), nuisances. Aucune donnée tarifaire ni de paiement. Les voyageurs n'ont JAMAIS
+// de compte : ce sont des données d'un séjour (jamais de lot_occupant ni de role_utilisateur).
+// ============================================================================
+
+/// Déclaration « ce lot est exploité en location courte durée » — une ligne par (lot, période).
+model LotLocationCourteDuree {
+  id                       String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // copropriete_id porté pour la policy RLS (même justification que `visite`).
+  coproprieteId            String               @map("copropriete_id") @db.Uuid
+  copropriete              Copropriete          @relation(fields: [coproprieteId], references: [id])
+  lotId                    String               @map("lot_id") @db.Uuid
+  lot                      Lot                  @relation(fields: [lotId], references: [id])
+  declareParId             String               @map("declare_par_id") @db.Uuid
+  declarePar               Utilisateur          @relation("LcdDeclarant", fields: [declareParId], references: [id])
+  // Gestionnaire LCD (rôle GESTIONNAIRE_LCD, scopé à cette déclaration).
+  gestionnaireId           String?              @map("gestionnaire_id") @db.Uuid
+  gestionnaire             Utilisateur?         @relation("LcdGestionnaire", fields: [gestionnaireId], references: [id])
+  // Liste libre de plateformes (Airbnb, Booking, direct…) — informatif uniquement.
+  plateformesJson          Json?                @map("plateformes_json")
+  contactUrgenceNom        String?              @map("contact_urgence_nom")
+  contactUrgenceTelephone  String?              @map("contact_urgence_telephone")
+  statut                   StatutDeclarationLcd @default(EN_ATTENTE)
+  motifDecision            String?              @map("motif_decision")
+  decideParId              String?              @map("decide_par_id") @db.Uuid
+  decidePar                Utilisateur?         @relation("LcdDecideur", fields: [decideParId], references: [id])
+  decideLe                 DateTime?            @map("decide_le") @db.Timestamptz
+  dateDebut                DateTime             @map("date_debut") @db.Date
+  // NULL = déclaration ouverte ; au plus une ouverte par lot (index unique partiel en SQL).
+  dateFin                  DateTime?            @map("date_fin") @db.Date
+  creeLe                   DateTime             @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
+
+  sejours SejourCourteDuree[]
+
+  @@index([coproprieteId])
+  @@index([lotId])
+  @@index([gestionnaireId])
+  @@map("lot_location_courte_duree")
+}
+
+/// Séjour d'un voyageur — données minimales (CNDP) : jamais de numéro de pièce complet ni de scan.
+model SejourCourteDuree {
+  id                    String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId         String                 @map("copropriete_id") @db.Uuid
+  copropriete           Copropriete            @relation(fields: [coproprieteId], references: [id])
+  lotId                 String                 @map("lot_id") @db.Uuid
+  lot                   Lot                    @relation(fields: [lotId], references: [id])
+  declarationLcdId      String                 @map("declaration_lcd_id") @db.Uuid
+  declarationLcd        LotLocationCourteDuree @relation(fields: [declarationLcdId], references: [id])
+  declareParId          String                 @map("declare_par_id") @db.Uuid
+  declarePar            Utilisateur            @relation("SejourDeclarant", fields: [declareParId], references: [id])
+  dateArrivee           DateTime               @map("date_arrivee") @db.Date
+  dateDepart            DateTime               @map("date_depart") @db.Date
+  heureArriveePrevue    String?                @map("heure_arrivee_prevue")
+  nbVoyageurs           Int                    @map("nb_voyageurs")
+  voyageurPrincipalNom  String                 @map("voyageur_principal_nom")
+  voyageurTelephone     String?                @map("voyageur_telephone")
+  voyageurNationalite   String?                @map("voyageur_nationalite")
+  pieceIdentiteType     TypePieceIdentite?     @map("piece_identite_type")
+  // 4 derniers caractères uniquement (CNDP — minimisation).
+  pieceIdentiteFin      String?                @map("piece_identite_fin") @db.VarChar(4)
+  plaqueVehicule        String?                @map("plaque_vehicule")
+  statut                StatutSejour           @default(PREVU)
+  annuleLe              DateTime?              @map("annule_le") @db.Timestamptz
+  motifAnnulation       String?                @map("motif_annulation")
+  gardienInformeLe      DateTime?              @map("gardien_informe_le") @db.Timestamptz
+  creeLe                DateTime               @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe             DateTime               @updatedAt @map("modifie_le") @db.Timestamptz
+
+  evenements SejourEvenement[]
+  incidents  Incident[]
+
+  @@index([coproprieteId, dateArrivee])
+  @@index([lotId])
+  @@index([declarationLcdId])
+  @@map("sejour_courte_duree")
+}
+
+/// Journal APPEND-ONLY d'un séjour (qui était dans l'immeuble, quand — valeur probante) : aucun
+/// modifie_le, aucun UPDATE/DELETE (GRANT SELECT, INSERT uniquement — même discipline que
+/// incident_log / audit_log).
+model SejourEvenement {
+  id            String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String              @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete         @relation(fields: [coproprieteId], references: [id])
+  sejourId      String              @map("sejour_id") @db.Uuid
+  sejour        SejourCourteDuree   @relation(fields: [sejourId], references: [id])
+  type          TypeEvenementSejour
+  // NULL = système (ex. clôture automatique par le job quotidien).
+  acteurId      String?             @map("acteur_id") @db.Uuid
+  acteur        Utilisateur?        @relation("SejourEvenementActeur", fields: [acteurId], references: [id])
+  detailsJson   Json?               @map("details_json")
+  horodatage    DateTime            @default(now()) @db.Timestamptz
+
+  @@index([sejourId])
+  @@index([coproprieteId])
+  @@map("sejour_evenement")
 }

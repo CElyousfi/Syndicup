@@ -21,7 +21,10 @@ export type Role =
   | "INDIVISAIRE"
   | "GARDIEN"
   | "PRESTATAIRE"
-  | "PERSONNE_MORALE_REPRESENTANT";
+  | "PERSONNE_MORALE_REPRESENTANT"
+  // M15 — ⚠️ hors Master Spec Partie 4.2 (signalé) : gestionnaire de location courte durée,
+  // scopé aux lots via lot_location_courte_duree.gestionnaire_id.
+  | "GESTIONNAIRE_LCD";
 
 /**
  * Une action peut être :

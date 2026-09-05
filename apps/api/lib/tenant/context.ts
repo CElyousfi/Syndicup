@@ -23,6 +23,7 @@ const ROLES: readonly Role[] = [
   "GARDIEN",
   "PRESTATAIRE",
   "PERSONNE_MORALE_REPRESENTANT",
+  "GESTIONNAIRE_LCD",
 ];
 
 /**

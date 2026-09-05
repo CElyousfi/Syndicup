@@ -296,9 +296,109 @@ async function main() {
     },
   });
 
+  // ── M15 — Location courte durée (Doc A §10.2) ────────────────────────────
+  // Régime ENCADREE voté « hors plateforme » (pas encore de résolution ADOPTEE en base) ;
+  // paramètres de démonstration — valeurs de règlement, pas des valeurs légales.
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: {
+      regimeLcd: "ENCADREE",
+      parametresLcdJson: {
+        declaration_prealable_obligatoire: true,
+        delai_declaration_heures: 24,
+        nb_nuits_max_par_an: 120,
+        nb_voyageurs_max_par_lot: 4,
+        gestionnaire_obligatoire_si_proprietaire_absent: true,
+        contact_gardien_obligatoire: true,
+      },
+    },
+  });
+  const gestionnaireLcd = await prisma.utilisateur.create({
+    data: {
+      email: "conciergerie.atlas@example.ma",
+      telephone: "+212600000008",
+      nom: "Atlas Conciergerie",
+      prenom: "Karim",
+      languePreferee: "FR",
+      statutCompte: "ACTIF",
+    },
+  });
+  await prisma.roleUtilisateur.create({
+    data: { utilisateurId: gestionnaireLcd.id, coproprieteId: copro.id, role: "GESTIONNAIRE_LCD", actif: true },
+  });
+  const declarationLcd = await prisma.lotLocationCourteDuree.create({
+    data: {
+      coproprieteId: copro.id,
+      lotId: lotA1.id,
+      declareParId: proprietaireA.id,
+      gestionnaireId: gestionnaireLcd.id,
+      plateformesJson: ["Airbnb", "Booking"],
+      contactUrgenceNom: "Karim (Atlas Conciergerie)",
+      contactUrgenceTelephone: "+212600000008",
+      statut: "VALIDEE",
+      decideParId: syndicUser.id,
+      decideLe: new Date(),
+      dateDebut: new Date("2026-01-01"),
+    },
+  });
+  const jour = (delta: number) => {
+    const d = new Date();
+    d.setUTCHours(0, 0, 0, 0);
+    d.setUTCDate(d.getUTCDate() + delta);
+    return d;
+  };
+  const sejourEnCours = await prisma.sejourCourteDuree.create({
+    data: {
+      coproprieteId: copro.id,
+      lotId: lotA1.id,
+      declarationLcdId: declarationLcd.id,
+      declareParId: gestionnaireLcd.id,
+      dateArrivee: jour(-1),
+      dateDepart: jour(1),
+      heureArriveePrevue: "16:00",
+      nbVoyageurs: 2,
+      voyageurPrincipalNom: "Famille Dupont",
+      voyageurNationalite: "FR",
+      pieceIdentiteType: "PASSEPORT",
+      pieceIdentiteFin: "7Z41",
+      statut: "EN_COURS",
+      gardienInformeLe: new Date(Date.now() - 36 * 3600 * 1000),
+    },
+  });
+  const sejourPrevu = await prisma.sejourCourteDuree.create({
+    data: {
+      coproprieteId: copro.id,
+      lotId: lotA1.id,
+      declarationLcdId: declarationLcd.id,
+      declareParId: proprietaireA.id,
+      dateArrivee: jour(1),
+      dateDepart: jour(4),
+      heureArriveePrevue: "14:30",
+      nbVoyageurs: 3,
+      voyageurPrincipalNom: "Sara El Idrissi",
+      voyageurTelephone: "+212661000000",
+      voyageurNationalite: "MA",
+      pieceIdentiteType: "CIN",
+      pieceIdentiteFin: "12AB",
+      plaqueVehicule: "12345-A-6",
+      statut: "PREVU",
+      gardienInformeLe: new Date(),
+    },
+  });
+  await prisma.sejourEvenement.createMany({
+    data: [
+      { coproprieteId: copro.id, sejourId: sejourEnCours.id, type: "DECLARE", acteurId: gestionnaireLcd.id, horodatage: new Date(Date.now() - 48 * 3600 * 1000) },
+      { coproprieteId: copro.id, sejourId: sejourEnCours.id, type: "GARDIEN_NOTIFIE", acteurId: null, horodatage: new Date(Date.now() - 36 * 3600 * 1000) },
+      { coproprieteId: copro.id, sejourId: sejourEnCours.id, type: "ARRIVEE_CONFIRMEE", acteurId: gardienUser.id, detailsJson: { nb_voyageurs_constate: 2 }, horodatage: new Date(Date.now() - 20 * 3600 * 1000) },
+      { coproprieteId: copro.id, sejourId: sejourPrevu.id, type: "DECLARE", acteurId: proprietaireA.id },
+      { coproprieteId: copro.id, sejourId: sejourPrevu.id, type: "GARDIEN_NOTIFIE", acteurId: null },
+    ],
+  });
+
   console.log("Seed terminé :", {
     copropriete: copro.nom,
-    utilisateurs: 7,
+    utilisateurs: 8,
+    lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },
     lots: 5,
     appelDeFonds: periode,
     ag: ag.id,

@@ -151,6 +151,7 @@ export async function resolveTenantContext(
       "LOCATAIRE",
       "GARDIEN",
       "PRESTATAIRE",
+      "GESTIONNAIRE_LCD",
     ];
     claim = [...roles].sort(
       (a, b) => PRIORITE.indexOf(a.role) - PRIORITE.indexOf(b.role)
