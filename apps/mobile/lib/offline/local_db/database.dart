@@ -48,6 +48,26 @@ class LcdActionsQueue extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// M20 — pointage de présence de l'employé (POST /personnel/me/presence) hors-ligne : même
+/// discipline que les visites (Idempotency-Key = id de la ligne, rejeu à l'identique). Une seule
+/// ligne par jour (clé = id ; la date sert au dédoublonnage côté serveur : upsert par date).
+class PresencesQueue extends Table {
+  TextColumn get id => text()();
+  TextColumn get coproprieteId => text()();
+  /// « YYYY-MM-DD » (jour local du pointage).
+  TextColumn get date => text()();
+  /// PRESENT | ABSENT | MALADIE
+  TextColumn get statut => text()();
+  TextColumn get commentaire => text().nullable()();
+  DateTimeColumn get creeLe => dateTime()();
+  IntColumn get tentatives => integer().withDefault(const Constant(0))();
+  TextColumn get derniereErreur => text().nullable()();
+  BoolColumn get definitif => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Cache de lecture du gardien (lots + visites du jour) pour consulter le planning hors-ligne.
 class CacheEntries extends Table {
   TextColumn get cle => text()();
@@ -58,12 +78,12 @@ class CacheEntries extends Table {
   Set<Column> get primaryKey => {cle};
 }
 
-@DriftDatabase(tables: [VisitesQueue, LcdActionsQueue, CacheEntries])
+@DriftDatabase(tables: [VisitesQueue, LcdActionsQueue, PresencesQueue, CacheEntries])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'syndicup_offline'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -71,6 +91,8 @@ class LocalDatabase extends _$LocalDatabase {
         onUpgrade: (m, from, to) async {
           // v2 (M15) : file des confirmations LCD — les lignes visites existantes sont conservées.
           if (from < 2) await m.createTable(lcdActionsQueue);
+          // v3 (M20) : file des pointages de présence.
+          if (from < 3) await m.createTable(presencesQueue);
         },
       );
 
@@ -115,6 +137,26 @@ class LocalDatabase extends _$LocalDatabase {
         'UPDATE lcd_actions_queue SET tentatives = tentatives + 1 WHERE id = ?',
         variables: [Variable.withString(id)],
         updates: {lcdActionsQueue},
+      );
+
+  // ── File des pointages (M20) ──
+  Stream<List<PresencesQueueData>> watchPresencesQueue() =>
+      (select(presencesQueue)..orderBy([(t) => OrderingTerm.asc(t.creeLe)])).watch();
+
+  Future<List<PresencesQueueData>> pendingPresences() =>
+      (select(presencesQueue)..where((t) => t.definitif.equals(false))..orderBy([(t) => OrderingTerm.asc(t.creeLe)])).get();
+
+  Future<void> enqueuePresence(PresencesQueueCompanion v) => into(presencesQueue).insert(v, mode: InsertMode.insertOrReplace);
+
+  Future<void> removePresence(String id) => (delete(presencesQueue)..where((t) => t.id.equals(id))).go();
+
+  Future<void> markPresenceFailure(String id, String erreur, {bool definitif = false}) =>
+      (update(presencesQueue)..where((t) => t.id.equals(id))).write(PresencesQueueCompanion(derniereErreur: Value(erreur), definitif: Value(definitif)));
+
+  Future<void> bumpPresenceAttempts(String id) => customUpdate(
+        'UPDATE presences_queue SET tentatives = tentatives + 1 WHERE id = ?',
+        variables: [Variable.withString(id)],
+        updates: {presencesQueue},
       );
 
   Future<void> putCache(String cle, String json) =>

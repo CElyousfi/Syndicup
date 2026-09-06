@@ -1221,6 +1221,593 @@ class LcdActionsQueueCompanion extends UpdateCompanion<LcdActionsQueueData> {
   }
 }
 
+class $PresencesQueueTable extends PresencesQueue
+    with TableInfo<$PresencesQueueTable, PresencesQueueData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PresencesQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _coproprieteIdMeta = const VerificationMeta(
+    'coproprieteId',
+  );
+  @override
+  late final GeneratedColumn<String> coproprieteId = GeneratedColumn<String>(
+    'copropriete_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<String> date = GeneratedColumn<String>(
+    'date',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _commentaireMeta = const VerificationMeta(
+    'commentaire',
+  );
+  @override
+  late final GeneratedColumn<String> commentaire = GeneratedColumn<String>(
+    'commentaire',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tentativesMeta = const VerificationMeta(
+    'tentatives',
+  );
+  @override
+  late final GeneratedColumn<int> tentatives = GeneratedColumn<int>(
+    'tentatives',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _derniereErreurMeta = const VerificationMeta(
+    'derniereErreur',
+  );
+  @override
+  late final GeneratedColumn<String> derniereErreur = GeneratedColumn<String>(
+    'derniere_erreur',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _definitifMeta = const VerificationMeta(
+    'definitif',
+  );
+  @override
+  late final GeneratedColumn<bool> definitif = GeneratedColumn<bool>(
+    'definitif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("definitif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    coproprieteId,
+    date,
+    statut,
+    commentaire,
+    creeLe,
+    tentatives,
+    derniereErreur,
+    definitif,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'presences_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PresencesQueueData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('copropriete_id')) {
+      context.handle(
+        _coproprieteIdMeta,
+        coproprieteId.isAcceptableOrUnknown(
+          data['copropriete_id']!,
+          _coproprieteIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_coproprieteIdMeta);
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dateMeta);
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statutMeta);
+    }
+    if (data.containsKey('commentaire')) {
+      context.handle(
+        _commentaireMeta,
+        commentaire.isAcceptableOrUnknown(
+          data['commentaire']!,
+          _commentaireMeta,
+        ),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_creeLeMeta);
+    }
+    if (data.containsKey('tentatives')) {
+      context.handle(
+        _tentativesMeta,
+        tentatives.isAcceptableOrUnknown(data['tentatives']!, _tentativesMeta),
+      );
+    }
+    if (data.containsKey('derniere_erreur')) {
+      context.handle(
+        _derniereErreurMeta,
+        derniereErreur.isAcceptableOrUnknown(
+          data['derniere_erreur']!,
+          _derniereErreurMeta,
+        ),
+      );
+    }
+    if (data.containsKey('definitif')) {
+      context.handle(
+        _definitifMeta,
+        definitif.isAcceptableOrUnknown(data['definitif']!, _definitifMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  PresencesQueueData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PresencesQueueData(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}id'],
+          )!,
+      coproprieteId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}copropriete_id'],
+          )!,
+      date:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}date'],
+          )!,
+      statut:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}statut'],
+          )!,
+      commentaire: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}commentaire'],
+      ),
+      creeLe:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}cree_le'],
+          )!,
+      tentatives:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}tentatives'],
+          )!,
+      derniereErreur: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}derniere_erreur'],
+      ),
+      definitif:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}definitif'],
+          )!,
+    );
+  }
+
+  @override
+  $PresencesQueueTable createAlias(String alias) {
+    return $PresencesQueueTable(attachedDatabase, alias);
+  }
+}
+
+class PresencesQueueData extends DataClass
+    implements Insertable<PresencesQueueData> {
+  final String id;
+  final String coproprieteId;
+
+  /// « YYYY-MM-DD » (jour local du pointage).
+  final String date;
+
+  /// PRESENT | ABSENT | MALADIE
+  final String statut;
+  final String? commentaire;
+  final DateTime creeLe;
+  final int tentatives;
+  final String? derniereErreur;
+  final bool definitif;
+  const PresencesQueueData({
+    required this.id,
+    required this.coproprieteId,
+    required this.date,
+    required this.statut,
+    this.commentaire,
+    required this.creeLe,
+    required this.tentatives,
+    this.derniereErreur,
+    required this.definitif,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['copropriete_id'] = Variable<String>(coproprieteId);
+    map['date'] = Variable<String>(date);
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || commentaire != null) {
+      map['commentaire'] = Variable<String>(commentaire);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['tentatives'] = Variable<int>(tentatives);
+    if (!nullToAbsent || derniereErreur != null) {
+      map['derniere_erreur'] = Variable<String>(derniereErreur);
+    }
+    map['definitif'] = Variable<bool>(definitif);
+    return map;
+  }
+
+  PresencesQueueCompanion toCompanion(bool nullToAbsent) {
+    return PresencesQueueCompanion(
+      id: Value(id),
+      coproprieteId: Value(coproprieteId),
+      date: Value(date),
+      statut: Value(statut),
+      commentaire:
+          commentaire == null && nullToAbsent
+              ? const Value.absent()
+              : Value(commentaire),
+      creeLe: Value(creeLe),
+      tentatives: Value(tentatives),
+      derniereErreur:
+          derniereErreur == null && nullToAbsent
+              ? const Value.absent()
+              : Value(derniereErreur),
+      definitif: Value(definitif),
+    );
+  }
+
+  factory PresencesQueueData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PresencesQueueData(
+      id: serializer.fromJson<String>(json['id']),
+      coproprieteId: serializer.fromJson<String>(json['coproprieteId']),
+      date: serializer.fromJson<String>(json['date']),
+      statut: serializer.fromJson<String>(json['statut']),
+      commentaire: serializer.fromJson<String?>(json['commentaire']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      tentatives: serializer.fromJson<int>(json['tentatives']),
+      derniereErreur: serializer.fromJson<String?>(json['derniereErreur']),
+      definitif: serializer.fromJson<bool>(json['definitif']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'coproprieteId': serializer.toJson<String>(coproprieteId),
+      'date': serializer.toJson<String>(date),
+      'statut': serializer.toJson<String>(statut),
+      'commentaire': serializer.toJson<String?>(commentaire),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'tentatives': serializer.toJson<int>(tentatives),
+      'derniereErreur': serializer.toJson<String?>(derniereErreur),
+      'definitif': serializer.toJson<bool>(definitif),
+    };
+  }
+
+  PresencesQueueData copyWith({
+    String? id,
+    String? coproprieteId,
+    String? date,
+    String? statut,
+    Value<String?> commentaire = const Value.absent(),
+    DateTime? creeLe,
+    int? tentatives,
+    Value<String?> derniereErreur = const Value.absent(),
+    bool? definitif,
+  }) => PresencesQueueData(
+    id: id ?? this.id,
+    coproprieteId: coproprieteId ?? this.coproprieteId,
+    date: date ?? this.date,
+    statut: statut ?? this.statut,
+    commentaire: commentaire.present ? commentaire.value : this.commentaire,
+    creeLe: creeLe ?? this.creeLe,
+    tentatives: tentatives ?? this.tentatives,
+    derniereErreur:
+        derniereErreur.present ? derniereErreur.value : this.derniereErreur,
+    definitif: definitif ?? this.definitif,
+  );
+  PresencesQueueData copyWithCompanion(PresencesQueueCompanion data) {
+    return PresencesQueueData(
+      id: data.id.present ? data.id.value : this.id,
+      coproprieteId:
+          data.coproprieteId.present
+              ? data.coproprieteId.value
+              : this.coproprieteId,
+      date: data.date.present ? data.date.value : this.date,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      commentaire:
+          data.commentaire.present ? data.commentaire.value : this.commentaire,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      tentatives:
+          data.tentatives.present ? data.tentatives.value : this.tentatives,
+      derniereErreur:
+          data.derniereErreur.present
+              ? data.derniereErreur.value
+              : this.derniereErreur,
+      definitif: data.definitif.present ? data.definitif.value : this.definitif,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresencesQueueData(')
+          ..write('id: $id, ')
+          ..write('coproprieteId: $coproprieteId, ')
+          ..write('date: $date, ')
+          ..write('statut: $statut, ')
+          ..write('commentaire: $commentaire, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('tentatives: $tentatives, ')
+          ..write('derniereErreur: $derniereErreur, ')
+          ..write('definitif: $definitif')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    coproprieteId,
+    date,
+    statut,
+    commentaire,
+    creeLe,
+    tentatives,
+    derniereErreur,
+    definitif,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PresencesQueueData &&
+          other.id == this.id &&
+          other.coproprieteId == this.coproprieteId &&
+          other.date == this.date &&
+          other.statut == this.statut &&
+          other.commentaire == this.commentaire &&
+          other.creeLe == this.creeLe &&
+          other.tentatives == this.tentatives &&
+          other.derniereErreur == this.derniereErreur &&
+          other.definitif == this.definitif);
+}
+
+class PresencesQueueCompanion extends UpdateCompanion<PresencesQueueData> {
+  final Value<String> id;
+  final Value<String> coproprieteId;
+  final Value<String> date;
+  final Value<String> statut;
+  final Value<String?> commentaire;
+  final Value<DateTime> creeLe;
+  final Value<int> tentatives;
+  final Value<String?> derniereErreur;
+  final Value<bool> definitif;
+  final Value<int> rowid;
+  const PresencesQueueCompanion({
+    this.id = const Value.absent(),
+    this.coproprieteId = const Value.absent(),
+    this.date = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.commentaire = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.tentatives = const Value.absent(),
+    this.derniereErreur = const Value.absent(),
+    this.definitif = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PresencesQueueCompanion.insert({
+    required String id,
+    required String coproprieteId,
+    required String date,
+    required String statut,
+    this.commentaire = const Value.absent(),
+    required DateTime creeLe,
+    this.tentatives = const Value.absent(),
+    this.derniereErreur = const Value.absent(),
+    this.definitif = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       coproprieteId = Value(coproprieteId),
+       date = Value(date),
+       statut = Value(statut),
+       creeLe = Value(creeLe);
+  static Insertable<PresencesQueueData> custom({
+    Expression<String>? id,
+    Expression<String>? coproprieteId,
+    Expression<String>? date,
+    Expression<String>? statut,
+    Expression<String>? commentaire,
+    Expression<DateTime>? creeLe,
+    Expression<int>? tentatives,
+    Expression<String>? derniereErreur,
+    Expression<bool>? definitif,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (coproprieteId != null) 'copropriete_id': coproprieteId,
+      if (date != null) 'date': date,
+      if (statut != null) 'statut': statut,
+      if (commentaire != null) 'commentaire': commentaire,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (tentatives != null) 'tentatives': tentatives,
+      if (derniereErreur != null) 'derniere_erreur': derniereErreur,
+      if (definitif != null) 'definitif': definitif,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PresencesQueueCompanion copyWith({
+    Value<String>? id,
+    Value<String>? coproprieteId,
+    Value<String>? date,
+    Value<String>? statut,
+    Value<String?>? commentaire,
+    Value<DateTime>? creeLe,
+    Value<int>? tentatives,
+    Value<String?>? derniereErreur,
+    Value<bool>? definitif,
+    Value<int>? rowid,
+  }) {
+    return PresencesQueueCompanion(
+      id: id ?? this.id,
+      coproprieteId: coproprieteId ?? this.coproprieteId,
+      date: date ?? this.date,
+      statut: statut ?? this.statut,
+      commentaire: commentaire ?? this.commentaire,
+      creeLe: creeLe ?? this.creeLe,
+      tentatives: tentatives ?? this.tentatives,
+      derniereErreur: derniereErreur ?? this.derniereErreur,
+      definitif: definitif ?? this.definitif,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (coproprieteId.present) {
+      map['copropriete_id'] = Variable<String>(coproprieteId.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<String>(date.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (commentaire.present) {
+      map['commentaire'] = Variable<String>(commentaire.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (tentatives.present) {
+      map['tentatives'] = Variable<int>(tentatives.value);
+    }
+    if (derniereErreur.present) {
+      map['derniere_erreur'] = Variable<String>(derniereErreur.value);
+    }
+    if (definitif.present) {
+      map['definitif'] = Variable<bool>(definitif.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PresencesQueueCompanion(')
+          ..write('id: $id, ')
+          ..write('coproprieteId: $coproprieteId, ')
+          ..write('date: $date, ')
+          ..write('statut: $statut, ')
+          ..write('commentaire: $commentaire, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('tentatives: $tentatives, ')
+          ..write('derniereErreur: $derniereErreur, ')
+          ..write('definitif: $definitif, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CacheEntriesTable extends CacheEntries
     with TableInfo<$CacheEntriesTable, CacheEntry> {
   @override
@@ -1497,6 +2084,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   late final $LcdActionsQueueTable lcdActionsQueue = $LcdActionsQueueTable(
     this,
   );
+  late final $PresencesQueueTable presencesQueue = $PresencesQueueTable(this);
   late final $CacheEntriesTable cacheEntries = $CacheEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -1505,6 +2093,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     visitesQueue,
     lcdActionsQueue,
+    presencesQueue,
     cacheEntries,
   ];
 }
@@ -2130,6 +2719,311 @@ typedef $$LcdActionsQueueTableProcessedTableManager =
       LcdActionsQueueData,
       PrefetchHooks Function()
     >;
+typedef $$PresencesQueueTableCreateCompanionBuilder =
+    PresencesQueueCompanion Function({
+      required String id,
+      required String coproprieteId,
+      required String date,
+      required String statut,
+      Value<String?> commentaire,
+      required DateTime creeLe,
+      Value<int> tentatives,
+      Value<String?> derniereErreur,
+      Value<bool> definitif,
+      Value<int> rowid,
+    });
+typedef $$PresencesQueueTableUpdateCompanionBuilder =
+    PresencesQueueCompanion Function({
+      Value<String> id,
+      Value<String> coproprieteId,
+      Value<String> date,
+      Value<String> statut,
+      Value<String?> commentaire,
+      Value<DateTime> creeLe,
+      Value<int> tentatives,
+      Value<String?> derniereErreur,
+      Value<bool> definitif,
+      Value<int> rowid,
+    });
+
+class $$PresencesQueueTableFilterComposer
+    extends Composer<_$LocalDatabase, $PresencesQueueTable> {
+  $$PresencesQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get definitif => $composableBuilder(
+    column: $table.definitif,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PresencesQueueTableOrderingComposer
+    extends Composer<_$LocalDatabase, $PresencesQueueTable> {
+  $$PresencesQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get definitif => $composableBuilder(
+    column: $table.definitif,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PresencesQueueTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $PresencesQueueTable> {
+  $$PresencesQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get definitif =>
+      $composableBuilder(column: $table.definitif, builder: (column) => column);
+}
+
+class $$PresencesQueueTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $PresencesQueueTable,
+          PresencesQueueData,
+          $$PresencesQueueTableFilterComposer,
+          $$PresencesQueueTableOrderingComposer,
+          $$PresencesQueueTableAnnotationComposer,
+          $$PresencesQueueTableCreateCompanionBuilder,
+          $$PresencesQueueTableUpdateCompanionBuilder,
+          (
+            PresencesQueueData,
+            BaseReferences<
+              _$LocalDatabase,
+              $PresencesQueueTable,
+              PresencesQueueData
+            >,
+          ),
+          PresencesQueueData,
+          PrefetchHooks Function()
+        > {
+  $$PresencesQueueTableTableManager(
+    _$LocalDatabase db,
+    $PresencesQueueTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$PresencesQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () =>
+                  $$PresencesQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer:
+              () => $$PresencesQueueTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> coproprieteId = const Value.absent(),
+                Value<String> date = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<String?> commentaire = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<int> tentatives = const Value.absent(),
+                Value<String?> derniereErreur = const Value.absent(),
+                Value<bool> definitif = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PresencesQueueCompanion(
+                id: id,
+                coproprieteId: coproprieteId,
+                date: date,
+                statut: statut,
+                commentaire: commentaire,
+                creeLe: creeLe,
+                tentatives: tentatives,
+                derniereErreur: derniereErreur,
+                definitif: definitif,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String coproprieteId,
+                required String date,
+                required String statut,
+                Value<String?> commentaire = const Value.absent(),
+                required DateTime creeLe,
+                Value<int> tentatives = const Value.absent(),
+                Value<String?> derniereErreur = const Value.absent(),
+                Value<bool> definitif = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PresencesQueueCompanion.insert(
+                id: id,
+                coproprieteId: coproprieteId,
+                date: date,
+                statut: statut,
+                commentaire: commentaire,
+                creeLe: creeLe,
+                tentatives: tentatives,
+                derniereErreur: derniereErreur,
+                definitif: definitif,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PresencesQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $PresencesQueueTable,
+      PresencesQueueData,
+      $$PresencesQueueTableFilterComposer,
+      $$PresencesQueueTableOrderingComposer,
+      $$PresencesQueueTableAnnotationComposer,
+      $$PresencesQueueTableCreateCompanionBuilder,
+      $$PresencesQueueTableUpdateCompanionBuilder,
+      (
+        PresencesQueueData,
+        BaseReferences<
+          _$LocalDatabase,
+          $PresencesQueueTable,
+          PresencesQueueData
+        >,
+      ),
+      PresencesQueueData,
+      PrefetchHooks Function()
+    >;
 typedef $$CacheEntriesTableCreateCompanionBuilder =
     CacheEntriesCompanion Function({
       required String cle,
@@ -2310,6 +3204,8 @@ class $LocalDatabaseManager {
       $$VisitesQueueTableTableManager(_db, _db.visitesQueue);
   $$LcdActionsQueueTableTableManager get lcdActionsQueue =>
       $$LcdActionsQueueTableTableManager(_db, _db.lcdActionsQueue);
+  $$PresencesQueueTableTableManager get presencesQueue =>
+      $$PresencesQueueTableTableManager(_db, _db.presencesQueue);
   $$CacheEntriesTableTableManager get cacheEntries =>
       $$CacheEntriesTableTableManager(_db, _db.cacheEntries);
 }

@@ -12,7 +12,11 @@ const Map<String, BadgeVariant> incidentVariant = {'OUVERT': BadgeVariant.danger
 const Map<String, BadgeVariant> urgenceVariant = {'NORMALE': BadgeVariant.neutral, 'URGENTE': BadgeVariant.warn, 'URGENCE_MAXIMALE': BadgeVariant.danger};
 const Map<String, BadgeVariant> reservationVariant = {'EN_ATTENTE': BadgeVariant.neutral, 'CONFIRMEE': BadgeVariant.ok, 'REJETEE': BadgeVariant.danger, 'ANNULEE': BadgeVariant.outline};
 const Map<String, BadgeVariant> visiteVariant = {'EN_ATTENTE': BadgeVariant.warn, 'AUTORISE': BadgeVariant.ok, 'REFUSE': BadgeVariant.danger};
-const Map<String, BadgeVariant> personnelVariant = {'PRESENT': BadgeVariant.ok, 'ABSENT': BadgeVariant.danger, 'REMPLACE': BadgeVariant.warn};
+const Map<String, BadgeVariant> personnelVariant = {'PRE_EMBAUCHE': BadgeVariant.outline, 'PRESENT': BadgeVariant.ok, 'ABSENT': BadgeVariant.danger, 'REMPLACE': BadgeVariant.warn, 'PARTI': BadgeVariant.neutral};
+// M20 — personnel RH.
+const Map<String, BadgeVariant> fichePaieVariant = {'BROUILLON': BadgeVariant.outline, 'VALIDEE': BadgeVariant.info, 'PAYEE': BadgeVariant.ok};
+const Map<String, BadgeVariant> congeVariant = {'DEMANDE': BadgeVariant.warn, 'APPROUVE': BadgeVariant.ok, 'REFUSE': BadgeVariant.danger, 'ANNULE': BadgeVariant.neutral};
+const Map<String, BadgeVariant> presenceVariant = {'PRESENT': BadgeVariant.ok, 'ABSENT': BadgeVariant.danger, 'CONGE': BadgeVariant.info, 'MALADIE': BadgeVariant.warn};
 const Map<String, BadgeVariant> litigeVariant = {'OUVERT': BadgeVariant.danger, 'RESOLU': BadgeVariant.ok, 'CLOS': BadgeVariant.outline};
 const Map<String, BadgeVariant> invitationVariant = {'EN_ATTENTE': BadgeVariant.info, 'ACCEPTEE': BadgeVariant.ok, 'EXPIREE': BadgeVariant.outline, 'REGENEREE': BadgeVariant.neutral};
 const Map<String, BadgeVariant> compteVariant = {'INVITE': BadgeVariant.neutral, 'EN_VALIDATION': BadgeVariant.warn, 'ACTIF': BadgeVariant.ok, 'SUSPENDU': BadgeVariant.danger, 'DESACTIVE': BadgeVariant.outline, 'ANONYMISE': BadgeVariant.ink};

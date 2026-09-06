@@ -11,6 +11,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import 'package:go_router/go_router.dart';
 
 /// H1 — fiches gardien (statut PRESENT/ABSENT/REMPLACE, logement de service).
 class PersonnelScreen extends ConsumerWidget {
@@ -28,10 +29,15 @@ class PersonnelScreen extends ConsumerWidget {
       return nomComplet(m?.prenom, m?.nom) ?? (id == ctx.profil.id ? (nomComplet(ctx.profil.prenom, ctx.profil.nom) ?? d.personnel.maFiche) : id.substring(0, 8));
     }
 
+    final enAttente = ctx.isGestion ? (ref.watch(congesEnAttenteProvider).valueOrNull ?? const <Conge>[]) : const <Conge>[];
     return SuPage(
       title: d.personnel.titre,
       subtitle: d.personnel.subtitle,
-      onRefresh: () async => ref.invalidate(personnelProvider),
+      actions: [if (ctx.isGestion || ctx.isConseil) IconButton(tooltip: d.personnel.planning, icon: const Icon(Icons.calendar_view_week_rounded), onPressed: () => context.push('/personnel/planning'))],
+      onRefresh: () async {
+        ref.invalidate(personnelProvider);
+        ref.invalidate(congesEnAttenteProvider);
+      },
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.personnel.nouvelleFiche, builder: (_) => _PersonnelForm(lots: lots)), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.personnel.nouvelleFiche)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(personnelProvider), data: (ps) {
@@ -39,15 +45,35 @@ class PersonnelScreen extends ConsumerWidget {
           return Column(
             children: [
               if (ps.any((p) => p.statut == 'ABSENT')) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.warn, body: d.personnel.absentAlerte)),
+              // M20 — demandes de congé à décider (syndic) : accès direct au dossier concerné.
+              if (enAttente.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SuBanner(
+                    tone: BannerTone.info,
+                    title: '${d.personnel.conges} · ${enAttente.length}',
+                    body: enAttente.map((c) => '${c.personnelNom ?? (d.enumsPersonnelRh.poste[c.personnelPoste ?? ''] ?? '')} · ${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)}').join('\n'),
+                    action: TextButton(onPressed: () => context.push('/personnel/${enAttente.first.personnelId}?onglet=conges'), child: Text(d.personnel.approuverConge)),
+                  ),
+                ),
               CardList([
                 for (final p in ps)
-                  ListRow(
-                    leading: Avatar(nom(p.utilisateurId), size: 40),
-                    title: nom(p.utilisateurId),
-                    subtitle: '${d.personnel.logement} : ${lots.where((x) => x.id == p.logementLotId).map((x) => x.numero).firstOrNull ?? d.personnel.aucuneLoge} · ${fill(d.common.sinceDate, {'date': formatDateCourte(p.creeLe, l)})}',
-                    trailing: StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, small: true),
-                    onTap: ctx.isGestion ? () => showFormSheet<void>(context, title: d.personnel.changerStatut, builder: (_) => _StatutForm(p: p, lots: lots)) : null,
-                  ),
+                  Builder(builder: (_) {
+                    final estMoi = p.utilisateurId == ctx.profil.id;
+                    final ouvrable = ctx.isGestion || estMoi;
+                    final poste = d.enumsPersonnelRh.poste[p.poste] ?? p.poste;
+                    return ListRow(
+                      leading: Avatar(p.nomAffiche(nom(p.utilisateurId)), size: 40, solid: estMoi),
+                      title: p.nomAffiche(nom(p.utilisateurId)),
+                      subtitle: '$poste · ${d.personnel.logement} : ${p.logementLotNumero ?? lots.where((x) => x.id == p.logementLotId).map((x) => x.numero).firstOrNull ?? d.personnel.aucuneLoge}',
+                      trailing: Row(mainAxisSize: MainAxisSize.min, children: [
+                        StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, small: true),
+                        if (ctx.isGestion) IconButton(tooltip: d.personnel.changerStatut, icon: const Icon(Icons.swap_horiz_rounded, size: 20), onPressed: () => showFormSheet<void>(context, title: d.personnel.changerStatut, builder: (_) => _StatutForm(p: p, lots: lots))),
+                      ]),
+                      chevron: ouvrable,
+                      onTap: ouvrable ? () => context.push('/personnel/${p.id}') : null,
+                    );
+                  }),
               ]),
             ],
           );

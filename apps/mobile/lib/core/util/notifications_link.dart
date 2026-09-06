@@ -23,6 +23,11 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('JUSTIFICATIF_') || templateCode == 'PAIEMENT_VALIDE' || templateCode == 'PAIEMENT_ESPECES_SAISI') {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
+  // M20 — personnel RH : congés (syndic → dossier de l'employé ; employé → son dossier), paie, fin de CDD.
+  if (templateCode.startsWith('CONGE_')) return id('personnel_id') != null ? '/personnel/${id('personnel_id')}?onglet=conges' : '/personnel/me?onglet=conges';
+  if (templateCode == 'PAIE_VALIDEE') return id('personnel_id') != null ? '/personnel/${id('personnel_id')}?onglet=paie' : '/personnel/me?onglet=paie';
+  if (templateCode == 'PAIE_A_VALIDER') return '/personnel';
+  if (templateCode == 'CONTRAT_TRAVAIL_FIN_PROCHE') return id('personnel_id') != null ? '/personnel/${id('personnel_id')}' : '/personnel';
   // M19 — contrats : échéances, expiration, reconduction, assurance absente.
   if (templateCode.startsWith('CONTRAT_')) return id('contrat_id') != null ? '/contrats/${id('contrat_id')}' : '/contrats';
   if (templateCode == 'ASSURANCE_IMMEUBLE_ABSENTE') return '/contrats';

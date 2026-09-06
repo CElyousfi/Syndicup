@@ -71,6 +71,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(contratsProvider);
       ref.invalidate(assuranceProvider);
     }
+    if (t.startsWith('CONGE_') || t.startsWith('PAIE_') || t == 'CONTRAT_TRAVAIL_FIN_PROCHE') {
+      ref.invalidate(personnelProvider);
+      ref.invalidate(congesEnAttenteProvider);
+    }
     if (t.startsWith('RAPPORT_GESTION_')) {
       ref.invalidate(rapportsGestionProvider);
       ref.invalidate(transparenceProvider);

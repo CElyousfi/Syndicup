@@ -136,6 +136,35 @@ final personnelProvider = FutureProvider.autoDispose<List<Personnel>>((ref) asyn
   return r.dataOrNull ?? const [];
 });
 
+// ── M20 — Personnel RH ───────────────────────────────────────────────────────
+final personnelDetailProvider = FutureProvider.autoDispose.family<PersonnelDetail, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/personnel/$id', parse: (j) => PersonnelDetail.fromJson(asMap(j))));
+});
+final fichesPaieProvider = FutureProvider.autoDispose.family<List<FichePaie>, String>((ref, personnelId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/personnel/$personnelId/fiches-paie', parse: (j) => parseList(j, FichePaie.fromJson)));
+});
+final congesProvider = FutureProvider.autoDispose.family<List<Conge>, String>((ref, personnelId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/personnel/$personnelId/conges', parse: (j) => parseList(j, Conge.fromJson)));
+});
+/// Demandes en attente de toute la copropriété (syndic) — badge + liste à décider.
+final congesEnAttenteProvider = FutureProvider.autoDispose<List<Conge>>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<Conge>>('/personnel/conges', query: {'statut': 'DEMANDE'}, parse: (j) => parseList(j, Conge.fromJson));
+  return r.dataOrNull ?? const [];
+});
+/// Présences d'un employé sur une période « YYYY-MM » (clé `personnelId|periode`).
+final presencesProvider = FutureProvider.autoDispose.family<List<PresencePersonnel>, String>((ref, cle) async {
+  final parts = cle.split('|');
+  final periode = parts[1];
+  final a = int.parse(periode.substring(0, 4));
+  final m = int.parse(periode.substring(5, 7));
+  final fin = DateTime.utc(a, m + 1, 0).day;
+  return unwrap(await ref.watch(apiClientProvider).get('/personnel/${parts[0]}/presences', query: {'from': '$periode-01', 'to': '$periode-${fin.toString().padLeft(2, '0')}'}, parse: (j) => parseList(j, PresencePersonnel.fromJson)));
+});
+/// Planning de la semaine (lundi ISO ou null = semaine courante).
+final planningProvider = FutureProvider.autoDispose.family<PlanningSemaine, String?>((ref, semaine) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/personnel/planning', query: semaine == null ? null : {'semaine': semaine}, parse: (j) => PlanningSemaine.fromJson(asMap(j))));
+});
+
 final visitesProvider = FutureProvider.autoDispose<List<Visite>>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/visites', parse: (j) => parseList(j, Visite.fromJson)));
 });

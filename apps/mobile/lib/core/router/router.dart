@@ -31,6 +31,7 @@ import '../../features/membres/membres_screens.dart';
 import '../../features/notifications/notifications_screen.dart';
 import '../../features/parametres/parametres_screen.dart';
 import '../../features/personnel/personnel_screen.dart';
+import '../../features/personnel/personnel_rh_screens.dart';
 import '../../features/profil/profil_screens.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
@@ -135,6 +136,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/visites', builder: (_, s) => VisitesScreen(enregistrer: s.uri.queryParameters['enregistrer'] == '1')),
           GoRoute(path: '/visites/:id', builder: (_, s) => VisiteRepondreScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/personnel', builder: (_, __) => const PersonnelScreen()),
+          // M20 — dossier RH : « Mon dossier » (employé), planning (syndic / conseil), détail (syndic / soi).
+          GoRoute(path: '/personnel/me', builder: (_, s) => MonDossierScreen(onglet: s.uri.queryParameters['onglet'])),
+          GoRoute(path: '/personnel/planning', builder: (_, s) => PlanningScreen(semaine: s.uri.queryParameters['semaine'])),
+          GoRoute(path: '/personnel/:id', builder: (_, s) => PersonnelDetailScreen(id: s.pathParameters['id']!, onglet: s.uri.queryParameters['onglet'])),
           GoRoute(path: '/location-courte-duree', builder: (_, __) => const LcdScreen()),
           GoRoute(path: '/location-courte-duree/reglement', builder: (_, __) => const LcdReglementScreen()),
           GoRoute(path: '/location-courte-duree/declarations/:id', builder: (_, s) => LcdDeclarationScreen(id: s.pathParameters['id']!)),

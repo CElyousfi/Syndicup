@@ -708,14 +708,107 @@ class BudgetVsRealise {
 }
 
 // ── Personnel & visites ─────────────────────────────────────────────────────
+class PersonnelUtilisateur {
+  final String id;
+  final String? nom, prenom, telephone;
+  const PersonnelUtilisateur({required this.id, this.nom, this.prenom, this.telephone});
+  factory PersonnelUtilisateur.fromJson(Map<String, dynamic> j) => PersonnelUtilisateur(id: _s(j, 'id'), nom: _sn(j, 'nom'), prenom: _sn(j, 'prenom'), telephone: _sn(j, 'telephone'));
+}
+
+/// Fiche personnel (M9) enrichie du dossier RH (M20) — les champs sensibles (salaire, CNSS,
+/// contrat) sont nuls quand l'API les masque (collègue, conseil).
 class Personnel {
-  final String id, utilisateurId, coproprieteId, statut, creeLe;
-  final String? logementLotId;
-  const Personnel({required this.id, required this.utilisateurId, required this.coproprieteId, required this.statut, this.logementLotId, required this.creeLe});
+  final String id, utilisateurId, coproprieteId, statut, creeLe, poste;
+  final String? logementLotId, logementLotNumero, typeContrat, dateEmbauche, dateFinContrat, salaireBrutMensuel, numeroCnssMasque, contactUrgence, notes;
+  final bool? cnssRenseigne;
+  final Map<String, dynamic>? horaires;
+  final Map<String, dynamic>? documentContrat;
+  final PersonnelUtilisateur? utilisateur;
+  const Personnel({required this.id, required this.utilisateurId, required this.coproprieteId, required this.statut, this.logementLotId, required this.creeLe, this.poste = 'GARDIEN', this.logementLotNumero, this.typeContrat, this.dateEmbauche, this.dateFinContrat, this.salaireBrutMensuel, this.numeroCnssMasque, this.contactUrgence, this.notes, this.cnssRenseigne, this.horaires, this.documentContrat, this.utilisateur});
   factory Personnel.fromJson(Map<String, dynamic> j) => Personnel(
         id: _s(j, 'id'), utilisateurId: _s(j, 'utilisateurId'), coproprieteId: _s(j, 'coproprieteId'), statut: _s(j, 'statut'),
-        logementLotId: _sn(j, 'logementLotId'), creeLe: _s(j, 'creeLe'),
+        logementLotId: _sn(j, 'logementLotId'), creeLe: _s(j, 'creeLe'), poste: _sn(j, 'poste') ?? 'GARDIEN',
+        logementLotNumero: j['logementLot'] is Map ? _sn((j['logementLot'] as Map).cast<String, dynamic>(), 'numero') : null,
+        typeContrat: _sn(j, 'typeContrat'), dateEmbauche: _sn(j, 'dateEmbauche'), dateFinContrat: _sn(j, 'dateFinContrat'),
+        salaireBrutMensuel: _sn(j, 'salaireBrutMensuel'), numeroCnssMasque: _sn(j, 'numeroCnssMasque'), contactUrgence: _sn(j, 'contactUrgence'), notes: _sn(j, 'notes'),
+        cnssRenseigne: j['cnssRenseigne'] is bool ? j['cnssRenseigne'] as bool : null, horaires: _map(j['horairesJson']), documentContrat: _map(j['documentContrat']),
+        utilisateur: j['utilisateur'] is Map ? PersonnelUtilisateur.fromJson((j['utilisateur'] as Map).cast<String, dynamic>()) : null,
       );
+  String nomAffiche(String repli) {
+    final n = [utilisateur?.prenom, utilisateur?.nom].whereType<String>().where((x) => x.isNotEmpty).join(' ');
+    return n.isEmpty ? repli : n;
+  }
+}
+
+/// GET /personnel/{id} — fiche + synthèses (solde de congés, paie, présences du mois).
+class PersonnelDetail {
+  final Personnel fiche;
+  final Map<String, dynamic>? soldeConges, paie, presencesMois, evaluationMoyenne;
+  final List<Map<String, dynamic>> documents;
+  const PersonnelDetail({required this.fiche, this.soldeConges, this.paie, this.presencesMois, this.evaluationMoyenne, this.documents = const []});
+  factory PersonnelDetail.fromJson(Map<String, dynamic> j) => PersonnelDetail(
+        fiche: Personnel.fromJson(j), soldeConges: _map(j['solde_conges']), paie: _map(j['paie']), presencesMois: _map(j['presences_mois']), evaluationMoyenne: _map(j['evaluation_moyenne']),
+        documents: ((j['documents'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+      );
+}
+
+class FichePaie {
+  final String id, personnelId, periode, brut, net, coutTotalEmployeur, statut, creeLe;
+  final String? primes, retenues, depenseId, depenseStatut, valideLe, personnelNom, personnelPoste;
+  final Map<String, dynamic> cotisationsSalariales, cotisationsPatronales;
+  const FichePaie({required this.id, required this.personnelId, required this.periode, required this.brut, required this.net, required this.coutTotalEmployeur, required this.statut, required this.creeLe, this.primes, this.retenues, this.depenseId, this.depenseStatut, this.valideLe, this.personnelNom, this.personnelPoste, this.cotisationsSalariales = const {}, this.cotisationsPatronales = const {}});
+  factory FichePaie.fromJson(Map<String, dynamic> j) {
+    final p = _map(j['personnel']);
+    final dep = _map(j['depense']);
+    return FichePaie(
+      id: _s(j, 'id'), personnelId: _s(j, 'personnelId'), periode: _s(j, 'periode'), brut: _s(j, 'brut'), net: _s(j, 'net'), coutTotalEmployeur: _s(j, 'coutTotalEmployeur'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+      primes: _sn(j, 'primes'), retenues: _sn(j, 'retenues'), depenseId: _sn(j, 'depenseId'), depenseStatut: dep == null ? null : _sn(dep, 'statut'), valideLe: _sn(j, 'valideLe'),
+      personnelNom: p == null ? null : _sn(p, 'nom'), personnelPoste: p == null ? null : _sn(p, 'poste'),
+      cotisationsSalariales: _map(j['cotisationsSalarialesJson']) ?? const {}, cotisationsPatronales: _map(j['cotisationsPatronalesJson']) ?? const {},
+    );
+  }
+}
+
+class Conge {
+  final String id, personnelId, type, dateDebut, dateFin, nbJours, statut, creeLe;
+  final String? motif, motifRefus, traiteLe, remplacantNom, remplacantId, personnelNom, personnelPoste, documentId;
+  const Conge({required this.id, required this.personnelId, required this.type, required this.dateDebut, required this.dateFin, required this.nbJours, required this.statut, required this.creeLe, this.motif, this.motifRefus, this.traiteLe, this.remplacantNom, this.remplacantId, this.personnelNom, this.personnelPoste, this.documentId});
+  factory Conge.fromJson(Map<String, dynamic> j) {
+    final p = _map(j['personnel']);
+    final r = _map(j['remplacant']);
+    final doc = _map(j['document']);
+    return Conge(
+      id: _s(j, 'id'), personnelId: _s(j, 'personnelId'), type: _s(j, 'type'), dateDebut: _s(j, 'dateDebut'), dateFin: _s(j, 'dateFin'), nbJours: _s(j, 'nbJours'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+      motif: _sn(j, 'motif'), motifRefus: _sn(j, 'motifRefus'), traiteLe: _sn(j, 'traiteLe'), remplacantNom: r == null ? null : _sn(r, 'nom'), remplacantId: r == null ? null : _sn(r, 'id'),
+      personnelNom: p == null ? null : _sn(p, 'nom'), personnelPoste: p == null ? null : _sn(p, 'poste'), documentId: doc == null ? null : _sn(doc, 'id'),
+    );
+  }
+}
+
+class PresencePersonnel {
+  final String id, personnelId, date, statut;
+  final String? commentaire;
+  const PresencePersonnel({required this.id, required this.personnelId, required this.date, required this.statut, this.commentaire});
+  factory PresencePersonnel.fromJson(Map<String, dynamic> j) => PresencePersonnel(id: _s(j, 'id'), personnelId: _s(j, 'personnelId'), date: _s(j, 'date').substring(0, 10), statut: _s(j, 'statut'), commentaire: _sn(j, 'commentaire'));
+}
+
+/// GET /personnel/planning — semaine : par employé, 7 jours (plages, congé approuvé, présence).
+class PlanningSemaine {
+  final String semaine;
+  final List<String> jours;
+  final List<PlanningPersonnel> personnels;
+  const PlanningSemaine({required this.semaine, required this.jours, required this.personnels});
+  factory PlanningSemaine.fromJson(Map<String, dynamic> j) => PlanningSemaine(
+        semaine: _s(j, 'semaine'), jours: ((j['jours'] as List?) ?? const []).map((e) => e.toString()).toList(),
+        personnels: ((j['personnels'] as List?) ?? const []).map((e) => PlanningPersonnel.fromJson((e as Map).cast<String, dynamic>())).toList(),
+      );
+}
+
+class PlanningPersonnel {
+  final Personnel fiche;
+  final List<Map<String, dynamic>> jours;
+  const PlanningPersonnel({required this.fiche, required this.jours});
+  factory PlanningPersonnel.fromJson(Map<String, dynamic> j) => PlanningPersonnel(fiche: Personnel.fromJson(j), jours: ((j['jours'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList());
 }
 
 class Visite {

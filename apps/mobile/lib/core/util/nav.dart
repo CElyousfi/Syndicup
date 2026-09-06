@@ -73,6 +73,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final espaces = NavItem('/espaces-communs', d.espaces, 'home');
   final reservations = NavItem('/reservations', d.reservations, 'calendar');
   final visites = NavItem('/visites', d.visites, 'door');
+  // M20 — l'employé ouvre directement son dossier RH (pointage, fiches de paie, congés).
+  final monDossier = NavItem('/personnel/me', dict.personnel.monDossier, 'users');
   final personnel = NavItem('/personnel', d.personnel, 'users');
   final documents = NavItem('/documents', d.documents, 'file');
   final litiges = NavItem('/litiges', d.litiges, 'scale');
@@ -130,7 +132,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'GARDIEN':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.quotidien, [visites, especes, lcd, incidents(), lots(), espaces, personnel, prestataires, documents]),
+        NavSection(s.quotidien, [visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents]),
       ];
     default: // PRESTATAIRE
       return [

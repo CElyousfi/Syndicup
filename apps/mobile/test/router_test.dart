@@ -93,4 +93,18 @@ void main() {
     expect(lienNotification('ASSURANCE_IMMEUBLE_ABSENTE', {}), '/contrats');
   });
 
+  test('M20 : « Mon dossier » pour le gardien, registre pour syndic / conseil ; deep-links congés / paie / fin de contrat', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths('GARDIEN'), contains('/personnel/me'));
+    expect(paths('GARDIEN'), isNot(contains('/personnel')));
+    expect(paths('SYNDIC'), contains('/personnel'));
+    for (final r in ['PROPRIETAIRE', 'LOCATAIRE', 'PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/personnel/me')), reason: r);
+    }
+    expect(lienNotification('CONGE_DEMANDE', {'conge_id': 'c1', 'personnel_id': 'p1'}), '/personnel/p1?onglet=conges');
+    expect(lienNotification('CONGE_APPROUVE', {}), '/personnel/me?onglet=conges');
+    expect(lienNotification('PAIE_VALIDEE', {'personnel_id': 'p1', 'fiche_id': 'f1'}), '/personnel/p1?onglet=paie');
+    expect(lienNotification('PAIE_A_VALIDER', {'periode': '2026-09'}), '/personnel');
+    expect(lienNotification('CONTRAT_TRAVAIL_FIN_PROCHE', {'personnel_id': 'p1'}), '/personnel/p1');
+  });
 }
