@@ -957,3 +957,146 @@ class LcdPieceJointe {
   factory LcdPieceJointe.fromJson(Map<String, dynamic> j) => LcdPieceJointe(path: _s(j, 'path'), url: _s(j, 'url'), nom: _s(j, 'nom'), type: _s(j, 'type'));
   bool get estImage => type == 'IMAGE';
 }
+
+// ── M18 — Rapports, transparence, rapport de gestion ─────────────────────────
+class TrancheImpayes {
+  final String tranche, montant;
+  final int nbLignes, nbLots;
+  const TrancheImpayes({required this.tranche, required this.montant, required this.nbLignes, required this.nbLots});
+  factory TrancheImpayes.fromJson(Map<String, dynamic> j) => TrancheImpayes(tranche: _s(j, 'tranche'), montant: _s(j, 'montant'), nbLignes: _in(j, 'nb_lignes') ?? 0, nbLots: _in(j, 'nb_lots') ?? 0);
+}
+
+class CategorieMontant {
+  final String categorie, montant;
+  final String? part;
+  final int nb;
+  const CategorieMontant({required this.categorie, required this.montant, this.part, required this.nb});
+  factory CategorieMontant.fromJson(Map<String, dynamic> j) => CategorieMontant(categorie: _s(j, 'categorie'), montant: _s(j, 'montant'), part: _sn(j, 'part'), nb: _in(j, 'nb') ?? 0);
+}
+
+class PosteTransparence {
+  final String posteId, libelle, categorie, realise;
+  final String? montantPrevu, pourcentageRealise;
+  final bool depassement;
+  const PosteTransparence({required this.posteId, required this.libelle, required this.categorie, required this.realise, this.montantPrevu, this.pourcentageRealise, required this.depassement});
+  factory PosteTransparence.fromJson(Map<String, dynamic> j) => PosteTransparence(posteId: _s(j, 'poste_id'), libelle: _s(j, 'libelle'), categorie: _s(j, 'categorie'), realise: _s(j, 'realise'), montantPrevu: _sn(j, 'montant_prevu'), pourcentageRealise: _sn(j, 'pourcentage_realise'), depassement: _b(j, 'depassement'));
+}
+
+class PointTresorerie {
+  final String mois, entrees, sorties, solde;
+  const PointTresorerie({required this.mois, required this.entrees, required this.sorties, required this.solde});
+  factory PointTresorerie.fromJson(Map<String, dynamic> j) => PointTresorerie(mois: _s(j, 'mois'), entrees: _s(j, 'entrees'), sorties: _s(j, 'sorties'), solde: _s(j, 'solde'));
+}
+
+class LotEnRetard {
+  final String lotId, lotNumero, resteDu;
+  final int nbLignes, retardMaxJours;
+  final bool conteste;
+  const LotEnRetard({required this.lotId, required this.lotNumero, required this.resteDu, required this.nbLignes, required this.retardMaxJours, required this.conteste});
+  factory LotEnRetard.fromJson(Map<String, dynamic> j) => LotEnRetard(lotId: _s(j, 'lot_id'), lotNumero: _s(j, 'lot_numero'), resteDu: _s(j, 'reste_du'), nbLignes: _in(j, 'nb_lignes') ?? 0, retardMaxJours: _in(j, 'retard_max_jours') ?? 0, conteste: _b(j, 'conteste'));
+}
+
+/// GET /rapports/tableau-de-bord (syndic / conseil, lecture).
+class TableauDeBord {
+  final String exercice, compteCourant, totalEntrees, totalSorties, reserve, impayesTotal, depensesTotal, depensesMois, justificatifsMontant;
+  final bool reserveConfiguree;
+  final String? tauxRecouvrement, tauxRecouvrementMois, appele, encaisse;
+  final int nbLotsEnRetard, nbLignesImpayees, incidentsOuverts, justificatifsNb;
+  final List<TrancheImpayes> tranches;
+  final List<LotEnRetard> topLots;
+  final List<CategorieMontant> parCategorie;
+  final List<PointTresorerie> serie;
+  final Map<String, int> incidentsParUrgence;
+  final BudgetVsRealise budget;
+  const TableauDeBord({required this.exercice, required this.compteCourant, required this.totalEntrees, required this.totalSorties, required this.reserve, required this.reserveConfiguree, this.tauxRecouvrement, this.tauxRecouvrementMois, this.appele, this.encaisse, required this.impayesTotal, required this.nbLotsEnRetard, required this.nbLignesImpayees, required this.tranches, required this.topLots, required this.depensesTotal, required this.depensesMois, required this.parCategorie, required this.serie, required this.incidentsOuverts, required this.incidentsParUrgence, required this.justificatifsNb, required this.justificatifsMontant, required this.budget});
+  factory TableauDeBord.fromJson(Map<String, dynamic> j) {
+    final tr = _map(j['tresorerie']) ?? const {};
+    final rec = _map(_map(j['recouvrement'])?['exercice']) ?? const {};
+    final recM = _map(_map(j['recouvrement'])?['periode']) ?? const {};
+    final imp = _map(j['impayes']) ?? const {};
+    final dep = _map(j['depenses']) ?? const {};
+    final inc = _map(j['incidents_ouverts']) ?? const {};
+    final jus = _map(j['justificatifs_en_attente']) ?? const {};
+    return TableauDeBord(
+      exercice: _s(j, 'exercice'),
+      compteCourant: _s(tr, 'compte_courant_estime'), totalEntrees: _s(tr, 'total_entrees'), totalSorties: _s(tr, 'total_sorties_compte_courant'), reserve: _s(tr, 'reserve'), reserveConfiguree: _b(tr, 'reserve_configuree'),
+      serie: _list(tr['serie_12_mois'], PointTresorerie.fromJson),
+      tauxRecouvrement: _sn(rec, 'taux'), tauxRecouvrementMois: _sn(recM, 'taux'), appele: _sn(rec, 'appele'), encaisse: _sn(rec, 'encaisse'),
+      impayesTotal: _s(imp, 'total'), nbLotsEnRetard: _in(imp, 'nb_lots_en_retard') ?? 0, nbLignesImpayees: _in(imp, 'nb_lignes') ?? 0, tranches: _list(imp['tranches'], TrancheImpayes.fromJson), topLots: _list(imp['top_lots'], LotEnRetard.fromJson),
+      depensesTotal: (_map(dep['exercice'])?['total'] ?? '0.00').toString(), depensesMois: (_map(dep['mois'])?['total'] ?? '0.00').toString(), parCategorie: _list(_map(dep['exercice'])?['categories'], CategorieMontant.fromJson),
+      incidentsOuverts: _in(inc, 'total') ?? 0, incidentsParUrgence: (_map(inc['par_urgence']) ?? const {}).map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0)),
+      justificatifsNb: _in(jus, 'nb') ?? 0, justificatifsMontant: _s(jus, 'montant'),
+      budget: BudgetVsRealise.fromJson(_map(j['budget_vs_realise']) ?? const {'exercice': '', 'impayes_total': '0.00', 'totaux': {}}),
+    );
+  }
+}
+
+class FactureTransparence {
+  final String id, montantTtc, url;
+  final String? numero;
+  const FactureTransparence({required this.id, required this.montantTtc, required this.url, this.numero});
+  factory FactureTransparence.fromJson(Map<String, dynamic> j) => FactureTransparence(id: _s(j, 'id'), montantTtc: _s(j, 'montant_ttc'), url: _s(j, 'url'), numero: _sn(j, 'numero'));
+}
+
+class DepenseTransparence {
+  final String id, libelle, categorie, montantTtc, source, date;
+  final String? prestataire, poste;
+  final List<FactureTransparence> factures;
+  const DepenseTransparence({required this.id, required this.libelle, required this.categorie, required this.montantTtc, required this.source, required this.date, this.prestataire, this.poste, this.factures = const []});
+  factory DepenseTransparence.fromJson(Map<String, dynamic> j) => DepenseTransparence(id: _s(j, 'id'), libelle: _s(j, 'libelle'), categorie: _s(j, 'categorie'), montantTtc: _s(j, 'montant_ttc'), source: _s(j, 'source'), date: _s(j, 'date'), prestataire: _sn(j, 'prestataire'), poste: _sn(j, 'poste'), factures: _list(j['factures'], FactureTransparence.fromJson));
+}
+
+class RapportPublie {
+  final String documentId, nom, date;
+  const RapportPublie({required this.documentId, required this.nom, required this.date});
+  factory RapportPublie.fromJson(Map<String, dynamic> j) => RapportPublie(documentId: _s(j, 'document_id'), nom: _s(j, 'nom'), date: _s(j, 'date'));
+}
+
+/// GET /rapports/transparence — agrégats de niveau copropriété, jamais un lot.
+class Transparence {
+  final String exercice, compteCourant, reserve, impayesTotal, appele, encaisse, depensesTotal;
+  final String? copropriete, tauxRecouvrement, budgetPrevu, budgetRealise, budgetPourcentage;
+  final bool facturesVisibles, reserveConfiguree, budgetActif;
+  final int nbLotsEnRetard, nbDepenses;
+  final List<PosteTransparence> postes;
+  final List<CategorieMontant> parCategorie;
+  final List<DepenseTransparence> depenses;
+  final List<RapportPublie> rapports;
+  const Transparence({required this.exercice, this.copropriete, required this.facturesVisibles, required this.compteCourant, required this.reserve, required this.reserveConfiguree, this.tauxRecouvrement, required this.appele, required this.encaisse, required this.impayesTotal, required this.nbLotsEnRetard, required this.budgetActif, this.budgetPrevu, this.budgetRealise, this.budgetPourcentage, required this.postes, required this.depensesTotal, required this.nbDepenses, required this.parCategorie, required this.depenses, required this.rapports});
+  factory Transparence.fromJson(Map<String, dynamic> j) {
+    final tr = _map(j['tresorerie']) ?? const {};
+    final rec = _map(j['recouvrement']) ?? const {};
+    final imp = _map(j['impayes']) ?? const {};
+    final bvr = _map(j['budget_vs_realise']) ?? const {};
+    final tot = _map(bvr['totaux']) ?? const {};
+    final dpc = _map(j['depenses_par_categorie']) ?? const {};
+    return Transparence(
+      exercice: _s(j, 'exercice'), copropriete: _sn(j, 'copropriete'), facturesVisibles: _b(j, 'factures_visibles'),
+      compteCourant: _s(tr, 'compte_courant_estime'), reserve: _s(tr, 'reserve'), reserveConfiguree: _b(tr, 'reserve_configuree'),
+      tauxRecouvrement: _sn(rec, 'exercice'), appele: _s(rec, 'appele'), encaisse: _s(rec, 'encaisse'),
+      impayesTotal: _s(imp, 'total'), nbLotsEnRetard: _in(imp, 'nb_lots_en_retard') ?? 0,
+      budgetActif: bvr['budget'] != null, budgetPrevu: _sn(tot, 'montant_prevu'), budgetRealise: _sn(tot, 'realise'), budgetPourcentage: _sn(tot, 'pourcentage_realise'), postes: _list(bvr['postes'], PosteTransparence.fromJson),
+      depensesTotal: _s(dpc, 'total'), nbDepenses: _in(dpc, 'nb') ?? 0, parCategorie: _list(dpc['categories'], CategorieMontant.fromJson),
+      depenses: _list(j['depenses'], DepenseTransparence.fromJson), rapports: _list(j['rapports_gestion'], RapportPublie.fromJson),
+    );
+  }
+}
+
+/// GET /rapports/gestion — résumé d'un rapport de gestion (liste).
+class RapportGestion {
+  final String id, exercice, statut, genereLe, compteCourantCloture, reserveCloture, impayesTotal, depensesTotal;
+  final String? tauxRecouvrement, documentId, agId, agDate, resolutionResultat, budgetRealise, budgetPrevu, generePar;
+  final int nbLotsEnRetard;
+  const RapportGestion({required this.id, required this.exercice, required this.statut, required this.genereLe, required this.compteCourantCloture, required this.reserveCloture, required this.impayesTotal, required this.depensesTotal, this.tauxRecouvrement, this.documentId, this.agId, this.agDate, this.resolutionResultat, this.budgetRealise, this.budgetPrevu, this.generePar, required this.nbLotsEnRetard});
+  factory RapportGestion.fromJson(Map<String, dynamic> j) {
+    final r = _map(j['resume']) ?? const {};
+    final gp = _map(j['genere_par']);
+    final nom = gp == null ? null : [gp['prenom'], gp['nom']].whereType<String>().where((x) => x.isNotEmpty).join(' ');
+    return RapportGestion(
+      id: _s(j, 'id'), exercice: _s(j, 'exercice'), statut: _s(j, 'statut'), genereLe: _s(j, 'genere_le'), documentId: _sn(j, 'document_id'),
+      agId: _map(j['ag'])?['id']?.toString(), agDate: _map(j['ag'])?['date_ag']?.toString(), resolutionResultat: _map(j['resolution'])?['resultat']?.toString(),
+      compteCourantCloture: _s(r, 'compte_courant_cloture'), reserveCloture: _s(r, 'reserve_cloture'), tauxRecouvrement: _sn(r, 'taux_recouvrement'), impayesTotal: _s(r, 'impayes_total'), nbLotsEnRetard: _in(r, 'nb_lots_en_retard') ?? 0,
+      depensesTotal: _s(r, 'depenses_total'), budgetPrevu: _sn(r, 'budget_prevu'), budgetRealise: _sn(r, 'budget_realise'), generePar: nom == null || nom.isEmpty ? null : nom,
+    );
+  }
+}

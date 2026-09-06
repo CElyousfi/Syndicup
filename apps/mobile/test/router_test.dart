@@ -66,4 +66,19 @@ void main() {
     expect(ctxFor('GESTIONNAIRE_LCD').declareSejoursLcd, isTrue);
     expect(ctxFor('GARDIEN').declareSejoursLcd, isFalse);
   });
+
+  test('M18 : rapports pour le syndic et le conseil ; transparence pour tout membre (locataire inclus), jamais pour le gardien ni le prestataire', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths('SYNDIC'), contains('/rapports'));
+    expect(paths('CONSEIL_SYNDICAL'), contains('/rapports'));
+    for (final r in ['PROPRIETAIRE', 'INDIVISAIRE', 'PERSONNE_MORALE_REPRESENTANT', 'LOCATAIRE']) {
+      expect(paths(r), contains('/rapports/transparence'), reason: r);
+      expect(paths(r), isNot(contains('/rapports')), reason: r);
+    }
+    for (final r in ['GARDIEN', 'PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/rapports/transparence')), reason: r);
+    }
+    expect(lienNotification('RAPPORT_GESTION_DISPONIBLE', {'rapport_id': 'x'}), '/rapports/transparence');
+  });
+
 }

@@ -42,6 +42,7 @@ IconData navIcon(String key) => switch (key) {
       'person' => Icons.person_rounded,
       'suitcase' => Icons.luggage_rounded,
       'receipt' => Icons.receipt_long_rounded,
+      'pie' => Icons.pie_chart_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -58,6 +59,9 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final payer = NavItem('/payer', d.payer, 'coins');
   final justificatifs = NavItem('/justificatifs', d.justificatifs, 'receipt');
   final especes = NavItem('/especes', d.especes, 'coins');
+  // M18 — rapports de gestion (syndic / conseil) et transparence « où va mon argent » (tout membre).
+  final rapports = NavItem('/rapports', d.rapports, 'pie');
+  final transparence = NavItem('/rapports/transparence', d.transparence, 'pie');
   final contestations = NavItem('/finances/contestations', d.contestations, 'scale');
   NavItem comptabilite([String? label]) => NavItem('/finances/comptabilite', label ?? d.comptabilite, 'chart');
   final ag = NavItem('/ag', d.ag, 'vote');
@@ -86,7 +90,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'SYNDIC':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
+        NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
@@ -94,7 +98,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'CONSEIL_SYNDICAL':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
+        NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
       ];
@@ -103,7 +107,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'PERSONNE_MORALE_REPRESENTANT':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [payer, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets]),
+        NavSection(s.finances, [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets]),
         NavSection(s.vieCollective, [ag, incidents(dict.incidents.mesSignalements), litiges]),
         NavSection(s.quotidien, [espaces, reservations, visites, lcd, documents]),
       ];
@@ -116,7 +120,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
     case 'LOCATAIRE':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.finances, [payer]),
+        NavSection(s.finances, [payer, transparence]),
         NavSection(s.vieCollective, [incidents(dict.incidents.mesSignalements), litiges]),
         NavSection(s.quotidien, [lots(dict.lots.mesLots), espaces, reservations, visites, documents]),
       ];

@@ -29,6 +29,8 @@ et remises à « non configuré » (null) si l'avocat infirme.
 | `reserve_sans_resolution_autorisee` (M16) | **false** | §8.2 — Doc A §3.6 « décision AG requise sauf urgence définie dans le règlement » |
 | `tva_par_defaut` (M16) | **20 %** (pré-remplissage seulement, le TTC saisi fait foi) | §8.3 — taux normal de TVA marocain, à confirmer par poste |
 | `delai_validation_justificatif_jours` (M17) | **5 jours** (seed ; NULL = aucun rappel) | §8.5 — délai de traitement d'un justificatif par le syndic |
+| `majorite_approbation_comptes` (M18) | **NULL** — fournie à la soumission ou configurée par le syndic ; SIMPLE dans le seed uniquement | PROVISOIRE (§9.1) |
+| `factures_visibles_residents` (M18) | **false** — activée par le syndic (true dans le seed) | PROVISOIRE (§9.3) |
 
 **À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
 d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
@@ -288,6 +290,43 @@ déjà conservées 10 ans, Master Spec Partie 9) — le module ne supprime jamai
 sa preuve ; l'approbation annuelle des comptes est portée par le rapport de gestion (M18).
 
 ---
+
+## 9. Rapport de gestion, approbation des comptes, transparence, exports (module M18)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `config_json.majorite_approbation_comptes` | **NULL par défaut** (SIMPLE posé par le seed de démonstration) — la soumission du rapport à l'AG exige la majorité dans le payload ou dans la config, sinon 422 `RAPPORT_PARAMETRE_NON_CONFIGURE` | PROVISOIRE |
+| `copropriete.factures_visibles_residents` | **false par défaut** (true dans le seed) — les résidents voient la liste des dépenses payées, les factures seulement sur activation du syndic | PROVISOIRE |
+
+### 9.1 — Majorité requise pour l'approbation des comptes annuels
+
+**À confirmer :** la Loi 18-00 (art. 12 et s. sur les décisions de l'AG) fixe-t-elle une majorité
+spécifique pour l'approbation des comptes du syndic, ou est-ce la majorité simple des voix des
+copropriétaires présents ou représentés ? Le module crée la résolution « Approbation des comptes de
+l'exercice N » via le moteur AG existant avec la majorité fournie ; aucune valeur n'est codée en dur.
+
+### 9.2 — Contenu minimal et conservation du rapport de gestion
+
+**À confirmer :** (1) le contenu minimal légal du compte rendu de gestion remis à l'AG (le module
+fige trésorerie estimée, recouvrement, impayés, budget vs réalisé, dépenses, réserve, faits
+marquants) ; (2) la durée de conservation du rapport approuvé et de son PDF — aujourd'hui alignée
+sur les 10 ans des pièces financières (Master Spec Partie 9) ; (3) la valeur de la signature
+électronique / du bloc de signatures (syndic, président du conseil) sur le PDF généré.
+
+### 9.3 — Transparence et données personnelles (CNDP)
+
+**À confirmer :** (1) un résident (locataire compris) peut-il connaître le NOMBRE de lots en retard
+et le montant global des impayés de la copropriété (le module ne montre jamais quel lot ni combien
+par lot) ; (2) l'exposition des factures fournisseurs aux résidents (nom du prestataire, montant)
+relève-t-elle d'une décision du syndic, du conseil ou de l'AG ; (3) le journal `export_log`
+(qui a extrait quelles données, quand) suffit-il à l'obligation de traçabilité des extractions
+de données personnelles (annuaire des propriétaires : nom, contact, quote-part).
+
+### 9.4 — « État daté » remis au notaire (Doc A §11)
+
+**À confirmer :** le contenu exigé de l'état daté lors de la vente d'un lot (le relevé de charges
+du module donne appels, paiements, déclarations en attente, solde de l'exercice et solde total dû)
+et qui peut le délivrer (syndic ; le propriétaire du lot peut-il le produire lui-même ?).
 
 ## Comment utiliser ce document
 

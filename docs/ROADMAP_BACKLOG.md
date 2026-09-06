@@ -409,6 +409,66 @@ file hors-ligne gardien non livrées (voir parité).
   espèces (finances exclues de la file locale) ; import CSV bancaire (rattachement automatique
   aux justificatifs) ; paiement « en avance » (avoir) toujours refusé (Doc A §3.4).
 
+## M18 — Rapports, rapport de gestion annuel, exports, transparence
+
+*Réf. Doc A §8 (reddition des comptes), §6 (approbation des comptes en AG), §3.5 (transparence),
+§11 (« état daté »). Domaine : `15-rapports-transparence.md`. Juridique : brief §9. Branche
+`feature/m18-rapports`. Décision projet : aucune API bancaire — le compte courant est une
+estimation (paiements validés − dépenses payées), la réserve est le ledger M5/M16.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enum `StatutRapportGestion` (BROUILLON, GENERE,
+SOUMIS_AG, APPROUVE, REJETE), tables `rapport_gestion` et `export_log` (append-only), colonne
+`copropriete.factures_visibles_residents` ; fonctions SECURITY DEFINER `transparence_factures`,
+`transparence_agregats` ; permissions `rapports.syndic.lire`, `rapports.transparence.lire`,
+`rapports.gestion.gerer`, `exports.lire`, `exports.proprietaires`, `exports.releve_lot` ; codes
+`RAPPORT_STATUT_INVALIDE`, `RAPPORT_PARAMETRE_NON_CONFIGURE` ; clé de config
+`majorite_approbation_comptes` ; dépendance `exceljs` (XLSX). **Écarts par rapport au prompt** :
+(1) le PDF stocké en Document est la variante « publique » FR (sans détail par lot) ; les variantes
+AR et « complète » sont rendues à la demande depuis l'instantané (déterministe) et journalisées —
+pas de second Document ; (2) la transaction idempotente couvre l'instantané, le rendu PDF + upload
+se font hors transaction (délai), un échec laisse le rapport BROUILLON régénérable ; (3) un rapport
+BROUILLON / GENERE du même exercice est RÉGÉNÉRÉ par `POST /rapports/gestion` (200) au lieu d'un
+409 — seul un rapport SOUMIS_AG / APPROUVE bloque ; (4) « contrats échus / à échoir » du tableau
+de bord et « contrats signés » des faits marquants restent vides jusqu'à M19 ; (5) exports
+contrats / personnel / parkings livrés avec M19 / M20 / M23.
+
+- [x] **Livré (06/09)** — Migrations `..._m18_rapports` (tables, CHECK exercice, index unique
+  partiel `(copropriete, exercice) WHERE statut <> 'REJETE'`, RLS syndic / conseil ; `export_log`
+  GRANT SELECT, INSERT + INSERT par l'auteur quel que soit son rôle) et `..._m18_transparence_fn`
+  (fonctions SECURITY DEFINER bornées à la copropriété courante — aucune policy assouplie).
+  `lib/http/export.ts` : `export_log` remplace l'audit `*_EXPORTEES` de M16, XLSX `exceljs`.
+  Seed Al Amal : rapport N-1 APPROUVE (résolution ADOPTEE sur l'AG passée, document public),
+  rapport N GENERE, `factures_visibles_residents`, `majorite_approbation_comptes` (PROVISOIRE),
+  deux lignes `export_log`. L'instantané du seed est construit par la MÊME fonction que l'API.
+- [x] **Livré (06/09)** — API tag `Rapports` (13 opérations) : tableau de bord, transparence,
+  grand livre (json / csv / xlsx), rapports de gestion (liste, génération idempotente, détail avec
+  instantané, PDF FR / AR publique / complète, soumission à l'AG via `creerResolutionDb` — jamais
+  dupliqué), impayés (tranches, tri, export), propriétaires (syndic, format obligatoire), journal
+  des exports, relevé de charges json / PDF, `PATCH /coproprietes/{id}/transparence` ;
+  `format=csv|xlsx` sur `/lots`, `/finances/paiements`, `/incidents`, `/depenses`. Hook
+  `ag.ts::finaliserResolution` → APPROUVE / REJETE. Notification FR/AR `RAPPORT_GESTION_DISPONIBLE`.
+  Audit `RAPPORT_GESTION_GENERE/REGENERE/SOUMIS_AG/APPROUVE/REJETE/PDF_ECHEC`,
+  `TRANSPARENCE_FACTURES_MODIFIEE`. PDF : `lib/rapports/pdf-commun.tsx` (Noto Sans Arabic, bidi
+  `direction: rtl`, dictionnaire FR/AR), `rapport-gestion-pdf.tsx`, `releve-pdf.tsx`. Tests
+  `tests/rapports.test.ts` (10) : réconciliation instantané ↔ grand livre, PDF FR + AR (rapport,
+  relevé), transparence sans aucune donnée par lot (LOCATAIRE, PROPRIETAIRE), factures via option,
+  exports journalisés (propriétaire scopé), hook AG (422 majorité, SOUMIS_AG, APPROUVE, 409).
+- [x] **Livré (06/09)** — Web : `rapports/` (tableau de bord : trésorerie 12 mois `TresorerieChart`,
+  ancienneté `AgeingBars`, top lots, budget vs réalisé `Bars`, dépenses `Donut`, incidents,
+  justificatifs), `rapports/grand-livre`, `rapports/gestion` (+ `[id]` : synthèse, PDF FR / AR
+  dans la visionneuse, soumission à l'AG, instantané), `rapports/impayes`, `rapports/exports`
+  (centre d'exports, journal, option factures), `rapports/transparence` (tout membre), relevé PDF
+  sur la fiche lot, `ExportButtons` csv / xlsx sur lots, incidents, paiements, dépenses ; proxies
+  `/api/export`, `/api/rapport-pdf`, `/api/releve-pdf` ; navigation Rapports (syndic, conseil) /
+  Transparence (résidents, locataire) ; FR/AR RTL (sélecteur d'exercice, graphiques inversés).
+- [x] **Livré (06/09)** — Mobile `features/rapports/` : transparence (parité), tableau de bord
+  lecture (CustomPaint 12 mois), rapports annuels + PDF, relevé PDF sur la fiche lot ;
+  `ApiClient.getBytes` + visionneuse par octets (corrige aussi l'ouverture des quittances et PV
+  rendus par l'API) ; deep-link `RAPPORT_GESTION_*` → transparence.
+- [ ] **Non livré / à confirmer** : import du relevé bancaire (rapprochement) ; relecture native
+  du PDF arabe ; contrats (M19) dans le tableau de bord et les faits marquants ; génération /
+  soumission depuis le mobile (web-first, voir parité).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

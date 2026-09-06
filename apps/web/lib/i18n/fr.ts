@@ -1695,6 +1695,8 @@ export const fr = {
     tresorerie: "Trésorerie",
     compteCourant: "Compte courant estimé",
     compteCourantAide: "Paiements validés − dépenses payées. Aucune connexion bancaire : le solde réel se lit sur le relevé.",
+    compteCourantCourt: "Paiements validés − dépenses payées",
+    reserveAbsente: "Non constitué",
     entrees: "Encaissements",
     sorties: "Décaissements",
     solde: "Solde",

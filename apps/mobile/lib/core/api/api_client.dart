@@ -158,6 +158,27 @@ class ApiClient {
     return false;
   }
 
+  /// Téléchargement binaire authentifié (PDF rendus par l'API : quittance, PV, rapport de gestion,
+  /// relevé de charges) — même en-têtes que `request`, corps brut. `null` en cas d'échec.
+  Future<List<int>?> getBytes(String path, {Map<String, Object?>? query}) async {
+    final token = _tokens.accessToken;
+    if (token == null) return null;
+    final headers = <String, String>{'X-Request-Id': _uuid.v4(), 'Authorization': 'Bearer $token'};
+    final copro = _tokens.coproprieteId;
+    if (copro != null && copro.isNotEmpty) headers['X-Copropriete-Id'] = copro;
+    final qp = <String, dynamic>{};
+    query?.forEach((k, v) {
+      if (v != null) qp[k] = v;
+    });
+    try {
+      final res = await _dio.get<List<int>>(path, queryParameters: qp.isEmpty ? null : qp, options: Options(headers: headers, responseType: ResponseType.bytes, validateStatus: (_) => true, receiveTimeout: const Duration(seconds: 60)));
+      if ((res.statusCode ?? 500) >= 300) return null;
+      return res.data;
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Téléversement direct vers une URL signée Supabase Storage (documents, photos d'incident,
   /// logo) — seule exception d'architecture autorisée (Master Spec 9.3, comme le web).
   Future<bool> uploadSigned(String uploadUrl, List<int> bytes, String contentType) async {

@@ -27,3 +27,7 @@ const Map<String, BadgeVariant> sejourVariant = {'PREVU': BadgeVariant.info, 'EN
 const Map<String, BadgeVariant> depenseVariant = {'BROUILLON': BadgeVariant.outline, 'A_APPROUVER': BadgeVariant.warn, 'APPROUVEE': BadgeVariant.info, 'REJETEE': BadgeVariant.danger, 'PAYEE': BadgeVariant.ok, 'ANNULEE': BadgeVariant.neutral};
 const Map<String, BadgeVariant> factureVariant = {'RECUE': BadgeVariant.neutral, 'VERIFIEE': BadgeVariant.info, 'CONTESTEE': BadgeVariant.danger, 'REGLEE': BadgeVariant.ok};
 const Map<String, BadgeVariant> justificatifVariant = {'EN_ATTENTE': BadgeVariant.warn, 'VALIDE': BadgeVariant.ok, 'REJETE': BadgeVariant.danger, 'ANNULE': BadgeVariant.neutral};
+
+// M18 — rapports de gestion, ancienneté des impayés.
+const Map<String, BadgeVariant> rapportVariant = {'BROUILLON': BadgeVariant.outline, 'GENERE': BadgeVariant.info, 'SOUMIS_AG': BadgeVariant.warn, 'APPROUVE': BadgeVariant.ok, 'REJETE': BadgeVariant.danger};
+const Map<String, BadgeVariant> trancheVariant = {'0_30': BadgeVariant.info, '31_90': BadgeVariant.warn, '91_180': BadgeVariant.danger, 'PLUS_180': BadgeVariant.danger};

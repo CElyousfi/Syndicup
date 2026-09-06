@@ -23,6 +23,8 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('JUSTIFICATIF_') || templateCode == 'PAIEMENT_VALIDE' || templateCode == 'PAIEMENT_ESPECES_SAISI') {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
+  // M18 — rapport de gestion soumis à l'AG : les copropriétaires le lisent depuis la transparence.
+  if (templateCode.startsWith('RAPPORT_GESTION_')) return '/rapports/transparence';
   // M16 — dépenses : approbation, décision, échéance de facture.
   if (templateCode.startsWith('DEPENSE_') || templateCode == 'FACTURE_ECHEANCE_PROCHE') {
     return id('depense_id') != null ? '/depenses/${id('depense_id')}' : '/depenses';

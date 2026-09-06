@@ -666,7 +666,7 @@ class AgPvScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 14),
               FilledButton.icon(
-                onPressed: () => ouvrirFichierApi(context, ref, endpoint: '/ag/$id/pv/pdf', titre: d.ag.pvTitre, messageErreur: d.ag.pvIndisponible),
+                onPressed: () => ouvrirPdfApi(context, ref, endpoint: '/ag/$id/pv/pdf', titre: d.ag.pvTitre, messageErreur: d.ag.pvIndisponible),
                 icon: const Icon(Icons.picture_as_pdf_rounded),
                 label: Text(d.ag.pvTelecharger),
               ),

@@ -1687,6 +1687,8 @@ export const ar: DeepDict<typeof fr> = {
     tresorerie: "الخزينة",
     compteCourant: "الحساب الجاري التقديري",
     compteCourantAide: "الدفعات المصادق عليها − المصاريف المدفوعة. لا يوجد ربط بنكي: الرصيد الفعلي يُقرأ من الكشف البنكي.",
+    compteCourantCourt: "الدفعات المصادق عليها − المصاريف المدفوعة",
+    reserveAbsente: "غير مُنشأ",
     entrees: "المداخيل",
     sorties: "المصاريف",
     solde: "الرصيد",

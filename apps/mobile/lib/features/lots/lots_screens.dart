@@ -16,6 +16,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../rapports/rapports_screens.dart' show ReleveButton;
 import '../lcd/lcd_screens.dart';
 import '../shell/app_shell.dart';
 
@@ -318,6 +319,11 @@ class _Finances extends ConsumerWidget {
                         Expanded(child: _Mini(d.finances.paye, formatMontant(versChaine(paye)))),
                         Expanded(child: _Mini(d.finances.restant, formatMontant(versChaine(du)))),
                       ]),
+                      // M18 — relevé de charges (« état daté ») : propriétaire du lot, syndic, conseil.
+                      if (ctx.isGestion || ctx.isConseil || lot.estProprietaire(ctx.profil.id)) ...[
+                        const SizedBox(height: 12),
+                        Align(alignment: AlignmentDirectional.centerStart, child: ReleveButton(lotId: lot.id, lotNumero: lot.numero)),
+                      ],
                     ],
                   ),
                 ),

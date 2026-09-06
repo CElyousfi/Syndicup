@@ -49,9 +49,9 @@ export default async function TransparencePage({ params, searchParams }: { param
           <>
             <Banner variant="info" className="mb-4">{r.transparenceAide}</Banner>
             <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard icon={<CWallet />} tone="sage" label={r.compteCourant} value={mad(t.tresorerie.compte_courant_estime)} hint={r.compteCourantAide} />
-              <StatCard icon={<CMoneyBag />} tone="lilac" label={r.reserve} value={t.tresorerie.reserve_configuree ? mad(t.tresorerie.reserve) : r.reserveNonConfiguree} />
-              <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={t.recouvrement.exercice ? `${t.recouvrement.exercice} %` : "—"} hint={`${r.appele} ${mad(t.recouvrement.appele)} · ${r.encaisse} ${mad(t.recouvrement.encaisse)}`} />
+              <StatCard icon={<CWallet />} tone="sage" label={r.compteCourant} value={mad(t.tresorerie.compte_courant_estime)} hint={r.compteCourantCourt} />
+              <StatCard icon={<CMoneyBag />} tone="lilac" label={r.reserve} value={t.tresorerie.reserve_configuree ? mad(t.tresorerie.reserve) : "—"} trend={t.tresorerie.reserve_configuree ? undefined : r.reserveAbsente} trendTone="neutral" />
+              <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={t.recouvrement.exercice ? `${t.recouvrement.exercice} %` : "—"} hint={`${r.encaisse} ${mad(t.recouvrement.encaisse)}`} />
               <StatCard icon={<CAlert />} tone={Number(t.impayes.total) > 0 ? "warn" : "sage"} label={r.impayes} value={mad(t.impayes.total)} hint={fill(r.lotsEnRetard, { n: t.impayes.nb_lots_en_retard })} />
             </div>
             <div className="grid gap-4 lg:grid-cols-3">

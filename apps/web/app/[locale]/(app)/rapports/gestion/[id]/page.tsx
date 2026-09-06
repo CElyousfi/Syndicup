@@ -48,8 +48,8 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
       {d.seuil_approbation_non_configure ? <Banner variant="legal" className="mb-4" title={r.seuilNonConfigure}>{dict.depenses.seuilNonConfigureCorps}</Banner> : null}
       <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<CWallet />} tone="sage" label={`${r.compteCourant} · ${r.cloture}`} value={mad(d.tresorerie.cloture.compte_courant)} hint={`${r.ouverture} ${mad(d.tresorerie.ouverture.compte_courant)}`} />
-        <StatCard icon={<CMoneyBag />} tone="lilac" label={`${r.reserve} · ${r.cloture}`} value={d.tresorerie.reserve_configuree ? mad(d.tresorerie.cloture.reserve) : r.reserveNonConfiguree} hint={d.tresorerie.reserve_configuree ? `${r.ouverture} ${mad(d.tresorerie.ouverture.reserve)}` : undefined} />
-        <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={d.recouvrement.taux ? `${d.recouvrement.taux} %` : "—"} hint={`${r.appele} ${mad(d.recouvrement.appele)} · ${r.encaisse} ${mad(d.recouvrement.encaisse)}`} />
+        <StatCard icon={<CMoneyBag />} tone="lilac" label={`${r.reserve} · ${r.cloture}`} value={d.tresorerie.reserve_configuree ? mad(d.tresorerie.cloture.reserve) : "—"} trend={d.tresorerie.reserve_configuree ? undefined : r.reserveAbsente} trendTone="neutral" hint={d.tresorerie.reserve_configuree ? `${r.ouverture} ${mad(d.tresorerie.ouverture.reserve)}` : undefined} />
+        <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={d.recouvrement.taux ? `${d.recouvrement.taux} %` : "—"} hint={`${r.encaisse} ${mad(d.recouvrement.encaisse)}`} />
         <StatCard icon={<CAlert />} tone={Number(d.impayes.total) > 0 ? "warn" : "sage"} label={r.impayes} value={mad(d.impayes.total)} hint={fill(r.lotsEnRetard, { n: d.impayes.nb_lots_en_retard })} />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">

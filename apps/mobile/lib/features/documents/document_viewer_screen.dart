@@ -21,6 +21,18 @@ import '../../core/widgets/widgets.dart';
 Future<void> ouvrirVisionneuse(BuildContext context, {required String titre, required String url}) =>
     context.push('/visionneuse', extra: {'titre': titre, 'url': url});
 
+/// Ouvre un PDF RENDU PAR L'API (quittance, PV, rapport de gestion, relevé de charges) : octets
+/// téléchargés avec la session (jamais d'URL publique), puis visionneuse intégrée. M18.
+Future<void> ouvrirPdfApi(BuildContext context, WidgetRef ref, {required String endpoint, Map<String, Object?>? query, required String titre, String? messageErreur}) async {
+  final bytes = await ref.read(apiClientProvider).getBytes(endpoint, query: query);
+  if (!context.mounted) return;
+  if (bytes == null) {
+    showToast(context, messageErreur ?? context.mdict.viewerError, error: true);
+    return;
+  }
+  await context.push('/visionneuse', extra: {'titre': titre, 'bytes': Uint8List.fromList(bytes)});
+}
+
 /// Demande l'URL signée d'un endpoint `{ url }` puis ouvre la visionneuse ; toast d'erreur sinon.
 Future<void> ouvrirFichierApi(BuildContext context, WidgetRef ref, {required String endpoint, required String titre, String? messageErreur}) async {
   final r = await ref.read(apiClientProvider).get<Map<String, dynamic>>(endpoint, parse: asMap);
@@ -34,9 +46,11 @@ Future<void> ouvrirFichierApi(BuildContext context, WidgetRef ref, {required Str
 }
 
 class DocumentViewerScreen extends StatefulWidget {
-  const DocumentViewerScreen({super.key, required this.titre, required this.url});
+  const DocumentViewerScreen({super.key, required this.titre, this.url, this.bytes}) : assert(url != null || bytes != null);
   final String titre;
-  final String url;
+  final String? url;
+  /// Octets déjà téléchargés (PDF rendu par l'API) — aucun téléchargement supplémentaire.
+  final Uint8List? bytes;
 
   @override
   State<DocumentViewerScreen> createState() => _DocumentViewerScreenState();
@@ -65,11 +79,17 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
 
   Future<void> _charger() async {
     try {
-      final res = await Dio().get<List<int>>(widget.url, options: Options(responseType: ResponseType.bytes, validateStatus: (_) => true, receiveTimeout: const Duration(seconds: 60)));
-      final data = res.data;
-      if ((res.statusCode ?? 500) >= 300 || data == null) throw Exception('HTTP ${res.statusCode}');
-      final bytes = Uint8List.fromList(data);
-      final header = (res.headers.value('content-type') ?? '').toLowerCase();
+      final Uint8List bytes;
+      var header = '';
+      if (widget.bytes != null) {
+        bytes = widget.bytes!;
+      } else {
+        final res = await Dio().get<List<int>>(widget.url!, options: Options(responseType: ResponseType.bytes, validateStatus: (_) => true, receiveTimeout: const Duration(seconds: 60)));
+        final data = res.data;
+        if ((res.statusCode ?? 500) >= 300 || data == null) throw Exception('HTTP ${res.statusCode}');
+        bytes = Uint8List.fromList(data);
+        header = (res.headers.value('content-type') ?? '').toLowerCase();
+      }
       final estPdf = header.contains('pdf') || (bytes.length > 4 && bytes[0] == 0x25 && bytes[1] == 0x50 && bytes[2] == 0x44 && bytes[3] == 0x46);
       final estImage = header.startsWith('image/') || _magicImage(bytes);
       if (!mounted) return;

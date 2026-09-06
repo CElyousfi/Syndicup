@@ -53,9 +53,9 @@ export default async function RapportsPage({ params, searchParams }: { params: P
           <>
             {bvr.seuil_non_configure ? <Banner variant="legal" className="mb-4" title={r.seuilNonConfigure} action={<Link href={p("/parametres")} className="font-medium underline">{dict.nav.parametres}</Link>}>{dict.depenses.seuilNonConfigureCorps}</Banner> : null}
             <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard icon={<CWallet />} tone={num(t.tresorerie.compte_courant_estime) >= 0 ? "sage" : "danger"} label={r.compteCourant} value={mad(t.tresorerie.compte_courant_estime)} hint={r.compteCourantAide} />
-              <StatCard icon={<CMoneyBag />} tone="lilac" label={r.reserve} value={t.tresorerie.reserve_configuree ? mad(t.tresorerie.reserve) : r.reserveNonConfiguree} hint={`${r.entrees} ${mad(t.tresorerie.total_entrees)} · ${r.sorties} ${mad(t.tresorerie.total_sorties_compte_courant)}`} />
-              <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={t.recouvrement.exercice.taux ? `${t.recouvrement.exercice.taux} %` : "—"} hint={`${r.appele} ${mad(t.recouvrement.exercice.appele)} · ${r.encaisse} ${mad(t.recouvrement.exercice.encaisse)}`} trend={t.recouvrement.periode.taux ? `${r.recouvrementMois} ${t.recouvrement.periode.taux} %` : undefined} trendTone="neutral" />
+              <StatCard icon={<CWallet />} tone={num(t.tresorerie.compte_courant_estime) >= 0 ? "sage" : "danger"} label={r.compteCourant} value={mad(t.tresorerie.compte_courant_estime)} hint={r.compteCourantCourt} />
+              <StatCard icon={<CMoneyBag />} tone="lilac" label={r.reserve} value={t.tresorerie.reserve_configuree ? mad(t.tresorerie.reserve) : "—"} trend={t.tresorerie.reserve_configuree ? undefined : r.reserveAbsente} trendTone="neutral" hint={`${r.entrees} ${mad(t.tresorerie.total_entrees)}`} />
+              <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={t.recouvrement.exercice.taux ? `${t.recouvrement.exercice.taux} %` : "—"} hint={`${r.encaisse} ${mad(t.recouvrement.exercice.encaisse)}`} trend={t.recouvrement.periode.taux ? `${r.recouvrementMois} ${t.recouvrement.periode.taux} %` : undefined} trendTone="neutral" />
               <StatCard icon={<CAlert />} tone={num(t.impayes.total) > 0 ? "warn" : "sage"} label={r.impayes} value={mad(t.impayes.total)} hint={fill(r.lotsEnRetard, { n: t.impayes.nb_lots_en_retard })} href={p(`/rapports/impayes?exercice=${exercice}`)} />
             </div>
 

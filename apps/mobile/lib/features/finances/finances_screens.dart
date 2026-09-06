@@ -582,7 +582,7 @@ class QuittanceScreen extends ConsumerWidget {
               SuBanner(tone: BannerTone.info, body: d.finances.quittanceConservation),
               const SizedBox(height: 14),
               FilledButton.icon(
-                onPressed: () => ouvrirFichierApi(context, ref, endpoint: '/finances/quittances/$id/pdf', titre: '${d.finances.quittanceNumero} ${qt.numero}'),
+                onPressed: () => ouvrirPdfApi(context, ref, endpoint: '/finances/quittances/$id/pdf', titre: '${d.finances.quittanceNumero} ${qt.numero}'),
                 icon: const Icon(Icons.picture_as_pdf_rounded),
                 label: Text('${d.common.download} · PDF'),
               ),

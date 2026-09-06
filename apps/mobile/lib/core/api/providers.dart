@@ -329,3 +329,19 @@ final comptesBancairesProvider = FutureProvider.autoDispose<List<CompteBancaire>
   final r = await ref.watch(apiClientProvider).get<List<CompteBancaire>>('/coproprietes/$coproId/comptes-bancaires', parse: (j) => parseList(j, CompteBancaire.fromJson));
   return r.dataOrNull ?? const [];
 });
+
+// ── M18 Rapports & transparence ───────────────────────────────────────────────
+/// Tableau de bord de gestion (syndic / conseil) — exercice courant.
+final tableauDeBordProvider = FutureProvider.autoDispose<TableauDeBord>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/rapports/tableau-de-bord', query: {'exercice': DateTime.now().year.toString()}, parse: (j) => TableauDeBord.fromJson(asMap(j))));
+});
+
+/// « Où va mon argent » — tout membre ; `exercice` « YYYY ».
+final transparenceProvider = FutureProvider.autoDispose.family<Transparence, String>((ref, exercice) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/rapports/transparence', query: {'exercice': exercice, 'limit': 100}, parse: (j) => Transparence.fromJson(asMap(j))));
+});
+
+/// Rapports de gestion (syndic / conseil, lecture).
+final rapportsGestionProvider = FutureProvider.autoDispose<List<RapportGestion>>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/rapports/gestion', query: {'limit': 50}, parse: (j) => parseList(j, RapportGestion.fromJson)));
+});
