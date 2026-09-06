@@ -310,3 +310,12 @@ export const IconPie = (p: SVGProps<SVGSVGElement>) => (
     <path d="M12 12l6.4 6.4" />
   </svg>
 );
+
+/** M19 — contrats (poignée de main). */
+export const IconHandshake = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3 11l4-4 4 3 3-3 4 4" />
+    <path d="M3 11v4l5 5 4-1 5-4 4-4v-4" />
+    <path d="M11 10l3 3" />
+  </svg>
+);

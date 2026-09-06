@@ -138,3 +138,7 @@ export const justificatifVariant = map({ EN_ATTENTE: "warn", VALIDE: "ok", REJET
 export const rapportVariant = map({ BROUILLON: "outline", GENERE: "info", SOUMIS_AG: "warn", APPROUVE: "ok", REJETE: "danger" });
 export const trancheVariant = map({ "0_30": "info", "31_90": "warn", "91_180": "danger", PLUS_180: "danger" });
 export const ligneGrandLivreVariant = map({ ENTREE: "ok", SORTIE: "danger", RESERVE: "info" });
+
+// M19 — contrats et échéances.
+export const contratVariant = map({ BROUILLON: "outline", ACTIF: "ok", SUSPENDU: "warn", RESILIE: "neutral", EXPIRE: "danger" });
+export const echeanceVariant = map({ A_VENIR: "info", DEPENSE_GENEREE: "ok", REALISEE: "ok", MANQUEE: "danger", ANNULEE: "neutral" });

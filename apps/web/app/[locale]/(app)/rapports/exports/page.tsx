@@ -28,7 +28,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
   const exercice = String(new Date().getFullYear());
   const [journal, copro] = await Promise.all([apiFetch<ExportLog[]>("/rapports/exports", { searchParams: { limit: 50 } }), ctx.coproprieteId ? apiFetch<{ facturesVisiblesResidents?: boolean }>(`/coproprietes/${ctx.coproprieteId}`) : Promise.resolve(null)]);
   const labels = { csv: r.exporterCsv, xlsx: r.exporterXlsx };
-  const cartes: { titre: string; aide: string; ressource: "lots" | "paiements" | "incidents" | "depenses" | "grand-livre" | "impayes" | "proprietaires"; filtres?: Record<string, string>; syndicSeul?: boolean }[] = [
+  const cartes: { titre: string; aide: string; ressource: "lots" | "paiements" | "incidents" | "depenses" | "grand-livre" | "impayes" | "proprietaires" | "contrats"; filtres?: Record<string, string>; syndicSeul?: boolean }[] = [
     { titre: r.exportLots, aide: r.exportLotsAide, ressource: "lots" },
     { titre: r.exportProprietaires, aide: r.exportProprietairesAide, ressource: "proprietaires", syndicSeul: true },
     { titre: r.exportImpayes, aide: r.exportImpayesAide, ressource: "impayes" },
@@ -36,6 +36,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
     { titre: r.exportDepenses, aide: r.exportDepensesAide, ressource: "depenses", filtres: { exercice } },
     { titre: r.exportGrandLivre, aide: r.exportGrandLivreAide, ressource: "grand-livre", filtres: { exercice } },
     { titre: r.exportIncidents, aide: r.exportIncidentsAide, ressource: "incidents" },
+    { titre: dict.contrats.titre, aide: dict.contrats.subtitle, ressource: "contrats" },
   ];
   return (
     <div className="animate-fade">

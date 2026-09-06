@@ -67,6 +67,10 @@ class _AppShellState extends ConsumerState<AppShell> {
     if (t.startsWith('APPEL_') || t.startsWith('IMPAYE_') || t == 'PAIEMENT_RECU') ref.invalidate(syntheseProvider);
     if (t.startsWith('DEPENSE_') || t == 'FACTURE_ECHEANCE_PROCHE') ref.invalidate(depensesProvider);
     if (t.startsWith('JUSTIFICATIF_') || t == 'PAIEMENT_VALIDE' || t == 'PAIEMENT_ESPECES_SAISI') ref.invalidate(justificatifsProvider);
+    if (t.startsWith('CONTRAT_') || t == 'ASSURANCE_IMMEUBLE_ABSENTE') {
+      ref.invalidate(contratsProvider);
+      ref.invalidate(assuranceProvider);
+    }
     if (t.startsWith('RAPPORT_GESTION_')) {
       ref.invalidate(rapportsGestionProvider);
       ref.invalidate(transparenceProvider);

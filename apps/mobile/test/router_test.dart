@@ -81,4 +81,16 @@ void main() {
     expect(lienNotification('RAPPORT_GESTION_DISPONIBLE', {'rapport_id': 'x'}), '/rapports/transparence');
   });
 
+
+  test('M19 : contrats pour le syndic et le conseil uniquement ; deep-links contrat / assurance', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths('SYNDIC'), contains('/contrats'));
+    expect(paths('CONSEIL_SYNDICAL'), contains('/contrats'));
+    for (final r in ['PROPRIETAIRE', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/contrats')), reason: r);
+    }
+    expect(lienNotification('CONTRAT_ECHEANCE_PROCHE', {'contrat_id': 'c1'}), '/contrats/c1');
+    expect(lienNotification('ASSURANCE_IMMEUBLE_ABSENTE', {}), '/contrats');
+  });
+
 }

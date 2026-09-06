@@ -345,3 +345,23 @@ final transparenceProvider = FutureProvider.autoDispose.family<Transparence, Str
 final rapportsGestionProvider = FutureProvider.autoDispose<List<RapportGestion>>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/rapports/gestion', query: {'limit': 50}, parse: (j) => parseList(j, RapportGestion.fromJson)));
 });
+
+// ── M19 Contrats ──────────────────────────────────────────────────────────────
+/// Contrats (syndic / conseil, lecture) — `statut` null = tous, 'A_RENOUVELER' = fin proche / expirés récents.
+final contratsProvider = FutureProvider.autoDispose.family<List<Contrat>, String?>((ref, statut) async {
+  final api = ref.watch(apiClientProvider);
+  if (statut == 'A_RENOUVELER') return unwrap(await api.get('/contrats/a-renouveler', query: {'jours': 90}, parse: (j) => parseList(j, Contrat.fromJson)));
+  return unwrap(await api.get('/contrats', query: {'limit': 100, if (statut != null) 'statut': statut}, parse: (j) => parseList(j, Contrat.fromJson)));
+});
+final contratProvider = FutureProvider.autoDispose.family<Contrat, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/contrats/$id', parse: (j) => Contrat.fromJson(asMap(j))));
+});
+final assuranceProvider = FutureProvider.autoDispose<EtatAssurance>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/contrats/assurance', parse: (j) => EtatAssurance.fromJson(asMap(j))));
+});
+/// Échéances des 30 prochains jours (tous contrats).
+final echeancierProchainProvider = FutureProvider.autoDispose<List<ContratEcheance>>((ref) async {
+  final now = DateTime.now().toUtc();
+  String iso(DateTime d) => d.toIso8601String().substring(0, 10);
+  return unwrap(await ref.watch(apiClientProvider).get('/contrats/echeancier', query: {'from': iso(now), 'to': iso(now.add(const Duration(days: 30)))}, parse: (j) => parseList(asMap(j)['echeances'], ContratEcheance.fromJson)));
+});

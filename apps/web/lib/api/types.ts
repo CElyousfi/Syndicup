@@ -1011,7 +1011,7 @@ export interface TableauDeBord {
   budget_vs_realise: BudgetVsRealise;
   incidents_ouverts: { total: number; par_urgence: Record<UrgenceIncident, number> };
   justificatifs_en_attente: { nb: number; montant: string };
-  contrats: null | { echus: number; a_echoir_30j: number };
+  contrats: IndicateursContrats;
 }
 export interface TransparenceDepense {
   id: string;
@@ -1163,4 +1163,92 @@ export interface ReleveLot {
   paiements: { id: string; date: string; methode: string; montant: string; reference: string | null; periode: string }[];
   justificatifs_en_attente: { id: string; date_paiement: string; methode: string; montant: string; reference: string | null }[];
   totaux: { appele: string; paye: string; solde_exercice: string; solde_total_du: string; en_attente: string };
+}
+
+// ── M19 — Contrats, assurances, échéances ────────────────────────────────────
+export type TypeContrat = "ASSURANCE_IMMEUBLE" | "ASSURANCE_RC" | "ASCENSEUR" | "NETTOYAGE" | "GARDIENNAGE" | "JARDINAGE" | "DERATISATION" | "EAU" | "ELECTRICITE" | "INTERNET" | "SYNDIC_PROFESSIONNEL" | "TRAVAUX" | "AUTRE";
+export type StatutContrat = "BROUILLON" | "ACTIF" | "SUSPENDU" | "RESILIE" | "EXPIRE";
+export type Periodicite = "MENSUELLE" | "TRIMESTRIELLE" | "SEMESTRIELLE" | "ANNUELLE" | "PONCTUELLE";
+export type TypeEcheance = "PAIEMENT" | "RENOUVELLEMENT" | "VISITE_TECHNIQUE" | "CONTROLE_REGLEMENTAIRE" | "AUTRE";
+export type StatutEcheanceContrat = "A_VENIR" | "DEPENSE_GENEREE" | "REALISEE" | "MANQUEE" | "ANNULEE";
+
+export interface DetailsAssurance {
+  assureur: string;
+  numero_police: string;
+  garanties: string[];
+  franchise?: string | null;
+  capital_assure?: string | null;
+}
+export interface ContratEcheance {
+  id: string;
+  contratId: string;
+  type: TypeEcheance;
+  dateEcheance: string;
+  montant: string | null;
+  statut: StatutEcheanceContrat;
+  depenseId: string | null;
+  depense: { id: string; libelle: string; statut: StatutDepense; montantTtc: string } | null;
+  tacheId: string | null;
+  notifieJ30Le: string | null;
+  notifieJ7Le: string | null;
+  contrat?: { id: string; libelle: string; type: TypeContrat; statut: StatutContrat; prestataire: { nom: string } | null };
+}
+export interface Contrat {
+  id: string;
+  coproprieteId: string;
+  prestataireId: string | null;
+  prestataire: { id: string; nom: string; specialite: string; telephone: string | null; email: string | null } | null;
+  type: TypeContrat;
+  libelle: string;
+  reference: string | null;
+  dateDebut: string;
+  dateFin: string | null;
+  tacite: boolean;
+  preavisJours: number | null;
+  periodicite: Periodicite;
+  montantPeriode: string | null;
+  budgetPosteId: string | null;
+  budgetPoste: { id: string; libelle: string; categorie: CategorieDepense } | null;
+  statut: StatutContrat;
+  document: { id: string; nom: string; type: string } | null;
+  attestationDocument: { id: string; nom: string; type: string } | null;
+  detailsAssuranceJson: DetailsAssurance | null;
+  resolutionAgId: string | null;
+  resolutionAg: { id: string; texte: string; resultat: ResultatResolution; agId: string } | null;
+  notes: string | null;
+  motifResiliation: string | null;
+  dateResiliation: string | null;
+  creePar: { id: string; nom: string | null; prenom: string | null } | null;
+  creeLe: string;
+  modifieLe: string;
+  jours_avant_fin: number | null;
+  a_renouveler: boolean;
+  est_assurance: boolean;
+  _count: { echeances: number; depenses: number };
+}
+export interface ContratDetail extends Contrat {
+  documents: { document_id: string; nom: string; type: string; url: string }[];
+  echeances: ContratEcheance[];
+  depenses: { id: string; libelle: string; statut: StatutDepense; montantTtc: string; dateDepense: string }[];
+  logs: { id: string; type: string; horodatage: string; acteur: { id: string; nom: string | null; prenom: string | null } | null; details: Record<string, unknown> | null }[];
+}
+export interface EtatAssurance {
+  immeuble_active: boolean;
+  rc_active: boolean;
+  polices: { id: string; type: TypeContrat; libelle: string; date_fin: string | null; echue: boolean; attestation: boolean; assureur: string | null }[];
+}
+export interface Echeancier {
+  from: string;
+  to: string;
+  total_montant: string;
+  echeances: ContratEcheance[];
+}
+export interface IndicateursContrats {
+  actifs: number;
+  a_echoir_30j: number;
+  echus_90j: number;
+  echeances_30j: { nb: number; montant: string };
+  echeances_manquees: number;
+  assurance_immeuble_active: boolean;
+  assurance_rc_active: boolean;
 }

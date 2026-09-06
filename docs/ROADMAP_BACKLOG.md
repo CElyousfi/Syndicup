@@ -469,6 +469,60 @@ contrats / personnel / parkings livrés avec M19 / M20 / M23.
   du PDF arabe ; contrats (M19) dans le tableau de bord et les faits marquants ; génération /
   soumission depuis le mobile (web-first, voir parité).
 
+## M19 — Contrats, assurances, échéances
+
+*Réf. Doc A §7 (ascenseur, nettoyage, gardiennage, jardins), §8 (assurance obligatoire,
+responsabilité du syndic), §5. Domaine : `16-contrats-assurances.md`. Juridique : brief §10.
+Branche `feature/m19-contrats`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `TypeContrat`, `StatutContrat`, `Periodicite`,
+`TypeEcheance`, `StatutEcheanceContrat`, `TypeContratLog` ; tables `contrat`, `contrat_echeance`,
+`contrat_log` (append-only) ; colonnes `copropriete.seuil_contrat_ag` /
+`assurance_alerte_envoyee_le`, `contrat_echeance.notifie_j30_le` / `notifie_j7_le`,
+`contrat.attestation_document_id` (attestation distincte du contrat signé) ; FK
+`depense.contrat_id` ; permissions `contrats.lire`, `contrats.gerer` ; codes
+`CONTRAT_STATUT_INVALIDE`, `CONTRAT_RESOLUTION_AG_REQUISE`, `CONTRAT_ECHEANCE_STATUT_INVALIDE`.
+**Écarts par rapport au prompt** : (1) les tâches M22 de renouvellement ne sont pas créées (table
+`tache` absente) — `contrat_echeance.tache_id` est posé, l'échéance RENOUVELLEMENT tient lieu de
+rappel ; (2) `PATCH /contrats/{id}` porte aussi les documents (contrat signé / attestation) — pas
+d'endpoint dédié ; (3) la génération d'échéances n'est pas un endpoint « generate » séparé : `POST
+/contrats/{id}/echeances` sans `date_echeance` régénère, avec `type` + `date_echeance` crée une
+échéance manuelle ; (4) le job traite la fin de contrat AVANT les rappels pour que les échéances
+créées par la reconduction soient notifiées dans le même passage (rejeu = 0 effet).
+
+- [x] **Livré (06/09)** — Migration `..._m19_contrats` : tables, CHECKs (dates, montants, motif de
+  résiliation), fonction `contrat_copropriete_id`, RLS syndic / conseil (aucun résident, gardien,
+  prestataire), `contrat_log` GRANT SELECT+INSERT. `creerDepenseDb` extrait de M16 (transaction
+  partagée). Seed Al Amal : ascenseur ACTIF (tacite, préavis, contrat signé, échéancier + visite
+  technique), nettoyage ACTIF lié à la dépense payée, multirisque immeuble ACTIF (police +
+  attestation), dératisation BROUILLON, gardiennage EXPIRE ; `seuil_contrat_ag` (PROVISOIRE).
+- [x] **Livré (06/09)** — API tag `Contrats` (15 opérations) : liste (filtres, tri, `meta.par_statut`,
+  `meta.assurance`, export csv / xlsx journalisé), création, upload-url, échéancier transverse
+  (`from`/`to`), à renouveler, état assurance, détail (documents signés, échéancier, dépenses,
+  journal), modification (régénère l'échéancier si dates / périodicité / montant changent),
+  activer (seuil AG → 422), suspendre, résilier (échéances futures annulées), échéances (génération
+  idempotente / manuelle, modification de statut), génération de dépense BROUILLON liée
+  (Idempotency-Key). Jobs `contrats-echeances-quotidien` (J-30 / J-7 une fois, MANQUEE, EXPIRE,
+  reconduction tacite prolongeant l'échéancier) et `contrats-assurance-mensuel` (dédoublonné 28 j).
+  Notifications FR/AR `CONTRAT_ECHEANCE_PROCHE`, `CONTRAT_ECHEANCE_MANQUEE`, `CONTRAT_EXPIRE`,
+  `CONTRAT_RECONDUIT`, `ASSURANCE_IMMEUBLE_ABSENTE`. Audit `CONTRAT_CREE/MODIFIE/ACTIVE/SUSPENDU/
+  RESILIE/DEPENSE_GENEREE`. Hooks M18 : tableau de bord `contrats`, faits marquants `contrats_signes`,
+  export `CONTRATS`. Tests `tests/contrats.test.ts` (9) : calcul pur des échéances par périodicité
+  (fins de mois, horizon, préavis), seuil AG, dépense liée idempotente, résiliation, RLS propriétaire,
+  job (idempotent), assurance absente / active, tableau de bord.
+- [x] **Livré (06/09)** — Web : `contrats/` (statistiques, bannière assurance, onglets statut + « à
+  renouveler », filtre type, export), `contrats/nouveau` et `[id]/modifier` (formulaire, bloc police
+  d'assurance, fichiers), `contrats/[id]` (échéancier avec actions : créer la dépense, réalisée,
+  annuler, ajouter une échéance, régénérer ; activer / suspendre / résilier ; documents dans la
+  visionneuse ; dépenses liées ; journal), `contrats/calendrier` (vue mois), indicateurs sur le
+  tableau de bord Rapports, `?contrat_id=` sur la liste des dépenses, navigation « Contrats »
+  (syndic, conseil), FR/AR RTL.
+- [x] **Livré (06/09)** — Mobile `features/contrats/` : liste (assurance, à renouveler, échéances 30
+  jours, onglets), fiche lecture (police, documents, échéancier, dépenses, journal), deep-links.
+- [ ] **Non livré / à confirmer** : tâches M22 de renouvellement ; indexation / révision de prix ;
+  saisie et transitions depuis le mobile (web-first, voir parité) ; exports personnel / parkings
+  (M20 / M23).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

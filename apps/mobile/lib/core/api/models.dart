@@ -1100,3 +1100,48 @@ class RapportGestion {
     );
   }
 }
+
+// ── M19 — Contrats, assurances, échéances ────────────────────────────────────
+class ContratEcheance {
+  final String id, contratId, type, dateEcheance, statut;
+  final String? montant, depenseId, depenseLibelle, depenseStatut, contratLibelle, contratType;
+  const ContratEcheance({required this.id, required this.contratId, required this.type, required this.dateEcheance, required this.statut, this.montant, this.depenseId, this.depenseLibelle, this.depenseStatut, this.contratLibelle, this.contratType});
+  factory ContratEcheance.fromJson(Map<String, dynamic> j) => ContratEcheance(
+        id: _s(j, 'id'), contratId: _s(j, 'contratId'), type: _s(j, 'type'), dateEcheance: _s(j, 'dateEcheance'), statut: _s(j, 'statut'), montant: _sn(j, 'montant'), depenseId: _sn(j, 'depenseId'),
+        depenseLibelle: _map(j['depense'])?['libelle']?.toString(), depenseStatut: _map(j['depense'])?['statut']?.toString(),
+        contratLibelle: _map(j['contrat'])?['libelle']?.toString(), contratType: _map(j['contrat'])?['type']?.toString(),
+      );
+}
+
+class Contrat {
+  final String id, type, libelle, dateDebut, periodicite, statut, creeLe;
+  final String? reference, dateFin, montantPeriode, prestataireNom, prestataireId, posteLibelle, notes, motifResiliation, dateResiliation, documentId, documentNom, attestationId, attestationNom, resolutionTexte;
+  final bool tacite, estAssurance, aRenouveler;
+  final int? preavisJours, joursAvantFin;
+  final int nbEcheances, nbDepenses;
+  final Map<String, dynamic>? detailsAssurance;
+  final List<ContratEcheance> echeances;
+  final List<DepenseRef> depenses;
+  final List<Map<String, dynamic>> logs;
+  const Contrat({required this.id, required this.type, required this.libelle, required this.dateDebut, required this.periodicite, required this.statut, required this.creeLe, this.reference, this.dateFin, this.montantPeriode, this.prestataireNom, this.prestataireId, this.posteLibelle, this.notes, this.motifResiliation, this.dateResiliation, this.documentId, this.documentNom, this.attestationId, this.attestationNom, this.resolutionTexte, required this.tacite, required this.estAssurance, required this.aRenouveler, this.preavisJours, this.joursAvantFin, this.nbEcheances = 0, this.nbDepenses = 0, this.detailsAssurance, this.echeances = const [], this.depenses = const [], this.logs = const []});
+  factory Contrat.fromJson(Map<String, dynamic> j) => Contrat(
+        id: _s(j, 'id'), type: _s(j, 'type'), libelle: _s(j, 'libelle'), dateDebut: _s(j, 'dateDebut'), periodicite: _s(j, 'periodicite'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+        reference: _sn(j, 'reference'), dateFin: _sn(j, 'dateFin'), montantPeriode: _sn(j, 'montantPeriode'), notes: _sn(j, 'notes'), motifResiliation: _sn(j, 'motifResiliation'), dateResiliation: _sn(j, 'dateResiliation'),
+        prestataireNom: _map(j['prestataire'])?['nom']?.toString(), prestataireId: _sn(j, 'prestataireId'), posteLibelle: _map(j['budgetPoste'])?['libelle']?.toString(),
+        documentId: _map(j['document'])?['id']?.toString(), documentNom: _map(j['document'])?['nom']?.toString(), attestationId: _map(j['attestationDocument'])?['id']?.toString(), attestationNom: _map(j['attestationDocument'])?['nom']?.toString(),
+        resolutionTexte: _map(j['resolutionAg'])?['texte']?.toString(),
+        tacite: _b(j, 'tacite'), estAssurance: _b(j, 'est_assurance'), aRenouveler: _b(j, 'a_renouveler'), preavisJours: _in(j, 'preavisJours'), joursAvantFin: _in(j, 'jours_avant_fin'),
+        nbEcheances: (_map(j['_count'])?['echeances'] as num?)?.toInt() ?? 0, nbDepenses: (_map(j['_count'])?['depenses'] as num?)?.toInt() ?? 0,
+        detailsAssurance: _map(j['detailsAssuranceJson']), echeances: _list(j['echeances'], ContratEcheance.fromJson),
+        depenses: ((j['depenses'] as List?) ?? const []).whereType<Map>().map((m) => DepenseRef(id: (m['id'] ?? '').toString(), nom: (m['libelle'] ?? '').toString())).toList(),
+        logs: ((j['logs'] as List?) ?? const []).whereType<Map>().map((m) => m.cast<String, dynamic>()).toList(),
+      );
+  bool get vivant => statut == 'ACTIF' || statut == 'BROUILLON' || statut == 'SUSPENDU';
+}
+
+class EtatAssurance {
+  final bool immeubleActive, rcActive;
+  final int nbPolices;
+  const EtatAssurance({required this.immeubleActive, required this.rcActive, required this.nbPolices});
+  factory EtatAssurance.fromJson(Map<String, dynamic> j) => EtatAssurance(immeubleActive: _b(j, 'immeuble_active'), rcActive: _b(j, 'rc_active'), nbPolices: ((j['polices'] as List?) ?? const []).length);
+}

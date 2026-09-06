@@ -31,6 +31,7 @@ et remises à « non configuré » (null) si l'avocat infirme.
 | `delai_validation_justificatif_jours` (M17) | **5 jours** (seed ; NULL = aucun rappel) | §8.5 — délai de traitement d'un justificatif par le syndic |
 | `majorite_approbation_comptes` (M18) | **NULL** — fournie à la soumission ou configurée par le syndic ; SIMPLE dans le seed uniquement | PROVISOIRE (§9.1) |
 | `factures_visibles_residents` (M18) | **false** — activée par le syndic (true dans le seed) | PROVISOIRE (§9.3) |
+| `seuil_contrat_ag` (M19) | **NULL** — configuré par le syndic ; 20 000 MAD dans le seed uniquement | PROVISOIRE (§10.2) |
 
 **À faire au retour de l'avocat** : confirmer ou corriger chaque valeur ici même (référence
 d'article + date), puis ajuster la configuration des copropriétés concernées. La déclaration
@@ -327,6 +328,32 @@ de données personnelles (annuaire des propriétaires : nom, contact, quote-part
 **À confirmer :** le contenu exigé de l'état daté lors de la vente d'un lot (le relevé de charges
 du module donne appels, paiements, déclarations en attente, solde de l'exercice et solde total dû)
 et qui peut le délivrer (syndic ; le propriétaire du lot peut-il le produire lui-même ?).
+
+## 10. Contrats prestataires, assurance de l'immeuble, engagement en AG (module M19)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `copropriete.seuil_contrat_ag` | **NULL par défaut** (20 000 MAD posé par le seed de démonstration) — au-dessus, l'activation d'un contrat exige une résolution d'AG ADOPTEE ; non configuré = aucun contrôle | PROVISOIRE |
+| Alerte « assurance immeuble absente » | mensuelle, syndic + conseil, tant qu'aucun contrat ASSURANCE_IMMEUBLE n'est ACTIF et non échu | PROVISOIRE |
+
+### 10.1 — L'assurance de l'immeuble est-elle obligatoire, et pour qui ?
+
+**À confirmer :** la Loi 18-00 (et le règlement de copropriété type) impose-t-elle au syndicat une
+assurance multirisque immeuble / responsabilité civile, avec quel contenu minimal de garanties ? Le
+module traite l'absence d'assurance immeuble ACTIVE comme une alerte bloquante visuellement (bannière
+rouge, notification mensuelle) sans empêcher aucune opération.
+
+### 10.2 — Engagements contractuels soumis à l'AG
+
+**À confirmer :** au-dessus de quel montant (ou pour quels types : gardiennage, syndic professionnel,
+travaux) un contrat pluriannuel doit-il être voté en AG, et à quelle majorité ? Le module n'applique
+le contrôle que si `seuil_contrat_ag` est renseigné par le syndic.
+
+### 10.3 — Reconduction tacite et préavis
+
+**À confirmer :** validité de la reconduction tacite des contrats de prestation (durée, information
+préalable du conseil, préavis minimal de résiliation). Le module prolonge d'une période égale et
+notifie le syndic ; le préavis est un paramètre libre par contrat.
 
 ## Comment utiliser ce document
 

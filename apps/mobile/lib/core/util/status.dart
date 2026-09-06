@@ -31,3 +31,7 @@ const Map<String, BadgeVariant> justificatifVariant = {'EN_ATTENTE': BadgeVarian
 // M18 — rapports de gestion, ancienneté des impayés.
 const Map<String, BadgeVariant> rapportVariant = {'BROUILLON': BadgeVariant.outline, 'GENERE': BadgeVariant.info, 'SOUMIS_AG': BadgeVariant.warn, 'APPROUVE': BadgeVariant.ok, 'REJETE': BadgeVariant.danger};
 const Map<String, BadgeVariant> trancheVariant = {'0_30': BadgeVariant.info, '31_90': BadgeVariant.warn, '91_180': BadgeVariant.danger, 'PLUS_180': BadgeVariant.danger};
+
+// M19 — contrats et échéances.
+const Map<String, BadgeVariant> contratVariant = {'BROUILLON': BadgeVariant.outline, 'ACTIF': BadgeVariant.ok, 'SUSPENDU': BadgeVariant.warn, 'RESILIE': BadgeVariant.neutral, 'EXPIRE': BadgeVariant.danger};
+const Map<String, BadgeVariant> echeanceVariant = {'A_VENIR': BadgeVariant.info, 'DEPENSE_GENEREE': BadgeVariant.ok, 'REALISEE': BadgeVariant.ok, 'MANQUEE': BadgeVariant.danger, 'ANNULEE': BadgeVariant.neutral};

@@ -25,7 +25,8 @@ export type IconKey =
   | "chart"
   | "suitcase"
   | "receipt"
-  | "pie";
+  | "pie"
+  | "handshake";
 
 export interface NavItem {
   href: string;
@@ -80,6 +81,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
     icon: "wrench",
   });
   const prestataires: NavItem = { href: p("/prestataires"), label: d.prestataires, icon: "send" };
+  // M19 — contrats, assurances, échéances (syndic gère, conseil lit).
+  const contrats: NavItem = { href: p("/contrats"), label: d.contrats, icon: "handshake" };
   const espaces: NavItem = { href: p("/espaces-communs"), label: d.espaces, icon: "home" };
   const reservations: NavItem = {
     href: p("/reservations"),
@@ -128,7 +131,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, lcd, prestataires, documents],
+          items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
         { label: s.administration, items: [membres, invitations, parametres] },
       ];
@@ -139,7 +142,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, lcd, prestataires, documents],
+          items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
       ];
     case "PROPRIETAIRE":

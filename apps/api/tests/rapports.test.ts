@@ -231,25 +231,26 @@ describe("M18 — rapport de gestion", () => {
     const cle = randomUUID();
     const r = await genererRapportGestion(S(), { exercice: EX }, cle);
     rapportId = r.id;
+    const donnees = r.donnees!;
     expect(r.statut).toBe("GENERE");
     expect(r.pdf_erreur).toBeNull();
     expect(r.document_id).toBeTruthy();
     expect(r.regenere).toBe(false);
     const gl = await obtenirGrandLivre(S(), EX);
-    expect(r.donnees.tresorerie.ouverture).toEqual(gl.ouverture);
-    expect(r.donnees.tresorerie.totaux).toEqual(gl.totaux);
-    expect(r.donnees.tresorerie.cloture).toEqual(gl.cloture);
-    expect(r.donnees.grand_livre_nb_lignes).toBe(gl.nb_lignes);
+    expect(donnees.tresorerie.ouverture).toEqual(gl.ouverture);
+    expect(donnees.tresorerie.totaux).toEqual(gl.totaux);
+    expect(donnees.tresorerie.cloture).toEqual(gl.cloture);
+    expect(donnees.grand_livre_nb_lignes).toBe(gl.nb_lignes);
     // Σ des SORTIE du grand livre = total des dépenses de l'instantané ; Σ ENTREE = encaissé recouvrement.
     const sorties = gl.lignes.filter((l) => l.type === "SORTIE").reduce((a, l) => a.plus(money(l.sortie ?? 0)), money(0));
-    expect(sorties.toFixed(2)).toBe(r.donnees.depenses_par_categorie.total);
+    expect(sorties.toFixed(2)).toBe(donnees.depenses_par_categorie.total);
     const entrees = gl.lignes.filter((l) => l.type === "ENTREE").reduce((a, l) => a.plus(money(l.entree ?? 0)), money(0));
-    expect(entrees.toFixed(2)).toBe(r.donnees.recouvrement.encaisse);
-    expect(r.donnees.impayes.par_lot).toHaveLength(2);
-    expect(r.donnees.reserve.mouvements).toHaveLength(2);
-    expect(r.donnees.faits_marquants.incidents_majeurs).toHaveLength(1);
-    expect(r.donnees.president_conseil.nom).toContain("CONSEIL");
-    expect(r.donnees.seuil_approbation_non_configure).toBe(true);
+    expect(entrees.toFixed(2)).toBe(donnees.recouvrement.encaisse);
+    expect(donnees.impayes.par_lot).toHaveLength(2);
+    expect(donnees.reserve.mouvements).toHaveLength(2);
+    expect(donnees.faits_marquants.incidents_majeurs).toHaveLength(1);
+    expect(donnees.president_conseil.nom).toContain("CONSEIL");
+    expect(donnees.seuil_approbation_non_configure).toBe(true);
     const doc = await admin.document.findUniqueOrThrow({ where: { id: r.document_id! } });
     expect(doc.type).toBe("RAPPORT_GESTION"); expect(doc.visibilite).toBe("CONSEIL_SYNDICAL"); expect(doc.storagePath).toContain(`${copro}/rapports/`);
     // Rejeu même clé → même rapport ; nouvelle clé → régénération (200, même ligne).

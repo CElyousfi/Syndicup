@@ -16,6 +16,7 @@ import '../../features/dashboard/dashboard_screen.dart';
 import '../../features/depenses/depenses_screens.dart';
 import '../../features/justificatifs/justificatifs_screens.dart';
 import '../../features/rapports/rapports_screens.dart';
+import '../../features/contrats/contrats_screens.dart';
 import '../../features/documents/document_viewer_screen.dart';
 import '../../features/documents/documents_screen.dart';
 import '../../features/espaces/espaces_screens.dart';
@@ -124,6 +125,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/depenses', builder: (_, __) => const DepensesScreen()),
           // M18 — rapports (syndic / conseil, lecture) et transparence « où va mon argent » (tout membre).
           GoRoute(path: '/rapports', builder: (_, __) => const RapportsScreen()),
+          // M19 — contrats (syndic / conseil, lecture).
+          GoRoute(path: '/contrats', builder: (_, __) => const ContratsScreen()),
+          GoRoute(path: '/contrats/:id', builder: (_, s) => ContratDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/rapports/transparence', builder: (_, __) => const TransparenceScreen()),
           GoRoute(path: '/depenses/:id', builder: (_, s) => DepenseDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/espaces-communs', builder: (_, __) => const EspacesScreen()),

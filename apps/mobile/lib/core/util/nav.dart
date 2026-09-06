@@ -43,6 +43,7 @@ IconData navIcon(String key) => switch (key) {
       'suitcase' => Icons.luggage_rounded,
       'receipt' => Icons.receipt_long_rounded,
       'pie' => Icons.pie_chart_rounded,
+      'handshake' => Icons.handshake_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -67,6 +68,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final ag = NavItem('/ag', d.ag, 'vote');
   NavItem incidents([String? label]) => NavItem('/incidents', label ?? d.incidents, 'wrench');
   final prestataires = NavItem('/prestataires', d.prestataires, 'send');
+  // M19 — contrats, assurances, échéances (syndic gère sur le web ; mobile : lecture + push).
+  final contrats = NavItem('/contrats', d.contrats, 'handshake');
   final espaces = NavItem('/espaces-communs', d.espaces, 'home');
   final reservations = NavItem('/reservations', d.reservations, 'calendar');
   final visites = NavItem('/visites', d.visites, 'door');
@@ -92,7 +95,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
+        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
       ];
     case 'CONSEIL_SYNDICAL':
@@ -100,7 +103,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, documents]),
+        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
       ];
     case 'PROPRIETAIRE':
     case 'INDIVISAIRE':

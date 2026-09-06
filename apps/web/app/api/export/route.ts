@@ -15,6 +15,7 @@ const RESSOURCES: Record<string, { path: string; filtres: string[] }> = {
   "grand-livre": { path: "/rapports/grand-livre", filtres: ["exercice"] },
   impayes: { path: "/rapports/impayes", filtres: ["tranche", "lot_id"] },
   proprietaires: { path: "/rapports/proprietaires", filtres: [] },
+  contrats: { path: "/contrats", filtres: ["type", "statut", "prestataire_id", "q"] },
 };
 
 export async function GET(req: NextRequest) {

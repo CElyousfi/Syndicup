@@ -31,7 +31,7 @@ export default async function DepensesPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string; statut?: string; categorie?: string; source?: string; exercice?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; statut?: string; categorie?: string; source?: string; exercice?: string; q?: string; contrat_id?: string }>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
@@ -46,7 +46,7 @@ export default async function DepensesPage({
   const exercice = /^\d{4}$/.test(sp.exercice ?? "") ? sp.exercice! : String(new Date().getFullYear());
   const statut = STATUTS_ONGLETS.includes(sp.statut as StatutDepense) && sp.statut !== "TOUS" ? (sp.statut as StatutDepense) : undefined;
   const page = Math.max(1, Number(sp.page) || 1);
-  const filtres = { exercice, statut, categorie: sp.categorie || undefined, source: sp.source || undefined, q: sp.q || undefined };
+  const filtres = { exercice, statut, categorie: sp.categorie || undefined, source: sp.source || undefined, q: sp.q || undefined, contrat_id: sp.contrat_id || undefined };
 
   const [listeRes, rapportRes] = await Promise.all([
     apiFetch<Depense[]>("/depenses", { searchParams: { ...filtres, page, limit: 25, sort: "-date_depense" } }),

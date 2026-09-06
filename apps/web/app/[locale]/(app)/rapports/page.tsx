@@ -133,7 +133,12 @@ export default async function RapportsPage({ params, searchParams }: { params: P
                     <span className="text-soft">{r.justificatifsAttente}</span>
                     <Link href={p("/finances/justificatifs")} className="tnum font-semibold text-ink hover:text-action">{t.justificatifs_en_attente.nb} · {mad(t.justificatifs_en_attente.montant)}</Link>
                   </div>
-                  <p className="mt-3 text-[12px] text-faint">{r.contratsBientot}</p>
+                  <div className="mt-4 space-y-2 border-t border-hairline pt-3 text-sm">
+                    <div className="flex items-center justify-between gap-3"><span className="text-soft">{dict.contrats.actifs}</span><Link href={p("/contrats")} className="tnum font-semibold text-ink hover:text-action">{t.contrats.actifs}</Link></div>
+                    <div className="flex items-center justify-between gap-3"><span className="text-soft">{dict.contrats.aRenouveler}</span><Link href={p("/contrats?statut=A_RENOUVELER")} className={`tnum font-semibold ${t.contrats.a_echoir_30j + t.contrats.echus_90j > 0 ? "text-warn" : "text-ink"} hover:text-action`}>{t.contrats.a_echoir_30j + t.contrats.echus_90j}</Link></div>
+                    <div className="flex items-center justify-between gap-3"><span className="text-soft">{dict.contrats.echeances30}</span><Link href={p("/contrats/calendrier")} className="tnum font-semibold text-ink hover:text-action">{t.contrats.echeances_30j.nb} · {mad(t.contrats.echeances_30j.montant)}</Link></div>
+                    <div className="flex items-center justify-between gap-3"><span className="text-soft">{dict.contrats.assurance}</span><Badge variant={t.contrats.assurance_immeuble_active ? "ok" : "danger"}>{t.contrats.assurance_immeuble_active ? dict.contrats.assuranceOk : dict.contrats.assuranceAbsente}</Badge></div>
+                  </div>
                 </Card>
               </div>
             </div>
