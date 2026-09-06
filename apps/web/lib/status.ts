@@ -52,7 +52,7 @@ export const reservationVariant = map({
 
 export const visiteVariant = map({ EN_ATTENTE: "warn", AUTORISE: "ok", REFUSE: "danger" });
 
-export const personnelVariant = map({ PRESENT: "ok", ABSENT: "danger", REMPLACE: "warn" });
+export const personnelVariant = map({ PRE_EMBAUCHE: "outline", PRESENT: "ok", ABSENT: "danger", REMPLACE: "warn", PARTI: "neutral" });
 
 export const litigeVariant = map({ OUVERT: "danger", RESOLU: "ok", CLOS: "outline" });
 
@@ -142,3 +142,8 @@ export const ligneGrandLivreVariant = map({ ENTREE: "ok", SORTIE: "danger", RESE
 // M19 — contrats et échéances.
 export const contratVariant = map({ BROUILLON: "outline", ACTIF: "ok", SUSPENDU: "warn", RESILIE: "neutral", EXPIRE: "danger" });
 export const echeanceVariant = map({ A_VENIR: "info", DEPENSE_GENEREE: "ok", REALISEE: "ok", MANQUEE: "danger", ANNULEE: "neutral" });
+
+// M20 — paie, congés, présences.
+export const fichePaieVariant = map({ BROUILLON: "outline", VALIDEE: "info", PAYEE: "ok" });
+export const congeVariant = map({ DEMANDE: "warn", APPROUVE: "ok", REFUSE: "danger", ANNULE: "neutral" });
+export const presenceVariant = map({ PRESENT: "ok", ABSENT: "danger", CONGE: "info", MALADIE: "warn" });

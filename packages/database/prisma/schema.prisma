@@ -264,37 +264,46 @@ model Copropriete {
   seuilContratAg                   Decimal?                  @map("seuil_contrat_ag") @db.Decimal(14, 2)
   // Job mensuel `contrats-assurance-mensuel` : dernière alerte « assurance immeuble absente » (dédoublonnage).
   assuranceAlerteEnvoyeeLe         DateTime?                 @map("assurance_alerte_envoyee_le") @db.Timestamptz
+  // M20 — Paramètres de paie (CNSS, AMO, IR, SMIG, congés…) : nullable, PROVISOIRES (brief §11),
+  // saisis par le syndic ; la validation d'une fiche de paie est refusée tant qu'ils sont absents
+  // (422 PAIE_PARAMETRES_NON_CONFIGURES). Schéma Zod : apps/api/lib/personnel/paie.ts.
+  parametresPaieJson               Json?                     @map("parametres_paie_json")
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
-  rolesUtilisateur    RoleUtilisateur[]
-  invitations         Invitation[]
-  lots                Lot[]
-  espacesCommuns      EspaceCommun[]
-  auditLogs           AuditLog[]
-  budgetsAg           BudgetAg[]
-  appelsDeFonds       AppelDeFonds[]
-  fondsReserve        FondsReserve?
-  prestataires        Prestataire[]
-  incidents           Incident[]
-  assembleesGenerales AssembleeGenerale[]
-  documents           Document[]
-  notifications       Notification[]
-  personnel           Personnel[]
-  visites             Visite[]
-  litiges             ConflitLitige[]
-  declarationsLcd     LotLocationCourteDuree[]
-  sejoursLcd          SejourCourteDuree[]
-  sejourEvenements    SejourEvenement[]
-  idempotencyKeys     IdempotencyKey[]
-  sessionsCmi         PaiementCmiSession[]
-  depenses            Depense[]
-  depenseLogs         DepenseLog[]
-  justificatifs       JustificatifPaiement[]
-  rapportsGestion     RapportGestion[]
-  exportLogs          ExportLog[]
-  contrats            Contrat[]
-  contratLogs         ContratLog[]
+  rolesUtilisateur     RoleUtilisateur[]
+  invitations          Invitation[]
+  lots                 Lot[]
+  espacesCommuns       EspaceCommun[]
+  auditLogs            AuditLog[]
+  budgetsAg            BudgetAg[]
+  appelsDeFonds        AppelDeFonds[]
+  fondsReserve         FondsReserve?
+  prestataires         Prestataire[]
+  incidents            Incident[]
+  assembleesGenerales  AssembleeGenerale[]
+  documents            Document[]
+  notifications        Notification[]
+  personnel            Personnel[]
+  visites              Visite[]
+  litiges              ConflitLitige[]
+  declarationsLcd      LotLocationCourteDuree[]
+  sejoursLcd           SejourCourteDuree[]
+  sejourEvenements     SejourEvenement[]
+  idempotencyKeys      IdempotencyKey[]
+  sessionsCmi          PaiementCmiSession[]
+  depenses             Depense[]
+  depenseLogs          DepenseLog[]
+  justificatifs        JustificatifPaiement[]
+  rapportsGestion      RapportGestion[]
+  exportLogs           ExportLog[]
+  contrats             Contrat[]
+  contratLogs          ContratLog[]
+  fichesPaie           FichePaie[]
+  conges               Conge[]
+  evaluationsPersonnel EvaluationPersonnel[]
+  presencesPersonnel   PresencePersonnel[]
+  personnelLogs        PersonnelLog[]
 
   @@map("copropriete")
 }
@@ -350,6 +359,11 @@ model Utilisateur {
   exportLogs               ExportLog[]
   contratsCrees            Contrat[]                 @relation("ContratCreateur")
   contratLogsActeur        ContratLog[]              @relation("ContratLogActeur")
+  fichesPaieValidees       FichePaie[]               @relation("FichePaieValidateur")
+  congesTraites            Conge[]                   @relation("CongeTraitant")
+  evaluationsDonnees       EvaluationPersonnel[]     @relation("EvaluationEvaluateur")
+  presencesSaisies         PresencePersonnel[]       @relation("PresenceSaisisseur")
+  personnelLogsActeur      PersonnelLog[]            @relation("PersonnelLogActeur")
 
   @@map("utilisateur")
 }
@@ -551,6 +565,9 @@ model Document {
   rapportsGestion    RapportGestion[]       @relation("RapportGestionPdf")
   contratsSignes     Contrat[]              @relation("ContratDocument")
   attestations       Contrat[]              @relation("ContratAttestation")
+  contratsTravail    Personnel[]            @relation("PersonnelContratTravail")
+  fichesPaie         FichePaie[]            @relation("FichePaieDocument")
+  congesCertificats  Conge[]                @relation("CongeCertificat")
 
   @@index([coproprieteId])
   @@map("document")
@@ -610,10 +627,14 @@ model AppareilPush {
 // M10 — PERSONNEL / GARDIEN (Master Spec Partie 2.2/13.3, Doc A §9)
 // ============================================================================
 
+// M20 — ⚠️ ajout signalé : PRE_EMBAUCHE (fiche créée avant l'acceptation de l'invitation / le début
+// du contrat) et PARTI (départ — Doc A §9.2 « restitution logement », fin de contrat).
 enum StatutPersonnel {
+  PRE_EMBAUCHE
   PRESENT
   ABSENT
   REMPLACE
+  PARTI
 }
 
 enum StatutVisite {
@@ -640,7 +661,33 @@ model Personnel {
   logementLot   Lot?            @relation(fields: [logementLotId], references: [id])
   creeLe        DateTime        @default(now()) @map("cree_le") @db.Timestamptz
 
-  depenses Depense[]
+  // M20 — RH (Doc A §9.1 profils, §9.2 embauche : « CDI ou CDD, CNSS obligatoire »). Champs
+  // confidentiels : masqués dans toute réponse pour un rôle non syndic (la policy RLS `personnel`
+  // reste tenant-wide pour la fiche d'urgence des résidents) ; le n° CNSS complet n'est renvoyé que
+  // par GET /personnel/{id}/cnss (audité CNSS_CONSULTE).
+  poste               PostePersonnel      @default(GARDIEN)
+  typeContrat         TypeContratTravail? @map("type_contrat")
+  dateEmbauche        DateTime?           @map("date_embauche") @db.Date
+  dateFinContrat      DateTime?           @map("date_fin_contrat") @db.Date
+  salaireBrutMensuel  Decimal?            @map("salaire_brut_mensuel") @db.Decimal(14, 2)
+  numeroCnss          String?             @map("numero_cnss")
+  documentContratId   String?             @map("document_contrat_id") @db.Uuid
+  documentContrat     Document?           @relation("PersonnelContratTravail", fields: [documentContratId], references: [id])
+  contactUrgence      String?             @map("contact_urgence")
+  // Planning hebdomadaire `{ lun: [{debut:"08:00", fin:"12:00"}], … }` — clés lun…dim.
+  horairesJson        Json?               @map("horaires_json")
+  notes               String?
+  // Job mensuel : rappel de fin de CDD envoyé une seule fois.
+  finContratNotifieLe DateTime?           @map("fin_contrat_notifie_le") @db.Timestamptz
+  modifieLe           DateTime            @default(now()) @updatedAt @map("modifie_le") @db.Timestamptz
+
+  depenses      Depense[]
+  fichesPaie    FichePaie[]
+  conges        Conge[]               @relation("CongePersonnel")
+  remplacements Conge[]               @relation("CongeRemplacant")
+  evaluations   EvaluationPersonnel[]
+  presences     PresencePersonnel[]
+  logs          PersonnelLog[]
 
   @@unique([utilisateurId, coproprieteId])
   @@index([coproprieteId])
@@ -1689,6 +1736,7 @@ model Depense {
   logs                   DepenseLog[]
   mouvementsFondsReserve FondsReserveMouvement[]
   echeancesContrat       ContratEcheance[]
+  fichePaie              FichePaie?
 
   @@index([coproprieteId, statut])
   @@index([coproprieteId, dateDepense])
@@ -2046,4 +2094,203 @@ model ContratLog {
 
   @@index([contratId, horodatage])
   @@map("contrat_log")
+}
+
+// ============================================================================
+// M20 — PERSONNEL RH : contrat de travail, paie, congés, présences, évaluations (Doc A §9).
+// Le gardien est souvent la première dépense de la copropriété et sa relation RH la plus
+// sensible. La fiche de paie est une AIDE AU CALCUL interne à partir des paramètres saisis par le
+// syndic (`copropriete.parametres_paie_json`, PROVISOIRES — brief §11), jamais un bulletin
+// certifié ; sa validation crée la dépense PERSONNEL (M16) dans la même transaction. Les données
+// (salaire, CNSS, paie, congés, présences, évaluations) ne sont visibles que du syndic et de
+// l'employé concerné (RLS via `personnel_utilisateur_id`) ; le conseil syndical évalue.
+// `personnel_log` est APPEND-ONLY. ⚠️ Ajouts signalés au-delà du Master Spec : enums
+// PostePersonnel, TypeContratTravail, StatutFichePaie, TypeConge, StatutConge, StatutPresence,
+// TypePersonnelLog, valeurs PRE_EMBAUCHE / PARTI de StatutPersonnel ; tables fiche_paie, conge,
+// evaluation_personnel, presence_personnel, personnel_log ; colonnes RH de `personnel` ;
+// copropriete.parametres_paie_json ; depense ↔ fiche_paie (1-1).
+// ============================================================================
+
+enum PostePersonnel {
+  GARDIEN
+  AGENT_ENTRETIEN
+  JARDINIER
+  AGENT_SECURITE
+  AUTRE
+}
+
+enum TypeContratTravail {
+  CDI
+  CDD
+  ANAPEC
+  STAGE
+  AUTRE
+}
+
+enum StatutFichePaie {
+  BROUILLON
+  VALIDEE
+  PAYEE
+}
+
+enum TypeConge {
+  ANNUEL
+  MALADIE
+  SANS_SOLDE
+  EXCEPTIONNEL
+}
+
+enum StatutConge {
+  DEMANDE
+  APPROUVE
+  REFUSE
+  ANNULE
+}
+
+enum StatutPresence {
+  PRESENT
+  ABSENT
+  CONGE
+  MALADIE
+}
+
+enum TypePersonnelLog {
+  FICHE_CREEE
+  FICHE_MODIFIEE
+  STATUT_CHANGE
+  CNSS_CONSULTE
+  PAIE_BROUILLON
+  PAIE_VALIDEE
+  PAIE_PAYEE
+  CONGE_DEMANDE
+  CONGE_APPROUVE
+  CONGE_REFUSE
+  CONGE_ANNULE
+  PRESENCE_SAISIE
+  EVALUATION
+  DOCUMENT_AJOUTE
+}
+
+model FichePaie {
+  id                        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId             String          @map("copropriete_id") @db.Uuid
+  copropriete               Copropriete     @relation(fields: [coproprieteId], references: [id])
+  personnelId               String          @map("personnel_id") @db.Uuid
+  personnel                 Personnel       @relation(fields: [personnelId], references: [id])
+  // « YYYY-MM »
+  periode                   String
+  brut                      Decimal         @db.Decimal(14, 2)
+  primes                    Decimal?        @db.Decimal(14, 2)
+  retenues                  Decimal?        @db.Decimal(14, 2)
+  // `{ cnss, amo, ir, total }` / `{ cnss, allocations_familiales, amo, formation_pro, total }` — chaînes décimales.
+  cotisationsSalarialesJson Json            @map("cotisations_salariales_json")
+  cotisationsPatronalesJson Json            @map("cotisations_patronales_json")
+  net                       Decimal         @db.Decimal(14, 2)
+  coutTotalEmployeur        Decimal         @map("cout_total_employeur") @db.Decimal(14, 2)
+  // Instantané complet du calcul (paramètres utilisés, absences retenues, tranches IR) — reproductible.
+  detailsJson               Json?           @map("details_json")
+  statut                    StatutFichePaie @default(BROUILLON)
+  // Dépense PERSONNEL créée à la validation (même transaction) ; PAYEE quand la dépense est payée.
+  depenseId                 String?         @unique @map("depense_id") @db.Uuid
+  depense                   Depense?        @relation(fields: [depenseId], references: [id])
+  // PDF déposé à la validation (Document FICHE_PAIE, SYNDIC_ONLY) ; l'employé l'obtient via GET …/pdf (rendu à la demande).
+  documentId                String?         @map("document_id") @db.Uuid
+  document                  Document?       @relation("FichePaieDocument", fields: [documentId], references: [id])
+  valideParId               String?         @map("valide_par_id") @db.Uuid
+  validePar                 Utilisateur?    @relation("FichePaieValidateur", fields: [valideParId], references: [id])
+  valideLe                  DateTime?       @map("valide_le") @db.Timestamptz
+  creeLe                    DateTime        @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                 DateTime        @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@unique([personnelId, periode])
+  @@index([coproprieteId, periode])
+  @@map("fiche_paie")
+}
+
+model Conge {
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId         String       @map("copropriete_id") @db.Uuid
+  copropriete           Copropriete  @relation(fields: [coproprieteId], references: [id])
+  personnelId           String       @map("personnel_id") @db.Uuid
+  personnel             Personnel    @relation("CongePersonnel", fields: [personnelId], references: [id])
+  type                  TypeConge
+  dateDebut             DateTime     @map("date_debut") @db.Date
+  dateFin               DateTime     @map("date_fin") @db.Date
+  // Jours ouvrés décomptés (demi-journées possibles).
+  nbJours               Decimal      @map("nb_jours") @db.Decimal(5, 1)
+  statut                StatutConge  @default(DEMANDE)
+  traiteParId           String?      @map("traite_par_id") @db.Uuid
+  traitePar             Utilisateur? @relation("CongeTraitant", fields: [traiteParId], references: [id])
+  traiteLe              DateTime?    @map("traite_le") @db.Timestamptz
+  motif                 String?
+  motifRefus            String?      @map("motif_refus")
+  // Certificat médical / justificatif (Document, SYNDIC_ONLY).
+  documentId            String?      @map("document_id") @db.Uuid
+  document              Document?    @relation("CongeCertificat", fields: [documentId], references: [id])
+  remplacantPersonnelId String?      @map("remplacant_personnel_id") @db.Uuid
+  remplacant            Personnel?   @relation("CongeRemplacant", fields: [remplacantPersonnelId], references: [id])
+  // Job : rappel « demande en attente > 3 jours » envoyé une seule fois.
+  rappelEnvoyeLe        DateTime?    @map("rappel_envoye_le") @db.Timestamptz
+  creeLe                DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe             DateTime     @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([coproprieteId, statut])
+  @@index([personnelId, dateDebut])
+  @@map("conge")
+}
+
+model EvaluationPersonnel {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String      @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  personnelId   String      @map("personnel_id") @db.Uuid
+  personnel     Personnel   @relation(fields: [personnelId], references: [id])
+  // « YYYY-MM » ou « YYYY-Sx » — libre côté saisie, borné par Zod.
+  periode       String
+  note          Int
+  commentaire   String?
+  evaluateurId  String      @map("evaluateur_id") @db.Uuid
+  evaluateur    Utilisateur @relation("EvaluationEvaluateur", fields: [evaluateurId], references: [id])
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@unique([personnelId, periode, evaluateurId])
+  @@index([personnelId])
+  @@map("evaluation_personnel")
+}
+
+model PresencePersonnel {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String         @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
+  personnelId   String         @map("personnel_id") @db.Uuid
+  personnel     Personnel      @relation(fields: [personnelId], references: [id])
+  date          DateTime       @db.Date
+  statut        StatutPresence
+  commentaire   String?
+  // Saisie par le syndic ou pointage de l'employé lui-même (mobile, file hors-ligne).
+  saisiParId    String         @map("saisi_par_id") @db.Uuid
+  saisiPar      Utilisateur    @relation("PresenceSaisisseur", fields: [saisiParId], references: [id])
+  creeLe        DateTime       @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime       @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@unique([personnelId, date])
+  @@index([coproprieteId, date])
+  @@map("presence_personnel")
+}
+
+/// Journal RH — APPEND-ONLY (pas de modifie_le, GRANT SELECT+INSERT uniquement).
+model PersonnelLog {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String           @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete      @relation(fields: [coproprieteId], references: [id])
+  personnelId   String           @map("personnel_id") @db.Uuid
+  personnel     Personnel        @relation(fields: [personnelId], references: [id])
+  type          TypePersonnelLog
+  acteurId      String?          @map("acteur_id") @db.Uuid
+  acteur        Utilisateur?     @relation("PersonnelLogActeur", fields: [acteurId], references: [id])
+  detailsJson   Json?            @map("details_json")
+  horodatage    DateTime         @default(now()) @db.Timestamptz
+
+  @@index([personnelId, horodatage])
+  @@map("personnel_log")
 }

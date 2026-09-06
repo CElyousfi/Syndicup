@@ -118,7 +118,7 @@ export type CategorieIncident =
   | "ADMINISTRATIF";
 export type StatutReservation = "EN_ATTENTE" | "CONFIRMEE" | "REJETEE" | "ANNULEE";
 export type StatutVisite = "EN_ATTENTE" | "AUTORISE" | "REFUSE";
-export type StatutPersonnel = "PRESENT" | "ABSENT" | "REMPLACE";
+export type StatutPersonnel = "PRE_EMBAUCHE" | "PRESENT" | "ABSENT" | "REMPLACE" | "PARTI";
 export type StatutLitige = "OUVERT" | "RESOLU" | "CLOS";
 export type StatutInvitation = "EN_ATTENTE" | "ACCEPTEE" | "EXPIREE" | "REGENEREE";
 export type CanalInvitation = "EMAIL" | "SMS" | "QR_CODE" | "WHATSAPP";
@@ -1251,4 +1251,123 @@ export interface IndicateursContrats {
   echeances_manquees: number;
   assurance_immeuble_active: boolean;
   assurance_rc_active: boolean;
+}
+
+// ── M20 — Personnel RH ────────────────────────────────────────────────────────
+export type PostePersonnel = "GARDIEN" | "AGENT_ENTRETIEN" | "JARDINIER" | "AGENT_SECURITE" | "AUTRE";
+export type TypeContratTravail = "CDI" | "CDD" | "ANAPEC" | "STAGE" | "AUTRE";
+export type StatutFichePaie = "BROUILLON" | "VALIDEE" | "PAYEE";
+export type TypeConge = "ANNUEL" | "MALADIE" | "SANS_SOLDE" | "EXCEPTIONNEL";
+export type StatutConge = "DEMANDE" | "APPROUVE" | "REFUSE" | "ANNULE";
+export type StatutPresence = "PRESENT" | "ABSENT" | "CONGE" | "MALADIE";
+export type PlageHoraire = { debut: string; fin: string };
+export type Horaires = Partial<Record<"lun" | "mar" | "mer" | "jeu" | "ven" | "sam" | "dim", PlageHoraire[]>>;
+
+export interface PersonnelRh extends Personnel {
+  poste: PostePersonnel;
+  typeContrat: TypeContratTravail | null;
+  dateEmbauche: string | null;
+  dateFinContrat: string | null;
+  salaireBrutMensuel: string | null;
+  numeroCnssMasque: string | null;
+  cnssRenseigne: boolean | null;
+  documentContrat: { id: string; nom: string; type: string } | null;
+  contactUrgence: string | null;
+  horairesJson: Horaires | null;
+  notes: string | null;
+  utilisateur: { id: string; nom: string | null; prenom: string | null; telephone: string | null; email: string | null; languePreferee: string } | null;
+  logementLot: { id: string; numero: string } | null;
+  modifieLe: string;
+}
+export interface PersonnelDetail extends PersonnelRh {
+  solde_conges: { annee: string; acquis: string | null; pris: string; solde: string | null; parametres_non_configures: boolean } | null;
+  paie: { parametres_configures: boolean; dernieres: { id: string; periode: string; statut: StatutFichePaie; net: string; brut: string }[] } | null;
+  presences_mois: { periode: string; presents: number; absents: number; conges: number } | null;
+  evaluation_moyenne: { moyenne: number | null; nb: number } | null;
+  documents: { document_id: string; nom: string; type: string; url: string }[];
+}
+export interface CotisationsSalariales { cnss: string; amo: string; ir: string; total: string }
+export interface CotisationsPatronales { cnss: string; allocations_familiales: string; amo: string; formation_pro: string; total: string }
+export interface FichePaie {
+  id: string;
+  coproprieteId: string;
+  personnelId: string;
+  periode: string;
+  brut: string;
+  primes: string | null;
+  retenues: string | null;
+  cotisationsSalarialesJson: Partial<CotisationsSalariales>;
+  cotisationsPatronalesJson: Partial<CotisationsPatronales>;
+  net: string;
+  coutTotalEmployeur: string;
+  detailsJson: Record<string, unknown> | null;
+  statut: StatutFichePaie;
+  depenseId: string | null;
+  depense: { id: string; statut: StatutDepense; montantTtc: string } | null;
+  documentId: string | null;
+  valideLe: string | null;
+  creeLe: string;
+  personnel: { id: string; poste: PostePersonnel; utilisateurId: string; nom: string | null };
+  regeneree?: boolean;
+}
+export interface PaieMois {
+  periode: string;
+  fiches: FichePaie[];
+  sans_fiche: { id: string; poste: PostePersonnel; nom: string; salaire_brut_mensuel: string | null }[];
+  totaux: { cout_total_employeur: string; net: string; nb: number };
+}
+export interface Conge {
+  id: string;
+  personnelId: string;
+  type: TypeConge;
+  dateDebut: string;
+  dateFin: string;
+  nbJours: string;
+  statut: StatutConge;
+  motif: string | null;
+  motifRefus: string | null;
+  traiteLe: string | null;
+  document: { id: string; nom: string } | null;
+  remplacant: { id: string; poste: PostePersonnel; utilisateurId: string; nom: string | null } | null;
+  personnel: { id: string; poste: PostePersonnel; utilisateurId: string; nom: string | null };
+  creeLe: string;
+}
+export interface PresencePersonnel {
+  id: string;
+  personnelId: string;
+  date: string;
+  statut: StatutPresence;
+  commentaire: string | null;
+  saisiParId: string;
+}
+export interface EvaluationPersonnel {
+  id: string;
+  personnelId: string;
+  periode: string;
+  note: number;
+  commentaire: string | null;
+  evaluateur: { id: string; nom: string | null; prenom: string | null };
+  creeLe: string;
+}
+export interface PlanningSemaine {
+  semaine: string;
+  jours: string[];
+  personnels: (PersonnelRh & { jours: { date: string; plages: PlageHoraire[]; conge: { id: string; type: TypeConge; remplacant: string | null } | null; presence: { statut: StatutPresence; commentaire: string | null } | null }[] })[];
+}
+export interface ParametresPaie {
+  smig_mensuel?: string | null;
+  taux_cnss_salarial: string;
+  plafond_cnss: string;
+  taux_amo_salarial: string;
+  taux_cnss_patronal: string;
+  taux_allocations_familiales: string;
+  taux_amo_patronal: string;
+  taux_formation_pro: string;
+  taux_frais_professionnels: string;
+  plafond_frais_professionnels_mensuel: string;
+  tranches_ir: { jusqua: string | null; taux: string; deduction: string }[];
+  jours_conge_annuels?: string | null;
+  jours_ouvres_mois: number;
+  retenue_absence_injustifiee: boolean;
+  source?: string | null;
 }

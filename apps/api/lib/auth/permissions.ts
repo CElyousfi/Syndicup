@@ -560,6 +560,66 @@ export const PERMISSIONS: PermissionMatrix = {
     PROPRIETAIRE: false,
     GARDIEN: false,
   },
+  // ── M20 — Personnel RH (Doc A §9.2 : « CDI ou CDD, CNSS obligatoire », absence / remplacement,
+  //    départ) — ⚠️ module absent du Master Spec 4.2, signalé dans ROADMAP M20 ──
+  // Données RH (contrat, salaire, paie, congés, présences) : syndic ; l'employé lit les SIENNES.
+  "personnel.rh.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: "scoped",
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  "personnel.rh.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: false,
+    PROPRIETAIRE: false,
+  },
+  // Demander un congé : l'employé pour lui-même, le syndic au nom d'un employé.
+  "personnel.conges.demander": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: "scoped",
+    PROPRIETAIRE: false,
+  },
+  "personnel.conges.approuver": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: false,
+    PROPRIETAIRE: false,
+  },
+  // Évaluer le personnel : syndic et conseil syndical ; jamais visible des résidents ni de l'employé.
+  "personnel.evaluer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    GARDIEN: false,
+    PROPRIETAIRE: false,
+  },
+  // Présences : le syndic saisit pour tous ; l'employé pointe pour lui-même (mobile, hors-ligne).
+  "personnel.presence.saisir": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    GARDIEN: "scoped",
+    PROPRIETAIRE: false,
+  },
+  // Planning hebdomadaire (horaires, congés, remplaçants) : syndic, conseil ; l'employé voit le sien.
+  "personnel.planning.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    GARDIEN: "scoped",
+    PROPRIETAIRE: false,
+    LOCATAIRE: false,
+  },
   // Comptes bancaires de la copropriété : tout membre lit banque + RIB masqué (écran « Payer par
   // virement ») ; le syndic gère et lit le RIB complet (audité RIB_CONSULTE).
   "coproprietes.comptes_bancaires.lire": {

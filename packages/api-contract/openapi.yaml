@@ -36,6 +36,7 @@ tags:
   - name: Justificatifs
   - name: Rapports
   - name: Contrats
+  - name: Personnel RH
     description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
@@ -762,9 +763,27 @@ components:
         id: { type: string, format: uuid }
         utilisateur_id: { type: string, format: uuid, description: "Doit avoir un rôle GARDIEN actif dans la copropriété (Doc A §9.2)." }
         copropriete_id: { type: string, format: uuid }
-        statut: { type: string, enum: [PRESENT, ABSENT, REMPLACE] }
+        statut: { type: string, enum: [PRE_EMBAUCHE, PRESENT, ABSENT, REMPLACE, PARTI], description: "M20 — PRE_EMBAUCHE / PARTI ajoutés (signalé ROADMAP M20)." }
         logement_lot_id: { type: string, format: uuid, nullable: true, description: "Lot de type LOGE_GARDIEN uniquement (Doc A §9.2)." }
         cree_le: { type: string, format: date-time }
+        # M20 — RH : renvoyés au syndic et à l'employé concerné uniquement (null / masqués pour les autres rôles).
+        poste: { type: string, enum: [GARDIEN, AGENT_ENTRETIEN, JARDINIER, AGENT_SECURITE, AUTRE] }
+        typeContrat: { type: string, enum: [CDI, CDD, ANAPEC, STAGE, AUTRE], nullable: true }
+        dateEmbauche: { type: string, format: date, nullable: true }
+        dateFinContrat: { type: string, format: date, nullable: true }
+        salaireBrutMensuel: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        numeroCnssMasque: { type: string, nullable: true, description: "4 derniers chiffres — le n° complet via GET /personnel/{id}/cnss (audité)." }
+        cnssRenseigne: { type: boolean, nullable: true }
+        documentContrat: { type: object, nullable: true, description: "Contrat de travail (Document CONTRAT_TRAVAIL, SYNDIC_ONLY)." }
+        contactUrgence: { type: string, nullable: true }
+        horairesJson: { type: object, nullable: true, description: "Planning hebdomadaire { lun..dim: [{debut, fin}] }." }
+        notes: { type: string, nullable: true }
+        utilisateur: { type: object, nullable: true }
+        logementLot: { type: object, nullable: true }
+        solde_conges: { type: object, nullable: true, description: "Détail uniquement : { annee, acquis, pris, solde, parametres_non_configures }." }
+        paie: { type: object, nullable: true, description: "Détail uniquement : { parametres_configures, dernieres[] }." }
+        presences_mois: { type: object, nullable: true }
+        evaluation_moyenne: { type: object, nullable: true, description: "Syndic uniquement." }
 
     PersonnelCreate:
       type: object
@@ -1896,6 +1915,140 @@ components:
               echue: { type: boolean }
               attestation: { type: boolean }
               assureur: { type: string, nullable: true }
+
+    # ── M20 — Personnel RH (Doc A §9 — ⚠️ module absent du Master Spec, signalé ROADMAP M20) ──
+    ParametresPaie:
+      type: object
+      description: "Taux en pourcentage et montants en chaînes décimales — PROVISOIRES (brief §11), saisis par le syndic."
+      required: [taux_cnss_salarial, plafond_cnss, taux_amo_salarial, taux_cnss_patronal, taux_allocations_familiales, taux_amo_patronal, taux_formation_pro, taux_frais_professionnels, plafond_frais_professionnels_mensuel, tranches_ir]
+      properties:
+        smig_mensuel: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        taux_cnss_salarial: { type: string, example: "4.48" }
+        plafond_cnss: { $ref: "#/components/schemas/Money" }
+        taux_amo_salarial: { type: string }
+        taux_cnss_patronal: { type: string }
+        taux_allocations_familiales: { type: string }
+        taux_amo_patronal: { type: string }
+        taux_formation_pro: { type: string }
+        taux_frais_professionnels: { type: string }
+        plafond_frais_professionnels_mensuel: { $ref: "#/components/schemas/Money" }
+        tranches_ir:
+          type: array
+          description: Barème annuel progressif (borne haute incluse, null = dernière tranche).
+          items:
+            type: object
+            required: [jusqua, taux, deduction]
+            properties:
+              jusqua: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+              taux: { type: string }
+              deduction: { $ref: "#/components/schemas/Money" }
+        jours_conge_annuels: { type: string, nullable: true, example: "18" }
+        jours_ouvres_mois: { type: integer, default: 26 }
+        retenue_absence_injustifiee: { type: boolean, default: true }
+        source: { type: string, nullable: true, description: "Référence de la source des valeurs (loi de finances, convention…)." }
+    PersonnelRhUpdate:
+      type: object
+      description: Champs RH (au moins un). Le contrat de travail est téléversé via POST /personnel/upload-url.
+      properties:
+        poste: { type: string, enum: [GARDIEN, AGENT_ENTRETIEN, JARDINIER, AGENT_SECURITE, AUTRE] }
+        type_contrat: { type: string, enum: [CDI, CDD, ANAPEC, STAGE, AUTRE], nullable: true }
+        date_embauche: { type: string, format: date, nullable: true }
+        date_fin_contrat: { type: string, format: date, nullable: true }
+        salaire_brut_mensuel: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        numero_cnss: { type: string, pattern: '^\d{6,12}$', nullable: true }
+        contact_urgence: { type: string, nullable: true }
+        horaires: { type: object, nullable: true }
+        notes: { type: string, nullable: true }
+        statut: { type: string, enum: [PRE_EMBAUCHE, PRESENT, ABSENT, REMPLACE, PARTI], description: "PARTI libère le logement de service (Doc A §9.2)." }
+        logement_lot_id: { type: string, format: uuid, nullable: true }
+        contrat_travail: { type: object, nullable: true, properties: { storage_path: { type: string }, nom: { type: string } } }
+    FichePaie:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        personnelId: { type: string, format: uuid }
+        periode: { type: string, pattern: '^\d{4}-\d{2}$' }
+        brut: { $ref: "#/components/schemas/Money" }
+        primes: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        retenues: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        cotisationsSalarialesJson: { type: object, description: "{ cnss, amo, ir, total }" }
+        cotisationsPatronalesJson: { type: object, description: "{ cnss, allocations_familiales, amo, formation_pro, total }" }
+        net: { $ref: "#/components/schemas/Money" }
+        coutTotalEmployeur: { $ref: "#/components/schemas/Money" }
+        detailsJson: { type: object, nullable: true, description: "Instantané complet du calcul (paramètres, tranche IR, absences) — ou { parametres_non_configures: true }." }
+        statut: { type: string, enum: [BROUILLON, VALIDEE, PAYEE] }
+        depenseId: { type: string, format: uuid, nullable: true }
+        depense: { type: object, nullable: true }
+        documentId: { type: string, format: uuid, nullable: true }
+        valideLe: { type: string, format: date-time, nullable: true }
+        personnel: { type: object }
+    FichePaieCreate:
+      type: object
+      required: [periode]
+      properties:
+        periode: { type: string, pattern: '^\d{4}-\d{2}$' }
+        brut: { allOf: [{ $ref: "#/components/schemas/Money" }], description: "Défaut = salaire_brut_mensuel de la fiche RH." }
+        primes: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        retenues: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        jours_absence_injustifiee: { type: integer, minimum: 0, maximum: 31, description: "Défaut = présences ABSENT du mois." }
+    Conge:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        personnelId: { type: string, format: uuid }
+        type: { type: string, enum: [ANNUEL, MALADIE, SANS_SOLDE, EXCEPTIONNEL] }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date }
+        nbJours: { type: string, description: "Jours ouvrables (lundi → samedi), demi-journées possibles." }
+        statut: { type: string, enum: [DEMANDE, APPROUVE, REFUSE, ANNULE] }
+        motif: { type: string, nullable: true }
+        motifRefus: { type: string, nullable: true }
+        remplacant: { type: object, nullable: true }
+        traitePar: { type: object, nullable: true }
+        traiteLe: { type: string, format: date-time, nullable: true }
+        document: { type: object, nullable: true, description: "Certificat (Document CERTIFICAT_CONGE, SYNDIC_ONLY)." }
+        personnel: { type: object }
+    CongeCreate:
+      type: object
+      required: [type, date_debut, date_fin]
+      properties:
+        personnel_id: { type: string, format: uuid, description: "Syndic au nom d'un employé ; ignoré pour l'employé (sa fiche)." }
+        type: { type: string, enum: [ANNUEL, MALADIE, SANS_SOLDE, EXCEPTIONNEL] }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date }
+        nb_jours: { type: string, description: "Défaut = jours ouvrables de la période." }
+        motif: { type: string, nullable: true }
+        certificat: { type: object, nullable: true, properties: { storage_path: { type: string }, nom: { type: string } } }
+        remplacant_personnel_id: { type: string, format: uuid, nullable: true }
+    PresencePersonnel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        personnelId: { type: string, format: uuid }
+        date: { type: string, format: date }
+        statut: { type: string, enum: [PRESENT, ABSENT, CONGE, MALADIE] }
+        commentaire: { type: string, nullable: true }
+        saisiParId: { type: string, format: uuid }
+    EvaluationPersonnel:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        personnelId: { type: string, format: uuid }
+        periode: { type: string }
+        note: { type: integer, minimum: 1, maximum: 5 }
+        commentaire: { type: string, nullable: true }
+        evaluateur: { type: object }
+        creeLe: { type: string, format: date-time }
+    PlanningSemaine:
+      type: object
+      properties:
+        semaine: { type: string, format: date, description: Lundi. }
+        jours: { type: array, items: { type: string, format: date } }
+        personnels:
+          type: array
+          items:
+            type: object
+            description: "Fiche (masquée selon le rôle) + jours[] : { date, plages[], conge, presence }."
 
   responses:
     ValidationError:
@@ -5793,4 +5946,393 @@ paths:
         "201": { description: "Créé — { echeance, depense }." }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── M20 — Personnel RH ──
+  /personnel/{id}:
+    get:
+      tags: [Personnel RH]
+      summary: "Fiche personnel — complète (contrat, salaire, CNSS masqué, solde de congés, paie, présences, évaluations) pour le syndic et l'employé concerné ; fiche d'urgence (statut, logement, poste, contact) pour les autres membres."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Personnel" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Personnel RH]
+      summary: "Modifie le dossier RH (syndic) : poste, contrat, dates, salaire, CNSS, contact d'urgence, horaires, notes, statut (PARTI libère la loge), logement, contrat de travail signé. Audit sans PII sensible."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PersonnelRhUpdate" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/cnss:
+    get:
+      tags: [Personnel RH]
+      summary: N° CNSS complet — syndic seul, chaque lecture est auditée (CNSS_CONSULTE).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/upload-url:
+    post:
+      tags: [Personnel RH]
+      summary: "URL signée d'upload (2 h) — contrat de travail, certificat médical — préfixe `<copropriete>/personnel/`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string }
+                content_type: { type: string }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/planning:
+    get:
+      tags: [Personnel RH]
+      summary: "Planning de la semaine (lundi → dimanche) : horaires de chaque employé, congés approuvés avec remplaçant, présences. Syndic / conseil : tous ; employé : le sien."
+      parameters:
+        - { name: semaine, in: query, schema: { type: string, format: date }, description: Une date de la semaine voulue (défaut = aujourd'hui). }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/PlanningSemaine" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/fiches-paie:
+    get:
+      tags: [Personnel RH]
+      summary: "Vue paie du mois (syndic) : fiches de la période, employés sans fiche, totaux (coût employeur, net)."
+      parameters:
+        - { name: periode, in: query, schema: { type: string, pattern: '^\d{4}-\d{2}$' }, description: Défaut = mois courant. }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/{id}/fiches-paie:
+    get:
+      tags: [Personnel RH]
+      summary: Fiches de paie d'un employé — syndic ; l'employé lit les siennes (RLS).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: periode, in: query, schema: { type: string } }
+        - { name: statut, in: query, schema: { type: string, enum: [BROUILLON, VALIDEE, PAYEE] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/FichePaie" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel RH]
+      summary: "Prépare (ou recalcule) la fiche BROUILLON d'une période (syndic) : calcul depuis les paramètres de paie s'ils existent, sinon brouillon « brut seul » (non validable)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/FichePaieCreate" }
+      responses:
+        "201": { description: Créée. }
+        "200": { description: Recalculée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/fiches-paie/{fid}:
+    patch:
+      tags: [Personnel RH]
+      summary: Recalcule un brouillon (brut, primes, retenues, jours d'absence).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                brut: { $ref: "#/components/schemas/Money" }
+                primes: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+                retenues: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+                jours_absence_injustifiee: { type: integer }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/fiches-paie/{fid}/valider:
+    post:
+      tags: [Personnel RH]
+      summary: "Valide la fiche (syndic) : recalcul avec les paramètres — 422 PAIE_PARAMETRES_NON_CONFIGURES s'ils sont absents — dépense PERSONNEL (coût total employeur) créée et soumise dans la même transaction, PDF déposé (Document FICHE_PAIE), notification PAIE_VALIDEE à l'employé. Idempotency-Key."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      responses:
+        "200": { description: OK (VALIDEE) }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/fiches-paie/{fid}/payer:
+    post:
+      tags: [Personnel RH]
+      summary: "Paie la dépense de la fiche VALIDEE — délègue à POST /depenses/{id}/payer (même payload : méthode, référence, date, preuve) ; la fiche passe PAYEE dans la même transaction. Idempotency-Key."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DepensePayer" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/fiches-paie/{fid}/pdf:
+    get:
+      tags: [Personnel RH]
+      summary: "PDF de la fiche (FR / AR) — mention « document généré par SyndicUp à partir des paramètres saisis par le syndic ». Syndic ; l'employé pour ses fiches validées."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: langue, in: query, schema: { type: string, enum: [fr, ar], default: fr } }
+      responses:
+        "200":
+          description: PDF
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/conges:
+    get:
+      tags: [Personnel RH]
+      summary: "Demandes de congé — syndic / conseil : toutes ; employé : les siennes. Filtres statut / annee."
+      parameters:
+        - { name: statut, in: query, schema: { type: string, enum: [DEMANDE, APPROUVE, REFUSE, ANNULE] } }
+        - { name: annee, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Conge" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel RH]
+      summary: "Demande de congé — l'employé pour lui-même (jours ouvrables calculés, chevauchement refusé), le syndic au nom d'un employé (`personnel_id`). Notification CONGE_DEMANDE au syndic. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CongeCreate" }
+      responses:
+        "201": { description: Créée (DEMANDE). }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/conges:
+    get:
+      tags: [Personnel RH]
+      summary: Congés d'un employé.
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: statut, in: query, schema: { type: string } }
+        - { name: annee, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel RH]
+      summary: Demande de congé pour cet employé (syndic) ou pour soi. Idempotency-Key.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CongeCreate" }
+      responses:
+        "201": { description: Créée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/conges/{cid}/approuver:
+    post:
+      tags: [Personnel RH]
+      summary: "Approuve (syndic) : solde annuel contrôlé (422 CONGE_SOLDE_INSUFFISANT), présences CONGE / MALADIE posées sur la période, remplaçant facultatif, certificat rattaché, notification CONGE_APPROUVE. Idempotency-Key."
+      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                remplacant_personnel_id: { type: string, format: uuid, nullable: true }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/conges/{cid}/refuser:
+    post:
+      tags: [Personnel RH]
+      summary: Refuse (syndic, motif obligatoire) — notification CONGE_REFUSE. Idempotency-Key.
+      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motif_refus]
+              properties:
+                motif_refus: { type: string, maxLength: 1000 }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/conges/{cid}/annuler:
+    post:
+      tags: [Personnel RH]
+      summary: Annule — l'employé sa demande en attente ; le syndic une demande ou un congé approuvé futur (présences retirées).
+      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /personnel/{id}/presences:
+    get:
+      tags: [Personnel RH]
+      summary: Présences d'un employé entre deux dates (syndic, conseil, l'employé).
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/PresencePersonnel" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel RH]
+      summary: "Saisie / correction en masse par date (upsert personnel + date) — syndic pour tous, l'employé pour lui-même."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [presences]
+              properties:
+                presences:
+                  type: array
+                  maxItems: 62
+                  items:
+                    type: object
+                    required: [date, statut]
+                    properties:
+                      date: { type: string, format: date }
+                      statut: { type: string, enum: [PRESENT, ABSENT, CONGE, MALADIE] }
+                      commentaire: { type: string, nullable: true }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /personnel/me/presence:
+    post:
+      tags: [Personnel RH]
+      summary: "Pointage de l'employé connecté (aujourd'hui par défaut ; statut PRESENT / ABSENT / MALADIE) — mobile, file hors-ligne rejouée à l'identique. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date: { type: string, format: date }
+                statut: { type: string, enum: [PRESENT, ABSENT, MALADIE], default: PRESENT }
+                commentaire: { type: string, nullable: true }
+      responses:
+        "201": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /personnel/{id}/evaluations:
+    get:
+      tags: [Personnel RH]
+      summary: Évaluations (syndic, conseil) + moyenne. Jamais visibles des résidents ni de l'employé.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Personnel RH]
+      summary: Évalue (note 1–5, période) — une évaluation par évaluateur et période (upsert).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [periode, note]
+              properties:
+                periode: { type: string, example: "2026-S2" }
+                note: { type: integer, minimum: 1, maximum: 5 }
+                commentaire: { type: string, nullable: true }
+      responses:
+        "201": { description: Créée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /coproprietes/{id}/parametres-paie:
+    get:
+      tags: [Personnel RH]
+      summary: Paramètres de paie de la copropriété (syndic) — null tant que non configurés.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    patch:
+      tags: [Personnel RH]
+      summary: "Remplace les paramètres de paie (syndic, audité PAIE_PARAMETRES_MODIFIES) — `parametres_paie: null` = non configurés (les validations de paie sont alors refusées)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [parametres_paie]
+              properties:
+                parametres_paie: { allOf: [{ $ref: "#/components/schemas/ParametresPaie" }], nullable: true }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }

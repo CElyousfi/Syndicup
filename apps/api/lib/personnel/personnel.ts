@@ -60,8 +60,10 @@ export async function creerPersonnel(ctx: TenantContext, input: PersonnelCreateI
         coproprieteId: ctx.coproprieteId,
         statut: input.statut ?? "PRESENT",
         logementLotId: input.logement_lot_id ?? null,
+        poste: input.poste ?? "GARDIEN",
       },
     });
+    await db.personnelLog.createMany({ data: [{ coproprieteId: ctx.coproprieteId, personnelId: fiche.id, type: "FICHE_CREEE", acteurId: ctx.utilisateurId, detailsJson: { poste: fiche.poste, statut: fiche.statut } }] });
     await ecrireAuditLog(db, {
       coproprieteId: ctx.coproprieteId,
       acteurId: ctx.utilisateurId,
@@ -78,12 +80,22 @@ export async function listerPersonnel(ctx: TenantContext) {
   if (can("personnel.lire", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister le personnel.");
   }
-  return withTenant(ctx, (db) =>
-    db.personnel.findMany({
+  // M20 — les colonnes RH (salaire, CNSS, contrat, notes) ne sortent que pour le syndic ou l'employé
+  // concerné : `presenterPersonnel` masque le reste (la policy RLS `personnel` reste tenant-wide —
+  // fiche d'urgence des résidents, Doc A §9).
+  const { presenterPersonnel, nomsUtilisateurs } = await import("./rh");
+  return withTenant(ctx, async (db) => {
+    const rows = await db.personnel.findMany({
       where: { coproprieteId: ctx.coproprieteId },
       orderBy: { creeLe: "asc" },
-    })
-  );
+      include: {
+        logementLot: { select: { id: true, numero: true } },
+        documentContrat: { select: { id: true, nom: true, type: true, storagePath: true } },
+      },
+    });
+    const noms = await nomsUtilisateurs(db, rows.map((r) => r.utilisateurId));
+    return rows.map((r) => presenterPersonnel({ ...r, utilisateur: noms.get(r.utilisateurId) ?? null }, ctx));
+  });
 }
 
 /**

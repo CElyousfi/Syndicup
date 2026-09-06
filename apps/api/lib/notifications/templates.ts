@@ -470,6 +470,39 @@ const CONTRATS: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, CONTRATS);
 
+// ── M20 — Personnel RH (Doc A §9) ────────────────────────────────────────────────────────────
+const PERSONNEL_RH: Record<string, Entree> = {
+  PAIE_A_VALIDER: {
+    FR: { titre: "Fiches de paie à valider", corps: "{{nb}} fiche(s) de paie {{periode}} préparée(s) en brouillon : vérifiez-les et validez-les dans l'application." },
+    AR: { titre: "قسائم أجور تنتظر المصادقة", corps: "تم إعداد {{nb}} قسيمة/قسائم أجور لشهر {{periode}} كمسودة: راجعوها وصادقوا عليها في التطبيق." },
+  },
+  PAIE_VALIDEE: {
+    FR: { titre: "Votre fiche de paie est disponible", corps: "Fiche de paie {{periode}} : net à payer {{net}} MAD. Consultez-la dans l'application." },
+    AR: { titre: "قسيمة أجرك متاحة", corps: "قسيمة الأجر لشهر {{periode}}: الصافي {{net}} درهم. يمكنك الاطلاع عليها في التطبيق." },
+  },
+  CONGE_DEMANDE: {
+    FR: { titre: "Demande de congé", corps: "{{nom}} demande un congé {{type}} du {{debut}} au {{fin}} ({{jours}} j). À traiter dans l'application." },
+    AR: { titre: "طلب عطلة", corps: "يطلب {{nom}} عطلة {{type}} من {{debut}} إلى {{fin}} ({{jours}} يومًا). للمعالجة في التطبيق." },
+  },
+  CONGE_APPROUVE: {
+    FR: { titre: "Congé approuvé", corps: "Votre congé du {{debut}} au {{fin}} est approuvé{{remplacant}}." },
+    AR: { titre: "تمت الموافقة على العطلة", corps: "تمت الموافقة على عطلتك من {{debut}} إلى {{fin}}{{remplacant}}." },
+  },
+  CONGE_REFUSE: {
+    FR: { titre: "Congé refusé", corps: "Votre demande de congé du {{debut}} au {{fin}} n'a pas été acceptée : {{motif}}" },
+    AR: { titre: "تم رفض العطلة", corps: "لم يُقبل طلب عطلتك من {{debut}} إلى {{fin}}: {{motif}}" },
+  },
+  CONGE_EN_ATTENTE_RAPPEL: {
+    FR: { titre: "Demande de congé en attente", corps: "La demande de congé de {{nom}} ({{debut}} → {{fin}}) attend votre décision depuis plus de 3 jours." },
+    AR: { titre: "طلب عطلة معلَّق", corps: "طلب عطلة {{nom}} ({{debut}} → {{fin}}) ينتظر قرارك منذ أكثر من 3 أيام." },
+  },
+  CONTRAT_TRAVAIL_FIN_PROCHE: {
+    FR: { titre: "Fin de contrat de travail dans {{jours}} jours", corps: "Le contrat {{type}} de {{nom}} se termine le {{date}}. Anticipez le renouvellement ou le départ (restitution du logement de service)." },
+    AR: { titre: "نهاية عقد عمل خلال {{jours}} يومًا", corps: "ينتهي عقد {{type}} الخاص بـ {{nom}} بتاريخ {{date}}. استعدوا للتجديد أو للمغادرة (إرجاع سكن الوظيفة)." },
+  },
+};
+Object.assign(TEMPLATES, PERSONNEL_RH);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

@@ -358,6 +358,8 @@ export async function creerDepenseDb(db: TenantDb, ctx: TenantContext, input: De
         incidentId: input.incident_id ?? null,
         resolutionAgId: input.resolution_ag_id ?? null,
         contratId: input.contrat_id ?? null,
+        personnelId: input.personnel_id ?? null,
+        periodePaie: input.periode_paie ?? null,
         creeParId: ctx.utilisateurId,
         statut: "BROUILLON",
       },
@@ -421,7 +423,12 @@ export async function modifierDepense(ctx: TenantContext, id: string, input: Dep
 
 export async function soumettreDepense(ctx: TenantContext, id: string, cle?: string) {
   if (can("depenses.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic soumet une dépense.");
-  return withTenantIdempotent(ctx, { cle, endpoint: `POST /depenses/${id}/soumettre`, payload: { id } }, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `POST /depenses/${id}/soumettre`, payload: { id } }, (db) => soumettreDepenseDb(db, ctx, id));
+}
+
+/** Cœur de la soumission, réutilisable dans une transaction ouverte (M20 : dépense de paie soumise à la validation de la fiche). */
+export async function soumettreDepenseDb(db: TenantDb, ctx: TenantContext, id: string) {
+  {
     const avant = await chargerDepense(db, ctx, id);
     if (avant.statut !== "BROUILLON" && avant.statut !== "REJETEE") {
       throw new DepenseError("DEPENSE_STATUT_INVALIDE", `Seule une dépense BROUILLON ou REJETEE peut être soumise (statut actuel : ${avant.statut}).`);
@@ -448,7 +455,7 @@ export async function soumettreDepense(ctx: TenantContext, id: string, cle?: str
       await notifierRoles(db, ctx, ["CONSEIL_SYNDICAL"], "DEPENSE_A_APPROUVER", { depense_id: id, libelle: apres.libelle, montant: toApiString(apres.montantTtc) });
     }
     return { ...apres, niveau_approbation_requis: niveau, seuil_non_configure: !seuilConfigure };
-  });
+  }
 }
 
 function assertPeutDecider(ctx: TenantContext, niveau: NiveauApprobation) {
@@ -546,6 +553,13 @@ export async function payerDepense(ctx: TenantContext, id: string, input: Depens
 
     // Les factures de la dépense (hors CONTESTEE) sont réglées par ce paiement.
     await db.facture.updateMany({ where: { depenseId: id, statut: { in: ["RECUE", "VERIFIEE"] } }, data: { statut: "REGLEE" } });
+    // M20 — dépense de paie : la fiche de paie VALIDEE passe PAYEE dans la même transaction.
+    if (avant.personnelId) {
+      const fiches = await db.fichePaie.updateMany({ where: { depenseId: id, statut: "VALIDEE" }, data: { statut: "PAYEE" } });
+      if (fiches.count > 0) {
+        await db.personnelLog.createMany({ data: [{ coproprieteId: ctx.coproprieteId, personnelId: avant.personnelId, type: "PAIE_PAYEE", acteurId: ctx.utilisateurId, detailsJson: { depense_id: id, periode: avant.periodePaie, methode: input.methode } }] });
+      }
+    }
     const apres = await db.depense.update({
       where: { id },
       data: {

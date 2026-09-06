@@ -79,6 +79,9 @@ const depenseBase = {
   // M19 — dépense née d'une échéance de contrat (posé par le service Contrats, jamais libre côté client
   // hors filtre de liste).
   contrat_id: uuid.nullish(),
+  // M20 — dépense de paie (posée par le service Personnel RH à la validation de la fiche).
+  personnel_id: uuid.nullish(),
+  periode_paie: z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/).nullish(),
 };
 
 export const depenseCreateSchema = z

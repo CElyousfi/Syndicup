@@ -1,5 +1,5 @@
 /**
- * Seed de développement — couvre M1→M19 : copropriété, utilisateurs/rôles, invitation, lots
+ * Seed de développement — couvre M1→M20 : copropriété, utilisateurs/rôles, invitation, lots
  * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
  * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
  * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
@@ -122,6 +122,11 @@ async function main() {
     },
   });
 
+  // M20 — agent d'entretien salariée de la copropriété (rôle applicatif GARDIEN : seul rôle « personnel »).
+  const agentUser = await prisma.utilisateur.create({
+    data: { telephone: "+212600000008", nom: "El Fassi", prenom: "Fatima", languePreferee: "AR", statutCompte: "ACTIF" },
+  });
+
   // M16 — membre du conseil syndical (approuve les dépenses au-dessus du seuil, Doc A §8.3).
   const conseilUser = await prisma.utilisateur.create({
     data: {
@@ -144,6 +149,7 @@ async function main() {
       { utilisateurId: indivisaire2.id, coproprieteId: copro.id, role: "INDIVISAIRE", actif: true },
       { utilisateurId: locataire.id, coproprieteId: copro.id, role: "LOCATAIRE", actif: true },
       { utilisateurId: gardienUser.id, coproprieteId: copro.id, role: "GARDIEN", actif: true },
+      { utilisateurId: agentUser.id, coproprieteId: copro.id, role: "GARDIEN", actif: true },
       { utilisateurId: conseilUser.id, coproprieteId: copro.id, role: "CONSEIL_SYNDICAL", actif: true },
     ],
   });
@@ -215,8 +221,21 @@ async function main() {
   });
 
   // ── M10 — Personnel (gardien logé) ───────────────────────────────────────
-  await prisma.personnel.create({
-    data: { coproprieteId: copro.id, utilisateurId: gardienUser.id, statut: "PRESENT", logementLotId: loge.id },
+  const personnelGardien = await prisma.personnel.create({
+    data: {
+      coproprieteId: copro.id, utilisateurId: gardienUser.id, statut: "PRESENT", logementLotId: loge.id,
+      // M20 — dossier RH (Doc A §9.2 « CDI ou CDD, CNSS obligatoire ») — valeurs de démonstration.
+      poste: "GARDIEN", typeContrat: "CDI", dateEmbauche: new Date("2022-03-01"), salaireBrutMensuel: "4500.00", numeroCnss: "118877665",
+      contactUrgence: "+212661000000 (épouse)", horairesJson: { lun: [{ debut: "07:00", fin: "12:00" }, { debut: "16:00", fin: "20:00" }], mar: [{ debut: "07:00", fin: "12:00" }, { debut: "16:00", fin: "20:00" }], mer: [{ debut: "07:00", fin: "12:00" }, { debut: "16:00", fin: "20:00" }], jeu: [{ debut: "07:00", fin: "12:00" }, { debut: "16:00", fin: "20:00" }], ven: [{ debut: "07:00", fin: "12:00" }, { debut: "16:00", fin: "20:00" }], sam: [{ debut: "08:00", fin: "13:00" }] },
+      notes: "Gardien logé. Astreinte nocturne assurée par la loge.",
+    },
+  });
+  const personnelAgent = await prisma.personnel.create({
+    data: {
+      coproprieteId: copro.id, utilisateurId: agentUser.id, statut: "PRESENT", poste: "AGENT_ENTRETIEN", typeContrat: "CDD",
+      dateEmbauche: new Date(`${new Date().getUTCFullYear()}-02-01`), dateFinContrat: new Date(Date.now() + 25 * 24 * 3600 * 1000), salaireBrutMensuel: "3300.00", numeroCnss: "220099887",
+      horairesJson: { lun: [{ debut: "08:00", fin: "12:00" }], mer: [{ debut: "08:00", fin: "12:00" }], ven: [{ debut: "08:00", fin: "12:00" }] },
+    },
   });
 
   const jour = (delta: number) => {
@@ -768,7 +787,74 @@ async function main() {
     [{ type: "CREE", il: 405 }, { type: "ACTIVE", il: 404 }, { type: "EXPIRE", il: 40, details: { date_fin: jour(-40).toISOString().slice(0, 10) } }]
   );
 
+  // ── M20 — Personnel RH : paramètres de paie, fiches, congés, présences, évaluations (Doc A §9) ──
+  const periodePaie = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+  await prisma.copropriete.update({
+    where: { id: copro.id },
+    data: {
+      // PROVISOIRE (LEGAL_QUESTIONS_BRIEF §11) — valeurs indicatives de démonstration, saisies par le syndic.
+      parametresPaieJson: {
+        smig_mensuel: "3200.00", taux_cnss_salarial: "4.48", plafond_cnss: "6000.00", taux_amo_salarial: "2.26",
+        taux_cnss_patronal: "8.98", taux_allocations_familiales: "6.40", taux_amo_patronal: "4.11", taux_formation_pro: "1.60",
+        taux_frais_professionnels: "25", plafond_frais_professionnels_mensuel: "2500.00",
+        tranches_ir: [
+          { jusqua: "40000.00", taux: "0", deduction: "0.00" }, { jusqua: "60000.00", taux: "10", deduction: "4000.00" }, { jusqua: "80000.00", taux: "20", deduction: "10000.00" },
+          { jusqua: "100000.00", taux: "30", deduction: "18000.00" }, { jusqua: "180000.00", taux: "34", deduction: "22000.00" }, { jusqua: null, taux: "37", deduction: "27400.00" },
+        ],
+        jours_conge_annuels: "18", jours_ouvres_mois: 26, retenue_absence_injustifiee: true,
+        source: "Seed de démonstration — valeurs indicatives à confirmer (brief §11)",
+      },
+    },
+  });
+  const { calculerPaie } = await import("../../../apps/api/lib/personnel/paie");
+  const paramsPaie = (await prisma.copropriete.findUniqueOrThrow({ where: { id: copro.id }, select: { parametresPaieJson: true } })).parametresPaieJson as Parameters<typeof calculerPaie>[0];
+  const logRh = (personnelId: string, type: "FICHE_CREEE" | "PAIE_BROUILLON" | "PAIE_VALIDEE" | "PAIE_PAYEE" | "CONGE_DEMANDE" | "CONGE_APPROUVE" | "PRESENCE_SAISIE" | "EVALUATION", il: number, details?: object, acteur: string | null = syndicUser.id) =>
+    prisma.personnelLog.create({ data: { coproprieteId: copro.id, personnelId, type, acteurId: acteur, detailsJson: details ?? undefined, horodatage: jour(-il) } });
+  await logRh(personnelGardien.id, "FICHE_CREEE", 400, { poste: "GARDIEN" });
+  await logRh(personnelAgent.id, "FICHE_CREEE", 210, { poste: "AGENT_ENTRETIEN" });
+  // 1. Fiche de paie du mois précédent du gardien : VALIDEE → dépense PERSONNEL payée → PAYEE.
+  const paieGardien = calculerPaie(paramsPaie, { brut: "4500.00" });
+  const depPaie = await prisma.depense.create({
+    data: { coproprieteId: copro.id, budgetAgId: budget.id, budgetPosteId: postes.PERSONNEL, categorie: "PERSONNEL", libelle: `Paie ${periodePaie} — Rachid Ouazzani`, montantTtc: paieGardien.cout_total_employeur, dateDepense: new Date(`${periodePaie}-28`), statut: "PAYEE", source: "COMPTE_COURANT", creeParId: syndicUser.id, approuveParId: syndicUser.id, approuveLe: jour(-8), payeLe: new Date(`${periodePaie}-30`), methodePaiement: "VIREMENT", referencePaiement: `VIR-PAIE-${periodePaie}`, personnelId: personnelGardien.id, periodePaie },
+  });
+  await prisma.fichePaie.create({
+    data: { coproprieteId: copro.id, personnelId: personnelGardien.id, periode: periodePaie, brut: "4500.00", cotisationsSalarialesJson: paieGardien.cotisations_salariales, cotisationsPatronalesJson: paieGardien.cotisations_patronales, net: paieGardien.net, coutTotalEmployeur: paieGardien.cout_total_employeur, detailsJson: paieGardien as object, statut: "PAYEE", depenseId: depPaie.id, valideParId: syndicUser.id, valideLe: jour(-8) },
+  });
+  await logRh(personnelGardien.id, "PAIE_VALIDEE", 8, { periode: periodePaie, net: paieGardien.net });
+  await logRh(personnelGardien.id, "PAIE_PAYEE", 6, { periode: periodePaie, methode: "VIREMENT" });
+  // 2. Fiche de l'agent, même mois : BROUILLON (à valider par le syndic).
+  const paieAgent = calculerPaie(paramsPaie, { brut: "3300.00" });
+  await prisma.fichePaie.create({
+    data: { coproprieteId: copro.id, personnelId: personnelAgent.id, periode: periodePaie, brut: "3300.00", cotisationsSalarialesJson: paieAgent.cotisations_salariales, cotisationsPatronalesJson: paieAgent.cotisations_patronales, net: paieAgent.net, coutTotalEmployeur: paieAgent.cout_total_employeur, detailsJson: paieAgent as object, statut: "BROUILLON" },
+  });
+  await logRh(personnelAgent.id, "PAIE_BROUILLON", 3, { periode: periodePaie, systeme: true }, null);
+  // 3. Congés : un congé annuel approuvé (gardien, remplacé par l'agent) + une demande en attente (agent).
+  const congeApprouve = await prisma.conge.create({
+    data: { coproprieteId: copro.id, personnelId: personnelGardien.id, type: "ANNUEL", dateDebut: jour(12), dateFin: jour(17), nbJours: "5", statut: "APPROUVE", traiteParId: syndicUser.id, traiteLe: jour(-2), motif: "Congé familial", remplacantPersonnelId: personnelAgent.id, creeLe: jour(-5) },
+  });
+  for (let d = 12; d <= 17; d++) {
+    if (jour(d).getUTCDay() === 0) continue;
+    await prisma.presencePersonnel.create({ data: { coproprieteId: copro.id, personnelId: personnelGardien.id, date: jour(d), statut: "CONGE", commentaire: "Congé ANNUEL", saisiParId: syndicUser.id } });
+  }
+  await logRh(personnelGardien.id, "CONGE_DEMANDE", 5, { conge_id: congeApprouve.id, type: "ANNUEL" }, gardienUser.id);
+  await logRh(personnelGardien.id, "CONGE_APPROUVE", 2, { conge_id: congeApprouve.id });
+  await prisma.conge.create({ data: { coproprieteId: copro.id, personnelId: personnelAgent.id, type: "MALADIE", dateDebut: jour(1), dateFin: jour(2), nbJours: "2", statut: "DEMANDE", motif: "Certificat à remettre", creeLe: jour(-1) } });
+  // 4. Présences du mois : gardien présent (pointage mobile), une absence injustifiée.
+  for (let d = -10; d <= 0; d++) {
+    const date = jour(d);
+    if (date.getUTCDay() === 0) continue;
+    await prisma.presencePersonnel.create({ data: { coproprieteId: copro.id, personnelId: personnelGardien.id, date, statut: d === -4 ? "ABSENT" : "PRESENT", commentaire: d === -4 ? "Absence non justifiée" : null, saisiParId: d === -4 ? syndicUser.id : gardienUser.id } });
+  }
+  await logRh(personnelGardien.id, "PRESENCE_SAISIE", 0, { self: true, statut: "PRESENT" }, gardienUser.id);
+  // 5. Évaluations semestrielles (syndic + conseil) — jamais visibles des résidents.
+  await prisma.evaluationPersonnel.createMany({ data: [
+    { coproprieteId: copro.id, personnelId: personnelGardien.id, periode: `${new Date().getUTCFullYear()}-S1`, note: 5, commentaire: "Ponctuel, très apprécié des résidents.", evaluateurId: syndicUser.id },
+    { coproprieteId: copro.id, personnelId: personnelGardien.id, periode: `${new Date().getUTCFullYear()}-S1`, note: 4, commentaire: "Bon relationnel ; améliorer le suivi des tickets.", evaluateurId: conseilUser.id },
+  ] });
+  await logRh(personnelGardien.id, "EVALUATION", 30, { periode: `${new Date().getUTCFullYear()}-S1`, note: 5 });
+
   console.log("Seed terminé :", {
+    personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
     rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
     copropriete: copro.nom,
