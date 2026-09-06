@@ -12,8 +12,9 @@ import { appelDeFondsFanout } from "../../../inngest/functions/appel-de-fonds-fa
 import { lcdSejours } from "../../../inngest/functions/lcd-sejours";
 import { depensesFactures } from "../../../inngest/functions/depenses-factures";
 import { justificatifsRelance } from "../../../inngest/functions/justificatifs-relance";
+import { contratsEcheances, contratsAssurance } from "../../../inngest/functions/contrats-echeances";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance],
+  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance, contratsEcheances, contratsAssurance],
 });

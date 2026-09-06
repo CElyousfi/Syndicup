@@ -76,6 +76,9 @@ const depenseBase = {
   prestataire_id: uuid.nullish(),
   incident_id: uuid.nullish(),
   resolution_ag_id: uuid.nullish(),
+  // M19 — dépense née d'une échéance de contrat (posé par le service Contrats, jamais libre côté client
+  // hors filtre de liste).
+  contrat_id: uuid.nullish(),
 };
 
 export const depenseCreateSchema = z

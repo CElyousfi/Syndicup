@@ -35,6 +35,7 @@ tags:
   - name: Dépenses
   - name: Justificatifs
   - name: Rapports
+  - name: Contrats
     description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
 
 components:
@@ -1752,6 +1753,149 @@ components:
         nb_lignes: { type: integer }
         horodatage: { type: string, format: date-time }
         utilisateur: { type: object }
+
+    # ── M19 — Contrats, assurances, échéances (Doc A §7, §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M19) ──
+    TypeContrat:
+      type: string
+      enum: [ASSURANCE_IMMEUBLE, ASSURANCE_RC, ASCENSEUR, NETTOYAGE, GARDIENNAGE, JARDINAGE, DERATISATION, EAU, ELECTRICITE, INTERNET, SYNDIC_PROFESSIONNEL, TRAVAUX, AUTRE]
+    StatutContrat:
+      type: string
+      enum: [BROUILLON, ACTIF, SUSPENDU, RESILIE, EXPIRE]
+    Periodicite:
+      type: string
+      enum: [MENSUELLE, TRIMESTRIELLE, SEMESTRIELLE, ANNUELLE, PONCTUELLE]
+    TypeEcheance:
+      type: string
+      enum: [PAIEMENT, RENOUVELLEMENT, VISITE_TECHNIQUE, CONTROLE_REGLEMENTAIRE, AUTRE]
+    StatutEcheanceContrat:
+      type: string
+      enum: [A_VENIR, DEPENSE_GENEREE, REALISEE, MANQUEE, ANNULEE]
+    PieceContrat:
+      type: object
+      required: [storage_path, nom]
+      description: "Fichier téléversé via POST /contrats/upload-url (préfixe `<copropriete>/contrats/`)."
+      properties:
+        storage_path: { type: string }
+        nom: { type: string, maxLength: 200 }
+    DetailsAssurance:
+      type: object
+      required: [assureur, numero_police]
+      properties:
+        assureur: { type: string, maxLength: 200 }
+        numero_police: { type: string, maxLength: 100 }
+        garanties: { type: array, items: { type: string }, maxItems: 30 }
+        franchise: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        capital_assure: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+    Contrat:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        prestataireId: { type: string, format: uuid, nullable: true }
+        prestataire: { type: object, nullable: true, description: "id, nom, specialite, telephone, email" }
+        type: { $ref: "#/components/schemas/TypeContrat" }
+        libelle: { type: string }
+        reference: { type: string, nullable: true }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date, nullable: true, description: "null = durée indéterminée." }
+        tacite: { type: boolean, description: "Reconduction tacite à date_fin (job quotidien)." }
+        preavisJours: { type: integer, nullable: true }
+        periodicite: { $ref: "#/components/schemas/Periodicite" }
+        montantPeriode: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        budgetPosteId: { type: string, format: uuid, nullable: true }
+        budgetPoste: { type: object, nullable: true }
+        statut: { $ref: "#/components/schemas/StatutContrat" }
+        document: { type: object, nullable: true, description: "Contrat signé (Document CONTRAT, SYNDIC_ONLY)." }
+        attestationDocument: { type: object, nullable: true, description: "Attestation d'assurance (Document ATTESTATION_ASSURANCE, CONSEIL_SYNDICAL)." }
+        detailsAssuranceJson: { allOf: [{ $ref: "#/components/schemas/DetailsAssurance" }], nullable: true }
+        resolutionAgId: { type: string, format: uuid, nullable: true }
+        resolutionAg: { type: object, nullable: true }
+        notes: { type: string, nullable: true }
+        motifResiliation: { type: string, nullable: true }
+        dateResiliation: { type: string, format: date, nullable: true }
+        creePar: { type: object, nullable: true }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+        jours_avant_fin: { type: integer, nullable: true }
+        a_renouveler: { type: boolean, description: "ACTIF et fin dans ≤ 90 jours." }
+        est_assurance: { type: boolean }
+        _count: { type: object, properties: { echeances: { type: integer }, depenses: { type: integer } } }
+        documents: { type: array, description: "Détail uniquement — URLs signées 15 min.", items: { type: object } }
+        echeances: { type: array, description: "Détail uniquement.", items: { $ref: "#/components/schemas/ContratEcheance" } }
+        depenses: { type: array, description: "Détail uniquement — dépenses liées (50 dernières).", items: { type: object } }
+        logs: { type: array, description: "Détail uniquement — journal append-only.", items: { type: object } }
+    ContratCreate:
+      type: object
+      required: [type, libelle, date_debut, periodicite]
+      properties:
+        type: { $ref: "#/components/schemas/TypeContrat" }
+        libelle: { type: string, maxLength: 200 }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        reference: { type: string, maxLength: 120, nullable: true }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+        tacite: { type: boolean, default: false }
+        preavis_jours: { type: integer, minimum: 0, maximum: 730, nullable: true }
+        periodicite: { $ref: "#/components/schemas/Periodicite" }
+        montant_periode: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        budget_poste_id: { type: string, format: uuid, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true, description: "Obligatoire à l'activation si montant_periode > copropriete.seuil_contrat_ag (brief §10)." }
+        notes: { type: string, maxLength: 4000, nullable: true }
+        details_assurance: { allOf: [{ $ref: "#/components/schemas/DetailsAssurance" }], nullable: true, description: "Types ASSURANCE_* uniquement." }
+        document: { allOf: [{ $ref: "#/components/schemas/PieceContrat" }], nullable: true }
+        attestation: { allOf: [{ $ref: "#/components/schemas/PieceContrat" }], nullable: true }
+    ContratUpdate:
+      type: object
+      description: "Mêmes champs que ContratCreate, tous facultatifs (au moins un). RESILIE / EXPIRE non modifiables ; dates / périodicité / montant modifiés sur un contrat ACTIF → échéancier régénéré."
+      properties:
+        type: { $ref: "#/components/schemas/TypeContrat" }
+        libelle: { type: string, maxLength: 200 }
+        prestataire_id: { type: string, format: uuid, nullable: true }
+        reference: { type: string, nullable: true }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true }
+        tacite: { type: boolean }
+        preavis_jours: { type: integer, nullable: true }
+        periodicite: { $ref: "#/components/schemas/Periodicite" }
+        montant_periode: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        budget_poste_id: { type: string, format: uuid, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+        details_assurance: { allOf: [{ $ref: "#/components/schemas/DetailsAssurance" }], nullable: true }
+        document: { allOf: [{ $ref: "#/components/schemas/PieceContrat" }], nullable: true }
+        attestation: { allOf: [{ $ref: "#/components/schemas/PieceContrat" }], nullable: true }
+    ContratEcheance:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        contratId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/TypeEcheance" }
+        dateEcheance: { type: string, format: date }
+        montant: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+        statut: { $ref: "#/components/schemas/StatutEcheanceContrat" }
+        depenseId: { type: string, format: uuid, nullable: true }
+        depense: { type: object, nullable: true, description: "id, libelle, statut, montantTtc" }
+        tacheId: { type: string, format: uuid, nullable: true, description: "M22." }
+        notifieJ30Le: { type: string, format: date-time, nullable: true }
+        notifieJ7Le: { type: string, format: date-time, nullable: true }
+        contrat: { type: object, nullable: true, description: "Échéancier transverse uniquement : id, libelle, type, statut, prestataire." }
+    EtatAssurance:
+      type: object
+      properties:
+        immeuble_active: { type: boolean }
+        rc_active: { type: boolean }
+        polices:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              type: { $ref: "#/components/schemas/TypeContrat" }
+              libelle: { type: string }
+              date_fin: { type: string, format: date, nullable: true }
+              echue: { type: boolean }
+              attestation: { type: boolean }
+              assureur: { type: string, nullable: true }
 
   responses:
     ValidationError:
@@ -5373,3 +5517,280 @@ paths:
       responses:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ── M19 — Contrats, assurances, échéances ──
+  /contrats:
+    get:
+      tags: [Contrats]
+      summary: "Contrats de la copropriété (syndic / conseil) — filtres type / statut / prestataire / q, tri `date_fin|date_debut|libelle|montant_periode|statut|cree_le`, `meta.par_statut`, `meta.assurance` ; `format=csv|xlsx` journalisé (export_log CONTRATS)."
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+        - { name: sort, in: query, schema: { type: string } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TypeContrat" } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutContrat" } }
+        - { name: prestataire_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Contrat" } }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Contrats]
+      summary: "Crée un contrat BROUILLON (syndic) — prestataire, poste budgétaire, résolution d'AG, détails d'assurance, contrat signé / attestation téléversés."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContratCreate" }
+      responses:
+        "201":
+          description: Créé (BROUILLON).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Contrat" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/upload-url:
+    post:
+      tags: [Contrats]
+      summary: "URL signée d'upload (2 h) — contrat signé ou attestation d'assurance, préfixe `<copropriete>/contrats/`."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nom_fichier, content_type]
+              properties:
+                nom_fichier: { type: string, maxLength: 180 }
+                content_type: { type: string, description: "image/jpeg|png|webp|heic|heif ou application/pdf." }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contrats/echeancier:
+    get:
+      tags: [Contrats]
+      summary: "Flux calendrier — toutes les échéances des contrats (BROUILLON / ACTIF / SUSPENDU) entre `from` et `to`, avec le contrat et la dépense liée ; `total_montant`."
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TypeEcheance" } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutEcheanceContrat" } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      from: { type: string, format: date }
+                      to: { type: string, format: date }
+                      total_montant: { $ref: "#/components/schemas/Money" }
+                      echeances: { type: array, items: { $ref: "#/components/schemas/ContratEcheance" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contrats/a-renouveler:
+    get:
+      tags: [Contrats]
+      summary: "Contrats ACTIF dont la fin tombe dans `jours` (défaut 90) + contrats EXPIRE depuis moins de `jours`."
+      parameters:
+        - { name: jours, in: query, schema: { type: integer, minimum: 1, maximum: 730, default: 90 } }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/Contrat" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contrats/assurance:
+    get:
+      tags: [Contrats]
+      summary: "Invariant Doc A §8 — assurance immeuble / RC active et non échue, polices en cours (alerte mensuelle ASSURANCE_IMMEUBLE_ABSENTE si absente)."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/EtatAssurance" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contrats/{id}:
+    get:
+      tags: [Contrats]
+      summary: "Détail d'un contrat — échéancier, documents (URLs signées), dépenses liées, journal."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Contrat" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Contrats]
+      summary: "Modifie un contrat (syndic) — sauf RESILIE / EXPIRE ; régénère l'échéancier si dates / périodicité / montant changent sur un contrat ACTIF."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ContratUpdate" }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/activer:
+    post:
+      tags: [Contrats]
+      summary: "BROUILLON / SUSPENDU → ACTIF (syndic). Montant de période > `seuil_contrat_ag` sans résolution d'AG ADOPTEE → 422 CONTRAT_RESOLUTION_AG_REQUISE. Génère l'échéancier des 12 prochains mois. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: "OK (ACTIF)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/suspendre:
+    post:
+      tags: [Contrats]
+      summary: "ACTIF → SUSPENDU (syndic, motif facultatif). Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                motif: { type: string, maxLength: 1000, nullable: true }
+      responses:
+        "200": { description: "OK (SUSPENDU)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/resilier:
+    post:
+      tags: [Contrats]
+      summary: "→ RESILIE (syndic, motif obligatoire, date de résiliation = aujourd'hui par défaut) ; les échéances postérieures sont ANNULEE. Idempotency-Key."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [motif]
+              properties:
+                motif: { type: string, maxLength: 1000 }
+                date_resiliation: { type: string, format: date }
+      responses:
+        "200": { description: "OK (RESILIE)" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/echeances:
+    get:
+      tags: [Contrats]
+      summary: Échéancier du contrat (toutes les échéances, dépense liée).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { type: array, items: { $ref: "#/components/schemas/ContratEcheance" } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Contrats]
+      summary: "Sans `date_echeance` : (re)génère les échéances PAIEMENT selon la périodicité (fins de mois bornées) et RENOUVELLEMENT (date_fin − préavis) sur `horizon_mois` (défaut 12) — idempotent (contrainte unique contrat/type/date). Avec `type` + `date_echeance` : échéance manuelle (visite technique, contrôle réglementaire…)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  properties:
+                    horizon_mois: { type: integer, minimum: 1, maximum: 36, default: 12 }
+                - type: object
+                  required: [type, date_echeance]
+                  properties:
+                    type: { $ref: "#/components/schemas/TypeEcheance" }
+                    date_echeance: { type: string, format: date }
+                    montant: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+      responses:
+        "200": { description: "Échéancier régénéré — creees, annulees, reactivees, echeances." }
+        "201": { description: Échéance manuelle créée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/echeances/{eid}:
+    patch:
+      tags: [Contrats]
+      summary: "Modifie une échéance (syndic) — statut REALISEE / ANNULEE / A_VENIR, date, montant. Une échéance DEPENSE_GENEREE ne peut passer qu'à REALISEE."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: eid, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                statut: { type: string, enum: [REALISEE, ANNULEE, A_VENIR] }
+                date_echeance: { type: string, format: date }
+                montant: { allOf: [{ $ref: "#/components/schemas/Money" }], nullable: true }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /contrats/{id}/echeances/{eid}/generer-depense:
+    post:
+      tags: [Contrats]
+      summary: "Crée une dépense BROUILLON liée au contrat (poste, prestataire, résolution ; catégorie déduite du poste ou du type) depuis une échéance A_VENIR / MANQUEE → DEPENSE_GENEREE. Idempotency-Key."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: eid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                montant_ttc: { allOf: [{ $ref: "#/components/schemas/Money" }], description: "Défaut = montant de l'échéance, sinon montant de période du contrat." }
+                date_depense: { type: string, format: date }
+                source: { $ref: "#/components/schemas/SourceFinancement" }
+      responses:
+        "201": { description: "Créé — { echeance, depense }." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }

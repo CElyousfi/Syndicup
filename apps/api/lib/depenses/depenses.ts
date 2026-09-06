@@ -329,7 +329,16 @@ export async function documentsDepense(ctx: TenantContext, id: string) {
 
 export async function creerDepense(ctx: TenantContext, input: DepenseCreateInput) {
   if (can("depenses.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic crée une dépense (Doc A §8).");
-  return withTenant(ctx, async (db) => {
+  return withTenant(ctx, (db) => creerDepenseDb(db, ctx, input));
+}
+
+/**
+ * Cœur de la création, réutilisable dans une transaction tenant déjà ouverte (M19 : dépense
+ * BROUILLON générée depuis une échéance de contrat, même transaction que le passage de l'échéance en
+ * DEPENSE_GENEREE). Les contrôles de permission restent à la charge de l'appelant.
+ */
+export async function creerDepenseDb(db: TenantDb, ctx: TenantContext, input: DepenseCreateInput) {
+  {
     await verifierReferences(db, ctx, input);
     const budget = await resoudreBudget(db, ctx, input);
     const depense = await db.depense.create({
@@ -348,15 +357,16 @@ export async function creerDepense(ctx: TenantContext, input: DepenseCreateInput
         source: input.source,
         incidentId: input.incident_id ?? null,
         resolutionAgId: input.resolution_ag_id ?? null,
+        contratId: input.contrat_id ?? null,
         creeParId: ctx.utilisateurId,
         statut: "BROUILLON",
       },
       include: depenseInclude,
     });
-    await journal(db, ctx, depense.id, "CREEE", { montant_ttc: toApiString(depense.montantTtc), source: depense.source });
+    await journal(db, ctx, depense.id, "CREEE", { montant_ttc: toApiString(depense.montantTtc), source: depense.source, ...(input.contrat_id ? { contrat_id: input.contrat_id } : {}) });
     await audit(db, ctx, "DEPENSE_CREEE", depense.id, undefined, { libelle: depense.libelle, montant_ttc: toApiString(depense.montantTtc), categorie: depense.categorie, source: depense.source });
     return depense;
-  });
+  }
 }
 
 export async function modifierDepense(ctx: TenantContext, id: string, input: DepenseUpdateInput) {

@@ -537,6 +537,29 @@ export const PERMISSIONS: PermissionMatrix = {
     GARDIEN: false,
     PRESTATAIRE: false,
   },
+  // ── M19 — Contrats, assurances, échéances (Doc A §7 parties communes, §8 assurance obligatoire ;
+  //    §12.3 : contrats prestataires = syndic_only / conseil — ⚠️ module absent du Master Spec 4.2,
+  //    signalé dans ROADMAP M19) ──
+  "contrats.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    INDIVISAIRE: false,
+    PERSONNE_MORALE_REPRESENTANT: false,
+    LOCATAIRE: false,
+    GARDIEN: false,
+    PRESTATAIRE: false,
+    GESTIONNAIRE_LCD: false,
+  },
+  // Créer, modifier, activer, suspendre, résilier, générer les échéances et les dépenses : syndic seul.
+  "contrats.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
   // Comptes bancaires de la copropriété : tout membre lit banque + RIB masqué (écran « Payer par
   // virement ») ; le syndic gère et lit le RIB complet (audité RIB_CONSULTE).
   "coproprietes.comptes_bancaires.lire": {

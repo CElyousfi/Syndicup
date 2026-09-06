@@ -15,6 +15,7 @@ import type Decimal from "decimal.js";
 import type { TenantDb } from "../tenant/db";
 import { money, toApiString } from "../money";
 import { soldeFondsReserve } from "../depenses/depenses";
+import { contratsSignesExercice } from "../contrats/contrats";
 
 export const TRANCHES_ANCIENNETE = ["0_30", "31_90", "91_180", "PLUS_180"] as const;
 export type TrancheAnciennete = (typeof TRANCHES_ANCIENNETE)[number];
@@ -322,7 +323,6 @@ export async function faitsMarquants(db: TenantDb, coproprieteId: string, exerci
     nb_incidents: nbIncidents,
     incidents_majeurs: incidents.map((i) => ({ id: i.id, categorie: i.categorie, sous_categorie: i.sousCategorie, statut: i.statut, date: isoDate(i.creeLe) })),
     ag_tenues: ags.map((a) => ({ id: a.id, type: a.type, date: isoDate(a.dateAg), quorum_atteint: a.quorumAtteint ? a.quorumAtteint.toString() : null, nb_resolutions: a._count.resolutions })),
-    // M19 — contrats signés dans l'exercice : rempli quand la table `contrat` existe.
-    contrats_signes: [] as { id: string; libelle: string; type: string; date: string }[],
+    contrats_signes: await contratsSignesExercice(db, coproprieteId, exercice),
   };
 }

@@ -445,6 +445,31 @@ const RAPPORTS: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, RAPPORTS);
 
+// ── M19 — Contrats, assurances, échéances (Doc A §7, §8) ─────────────────────────────────────
+const CONTRATS: Record<string, Entree> = {
+  CONTRAT_ECHEANCE_PROCHE: {
+    FR: { titre: "Échéance de contrat dans {{jours}} jours", corps: "« {{libelle}} » : {{type_echeance}} le {{date}}{{montant}}. Préparez le paiement ou l'intervention dans l'application." },
+    AR: { titre: "استحقاق عقد خلال {{jours}} يومًا", corps: "«{{libelle}}»: {{type_echeance}} بتاريخ {{date}}{{montant}}. حضّروا الدفع أو التدخل في التطبيق." },
+  },
+  CONTRAT_ECHEANCE_MANQUEE: {
+    FR: { titre: "Échéance de contrat dépassée", corps: "« {{libelle}} » : l'échéance de paiement du {{date}} est passée sans dépense enregistrée." },
+    AR: { titre: "استحقاق عقد متجاوز", corps: "«{{libelle}}»: مرّ استحقاق الدفع بتاريخ {{date}} دون تسجيل أي مصروف." },
+  },
+  CONTRAT_EXPIRE: {
+    FR: { titre: "Contrat expiré", corps: "« {{libelle}} » a expiré le {{date}} sans reconduction. Renouvelez-le ou consultez un autre prestataire." },
+    AR: { titre: "عقد منتهٍ", corps: "انتهى «{{libelle}}» بتاريخ {{date}} دون تجديد. جدّدوه أو استشيروا مزوّدًا آخر." },
+  },
+  CONTRAT_RECONDUIT: {
+    FR: { titre: "Contrat reconduit tacitement", corps: "« {{libelle}} » a été reconduit jusqu'au {{date}} ; l'échéancier a été prolongé." },
+    AR: { titre: "عقد مُجدَّد ضمنيًا", corps: "تم تجديد «{{libelle}}» ضمنيًا حتى {{date}}؛ تم تمديد جدول الاستحقاقات." },
+  },
+  ASSURANCE_IMMEUBLE_ABSENTE: {
+    FR: { titre: "Aucune assurance immeuble active", corps: "La copropriété n'a aucun contrat d'assurance immeuble ACTIF. Le syndic engage sa responsabilité : enregistrez la police en cours." },
+    AR: { titre: "لا يوجد تأمين نشط على العمارة", corps: "لا تملك الملكية المشتركة أي عقد تأمين نشط على العمارة. مسؤولية السنديك قائمة: سجّلوا وثيقة التأمين الجارية." },
+  },
+};
+Object.assign(TEMPLATES, CONTRATS);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

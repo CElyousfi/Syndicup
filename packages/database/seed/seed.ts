@@ -1,5 +1,5 @@
 /**
- * Seed de développement — couvre M1→M18 : copropriété, utilisateurs/rôles, invitation, lots
+ * Seed de développement — couvre M1→M19 : copropriété, utilisateurs/rôles, invitation, lots
  * (plein/indivision/parking rattaché/loge), occupants, personnel gardien, budget ACTIF +
  * appel de fonds EMIS + paiement partiel, espace commun + réservation, AG convoquée avec
  * résolutions, prestataire + incident. Les paramètres légaux (délai convocation, quorum,
@@ -713,7 +713,63 @@ async function main() {
     ],
   });
 
+  // ── M19 — Contrats, assurances, échéances (Doc A §7, §8) ──────────────────────
+  await prisma.copropriete.update({ where: { id: copro.id }, data: { seuilContratAg: "20000.00" } }); // PROVISOIRE (brief §10)
+  const ascenseursAtlas = await prisma.prestataire.create({
+    data: { coproprieteId: copro.id, nom: "Ascenseurs Atlas", specialite: "Ascenseur", contact: "+212522445566", telephone: "+212522445566", email: "contact@ascenseurs-atlas.ma", ice: "001998877000045", rc: "RC 77120" },
+  });
+  const contratDoc = (nom: string) => `${copro.id}/contrats/${randomUUID()}-${nom}`;
+  const creerContratSeed = async (data: Parameters<typeof prisma.contrat.create>[0]["data"], logs: { type: "CREE" | "ACTIVE" | "ECHEANCES_GENEREES" | "SUSPENDU" | "EXPIRE"; il: number; details?: object }[]) => {
+    const c = await prisma.contrat.create({ data });
+    await prisma.contratLog.createMany({ data: logs.map((l) => ({ coproprieteId: copro.id, contratId: c.id, type: l.type, acteurId: syndicUser.id, detailsJson: l.details ?? undefined, horodatage: jour(-l.il) })) });
+    return c;
+  };
+  const echeancesMensuelles = (contratId: string, montant: string, ancreJour: number, n = 6) => {
+    const rows: { contratId: string; type: "PAIEMENT"; dateEcheance: Date; montant: string; statut: "A_VENIR" }[] = [];
+    const now = new Date();
+    for (let i = 0; i < n; i++) {
+      const y = now.getUTCFullYear(), m = now.getUTCMonth() + i;
+      const dim = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+      const d = new Date(Date.UTC(y, m, Math.min(ancreJour, dim)));
+      if (d < jour(0)) continue;
+      rows.push({ contratId, type: "PAIEMENT", dateEcheance: d, montant, statut: "A_VENIR" });
+    }
+    return rows;
+  };
+  // 1. Maintenance ascenseur — ACTIF, mensuel, tacite, préavis 60 j, contrat signé, échéancier généré.
+  const docAscenseur = await prisma.document.create({ data: { coproprieteId: copro.id, type: "CONTRAT", nom: "Contrat maintenance ascenseur 2026.pdf", visibilite: "SYNDIC_ONLY", storagePath: contratDoc("contrat-ascenseur.pdf"), creePar: syndicUser.id } });
+  const contratAscenseur = await creerContratSeed(
+    { coproprieteId: copro.id, prestataireId: ascenseursAtlas.id, type: "ASCENSEUR", libelle: "Maintenance ascenseur (contrat complet)", reference: "ASC-2026-014", dateDebut: new Date(`${exercice}-01-31`), dateFin: new Date(`${exercice}-12-31`), tacite: true, preavisJours: 60, periodicite: "MENSUELLE", montantPeriode: "1500.00", budgetPosteId: postes.ENTRETIEN_COURANT, statut: "ACTIF", documentId: docAscenseur.id, notes: "Visite mensuelle + astreinte 24/7. Deux cabines.", creeParId: syndicUser.id },
+    [{ type: "CREE", il: 240 }, { type: "ACTIVE", il: 239 }, { type: "ECHEANCES_GENEREES", il: 239, details: { creees: 12, horizon_mois: 12 } }]
+  );
+  await prisma.contratEcheance.createMany({ data: [...echeancesMensuelles(contratAscenseur.id, "1500.00", 31), { contratId: contratAscenseur.id, type: "RENOUVELLEMENT", dateEcheance: new Date(`${exercice}-11-01`), montant: null, statut: "A_VENIR" }, { contratId: contratAscenseur.id, type: "VISITE_TECHNIQUE", dateEcheance: jour(12), montant: null, statut: "A_VENIR" }] });
+  // 2. Nettoyage des parties communes — ACTIF, mensuel, lié à la dépense payée « Nettoyage janvier » (Propreté Maroc).
+  const contratNettoyage = await creerContratSeed(
+    { coproprieteId: copro.id, prestataireId: proprete.id, type: "NETTOYAGE", libelle: "Nettoyage des parties communes", reference: "NET-2025-09", dateDebut: new Date(`${Number(exercice) - 1}-09-01`), dateFin: new Date(`${exercice}-08-31`), tacite: true, preavisJours: 30, periodicite: "MENSUELLE", montantPeriode: "1000.00", budgetPosteId: postes.ENTRETIEN_COURANT, statut: "ACTIF", creeParId: syndicUser.id },
+    [{ type: "CREE", il: 370 }, { type: "ACTIVE", il: 369 }]
+  );
+  await prisma.contratEcheance.createMany({ data: echeancesMensuelles(contratNettoyage.id, "1000.00", 1) });
+  await prisma.depense.update({ where: { id: depNettoyage.id }, data: { contratId: contratNettoyage.id } });
+  // 3. Assurance multirisque immeuble — ACTIF, annuelle, attestation jointe, détails de la police.
+  const attestation = await prisma.document.create({ data: { coproprieteId: copro.id, type: "ATTESTATION_ASSURANCE", nom: `Attestation multirisque ${exercice}.pdf`, visibilite: "CONSEIL_SYNDICAL", storagePath: contratDoc("attestation-mri.pdf"), creePar: syndicUser.id } });
+  const contratAssurance = await creerContratSeed(
+    { coproprieteId: copro.id, type: "ASSURANCE_IMMEUBLE", libelle: "Multirisque immeuble — Wafa Assurance", reference: "MRI-778812", dateDebut: new Date(`${exercice}-01-01`), dateFin: new Date(`${exercice}-12-31`), tacite: true, preavisJours: 60, periodicite: "ANNUELLE", montantPeriode: "4000.00", budgetPosteId: postes.ASSURANCE, statut: "ACTIF", attestationDocumentId: attestation.id, detailsAssuranceJson: { assureur: "Wafa Assurance", numero_police: "MRI-778812", garanties: ["Incendie", "Dégât des eaux", "Responsabilité civile", "Bris de glace"], franchise: "1500.00", capital_assure: "12000000.00" }, creeParId: syndicUser.id },
+    [{ type: "CREE", il: 250 }, { type: "ACTIVE", il: 249 }]
+  );
+  await prisma.contratEcheance.createMany({ data: [{ contratId: contratAssurance.id, type: "PAIEMENT", dateEcheance: new Date(`${Number(exercice) + 1}-01-01`), montant: "4000.00", statut: "A_VENIR" }, { contratId: contratAssurance.id, type: "RENOUVELLEMENT", dateEcheance: new Date(`${exercice}-11-01`), montant: null, statut: "A_VENIR" }] });
+  // 4. Dératisation — BROUILLON (devis reçu, pas encore signé), semestriel.
+  await creerContratSeed(
+    { coproprieteId: copro.id, prestataireId: prestataire.id, type: "DERATISATION", libelle: "Dératisation semestrielle", dateDebut: jour(20), dateFin: null, tacite: false, periodicite: "SEMESTRIELLE", montantPeriode: "900.00", budgetPosteId: postes.ENTRETIEN_COURANT, statut: "BROUILLON", notes: "Devis reçu, signature en attente.", creeParId: syndicUser.id },
+    [{ type: "CREE", il: 3 }]
+  );
+  // 5. Gardiennage externe — EXPIRE il y a 40 jours (non reconduit) : apparaît dans « à renouveler ».
+  await creerContratSeed(
+    { coproprieteId: copro.id, type: "GARDIENNAGE", libelle: "Gardiennage de nuit (société externe)", reference: "GARD-2025", dateDebut: jour(-405), dateFin: jour(-40), tacite: false, periodicite: "MENSUELLE", montantPeriode: "6000.00", statut: "EXPIRE", creeParId: syndicUser.id },
+    [{ type: "CREE", il: 405 }, { type: "ACTIVE", il: 404 }, { type: "EXPIRE", il: 40, details: { date_fin: jour(-40).toISOString().slice(0, 10) } }]
+  );
+
   console.log("Seed terminé :", {
+    contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
     rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
     copropriete: copro.nom,
     utilisateurs: 9,

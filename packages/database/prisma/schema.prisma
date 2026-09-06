@@ -259,6 +259,11 @@ model Copropriete {
   // M18 — Transparence (Doc A §3.5) : les résidents voient la liste des dépenses PAYEE ; les
   // factures elles-mêmes ne leur sont exposées que si le syndic active cette option.
   facturesVisiblesResidents        Boolean                   @default(false) @map("factures_visibles_residents")
+  // M19 — Contrats (Doc A §7, §8). Montant au-delà duquel un contrat doit être lié à une résolution
+  // d'AG — nullable, PROVISOIRE (LEGAL_QUESTIONS_BRIEF §10) : non configuré = aucun contrôle, jamais deviné.
+  seuilContratAg                   Decimal?                  @map("seuil_contrat_ag") @db.Decimal(14, 2)
+  // Job mensuel `contrats-assurance-mensuel` : dernière alerte « assurance immeuble absente » (dédoublonnage).
+  assuranceAlerteEnvoyeeLe         DateTime?                 @map("assurance_alerte_envoyee_le") @db.Timestamptz
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
@@ -288,6 +293,8 @@ model Copropriete {
   justificatifs       JustificatifPaiement[]
   rapportsGestion     RapportGestion[]
   exportLogs          ExportLog[]
+  contrats            Contrat[]
+  contratLogs         ContratLog[]
 
   @@map("copropriete")
 }
@@ -341,6 +348,8 @@ model Utilisateur {
   paiementsEnregistres     Paiement[]                @relation("PaiementEnregistreur")
   rapportsGeneres          RapportGestion[]          @relation("RapportGenerateur")
   exportLogs               ExportLog[]
+  contratsCrees            Contrat[]                 @relation("ContratCreateur")
+  contratLogsActeur        ContratLog[]              @relation("ContratLogActeur")
 
   @@map("utilisateur")
 }
@@ -540,6 +549,8 @@ model Document {
   justificatifs      JustificatifPaiement[] @relation("JustificatifPreuve")
   paiementsPreuve    Paiement[]             @relation("PaiementPreuve")
   rapportsGestion    RapportGestion[]       @relation("RapportGestionPdf")
+  contratsSignes     Contrat[]              @relation("ContratDocument")
+  attestations       Contrat[]              @relation("ContratAttestation")
 
   @@index([coproprieteId])
   @@map("document")
@@ -1155,6 +1166,7 @@ model Prestataire {
   incidentsAssignes Incident[]
   depenses          Depense[]
   factures          Facture[]
+  contrats          Contrat[]
 
   @@index([coproprieteId])
   @@map("prestataire")
@@ -1329,6 +1341,7 @@ model AgResolution {
   coproprietesRegimeLcd Copropriete[]    @relation("CoproprieteRegimeLcdResolution")
   depenses              Depense[]
   rapportsGestion       RapportGestion[]
+  contrats              Contrat[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1613,6 +1626,7 @@ model BudgetPoste {
   modifieLe    DateTime         @updatedAt @map("modifie_le") @db.Timestamptz
 
   depenses Depense[]
+  contrats Contrat[]
 
   @@unique([budgetAgId, categorie, libelle])
   @@index([budgetAgId])
@@ -1644,9 +1658,9 @@ model Depense {
   // Dépense née d'un incident (POST /incidents/{id}/depense).
   incidentId                     String?           @map("incident_id") @db.Uuid
   incident                       Incident?         @relation(fields: [incidentId], references: [id])
-  // Rempli par M19 (contrats) — colonne posée sans FK : la table `contrat` n'existe pas encore,
-  // la FK est ajoutée dans la migration M19 (même approche que fonds_reserve_mouvement.resolution_ag_id en M5).
+  // M19 — dépense née d'une échéance de contrat (POST /contrats/{id}/echeances/{eid}/generer-depense).
   contratId                      String?           @map("contrat_id") @db.Uuid
+  contrat                        Contrat?          @relation(fields: [contratId], references: [id])
   // Rempli par M20 (paie) : personnel + période "YYYY-MM".
   personnelId                    String?           @map("personnel_id") @db.Uuid
   personnel                      Personnel?        @relation(fields: [personnelId], references: [id])
@@ -1674,6 +1688,7 @@ model Depense {
   factures               Facture[]
   logs                   DepenseLog[]
   mouvementsFondsReserve FondsReserveMouvement[]
+  echeancesContrat       ContratEcheance[]
 
   @@index([coproprieteId, statut])
   @@index([coproprieteId, dateDepense])
@@ -1858,4 +1873,177 @@ model ExportLog {
   @@index([coproprieteId, horodatage])
   @@index([utilisateurId])
   @@map("export_log")
+}
+
+// ============================================================================
+// M19 — CONTRATS, ASSURANCES, ÉCHÉANCES (Doc A §7 parties communes — ascenseur, nettoyage,
+// gardiennage, jardins ; §8 obligations du syndic — assurance de l'immeuble ; §5 interventions).
+// Une copropriété vit sur 5 à 15 contrats récurrents : l'échéancier (paiements, renouvellements,
+// visites techniques, contrôles réglementaires) est matérialisé 12 mois à l'avance et surveillé
+// par un job quotidien (J-30 / J-7, expiration, reconduction tacite, échéances manquées).
+// L'assurance est un contrat ASSURANCE_* avec `details_assurance_json` + attestation ; l'absence
+// d'assurance immeuble ACTIVE remonte dans le tableau de bord M18 et un job mensuel.
+// `contrat_log` est APPEND-ONLY. ⚠️ Ajouts signalés au-delà du Master Spec : enums TypeContrat,
+// StatutContrat, Periodicite, TypeEcheance, StatutEcheanceContrat, TypeContratLog ; tables contrat,
+// contrat_echeance, contrat_log ; copropriete.seuil_contrat_ag / assurance_alerte_envoyee_le ;
+// contrat_echeance.notifie_j30_le / notifie_j7_le (idempotence des rappels).
+// ============================================================================
+
+enum TypeContrat {
+  ASSURANCE_IMMEUBLE
+  ASSURANCE_RC
+  ASCENSEUR
+  NETTOYAGE
+  GARDIENNAGE
+  JARDINAGE
+  DERATISATION
+  EAU
+  ELECTRICITE
+  INTERNET
+  SYNDIC_PROFESSIONNEL
+  TRAVAUX
+  AUTRE
+}
+
+// BROUILLON → ACTIF ⇄ SUSPENDU ; ACTIF/SUSPENDU → RESILIE (motif) ; ACTIF → EXPIRE (job, date_fin
+// atteinte sans reconduction tacite).
+enum StatutContrat {
+  BROUILLON
+  ACTIF
+  SUSPENDU
+  RESILIE
+  EXPIRE
+}
+
+enum Periodicite {
+  MENSUELLE
+  TRIMESTRIELLE
+  SEMESTRIELLE
+  ANNUELLE
+  PONCTUELLE
+}
+
+enum TypeEcheance {
+  PAIEMENT
+  RENOUVELLEMENT
+  VISITE_TECHNIQUE
+  CONTROLE_REGLEMENTAIRE
+  AUTRE
+}
+
+enum StatutEcheanceContrat {
+  A_VENIR
+  DEPENSE_GENEREE
+  REALISEE
+  MANQUEE
+  ANNULEE
+}
+
+enum TypeContratLog {
+  CREE
+  MODIFIE
+  ACTIVE
+  SUSPENDU
+  RESILIE
+  EXPIRE
+  RECONDUIT
+  ECHEANCES_GENEREES
+  DEPENSE_GENEREE
+  ECHEANCE_MODIFIEE
+  DOCUMENT_AJOUTE
+}
+
+model Contrat {
+  id                    String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId         String        @map("copropriete_id") @db.Uuid
+  copropriete           Copropriete   @relation(fields: [coproprieteId], references: [id])
+  prestataireId         String?       @map("prestataire_id") @db.Uuid
+  prestataire           Prestataire?  @relation(fields: [prestataireId], references: [id])
+  type                  TypeContrat
+  libelle               String
+  reference             String?
+  dateDebut             DateTime      @map("date_debut") @db.Date
+  // NULL = durée indéterminée (aucune expiration ; reconduction sans objet).
+  dateFin               DateTime?     @map("date_fin") @db.Date
+  // Reconduction tacite : à `date_fin`, le job prolonge d'une période (même durée) et journalise RECONDUIT.
+  tacite                Boolean       @default(false)
+  // Délai de préavis avant `date_fin` (jours) — déclenche l'échéance RENOUVELLEMENT et la tâche M22.
+  preavisJours          Int?          @map("preavis_jours")
+  periodicite           Periodicite
+  montantPeriode        Decimal?      @map("montant_periode") @db.Decimal(14, 2)
+  budgetPosteId         String?       @map("budget_poste_id") @db.Uuid
+  budgetPoste           BudgetPoste?  @relation(fields: [budgetPosteId], references: [id])
+  statut                StatutContrat @default(BROUILLON)
+  // Contrat signé (Document.type = CONTRAT, SYNDIC_ONLY — Doc A §12.3).
+  documentId            String?       @map("document_id") @db.Uuid
+  document              Document?     @relation("ContratDocument", fields: [documentId], references: [id])
+  // Assurances : attestation en cours (Document.type = ATTESTATION_ASSURANCE, CONSEIL_SYNDICAL).
+  attestationDocumentId String?       @map("attestation_document_id") @db.Uuid
+  attestationDocument   Document?     @relation("ContratAttestation", fields: [attestationDocumentId], references: [id])
+  // `{ assureur, numero_police, garanties: string[], franchise, capital_assure }` — types ASSURANCE_* uniquement.
+  detailsAssuranceJson  Json?         @map("details_assurance_json")
+  // Contrat au-dessus de `copropriete.seuil_contrat_ag` → résolution d'AG obligatoire à l'activation.
+  resolutionAgId        String?       @map("resolution_ag_id") @db.Uuid
+  resolutionAg          AgResolution? @relation(fields: [resolutionAgId], references: [id])
+  notes                 String?
+  motifResiliation      String?       @map("motif_resiliation")
+  dateResiliation       DateTime?     @map("date_resiliation") @db.Date
+  creeParId             String        @map("cree_par_id") @db.Uuid
+  creePar               Utilisateur   @relation("ContratCreateur", fields: [creeParId], references: [id])
+  creeLe                DateTime      @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe             DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
+
+  echeances ContratEcheance[]
+  logs      ContratLog[]
+  depenses  Depense[]
+
+  @@index([coproprieteId, statut])
+  @@index([coproprieteId, type])
+  @@index([prestataireId])
+  @@index([dateFin])
+  @@map("contrat")
+}
+
+model ContratEcheance {
+  id           String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  contratId    String                @map("contrat_id") @db.Uuid
+  contrat      Contrat               @relation(fields: [contratId], references: [id])
+  type         TypeEcheance
+  dateEcheance DateTime              @map("date_echeance") @db.Date
+  montant      Decimal?              @db.Decimal(14, 2)
+  statut       StatutEcheanceContrat @default(A_VENIR)
+  // Dépense BROUILLON générée depuis l'échéance (liée au contrat, au poste, au prestataire).
+  depenseId    String?               @map("depense_id") @db.Uuid
+  depense      Depense?              @relation(fields: [depenseId], references: [id])
+  // Tâche M22 (renouvellement / contrôle) — colonne posée sans FK, ajoutée en M22.
+  tacheId      String?               @map("tache_id") @db.Uuid
+  // Job quotidien : rappels J-30 / J-7 envoyés une seule fois.
+  notifieJ30Le DateTime?             @map("notifie_j30_le") @db.Timestamptz
+  notifieJ7Le  DateTime?             @map("notifie_j7_le") @db.Timestamptz
+  creeLe       DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe    DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
+
+  // Génération idempotente : une seule échéance par (contrat, type, date).
+  @@unique([contratId, type, dateEcheance])
+  @@index([contratId, statut])
+  @@index([dateEcheance])
+  @@map("contrat_echeance")
+}
+
+/// Journal des contrats — APPEND-ONLY (pas de modifie_le, GRANT SELECT+INSERT uniquement).
+model ContratLog {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String         @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete    @relation(fields: [coproprieteId], references: [id])
+  contratId     String         @map("contrat_id") @db.Uuid
+  contrat       Contrat        @relation(fields: [contratId], references: [id])
+  type          TypeContratLog
+  // NULL = système (job).
+  acteurId      String?        @map("acteur_id") @db.Uuid
+  acteur        Utilisateur?   @relation("ContratLogActeur", fields: [acteurId], references: [id])
+  detailsJson   Json?          @map("details_json")
+  horodatage    DateTime       @default(now()) @db.Timestamptz
+
+  @@index([contratId, horodatage])
+  @@map("contrat_log")
 }
