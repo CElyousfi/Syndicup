@@ -91,6 +91,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   };
   const visites: NavItem = { href: p("/visites"), label: d.visites, icon: "door" };
   const personnel: NavItem = { href: p("/personnel"), label: d.personnel, icon: "users" };
+  // M20 — le gardien / employé ouvre directement son dossier RH (paie, congés, pointage).
+  const monDossier: NavItem = { href: p("/personnel/me"), label: dict.personnel.monDossier, icon: "users" };
   const documents: NavItem = { href: p("/documents"), label: d.documents, icon: "file" };
   const litiges: NavItem = { href: p("/litiges"), label: d.litiges, icon: "scale" };
   const invitations: NavItem = { href: p("/invitations"), label: d.invitations, icon: "key" };
@@ -176,7 +178,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [visites, especes, lcd, incidents(), lots(), espaces, personnel, prestataires, documents],
+          items: [visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":

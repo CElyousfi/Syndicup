@@ -13,7 +13,9 @@ import {
   modifierOptions,
   modifierRecouvrement,
   modifierReglement,
+  modifierParametresPaie,
 } from "./actions";
+import type { ParametresPaie } from "../../../../lib/api/types";
 
 const DELAIS_DEFAUT: Record<string, number> = { N1: 3, N2: 15, N3: 30, N4: 45, N5: 60, N6: 90 };
 
@@ -261,6 +263,55 @@ export function LegauxForm({
       </div>
       <FormAlert state={state} />
       <PiedSection dict={dict} state={state} />
+    </form>
+  );
+}
+
+
+/** M20 — Paramètres de paie (PROVISOIRES, brief §11) : taux, plafonds, barème IR, congés. */
+export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Locale; parametres: ParametresPaie | null }) {
+  const [state, action] = useActionState(modifierParametresPaie, IDLE);
+  const pa = dict.parametres;
+  const p = parametres;
+  const champs: [string, string, string | null | undefined][] = [
+    ["smig_mensuel", pa.paieSmig, p?.smig_mensuel], ["taux_cnss_salarial", pa.paieCnssSal, p?.taux_cnss_salarial], ["plafond_cnss", pa.paiePlafondCnss, p?.plafond_cnss], ["taux_amo_salarial", pa.paieAmoSal, p?.taux_amo_salarial],
+    ["taux_cnss_patronal", pa.paieCnssPat, p?.taux_cnss_patronal], ["taux_allocations_familiales", pa.paieAllocFam, p?.taux_allocations_familiales], ["taux_amo_patronal", pa.paieAmoPat, p?.taux_amo_patronal], ["taux_formation_pro", pa.paieFormation, p?.taux_formation_pro],
+    ["taux_frais_professionnels", pa.paieFraisPro, p?.taux_frais_professionnels], ["plafond_frais_professionnels_mensuel", pa.paiePlafondFrais, p?.plafond_frais_professionnels_mensuel], ["jours_conge_annuels", pa.paieCongesAnnuels, p?.jours_conge_annuels], ["jours_ouvres_mois", pa.paieJoursOuvres, String(p?.jours_ouvres_mois ?? 26)],
+  ];
+  const tranches = p?.tranches_ir ?? [{ jusqua: "", taux: "", deduction: "" }];
+  return (
+    <form action={action} className="space-y-4">
+      <input type="hidden" name="locale" value={locale} />
+      <Banner variant="legal">{pa.paieAide}</Banner>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {champs.map(([name, label, val]) => (
+          <Field key={name} label={label} htmlFor={`paie_${name}`} optionalLabel={name === "smig_mensuel" || name === "jours_conge_annuels" ? dict.common.optional : undefined}>
+            <Input id={`paie_${name}`} name={name} inputMode="decimal" dir="ltr" defaultValue={val ?? ""} className="tnum text-start" required={name !== "smig_mensuel" && name !== "jours_conge_annuels"} />
+          </Field>
+        ))}
+      </div>
+      <div>
+        <p className="text-sm font-medium text-ink-strong">{pa.paieTranches}</p>
+        <p className="mt-1 text-[12px] text-soft">{pa.paieTranchesAide}</p>
+        <div className="mt-2 space-y-2">
+          {Array.from({ length: Math.max(6, tranches.length) }, (_, i) => tranches[i] ?? { jusqua: "", taux: "", deduction: "" }).map((t, i) => (
+            <div key={i} className="grid grid-cols-3 gap-2">
+              <Input name={`t_jusqua_${i}`} placeholder={pa.paieJusqua} inputMode="decimal" dir="ltr" defaultValue={t.jusqua ?? ""} className="tnum text-start" />
+              <Input name={`t_taux_${i}`} placeholder={pa.paieTaux} inputMode="decimal" dir="ltr" defaultValue={t.taux} className="tnum text-start" />
+              <Input name={`t_deduction_${i}`} placeholder={pa.paieDeduction} inputMode="decimal" dir="ltr" defaultValue={t.deduction} className="tnum text-start" />
+            </div>
+          ))}
+        </div>
+      </div>
+      <Switch name="retenue_absence_injustifiee" label={pa.paieRetenueAbsence} defaultChecked={p?.retenue_absence_injustifiee ?? true} />
+      <Field label={pa.paieSource} htmlFor="paie_source" optionalLabel={dict.common.optional}>
+        <Input id="paie_source" name="source" maxLength={500} defaultValue={p?.source ?? ""} />
+      </Field>
+      <FormAlert state={state} />
+      <div className="flex items-center justify-between gap-3 border-t border-hairline pt-4">
+        <button type="submit" name="effacer" value="1" className="text-[13px] font-medium text-danger hover:underline">{pa.paieEffacer}</button>
+        <div className="flex items-center gap-3">{state.status === "success" ? <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p> : null}<SubmitButton variant="secondary">{dict.common.save}</SubmitButton></div>
+      </div>
     </form>
   );
 }

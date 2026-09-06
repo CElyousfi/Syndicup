@@ -180,3 +180,36 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
 }
+
+/** M20 — paramètres de paie (PROVISOIRES, brief §11) : PATCH /coproprietes/{id}/parametres-paie ; « effacer » = null. */
+export async function modifierParametresPaie(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const coproprieteId = (await readSession()).coproprieteId;
+  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  let body: Record<string, unknown> | null = null;
+  if (fd.get("effacer") !== "1") {
+    const tranches: { jusqua: string | null; taux: string; deduction: string }[] = [];
+    for (let i = 0; i < 8; i++) {
+      const taux = champ(fd, `t_taux_${i}`);
+      if (!taux) continue;
+      const jusqua = champ(fd, `t_jusqua_${i}`);
+      tranches.push({ jusqua: jusqua || null, taux, deduction: champ(fd, `t_deduction_${i}`) || "0.00" });
+    }
+    const v = (k: string) => champ(fd, k);
+    body = {
+      smig_mensuel: v("smig_mensuel") || null,
+      taux_cnss_salarial: v("taux_cnss_salarial"), plafond_cnss: v("plafond_cnss"), taux_amo_salarial: v("taux_amo_salarial"),
+      taux_cnss_patronal: v("taux_cnss_patronal"), taux_allocations_familiales: v("taux_allocations_familiales"), taux_amo_patronal: v("taux_amo_patronal"), taux_formation_pro: v("taux_formation_pro"),
+      taux_frais_professionnels: v("taux_frais_professionnels"), plafond_frais_professionnels_mensuel: v("plafond_frais_professionnels_mensuel"),
+      tranches_ir: tranches,
+      jours_conge_annuels: v("jours_conge_annuels") || null,
+      jours_ouvres_mois: Number(v("jours_ouvres_mois") || 26),
+      retenue_absence_injustifiee: fd.get("retenue_absence_injustifiee") === "on",
+      source: v("source") || null,
+    };
+  }
+  const res = await apiFetch(`/coproprietes/${coproprieteId}/parametres-paie`, { method: "PATCH", body: { parametres_paie: body } });
+  if (!res.ok) return fromApiError(res);
+  revalidatePath(`/${locale}/parametres`);
+  return success();
+}

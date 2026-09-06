@@ -7,11 +7,12 @@ import { Card, SectionHeader } from "../../../../components/ui/card";
 import { LogoForm } from "./logo-form";
 import { PhotosForm } from "./photos-form";
 import { apiFetch } from "../../../../lib/api/client";
-import type { EspaceCommun } from "../../../../lib/api/types";
+import type { EspaceCommun, ParametresPaie } from "../../../../lib/api/types";
 import { espaceImageCle } from "../../../../components/espaces/espace-image";
 import {
   IdentiteForm,
   LegauxForm,
+  PaieForm,
   OptionsForm,
   RecouvrementForm,
   ReglementForm,
@@ -38,6 +39,7 @@ export default async function ParametresPage({
   if (!copropriete) notFound();
   const pa = dict.parametres;
   const espacesRes = await apiFetch<EspaceCommun[]>("/espaces-communs");
+  const paie = copropriete ? await apiFetch<{ parametres_paie: ParametresPaie | null }>(`/coproprietes/${copropriete.id}/parametres-paie`) : null;
   const espaces = (espacesRes.ok ? espacesRes.data : []).map((e) => ({ id: e.id, nom: e.nom, cleDefaut: espaceImageCle(e.nom, e.type) }));
 
   return (
@@ -79,6 +81,12 @@ export default async function ParametresPage({
         <Card id="legaux" className="border-ink/20">
           <SectionHeader title={`⚖ ${pa.legaux}`} className="mb-5" />
           <LegauxForm dict={dict} locale={ctx.locale} copro={copropriete} />
+        </Card>
+
+        {/* M20 — paie du personnel (paramètres PROVISOIRES, brief §11) */}
+        <Card id="paie" className="border-ink/20">
+          <SectionHeader title={`⚖ ${pa.paie}`} className="mb-5" />
+          <PaieForm dict={dict} locale={ctx.locale} parametres={paie?.ok ? paie.data.parametres_paie : null} />
         </Card>
       </div>
     </div>
