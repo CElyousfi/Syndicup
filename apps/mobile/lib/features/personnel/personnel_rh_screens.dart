@@ -60,7 +60,7 @@ class PersonnelDetailScreen extends ConsumerStatefulWidget {
   ConsumerState<PersonnelDetailScreen> createState() => _PersonnelDetailScreenState();
 }
 
-class _PersonnelDetailScreenState extends ConsumerState<PersonnelDetailScreen> with SingleTickerProviderStateMixin {
+class _PersonnelDetailScreenState extends ConsumerState<PersonnelDetailScreen> with TickerProviderStateMixin {
   TabController? _tabs;
   int _nb = 0;
 

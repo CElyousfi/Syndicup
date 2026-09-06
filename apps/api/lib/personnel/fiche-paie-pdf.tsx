@@ -53,7 +53,7 @@ function Doc({ d, langue }: { d: DonneesFichePaiePdf; langue: "fr" | "ar" }) {
           lignes={[
             { l: `${t.cnssL} (${r.parametres.taux_cnss_salarial} %)`, m: mad(r.cotisations_salariales.cnss) },
             { l: `${t.amo} (${r.parametres.taux_amo_salarial} %)`, m: mad(r.cotisations_salariales.amo) },
-            { l: `${t.fraisPro} (${r.parametres.taux_frais_professionnels} %) → ${t.netImposable} ${mad(r.net_imposable)}`, m: "" },
+            { l: `${t.fraisPro} (${r.parametres.taux_frais_professionnels} %) · ${t.netImposable} ${mad(r.net_imposable)}`, m: "" },
             { l: `${t.ir} (${r.tranche_ir.taux} %)`, m: mad(r.cotisations_salariales.ir) },
             ...(r.retenues !== "0.00" ? [{ l: t.retenues, m: mad(r.retenues) }] : []),
           ]}
