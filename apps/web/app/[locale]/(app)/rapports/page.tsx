@@ -17,7 +17,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { Bars, Donut } from "../../../../components/ui/charts";
 import { TresorerieChart, AgeingBars } from "../../../../components/ui/charts-rapports";
-import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
+import { Table, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { CAlert, CChart, CCoins, CMoneyBag, CWallet, CWrench } from "../../../../components/ui/color-icons";
 import { trancheVariant, urgenceVariant } from "../../../../lib/status";
 import { RapportsTabs, ExerciceLinks } from "./onglets";
