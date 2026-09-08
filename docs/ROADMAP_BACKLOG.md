@@ -716,6 +716,73 @@ tâche s'envoie en ligne, seul le statut est mis en file hors-ligne.
   d'obligations légales pré-remplis (brief §13.3) ; création / assignation depuis le mobile
   (web-first, voir parité) ; rattachement d'une annonce TRAVAUX à une tâche.
 
+## M23 — Parkings et caves : emplacements non titrés, attributions, véhicules, badges
+
+*Réf. Doc A §4 (parkings : modèle, scénarios conflictuels), §9 (gardien, visiteurs), §12.
+Domaine : `20-parkings-caves.md`. Juridique : brief §14. Branche `feature/m23-parkings`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `TypeEmplacement`, `StatutEmplacement`,
+`TypeAttributionEmplacement`, `TypeVehicule`, `TypeBadge`, `StatutBadge` ; valeur
+`TypeAppelDeFonds.REDEVANCE_PARKING` ; tables `emplacement`, `attribution_emplacement`,
+`vehicule`, `badge` ; colonnes `visite.emplacement_id` / `immatriculation` / `heure_limite`,
+`sejour_courte_duree.emplacement_id`, `incident.emplacement_id` / `immatriculation_signalee`,
+`attribution_emplacement.expiree_notifiee_le` (idempotence du job), `badge.caution_paiement_id`
+(FK `paiement`) ; fonctions SQL `lots_du_resident_courant()` et `residents_du_lot(uuid)`
+(SECURITY DEFINER) ; policy `resident_perdu` sur `badge` (UPDATE ACTIF → PERDU pour ses lots) ;
+permissions `parkings.gerer`, `parkings.lire` (résidents scoped), `vehicules.gerer_propres`,
+`vehicules.rechercher` (GARDIEN / SYNDIC) ; codes `EMPLACEMENT_STATUT_INVALIDE`,
+`EMPLACEMENT_CODE_EXISTANT`, `EMPLACEMENT_NON_VISITEUR`, `ATTRIBUTION_CHEVAUCHEMENT`,
+`IMMATRICULATION_EXISTANTE`, `IMMATRICULATION_INCONNUE`, `BADGE_STATUT_INVALIDE`,
+`BADGE_IDENTIFIANT_EXISTANT` ; audit `EMPLACEMENT_*`, `VEHICULE_DECLARE/MODIFIE/RECHERCHE`,
+`BADGE_*`, `VISITE_EMPLACEMENT`. **Écarts par rapport au prompt** : (1) les places titrées ne
+sont pas dupliquées : elles restent des lots (Doc A §4.1 TITRE = lot) ; (2) un véhicule ne se
+supprime pas, il se désactive (historique des recherches) ; (3) `date_fin` = dernier jour
+d'occupation inclus, « libérer » sans date = fin hier ; (4) la caution d'un badge est un montant +
+un lien facultatif vers un paiement M17 du lot — aucune écriture comptable dédiée (brief §14.4) ;
+(5) la tâche « désactiver le badge » n'est créée que lorsque le syndic déclare la perte (le
+résident déclenche la notification, le syndic qualifie) ; (6) la recherche de plaque compare sans
+tirets (« 12345a6 » → « 12345-A-6 ») et le plan est une grille par niveau, pas une CAO.
+
+- [x] **Livré (08/09)** — Migrations `..._m23_parkings` (tables, CHECKs plaque / caution / dates,
+  `lots_du_resident_courant()`, RLS : emplacement tenant / syndic ; attribution, véhicule, badge :
+  gestion et gardien tout, résident ses lots ; véhicule écrit par le résident pour ses lots),
+  `..._m23_badge_perdu_resident`, `..._m23_residents_du_lot`. Seed Al Amal : 8 emplacements (2
+  visiteurs, 2 communes dont P-12 louée en interne 150 MAD/mois au lot A2 sur résolution d'AG, PMR,
+  moto en rotation, local vélos, cave hors service), attribution temporaire expirée, 4 véhicules
+  (un inactif), télécommande avec caution, badge perdu + tâche M22 terminée, clé de cave restituée,
+  visite du jour placée en P-V1 (heure limite dépassée), séjour LCD placé en P-V2, incident
+  « véhicule sur ma place » avec plaque, appel `REDEVANCE_PARKING` du mois précédent réglé.
+- [x] **Livré (08/09)** — API tag `Parkings` (24 opérations) : emplacements (liste filtrée +
+  `meta.par_statut` + export, plan par niveau, fiche, création, modification, suppression,
+  attribuer avec Idempotency-Key, libérer, attributions), véhicules (liste, déclaration, modification,
+  retrait, recherche auditée, plaques actives), badges (liste, remise, modification, perdu,
+  restituer, désactiver), places visiteurs du jour, place visiteur d'une visite, « notifier le
+  véhicule » d'un incident ; `POST /incidents` et `PATCH /lcd/sejours/{id}` étendus. Jobs
+  `parkings-quotidien`, `parkings-redevances-mensuel`. Notifications FR/AR (6). Tests
+  `tests/parkings.test.ts` (10) : codes uniques, place visiteur non attribuable, chevauchement 409,
+  notification et libération, RLS résident (attributions, véhicules, badges de ses lots, 404 sur un
+  badge étranger), normalisation et unicité des plaques (doublon invisible sous RLS), recherche
+  auditée / refusée aux résidents, caution liée au lot, badge perdu → tâche unique, restitution,
+  place visiteur (422 / 409), véhicule gênant (notification, plaque inconnue), jobs rejouables
+  (expiration, démarrage, dépassement, redevance mensuelle idempotente).
+- [x] **Livré (08/09)** — Web : `parkings/` (plan, emplacements + filtres + export, véhicules +
+  recherche, badges, visiteurs du jour), `parkings/[id]` (attribution en cours, historique,
+  attribuer / libérer / modifier / supprimer), onglet « Parkings & badges » du lot, place visiteur
+  sur la visite du jour, champs parking du formulaire d'incident + bloc « Parking » et « Prévenir le
+  propriétaire du véhicule » sur la fiche, navigation « Parkings & badges » (tous rôles sauf
+  prestataire et gestionnaire LCD), FR/AR RTL, deep-links.
+- [x] **Livré (08/09)** — Mobile `features/parkings/parkings_screens.dart` : onglets par rôle
+  (plan, mes emplacements, véhicules avec déclaration / modification / retrait, badges avec perte,
+  visiteurs du jour), fiche emplacement (lecture), recherche de plaque du gardien avec cache
+  hors-ligne (`cache_entries`), feuille « place visiteur » sur la visite, champs parking de
+  l'incident + « prévenir le propriétaire », onglet parkings du lot, deep-links, invalidation temps
+  réel ; test routeur M23. Vérifié sur l'émulateur (gardien : places du jour, recherche
+  « 98765b40 » → lot A2, changement de place P-V1 → P-V2).
+- [ ] **Non livré / à confirmer** : plan graphique (CAO) ; rotation automatique des places
+  (tirage au sort, file d'attente) ; gestion des places titrées ici (restent des lots) ; lecture
+  automatique de plaque (caméra) ; écriture comptable de la caution (brief §14.4) ; création /
+  attribution / remise de badge depuis le mobile (web-first, voir parité).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

@@ -464,6 +464,44 @@ append-only et les pièces jointes.
 extincteurs, entretien ascenseur, déclarations CNSS, assurance, rapport annuel) et leurs fréquences
 légales. Le module fournit la récurrence (mensuelle → annuelle) sans liste imposée.
 
+## 14. Parkings communs, attribution, redevance, badges, fourrière (module M23)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `attribution_emplacement.redevance_mensuelle` | **NULL par défaut** (150 MAD posés par le seed de démonstration) — appelée le 1er du mois (`REDEVANCE_PARKING`, échéance le 15) ; aucune redevance sans décision d'AG | PROVISOIRE |
+| `badge.caution_montant` | **NULL par défaut** (300 MAD télécommande, 100 MAD badge piéton dans le seed) — encaissée via un paiement M17 du lot ; restitution avec caution rendue ou non tracée | PROVISOIRE |
+| Recherche de plaque | réservée au gardien et au syndic, chaque recherche journalisée (`VEHICULE_RECHERCHE`) ; jamais un résident | PROVISOIRE |
+| Heure limite visiteur | libre (gardien), dépassement notifié au gardien ; aucune sanction automatique | PROVISOIRE |
+
+### 14.1 — Attribution d'une place commune
+
+**À confirmer :** l'attribution exclusive d'une partie commune (place, cave) à un lot relève-t-elle
+de la majorité de l'article 21 ou de l'unanimité (Loi 18-00, jouissance privative d'une partie
+commune) ? Une location interne avec redevance modifie-t-elle la répartition des charges ou
+constitue-t-elle une recette du syndicat à porter au budget ? Le module lie l'attribution à une
+résolution ADOPTEE sans contrôler la majorité requise.
+
+### 14.2 — Plaques, badges et données personnelles
+
+**À confirmer :** la plaque d'immatriculation et l'identifiant de badge sont des données
+personnelles (CNDP, §6) : information des résidents, durée de conservation après désactivation
+(anonymisation §5 : plaque effacée ou conservée dans l'audit ?), et licéité de la recherche par le
+gardien (finalité : contrôle d'accès et « véhicule sur ma place »). Le module conserve les
+recherches en `audit_log` et n'expose jamais la plaque aux autres résidents.
+
+### 14.3 — Fourrière et véhicule extérieur
+
+**À confirmer :** conditions dans lesquelles le syndic peut faire enlever un véhicule extérieur ou
+gênant dans un parking privé (règlement de copropriété, affichage à l'entrée, intervention des
+autorités). Le module se limite à identifier la plaque et prévenir le propriétaire connu ; la
+procédure fourrière reste hors plateforme.
+
+### 14.4 — Caution de badge
+
+**À confirmer :** la caution d'un badge / télécommande est-elle une recette du syndicat, un dépôt
+restituable (comptabilisé hors budget) et quelle preuve de restitution exiger ? Le module trace la
+restitution et le sort de la caution dans l'audit sans écriture comptable dédiée.
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.
