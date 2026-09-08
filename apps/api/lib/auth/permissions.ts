@@ -1144,6 +1144,36 @@ export const PERMISSIONS: PermissionMatrix = {
     GARDIEN: true,
     PRESTATAIRE: false,
   },
+  // ── M24 — Import Excel & onboarding (Doc A §11) — ⚠️ module absent du Master Spec, signalé ROADMAP M24 ──
+  "import.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  "import.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Checklist de démarrage : syndic (et conseil, lecture) ; jamais un résident.
+  "onboarding.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Résidence de démonstration : opérateur plateforme seul.
+  "demo.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: false,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
 };
 
 /**

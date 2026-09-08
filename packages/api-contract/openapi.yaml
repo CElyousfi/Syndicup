@@ -40,6 +40,8 @@ tags:
   - name: Communication
   - name: Tâches
     description: "Suivi des décisions (résolutions d'AG adoptées), échéances de contrats, incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles (M22, Doc A §6, §8)."
+  - name: Import
+    description: "Import Excel / csv et onboarding d'une résidence en une heure (Doc A §11) : lots + propriétaires (invitations pré-remplies, jamais envoyées seules), soldes d'ouverture (première ligne du relevé), prestataires, contrats, véhicules / badges, personnel ; checklist de démarrage ; résidence de démonstration (M24 — ⚠️ module absent du Master Spec, signalé ROADMAP M24)."
   - name: Parkings
     description: "Emplacements non titrés (communs, visiteurs, PMR, moto, vélo, caves communes), attributions (AG / rotation / location interne / temporaire, redevance mensuelle → appel REDEVANCE_PARKING), véhicules déclarés (plaque unique), badges / télécommandes (caution M17), places visiteurs du gardien, « véhicule sur ma place » (M23, Doc A §4 — ⚠️ module absent du Master Spec, signalé ROADMAP M23)."
     description: "Tableau d'affichage, sondages consultatifs (jamais un vote d'AG, Doc A §6), contacts utiles, préférences de notification (M21)."
@@ -498,7 +500,17 @@ components:
         justificatifs_en_attente: { $ref: "#/components/schemas/Money", description: "M17 — paiements déclarés par le résident, en attente de validation du syndic (jamais déduits du solde dû)." }
         nb_justificatifs_en_attente: { type: integer }
         lot_id: { type: string, format: uuid }
-        solde_du: { $ref: "#/components/schemas/Money" }
+        solde_du: { $ref: "#/components/schemas/Money", description: "Somme des lignes non closes, moins l'avoir d'ouverture (M24) — jamais négatif." }
+        avoir_ouverture: { $ref: "#/components/schemas/Money", description: "M24 — solde d'ouverture négatif (crédit repris à l'import), déduit du solde dû." }
+        solde_ouverture:
+          type: object
+          nullable: true
+          description: "M24 — solde repris à l'ouverture : un dû est aussi une ligne d'appel SOLDE_OUVERTURE (la plus ancienne : FIFO M17, escalade)."
+          properties:
+            montant: { $ref: "#/components/schemas/Money" }
+            date_reference: { type: string, format: date }
+            commentaire: { type: string, nullable: true }
+            appel_de_fonds_lot_id: { type: string, format: uuid, nullable: true }
         lignes:
           type: array
           items:
@@ -2462,6 +2474,110 @@ components:
               date_depart: { type: string, format: date }
               emplacement: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, code: { type: string }, niveau: { type: string, nullable: true } } }
         places_libres: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, code: { type: string }, niveau: { type: string, nullable: true } } } }
+
+    # ── M24 — Import Excel & onboarding (Doc A §11 — ⚠️ module absent du Master Spec, signalé ROADMAP M24) ──
+    TypeImport: { type: string, enum: [LOTS_PROPRIETAIRES, SOLDES_OUVERTURE, PRESTATAIRES, CONTRATS, VEHICULES_BADGES, PERSONNEL] }
+    StatutImport: { type: string, enum: [TELEVERSE, ANALYSE, PRET, EN_COURS, TERMINE, ECHOUE, ANNULE] }
+    ImportOptions:
+      type: object
+      properties:
+        date_reference: { type: string, format: date, description: "SOLDES_OUVERTURE — date par défaut si le fichier n'en porte pas." }
+        inviter: { type: boolean, default: true, description: "LOTS_PROPRIETAIRES — créer les invitations pré-remplies (jamais envoyées seules)." }
+        canal: { type: string, enum: [SMS, EMAIL, WHATSAPP], description: "Canal (expiration) des invitations créées." }
+    ImportMapping:
+      type: object
+      properties:
+        colonnes: { type: array, items: { type: object, properties: { index: { type: integer }, entete: { type: string }, champ: { type: string, nullable: true } } } }
+        options: { $ref: "#/components/schemas/ImportOptions" }
+    ImportApercu:
+      type: object
+      properties:
+        entetes: { type: array, items: { type: string } }
+        feuille: { type: string }
+        colonnes: { type: array, items: { type: object, properties: { index: { type: integer }, entete: { type: string }, champ: { type: string, nullable: true } } } }
+        champs: { type: array, items: { type: object, properties: { cle: { type: string }, requis: { type: boolean }, libelle: { type: object, properties: { FR: { type: string }, AR: { type: string } } } } } }
+        lignes:
+          type: array
+          maxItems: 20
+          items:
+            type: object
+            properties:
+              n: { type: integer, description: Numéro de ligne dans le fichier. }
+              valeurs: { type: array, items: { type: string } }
+              champs: { type: object, additionalProperties: { type: string, nullable: true } }
+              erreurs: { type: array, items: { type: string } }
+              avertissements: { type: array, items: { type: string } }
+        avertissements: { type: array, items: { type: string }, description: "Doublons de lot, somme des tantièmes ≠ règlement, même personne sur plusieurs lots, colonnes obligatoires non reconnues…" }
+    ImportResultat:
+      type: object
+      nullable: true
+      properties:
+        crees: { type: integer }
+        mis_a_jour: { type: integer }
+        ignorees: { type: integer }
+        deja_appliquees: { type: integer, description: "Lignes déjà appliquées par un import précédent (empreinte) — jamais rejouées." }
+        erreurs: { type: array, items: { type: object, properties: { n: { type: integer }, message: { type: string } } } }
+    ImportJob:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/TypeImport" }
+        statut: { $ref: "#/components/schemas/StatutImport" }
+        nomFichier: { type: string }
+        documentId: { type: string, format: uuid }
+        nbLignes: { type: integer }
+        nbTraitees: { type: integer, description: Progression (chunks de 50). }
+        nbErreurs: { type: integer }
+        mapping: { allOf: [{ $ref: "#/components/schemas/ImportMapping" }], nullable: true }
+        apercu: { allOf: [{ $ref: "#/components/schemas/ImportApercu" }], nullable: true }
+        resultat: { $ref: "#/components/schemas/ImportResultat" }
+        lancePar: { $ref: "#/components/schemas/IdentiteCourte" }
+        creeLe: { type: string, format: date-time }
+        termineLe: { type: string, format: date-time, nullable: true }
+    ImportCreate:
+      type: object
+      required: [type, storage_path, nom_fichier]
+      properties:
+        type: { $ref: "#/components/schemas/TypeImport" }
+        storage_path: { type: string, description: "Chemin retourné par POST /import/upload-url (périmètre `<copro>/import/`)." }
+        nom_fichier: { type: string }
+        options: { $ref: "#/components/schemas/ImportOptions" }
+    ImportMappingUpdate:
+      type: object
+      required: [colonnes]
+      properties:
+        colonnes: { type: array, items: { type: object, required: [index, champ], properties: { index: { type: integer }, champ: { type: string, nullable: true } } } }
+        options: { $ref: "#/components/schemas/ImportOptions" }
+    OnboardingChecklist:
+      type: object
+      properties:
+        copropriete_id: { type: string, format: uuid }
+        est_demo: { type: boolean }
+        etapes:
+          type: array
+          items:
+            type: object
+            properties:
+              cle: { type: string, enum: [residence_creee, lots_importes, tantiemes_coherents, proprietaires_invites, acceptes, budget_actif, premier_appel, rib_saisi, assurance_saisie, gardien_cree] }
+              fait: { type: boolean }
+              valeur: { nullable: true }
+              detail: { type: string, nullable: true }
+              lien: { type: string, description: Chemin web relatif de l'écran à ouvrir. }
+        faites: { type: integer }
+        total: { type: integer }
+        complet: { type: boolean, description: Tout est fait — la checklist disparaît des écrans. }
+        progression: { type: integer, description: Pourcentage. }
+        imports_termines: { type: integer }
+    DemoCopropriete:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nom: { type: string }
+        est_demo: { type: boolean }
+        demo_expire_le: { type: string, format: date-time, nullable: true }
+        invitation_syndic: { type: object, properties: { id: { type: string, format: uuid }, code: { type: string }, expire_le: { type: string, format: date-time } } }
+        lots: { type: integer }
 
   responses:
     ValidationError:
@@ -7342,3 +7458,120 @@ paths:
         "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { immatriculation: { type: string }, lot: { type: string, nullable: true }, notifies: { type: integer } } } } } } } }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  # ── M24 — Import Excel & onboarding (Doc A §11 — ⚠️ module absent du Master Spec, signalé ROADMAP M24) ──
+  /import:
+    get:
+      tags: [Import]
+      summary: Historique des imports (syndic ; conseil en lecture).
+      parameters:
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TypeImport" } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutImport" } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/ImportJob" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Import]
+      summary: "Créer un import (syndic) : le fichier téléversé est attaché (IMPORT_SOURCE, syndic seul), lu et analysé immédiatement — colonnes détectées par synonymes FR / AR / EN, aperçu de 20 lignes validées, avertissements (doublons, somme des tantièmes, téléphones, même personne sur plusieurs lots). Statut PRET, ou ANALYSE si une colonne obligatoire manque."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ImportCreate" } } } }
+      responses:
+        "201": { description: Analysé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ImportJob" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /import/upload-url:
+    post:
+      tags: [Import]
+      summary: URL signée d'upload du tableur (xlsx / csv, 2 h).
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nom_fichier, content_type], properties: { nom_fichier: { type: string }, content_type: { type: string } } } } } }
+      responses:
+        "201": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { storage_path: { type: string }, upload_url: { type: string }, token: { type: string } } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /import/modeles/{type}:
+    get:
+      tags: [Import]
+      summary: "Modèle xlsx téléchargeable (en-têtes FR ou AR + ligne d'exemple) — `?langue=fr|ar`."
+      parameters:
+        - { name: type, in: path, required: true, schema: { type: string }, description: "Type d'import (suffixe .xlsx accepté)." }
+        - { name: langue, in: query, schema: { type: string, enum: [fr, ar] } }
+      responses:
+        "200": { description: Fichier xlsx, content: { application/vnd.openxmlformats-officedocument.spreadsheetml.sheet: { schema: { type: string, format: binary } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /import/{id}:
+    get:
+      tags: [Import]
+      summary: État de l'import (progression `nbTraitees` / `nbLignes`, mapping, aperçu, résultat) — à interroger pendant l'exécution.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ImportJob" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /import/{id}/apercu:
+    get:
+      tags: [Import]
+      summary: Aperçu seul (20 lignes projetées sur le mapping, erreurs / avertissements).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { id: { type: string, format: uuid }, statut: { $ref: "#/components/schemas/StatutImport" }, mapping: { $ref: "#/components/schemas/ImportMapping" }, apercu: { $ref: "#/components/schemas/ImportApercu" } } } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /import/{id}/mapping:
+    patch:
+      tags: [Import]
+      summary: Corriger l'association colonne → champ et les options (syndic) ; ré-analyse. Refusé après lancement (422 IMPORT_STATUT_INVALIDE).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ImportMappingUpdate" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ImportJob" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /import/{id}/executer:
+    post:
+      tags: [Import]
+      summary: "Lancer l'exécution (syndic) : job Inngest par chunks de 50, transactionnel par chunk, point de sauvegarde par ligne, idempotent par empreinte de ligne (rejouer un fichier ne crée rien deux fois). `?sync=1` exécute en ligne. Notification IMPORT_TERMINE au lanceur ; audité."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: sync, in: query, schema: { type: string, enum: ["1"] } }
+      responses:
+        "202": { description: Lancé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ImportJob" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /import/{id}/annuler:
+    post:
+      tags: [Import]
+      summary: Annuler (syndic) — l'exécution s'arrête entre deux chunks ; les lignes déjà appliquées restent.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /import/{id}/rapport.csv:
+    get:
+      tags: [Import]
+      summary: "Rapport ligne à ligne (csv) : n° de ligne, résultat (CREE / MIS_A_JOUR / IGNOREE / ERREUR), message, détails."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: csv, content: { text/csv: { schema: { type: string } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /invitations/envoyer-en-masse:
+    post:
+      tags: [Import]
+      summary: "Envoi en masse des invitations pré-remplies (syndic) — jamais automatique après un import. SMS / EMAIL : transport de notification (statistiques) ; WHATSAPP / CSV : fichier « nom, prénom, téléphone, e-mail, rôle, lot, code, lien, lien WhatsApp, expiration » pour un envoi manuel. `envoyee_le` posé ; audit INVITATIONS_ENVOI_MASSE."
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [canal], properties: { canal: { type: string, enum: [SMS, EMAIL, WHATSAPP, CSV] }, invitation_ids: { type: array, items: { type: string, format: uuid } }, import_job_id: { type: string, format: uuid } } } } } }
+      responses:
+        "200": { description: "JSON (SMS / EMAIL) ou csv (WHATSAPP / CSV)", content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { canal: { type: string }, total: { type: integer }, envoyees: { type: integer }, sans_contact: { type: integer }, echouees: { type: integer } } } } } }, text/csv: { schema: { type: string } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /coproprietes/{id}/onboarding:
+    get:
+      tags: [Import]
+      summary: "Checklist de démarrage calculée depuis les données (syndic, conseil) : résidence créée → lots importés → tantièmes cohérents → propriétaires invités → % acceptés → budget actif → premier appel envoyé (hors SOLDE_OUVERTURE) → RIB saisi → assurance saisie → gardien créé."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/OnboardingChecklist" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /coproprietes/{id}/demo:
+    post:
+      tags: [Import]
+      summary: "SUPER_ADMIN — crée une résidence de démonstration jetable (lots, budget, appel, paiement, incidents, annonce, emplacements, assurance) marquée `est_demo`, exclue des rapports / exports transverses et purgée par le job `demo-purge-quotidien` après `jours` (30 par défaut). Renvoie le code d'invitation SYNDIC pour le prospect."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { nom: { type: string }, jours: { type: integer, minimum: 1, maximum: 90, default: 30 } } } } } }
+      responses:
+        "201": { description: Créée, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/DemoCopropriete" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }

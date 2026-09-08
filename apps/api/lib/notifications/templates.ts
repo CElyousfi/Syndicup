@@ -586,6 +586,19 @@ const PARKINGS: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, PARKINGS);
 
+// ── M24 — Import & onboarding (Doc A §11) ─────────────────────────────────────────────────
+const IMPORT: Record<string, Entree> = {
+  IMPORT_TERMINE: {
+    FR: { titre: "Import terminé : {{crees}} créé(s), {{mis_a_jour}} mis à jour", corps: "{{erreurs}} ligne(s) en erreur — consultez le rapport pour les corriger et relancer (rien n'est importé deux fois)." },
+    AR: { titre: "اكتمل الاستيراد: {{crees}} أُنشئ، {{mis_a_jour}} حُدّث", corps: "{{erreurs}} سطر (أسطر) بها أخطاء — راجعوا التقرير لتصحيحها وإعادة التشغيل (لا يُستورد شيء مرتين)." },
+  },
+  INVITATION_ENVOI: {
+    FR: { titre: "{{residence}} vous invite sur SyndicUp", corps: "Bonjour {{nom}}, votre syndic a préparé votre accès (lot {{lot}}). Ouvrez ce lien pour activer votre compte : {{lien}}" },
+    AR: { titre: "{{residence}} تدعوكم إلى SyndicUp", corps: "مرحبًا {{nom}}، أعدّ السنديك حسابكم (الشقة {{lot}}). افتحوا هذا الرابط لتفعيله: {{lien}}" },
+  },
+};
+Object.assign(TEMPLATES, IMPORT);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

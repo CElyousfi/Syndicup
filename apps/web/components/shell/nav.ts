@@ -29,7 +29,8 @@ export type IconKey =
   | "handshake"
   | "megaphone"
   | "tasks"
-  | "car";
+  | "car"
+  | "download";
 
 export interface NavItem {
   href: string;
@@ -108,6 +109,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const invitations: NavItem = { href: p("/invitations"), label: d.invitations, icon: "key" };
   const membres: NavItem = { href: p("/membres"), label: d.membres, icon: "users" };
   const parametres: NavItem = { href: p("/parametres"), label: d.parametres, icon: "settings" };
+  // M24 — import Excel / démarrage (syndic ; conseil en lecture).
+  const importer: NavItem = { href: p("/import"), label: d.importer, icon: "download" };
   // M15 — location courte durée : régime, déclarations de lots, séjours (Doc A §10.2).
   const lcd: NavItem = {
     href: p("/location-courte-duree"),
@@ -145,7 +148,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
           label: s.quotidien,
           items: [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
-        { label: s.administration, items: [membres, invitations, parametres] },
+        { label: s.administration, items: [importer, membres, invitations, parametres] },
       ];
     case "CONSEIL_SYNDICAL":
       return [

@@ -1044,11 +1044,53 @@ async function main() {
     ],
   });
 
+  // ── M24 — Import Excel & onboarding (Doc A §11) : import LOTS_PROPRIETAIRES terminé (fichier source
+  // SYNDIC_ONLY, journal ligne à ligne), invitation pré-remplie jamais envoyée seule, solde d'ouverture
+  // repris pour A3 (ligne d'appel SOLDE_OUVERTURE ⚠️ valeur d'enum ajoutée, la plus ancienne du relevé). ──
+  const docImport = await prisma.document.create({
+    data: { coproprieteId: copro.id, type: "IMPORT_SOURCE", nom: "lots-al-amal.xlsx", visibilite: "SYNDIC_ONLY", storagePath: `${copro.id}/import/${randomUUID()}-lots-al-amal.xlsx`, creePar: syndicUser.id, creeLe: jour(-400) },
+  });
+  const importJob = await prisma.importJob.create({
+    data: {
+      coproprieteId: copro.id, type: "LOTS_PROPRIETAIRES", documentId: docImport.id, statut: "TERMINE", lanceParId: syndicUser.id, nbLignes: 5, nbTraitees: 5, nbErreurs: 0, creeLe: jour(-400), termineLe: jour(-400),
+      mappingJson: { colonnes: [{ index: 0, entete: "N° lot", champ: "numero" }, { index: 1, entete: "Étage", champ: "etage" }, { index: 2, entete: "Tantièmes", champ: "tantiemes" }, { index: 3, entete: "Propriétaire", champ: "nom" }, { index: 4, entete: "Téléphone", champ: "telephone" }], options: { inviter: true, canal: "SMS" } },
+      apercuJson: { entetes: ["N° lot", "Étage", "Tantièmes", "Propriétaire", "Téléphone"], feuille: "Lots", colonnes: [], champs: [], lignes: [], avertissements: ["Somme des tantièmes du fichier : 1000.00 — total du règlement : 1000.00."] },
+      resultatJson: { crees: 5, mis_a_jour: 0, ignorees: 0, deja_appliquees: 0, erreurs: [] },
+    },
+  });
+  await prisma.importJobLog.createMany({
+    data: [
+      { coproprieteId: copro.id, importJobId: importJob.id, type: "CREE", horodatage: jour(-400) },
+      { coproprieteId: copro.id, importJobId: importJob.id, type: "ANALYSE", detailsJson: { nb_lignes: 5, nb_erreurs: 0 }, horodatage: jour(-400) },
+      { coproprieteId: copro.id, importJobId: importJob.id, type: "LANCE", horodatage: jour(-400) },
+      ...[lotA1, lotA2, lotA3, parkingP1, loge].map((l, i) => ({ coproprieteId: copro.id, importJobId: importJob.id, type: "LIGNE" as const, ligne: i + 2, hash: `seed-lots-${l.numero.toLowerCase()}`, resultat: "CREE", detailsJson: { lot_id: l.id, numero: l.numero }, horodatage: jour(-400) })),
+      { coproprieteId: copro.id, importJobId: importJob.id, type: "TERMINE", detailsJson: { crees: 5 }, horodatage: jour(-400) },
+    ],
+  });
+  // Invitation pré-remplie (locataire de A3, jamais envoyée automatiquement) — l'écran « Invitations en masse » la propose.
+  await prisma.invitation.create({
+    data: { coproprieteId: copro.id, lotId: lotA3.id, roleCible: "LOCATAIRE", emetteurId: syndicUser.id, canal: "SMS", code: "SEEDIMP1", expireLe: new Date(Date.now() + 48 * 3600 * 1000), importJobId: importJob.id, preRempliJson: { nom: "Tazi", prenom: "Nour", telephone: "+212600000099", email: null, langue: "FR", lots: [{ lot_id: lotA3.id }] } },
+  });
+  // Solde d'ouverture de A3 : 600 MAD dus au 1er janvier de l'exercice — première ligne du relevé (FIFO, escalade).
+  const appelOuverture = await prisma.appelDeFonds.create({
+    data: { coproprieteId: copro.id, periode: `${exercice}-01`, type: "SOLDE_OUVERTURE", montantTotal: "600.00", dateEcheance: new Date(`${exercice}-01-01`), statut: "EMIS", lignes: { create: [{ lotId: lotA3.id, montantDu: "600.00", niveauEscalade: "N2", derniereEscaladeLe: jour(-20) }] } },
+    include: { lignes: true },
+  });
+  await prisma.soldeOuverture.create({ data: { coproprieteId: copro.id, lotId: lotA3.id, montant: "600.00", dateReference: new Date(`${exercice}-01-01`), commentaire: "Arriérés repris de l'ancien syndic (tableur).", importJobId: importJob.id, appelDeFondsLotId: appelOuverture.lignes[0]!.id } });
+  await prisma.soldeOuverture.create({ data: { coproprieteId: copro.id, lotId: lotA1.id, montant: "-120.00", dateReference: new Date(`${exercice}-01-01`), commentaire: "Trop-perçu de l'ancien syndic (avoir)." } });
+  await prisma.auditLog.createMany({
+    data: [
+      { coproprieteId: copro.id, acteurId: syndicUser.id, action: "IMPORT_CREE", entite: "import_job", entiteId: importJob.id, apresJson: { type: "LOTS_PROPRIETAIRES", nom_fichier: "lots-al-amal.xlsx", nb_lignes: 5 }, horodatage: jour(-400) },
+      { coproprieteId: copro.id, acteurId: syndicUser.id, action: "IMPORT_TERMINE", entite: "import_job", entiteId: importJob.id, apresJson: { type: "LOTS_PROPRIETAIRES", crees: 5, mis_a_jour: 0, ignorees: 0, erreurs: 0 }, horodatage: jour(-400) },
+    ],
+  });
+
   console.log("Seed terminé :", {
     personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
     rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
     parkings: { emplacements: 8, attributions: 3, vehicules: 4, badges: 4, redevance: periodeRedevance },
+    import: { job: importJob.id, soldeOuvertureA3: appelOuverture.id },
     copropriete: copro.nom,
     utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },

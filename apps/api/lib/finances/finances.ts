@@ -256,10 +256,17 @@ export async function obtenirSoldeLot(ctx: TenantContext, lotId: string) {
     // M17 — paiements déclarés par le résident, pas encore validés par le syndic : affichés
     // « en attente de validation », jamais déduits du solde dû tant que non validés.
     const enAttente = await db.justificatifPaiement.aggregate({ where: { lotId, statut: "EN_ATTENTE" }, _sum: { montant: true }, _count: { _all: true } });
+    // M24 — solde d'ouverture repris d'un import : un dû est déjà une ligne d'appel SOLDE_OUVERTURE (la
+    // plus ancienne, FIFO / escalade) ; un avoir (montant négatif) est déduit du solde affiché.
+    const ouverture = await db.soldeOuverture.findUnique({ where: { coproprieteId_lotId: { coproprieteId: ctx.coproprieteId, lotId } }, select: { montant: true, dateReference: true, commentaire: true, appelDeFondsLotId: true } }).catch(() => null);
+    const avoir = ouverture && money(ouverture.montant).lessThan(0) ? money(ouverture.montant).abs() : money(0);
+    const soldeNet = solde.minus(avoir);
 
     return {
       lot_id: lotId,
-      solde_du: toApiString(solde),
+      solde_du: toApiString(soldeNet.lessThan(0) ? money(0) : soldeNet),
+      avoir_ouverture: toApiString(avoir),
+      solde_ouverture: ouverture ? { montant: toApiString(ouverture.montant), date_reference: ouverture.dateReference.toISOString().slice(0, 10), commentaire: ouverture.commentaire, appel_de_fonds_lot_id: ouverture.appelDeFondsLotId } : null,
       justificatifs_en_attente: toApiString(enAttente._sum.montant ?? 0),
       nb_justificatifs_en_attente: enAttente._count._all,
       lignes: lignes.map((l) => ({

@@ -290,6 +290,10 @@ export interface Invitation {
   expireLe: string;
   /** Premier scan (usage unique) — null tant que personne n'a ouvert le code. */
   ouverteLe?: string | null;
+  /** M24 — identité pré-remplie par un import ; `envoyeeLe` = envoi en masse. */
+  preRempliJson?: { nom?: string; prenom?: string; telephone?: string | null; email?: string | null; lots?: unknown[] } | null;
+  envoyeeLe?: string | null;
+  importJobId?: string | null;
   creeLe: string;
 }
 
@@ -1584,3 +1588,47 @@ export interface VisiteursAujourdhui {
   sejours: { sejour_id: string; voyageur: string; lot: string | null; immatriculation: string | null; date_depart: string; emplacement: { id: string; code: string; niveau: string | null } | null }[];
   places_libres: { id: string; code: string; niveau: string | null }[];
 }
+
+// ── M24 — Import Excel & onboarding (Doc A §11 — ⚠️ module absent du Master Spec, signalé ROADMAP M24) ──
+export type TypeImport = "LOTS_PROPRIETAIRES" | "SOLDES_OUVERTURE" | "PRESTATAIRES" | "CONTRATS" | "VEHICULES_BADGES" | "PERSONNEL";
+export type StatutImport = "TELEVERSE" | "ANALYSE" | "PRET" | "EN_COURS" | "TERMINE" | "ECHOUE" | "ANNULE";
+export interface ImportColonne { index: number; entete: string; champ: string | null }
+export interface ImportOptions { date_reference?: string; inviter?: boolean; canal?: "SMS" | "EMAIL" | "WHATSAPP" }
+export interface ImportApercu {
+  entetes: string[];
+  feuille: string;
+  colonnes: ImportColonne[];
+  champs: { cle: string; requis: boolean; libelle: { FR: string; AR: string } }[];
+  lignes: { n: number; valeurs: string[]; champs: Record<string, string | null>; erreurs: string[]; avertissements: string[] }[];
+  avertissements: string[];
+}
+export interface ImportResultat { crees: number; mis_a_jour: number; ignorees: number; deja_appliquees?: number; erreurs: { n: number; message: string }[]; echec?: string }
+export interface ImportJob {
+  id: string;
+  coproprieteId: string;
+  type: TypeImport;
+  statut: StatutImport;
+  nomFichier: string;
+  documentId: string;
+  nbLignes: number;
+  nbTraitees: number;
+  nbErreurs: number;
+  mapping?: { colonnes: ImportColonne[]; options?: ImportOptions } | null;
+  apercu?: ImportApercu | null;
+  resultat: ImportResultat | null;
+  lancePar: IdentiteCourte | null;
+  creeLe: string;
+  termineLe: string | null;
+}
+export type CleOnboarding = "residence_creee" | "lots_importes" | "tantiemes_coherents" | "proprietaires_invites" | "acceptes" | "budget_actif" | "premier_appel" | "rib_saisi" | "assurance_saisie" | "gardien_cree";
+export interface OnboardingChecklist {
+  copropriete_id: string;
+  est_demo: boolean;
+  etapes: { cle: CleOnboarding; fait: boolean; valeur?: string | number | null; detail?: string | null; lien: string }[];
+  faites: number;
+  total: number;
+  complet: boolean;
+  progression: number;
+  imports_termines: number;
+}
+export interface DemoCopropriete { id: string; nom: string; est_demo: boolean; demo_expire_le: string | null; invitation_syndic: { id: string; code: string; expire_le: string }; lots: number }

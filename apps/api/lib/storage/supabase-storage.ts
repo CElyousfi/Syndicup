@@ -122,3 +122,12 @@ export async function supprimerObjet(storagePath: string): Promise<void> {
     throw new Error(`Storage remove: ${error.message}`);
   }
 }
+
+/** Lecture serveur d'un objet du bucket privé (fichier source d'un import M24) — jamais exposé au client. */
+export async function telechargerObjet(storagePath: string): Promise<Buffer> {
+  await ensureBucketDocuments();
+  const supabase = getServiceRoleClient();
+  const { data, error } = await supabase.storage.from(BUCKET_DOCUMENTS).download(storagePath);
+  if (error || !data) throw new Error(`Lecture du fichier impossible : ${error?.message ?? "objet absent"}`);
+  return Buffer.from(await data.arrayBuffer());
+}

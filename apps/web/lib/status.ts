@@ -157,3 +157,5 @@ export const prioriteVariant = map({ BASSE: "neutral", NORMALE: "outline", HAUTE
 // M23 — parkings.
 export const emplacementVariant = map({ DISPONIBLE: "ok", ATTRIBUE: "info", HORS_SERVICE: "neutral" });
 export const badgeAccesVariant = map({ ACTIF: "ok", PERDU: "danger", DESACTIVE: "neutral", RESTITUE: "outline" });
+// M24 — imports.
+export const importVariant = map({ TELEVERSE: "neutral", ANALYSE: "warn", PRET: "info", EN_COURS: "info", TERMINE: "ok", ECHOUE: "danger", ANNULE: "neutral" });

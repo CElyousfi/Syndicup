@@ -271,10 +271,17 @@ model Copropriete {
   // saisis par le syndic ; la validation d'une fiche de paie est refusée tant qu'ils sont absents
   // (422 PAIE_PARAMETRES_NON_CONFIGURES). Schéma Zod : apps/api/lib/personnel/paie.ts.
   parametresPaieJson               Json?                     @map("parametres_paie_json")
+  // M24 — Résidence de démonstration (SUPER_ADMIN, prospect) : exclue des exports / rapports transverses,
+  // purgée par le job `demo-purge-quotidien` après `demo_expire_le` (⚠️ colonnes ajoutées et signalées).
+  estDemo                          Boolean                   @default(false) @map("est_demo")
+  demoExpireLe                     DateTime?                 @map("demo_expire_le") @db.Timestamptz
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
   rolesUtilisateur        RoleUtilisateur[]
+  importJobs              ImportJob[]
+  importJobLogs           ImportJobLog[]
+  soldesOuverture         SoldeOuverture[]
   invitations             Invitation[]
   lots                    Lot[]
   espacesCommuns          EspaceCommun[]
@@ -393,6 +400,7 @@ model Utilisateur {
   vehicules                Vehicule[]
   badgesRemis              Badge[]                   @relation("BadgeRemisPar")
   attributionsCreees       AttributionEmplacement[]  @relation("AttributionCreateur")
+  importsLances            ImportJob[]               @relation("ImportLanceur")
 
   @@map("utilisateur")
 }
@@ -436,9 +444,20 @@ model Invitation {
   // Usage unique (M17) : premier scan → lié à l'appareil (jeton haché) ; les autres sont refusés.
   ouverteLe          DateTime?        @map("ouverte_le") @db.Timestamptz
   jetonOuvertureHash String?          @map("jeton_ouverture_hash")
+  // M24 — Import Excel (⚠️ colonnes ajoutées et signalées) : identité pré-remplie depuis le tableur
+  // ({ nom, prenom, telephone, email, langue, lots: [{ lot_id, quote_part, type_propriete }], poste })
+  // matérialisée à l'acceptation par `invitation_accepter` (lot_proprietaire / lot_occupant /
+  // personnel) — aucun compte fantôme n'est créé avant l'acceptation ; `envoyee_le` = envoi en masse.
+  preRempliJson      Json?            @map("pre_rempli_json")
+  envoyeeLe          DateTime?        @map("envoyee_le") @db.Timestamptz
+  /// Compte qui a accepté (posé par `invitation_accepter`) — rééquilibrage des quote-parts d'indivision importées, « % acceptés ».
+  accepteParId       String?          @map("accepte_par_id") @db.Uuid
+  importJobId        String?          @map("import_job_id") @db.Uuid
+  importJob          ImportJob?       @relation(fields: [importJobId], references: [id])
   creeLe             DateTime         @default(now()) @map("cree_le") @db.Timestamptz
 
   @@index([coproprieteId])
+  @@index([importJobId])
   @@map("invitation")
 }
 
@@ -485,6 +504,7 @@ model Lot {
   badges                  Badge[]
   sejoursLcd              SejourCourteDuree[]
   justificatifs           JustificatifPaiement[]
+  soldeOuvertures         SoldeOuverture[]
 
   @@index([coproprieteId])
   @@map("lot")
@@ -504,7 +524,8 @@ model EspaceCommun {
   // ajouté par nécessité pour distinguer les deux modes explicitement demandés par Doc A.
   validationAutomatique Boolean     @default(false) @map("validation_automatique")
 
-  reservations ReservationEspaceCommun[]
+  reservations    ReservationEspaceCommun[]
+  soldesOuverture SoldeOuverture[]
 
   @@index([coproprieteId])
   @@map("espace_commun")
@@ -606,6 +627,8 @@ model Document {
   // M21 — pièce jointe d'une annonce (type ANNONCE_PJ) — ⚠️ colonne de liaison ajoutée et signalée.
   annonceId          String?                @map("annonce_id") @db.Uuid
   annonce            Annonce?               @relation("AnnonceDocument", fields: [annonceId], references: [id])
+  // M24 — fichier source d'un import (type IMPORT_SOURCE, SYNDIC_ONLY).
+  importJobs         ImportJob[]
   // M22 — pièce jointe d'une tâche (type TACHE_PJ) — ⚠️ colonne de liaison ajoutée et signalée.
   tacheId            String?                @map("tache_id") @db.Uuid
   tache              Tache?                 @relation("TacheDocument", fields: [tacheId], references: [id])
@@ -910,6 +933,10 @@ enum TypeAppelDeFonds {
   // M23 — ⚠️ valeur ABSENTE du Master Spec, ajoutée et signalée : redevance mensuelle d'usage d'un
   // emplacement commun attribué (Doc A §4, décision d'AG), appelée par le job parkings-redevances-mensuel.
   REDEVANCE_PARKING
+  // M24 — ⚠️ valeur ABSENTE du Master Spec, ajoutée et signalée : solde d'ouverture repris d'un import
+  // Excel (Doc A §11) — matérialisé comme première ligne du relevé du lot (FIFO M17 : la plus ancienne,
+  // escalade M5), jamais compté comme « premier appel envoyé » par l'onboarding.
+  SOLDE_OUVERTURE
 }
 
 enum StatutAppelDeFonds {
@@ -1041,10 +1068,11 @@ model AppelDeFondsLot {
   creeLe             DateTime              @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe          DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
 
-  paiements     Paiement[]
-  quittance     Quittance?
-  contestations ContestationCharge[]
-  sessionsCmi   PaiementCmiSession[]
+  paiements      Paiement[]
+  soldeOuverture SoldeOuverture?
+  quittance      Quittance?
+  contestations  ContestationCharge[]
+  sessionsCmi    PaiementCmiSession[]
 
   @@unique([appelDeFondsId, lotId])
   @@index([lotId])
@@ -2788,4 +2816,113 @@ model Badge {
   @@unique([coproprieteId, type, identifiant])
   @@index([lotId])
   @@map("badge")
+}
+
+// ============================================================================
+// M24 — IMPORT EXCEL & ONBOARDING (Doc A §11) — ⚠️ module absent du Master Spec, signalé ROADMAP M24
+// ============================================================================
+
+enum TypeImport {
+  LOTS_PROPRIETAIRES
+  SOLDES_OUVERTURE
+  PRESTATAIRES
+  CONTRATS
+  VEHICULES_BADGES
+  PERSONNEL
+}
+
+enum StatutImport {
+  TELEVERSE
+  ANALYSE
+  PRET
+  EN_COURS
+  TERMINE
+  ECHOUE
+  ANNULE
+}
+
+enum TypeImportJobLog {
+  CREE
+  ANALYSE
+  MAPPING
+  LANCE
+  LIGNE
+  TERMINE
+  ECHEC
+  ANNULE
+}
+
+/// Import d'un tableur (xlsx / csv) — analysé côté serveur, mapping confirmé par le syndic, exécuté par chunks idempotents.
+model ImportJob {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String       @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete  @relation(fields: [coproprieteId], references: [id])
+  type          TypeImport
+  documentId    String       @map("document_id") @db.Uuid
+  document      Document     @relation(fields: [documentId], references: [id])
+  statut        StatutImport @default(TELEVERSE)
+  /// { colonnes: [{ index, entete, champ | null }], options: {...} } — confirmé par l'utilisateur.
+  mappingJson   Json?        @map("mapping_json")
+  /// { entetes, lignes: [{ n, valeurs, champs, erreurs, avertissements }] (≤ 20), avertissements: [] }
+  apercuJson    Json?        @map("apercu_json")
+  /// { crees, mis_a_jour, ignorees, erreurs: [{ n, message }] }
+  resultatJson  Json?        @map("resultat_json")
+  nbLignes      Int          @default(0) @map("nb_lignes")
+  nbTraitees    Int          @default(0) @map("nb_traitees")
+  nbErreurs     Int          @default(0) @map("nb_erreurs")
+  lanceParId    String       @map("lance_par_id") @db.Uuid
+  lancePar      Utilisateur  @relation("ImportLanceur", fields: [lanceParId], references: [id])
+  creeLe        DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+  termineLe     DateTime?    @map("termine_le") @db.Timestamptz
+
+  logs            ImportJobLog[]
+  soldesOuverture SoldeOuverture[]
+  invitations     Invitation[]
+
+  @@index([coproprieteId, creeLe])
+  @@map("import_job")
+}
+
+/// Journal append-only d'un import : une ligne par événement et par ligne traitée (hash = idempotence entre rejeux).
+model ImportJobLog {
+  id            String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String           @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete      @relation(fields: [coproprieteId], references: [id])
+  importJobId   String           @map("import_job_id") @db.Uuid
+  importJob     ImportJob        @relation(fields: [importJobId], references: [id])
+  type          TypeImportJobLog
+  ligne         Int?
+  /// Empreinte (type d'import + valeurs normalisées) — une ligne déjà appliquée dans la copropriété n'est jamais rejouée.
+  hash          String?
+  /// CREE | MIS_A_JOUR | IGNOREE | ERREUR
+  resultat      String?
+  detailsJson   Json?            @map("details_json")
+  horodatage    DateTime         @default(now()) @db.Timestamptz
+
+  @@index([importJobId])
+  @@index([coproprieteId, hash])
+  @@map("import_job_log")
+}
+
+/// Solde repris à l'ouverture (Doc A §11) : positif = dû par le lot (matérialisé comme ligne d'appel
+/// SOLDE_OUVERTURE, la plus ancienne pour le FIFO M17 et l'escalade), négatif = avoir (déduit du solde affiché).
+model SoldeOuverture {
+  id                String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId     String           @map("copropriete_id") @db.Uuid
+  copropriete       Copropriete      @relation(fields: [coproprieteId], references: [id])
+  lotId             String           @map("lot_id") @db.Uuid
+  lot               Lot              @relation(fields: [lotId], references: [id])
+  montant           Decimal          @db.Decimal(14, 2)
+  dateReference     DateTime         @map("date_reference") @db.Date
+  commentaire       String?
+  importJobId       String?          @map("import_job_id") @db.Uuid
+  importJob         ImportJob?       @relation(fields: [importJobId], references: [id])
+  appelDeFondsLotId String?          @unique @map("appel_de_fonds_lot_id") @db.Uuid
+  appelDeFondsLot   AppelDeFondsLot? @relation(fields: [appelDeFondsLotId], references: [id])
+  creeLe            DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+  espaceCommun      EspaceCommun?    @relation(fields: [espaceCommunId], references: [id])
+  espaceCommunId    String?          @db.Uuid
+
+  @@unique([coproprieteId, lotId])
+  @@map("solde_ouverture")
 }

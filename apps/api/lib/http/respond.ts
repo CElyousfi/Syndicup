@@ -76,7 +76,11 @@ export type ErrorCode =
   | "IMMATRICULATION_EXISTANTE"
   | "IMMATRICULATION_INCONNUE"
   | "BADGE_STATUT_INVALIDE"
-  | "BADGE_IDENTIFIANT_EXISTANT";
+  | "BADGE_IDENTIFIANT_EXISTANT"
+  // M24 — import / onboarding.
+  | "IMPORT_FICHIER_ILLISIBLE"
+  | "IMPORT_STATUT_INVALIDE"
+  | "DEMO_INTERDIT";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -134,6 +138,9 @@ const STATUS: Record<ErrorCode, number> = {
   IMMATRICULATION_INCONNUE: 422,
   BADGE_STATUT_INVALIDE: 422,
   BADGE_IDENTIFIANT_EXISTANT: 409,
+  IMPORT_FICHIER_ILLISIBLE: 422,
+  IMPORT_STATUT_INVALIDE: 422,
+  DEMO_INTERDIT: 422,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {
