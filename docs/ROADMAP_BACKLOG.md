@@ -847,6 +847,77 @@ signalée dans les erreurs du job, jamais supprimée à moitié.
   avance / trop-perçu comme avoir automatique (moteur M5) ; fusion d'un compte existant avec une
   invitation d'un autre numéro ; import depuis le mobile (web-first, voir parité).
 
+## M25 — Cabinet / portefeuille multi-résidences
+
+*Réf. Doc A §8 (syndic professionnel), Master Spec Partie 1.6 (deux couches), 2.4 (un syndic
+actif), 4 (rôles). Domaine : `22-cabinet.md`. Juridique : brief §16. Branche
+`feature/m25-cabinet`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `StatutCabinet`, `RoleCabinet`,
+`StatutMandat`, `TypeCabinetLog` ; **valeur `RoleType.SYNDIC_COMPTABLE`** (comptable d'un cabinet,
+lecture seule des finances — policies SELECT **additives** `comptable_select` sur depense,
+depense_log, facture, justificatif_paiement, fonds_reserve(+mouvement), contrat, contrat_echeance,
+contrat_log, rapport_gestion, contestation_charge, appel_de_fonds_lot, paiement, quittance,
+lot_proprietaire, lot_occupant, lot, export_log (+ INSERT), solde_ouverture, import_job ; aucune
+policy existante modifiée) ; tables `cabinet`, `cabinet_membre`, `cabinet_copropriete`,
+`cabinet_log` (append-only), `cabinet_prestataire` ; colonnes `copropriete.cabinet_id`,
+`role_utilisateur.cabinet_id` (rôle posé par le cabinet), `prestataire.cabinet_prestataire_id` ;
+fonctions SQL `cabinet_role_courant`, `cabinet_appliquer_acces`, `cabinet_mandat_confirmer`,
+`cabinet_mandat_terminer`, `cabinet_portefeuille`, `cabinet_coproprietes_visibles`,
+`cabinet_identites`, `cabinet_trouver_utilisateur`, `cabinet_creer_copropriete`,
+`cabinet_fiche_publique`, `cabinet_marque`, `cabinet_coproprietes_fiche`,
+`portefeuille_kpi_rafraichir` ; vue matérialisée `portefeuille_kpi` ; helper `withActeur`
+(transaction sans copropriété) ; permissions `cabinet.mandat.confirmer`, `cabinet.mandat.lire` +
+`SYNDIC_COMPTABLE: true` sur 19 lectures finances ; codes `CABINET_STATUT_INVALIDE`,
+`MANDAT_EXISTANT`, `MANDAT_STATUT_INVALIDE`, `CONFLIT_SYNDIC`. **Écarts par rapport au prompt** :
+(1) l'annuaire partagé est une table `cabinet_prestataire` copiée dans `prestataire`
+(`Prestataire.cabinetId` aurait créé une ligne sans copropriété, impossible sous RLS) ; (2) un
+membre de cabinet sans aucun rôle de copropriété n'accède pas encore aux écrans (JWT sans rôle →
+`/compte/sans-acces`) — les routes `/cabinets/*` acceptent déjà le JWT seul, la claim « cabinet »
+et l'écran d'accueil cabinet-seul sont à faire ; (3) la fin de mandat laisse la copropriété sans
+syndic (l'opérateur ou l'AG désigne le suivant) — pas de réactivation automatique de l'ancien ;
+(4) les KPI agrégés (agenda, alertes) sont calculés copropriété par copropriété sous un contexte
+système interne après vérification de l'appartenance (les policies ne regardent jamais le
+cabinet) ; (5) la marque du cabinet apparaît sur le rapport de gestion et les relevés (texte),
+pas encore sur les convocations d'AG ni en logo.
+
+- [x] **Livré (08/09)** — Migrations `..._m25_cabinet` (tables, RLS par appartenance,
+  réconciliation des accès, confirmation / fin de mandat SQL, vue matérialisée + fonctions,
+  policies du comptable), `..._m25_cabinet_fonctions`, `..._m25_cabinet_copro_fiche`,
+  `..._m25_comptable_lot`. Seed Al Amal : cabinet « Atlas Gestion » (syndic = admin, gestionnaire
+  Salma Tahiri +212600000010), mandat actif sur Al Amal (honoraires 2 500 MAD → contrat
+  SYNDIC_PROFESSIONNEL) et sur une seconde résidence « Les Palmiers » (3 lots, budget, appel,
+  impayés N1, incident urgent — la gestionnaire en est SYNDIC via `cabinet_id`), annuaire (Otis,
+  Clean Pro), journal, vue rafraîchie.
+- [x] **Livré (08/09)** — API tag `Cabinet` (19 opérations) : cabinets (liste / fiche / création
+  SUPER_ADMIN / modification), membres (ajout par id / téléphone / e-mail, rôle, retrait),
+  mandats (proposer sur une copropriété existante ou créer une résidence, modifier, terminer,
+  **confirmer** par le syndic en place), portefeuille (tri, alertes, csv / xlsx), agenda, alertes,
+  annuaire (modèles, copie), `GET /coproprietes/{id}/mandat`. Job `portefeuille-kpi-refresh`
+  (*/15). Notifications FR/AR `MANDAT_PROPOSE`, `MANDAT_CONFIRME`, `MANDAT_TERMINE`. Marque du
+  cabinet sur rapport de gestion et relevé. Tests `tests/cabinet.test.ts` (7) : création /
+  appartenance / étranger, passation (rôle cédé, SYNDIC + SYNDIC_COMPTABLE posés, contrat
+  d'honoraires, doublon 409, conseil refusé), comptable lecture seule (solde, appels ; écriture
+  refusée ; rien dans une autre copropriété), KPI de la vue = données (lots, appelé, encaissé,
+  taux, impayés, incidents, tâches, AG, assurance, alertes, totaux), gestionnaire ne voit que ses
+  copropriétés / cabinet B rien, changement de gestionnaire bascule SYNDIC, résidence créée =
+  mandat actif, retrait du comptable et fin de mandat révoquent atomiquement, dernier admin
+  protégé, annuaire copié idempotent / hors portefeuille refusé.
+- [x] **Livré (08/09)** — Web : `cabinet/` (portefeuille avec totaux, tri, filtre alertes, export,
+  ouverture d'une copropriété en un clic ; alertes ; agenda ; équipe + mandats ; annuaire ;
+  paramètres), sélecteur de cabinet, lien « cabinet » au-dessus de la copropriété active,
+  Paramètres → « Cabinet de syndic » (mandat proposé / actif, **confirmation de la passation**),
+  rôle `SYNDIC_COMPTABLE` (navigation finance en lecture, tableau de bord en lecture, gardes des
+  pages finances / rapports / contrats / import / lots), FR/AR RTL.
+- [x] **Livré (08/09)** — Mobile `features/cabinet/cabinet_screens.dart` : portefeuille (cartes
+  KPI), alertes, agenda (lecture), sélecteur de cabinet, navigation (syndic : administration ;
+  comptable : finances en lecture) ; test routeur M25.
+- [ ] **Non livré / à confirmer** : claim JWT « cabinet » et accueil pour un membre sans rôle de
+  copropriété ; convocations d'AG avec marque et logo du cabinet ; sparklines historiques (la vue
+  ne garde que l'instantané) ; facturation des honoraires par le cabinet (avoir / relance) ;
+  gestion (membres, mandats) depuis le mobile (web-first, voir parité) ; désignation du syndic
+  suivant à la fin d'un mandat.
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

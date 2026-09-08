@@ -540,6 +540,44 @@ l'export csv pour un envoi manuel.
 temporairement 100 % des droits de vote / quote-part du lot (contrainte « somme = 100 % »), puis
 rééquilibre. Est-ce acceptable pour une AG tenue entre-temps (représentant de l'indivision) ?
 
+## 16. Mandat du syndic professionnel, honoraires, passation, comptable du cabinet (module M25)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `cabinet_copropriete.honoraires_mensuels` | **NULL par défaut** (2 500 / 1 800 MAD dans le seed) — contrat SYNDIC_PROFESSIONNEL mensuel, dépenses HONORAIRES_SYNDIC | PROVISOIRE |
+| `cabinet_copropriete.resolution_ag_id` | facultatif — le module n'exige pas de résolution ADOPTEE pour activer un mandat | PROVISOIRE |
+| Passation | confirmée par le SYNDIC en place (son rôle est désactivé) ; une copropriété créée par le cabinet a un mandat actif immédiat | PROVISOIRE |
+| Paramètres d'alerte du cabinet | `seuil_recouvrement`, `delai_justificatifs_jours` — outils de pilotage, aucune valeur légale | — |
+
+### 16.1 — Désignation et durée du mandat
+
+**À confirmer :** la désignation d'un syndic professionnel (personne morale) relève-t-elle de l'AG à
+la majorité de l'article 21 (Loi 18-00), pour quelle durée maximale, et le mandat est-il
+renouvelable tacitement ? La passation « le syndic en place confirme » suffit-elle, ou faut-il une
+résolution d'AG obligatoire (le module la rend facultative) ? Qui est syndic entre la fin d'un
+mandat et la désignation suivante (le module laisse la copropriété sans syndic) ?
+
+### 16.2 — Honoraires
+
+**À confirmer :** les honoraires du syndic professionnel doivent-ils être votés en AG et figurer au
+budget (poste dédié), et le cabinet peut-il les comptabiliser lui-même en dépense (le gestionnaire
+du cabinet est le syndic qui approuve et paie la dépense HONORAIRES_SYNDIC) sans contrôle du
+conseil syndical ? Faut-il un plafond ou une transparence particulière (rapport de gestion) ?
+
+### 16.3 — Comptable du cabinet
+
+**À confirmer :** un salarié du cabinet non désigné par l'AG peut-il accéder aux données financières
+nominatives de la copropriété (soldes par lot, propriétaires) en lecture ? Le rôle
+`SYNDIC_COMPTABLE` est posé par le cabinet, jamais par l'AG : information des copropriétaires et
+mention dans la déclaration CNDP (§6) à prévoir ; le module trace tout accès dérivé (`cabinet_log`,
+`audit_log`).
+
+### 16.4 — Responsabilité et données à la fin du mandat
+
+**À confirmer :** obligations de remise des documents et données à la fin du mandat (Doc A §8) —
+la copropriété conserve tout sur la plateforme (le cabinet perd ses accès) ; le cabinet peut-il
+conserver une copie (archives, responsabilité civile) ? Le module ne supprime rien et révoque.
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.
