@@ -74,6 +74,23 @@ export async function withTenant<T>(
 }
 
 /** Réservé aux tests et aux scripts d'arrêt propre. */
+/**
+ * M25 — transaction « acteur » sans copropriété (espace cabinet) : seul `app.current_user_id` (et le
+ * marqueur de rôle CABINET / SUPER_ADMIN) est posé ; les policies des tables cabinet_* s'appuient sur
+ * cabinet_role_courant(). Aucune table de copropriété n'est lisible dans ce contexte (copropriete_id vide).
+ */
+export async function withActeur<T>(utilisateurId: string, role: "CABINET" | "SUPER_ADMIN", fn: (db: TenantDb) => Promise<T>): Promise<T> {
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(utilisateurId)) throw new Error("withActeur : utilisateurId invalide.");
+  return basePrisma.$transaction(async (tx) => {
+    await tx.$executeRaw`
+      SELECT set_config('app.current_copropriete_id', '', true),
+             set_config('app.current_role', ${role}, true),
+             set_config('app.current_user_id', ${utilisateurId}, true)
+    `;
+    return fn(tx as unknown as TenantDb);
+  });
+}
+
 export async function disconnectTenantDb(): Promise<void> {
   await basePrisma.$disconnect();
 }

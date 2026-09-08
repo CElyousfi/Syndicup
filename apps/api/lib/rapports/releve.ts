@@ -5,6 +5,7 @@
  * lot ; propriétaire (indivisaire, représentant) : SES lots — vérification applicative + RLS.
  * Chaque relevé (JSON ou PDF) est journalisé dans export_log (RELEVE_LOT).
  */
+import { marqueCabinet } from "../cabinet/cabinet";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
@@ -18,6 +19,8 @@ export interface ReleveLot {
   exercice: string;
   emis_le: string;
   copropriete: { nom: string; adresse: string; ville: string };
+  /** M25 — cabinet mandataire (en-tête du relevé), null sans mandat actif. */
+  cabinet?: { nom: string } | null;
   lot: { id: string; numero: string; type_lot: string; etage: number | null; tantiemes: string };
   proprietaires: { nom: string | null; prenom: string | null; quote_part: string; type_propriete: string }[];
   appels: { appel_de_fonds_lot_id: string; periode: string; type: string; date_echeance: string; montant_du: string; montant_paye: string; reste_du: string; statut: string; conteste: boolean }[];
@@ -51,6 +54,7 @@ export async function calculerReleveLot(db: TenantDb, coproprieteId: string, lot
     exercice,
     emis_le: maintenant.toISOString(),
     copropriete: copro,
+    cabinet: await marqueCabinet(db, coproprieteId).then((c) => (c ? { nom: c.nom } : null)),
     lot: { id: lot.id, numero: lot.numero, type_lot: lot.typeLot, etage: lot.etage, tantiemes: toApiString(lot.tantiemes) },
     proprietaires: proprietaires.map((p) => ({ nom: p.utilisateur.raisonSociale ?? p.utilisateur.nom, prenom: p.utilisateur.raisonSociale ? null : p.utilisateur.prenom, quote_part: toApiString(p.quotePart), type_propriete: p.typePropriete })),
     appels: lignesExercice.map((l) => ({ appel_de_fonds_lot_id: l.id, periode: l.appelDeFonds.periode, type: l.appelDeFonds.type, date_echeance: isoDate(l.appelDeFonds.dateEcheance), montant_du: toApiString(l.montantDu), montant_paye: toApiString(l.montantPaye), reste_du: toApiString(money(l.montantDu).minus(money(l.montantPaye))), statut: l.statut, conteste: l.conteste })),

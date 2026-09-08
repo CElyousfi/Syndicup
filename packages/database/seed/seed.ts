@@ -1085,12 +1085,68 @@ async function main() {
     ],
   });
 
+  // ── M25 — Cabinet de syndic (Doc A §8) : « Atlas Gestion » gère Al Amal (mandat actif, honoraires → contrat
+  // SYNDIC_PROFESSIONNEL) et une seconde résidence « Les Palmiers » (gestionnaire dédié +212600000010, qui en est le
+  // SYNDIC via role_utilisateur.cabinet_id) ; le syndic d'Al Amal est l'administrateur du cabinet. ──
+  const gestionnaireCabinet = await prisma.utilisateur.create({
+    data: { email: "gestionnaire.cabinet@example.ma", telephone: "+212600000010", nom: "Tahiri", prenom: "Salma", statutCompte: "ACTIF", languePreferee: "FR" },
+  });
+  const cabinet = await prisma.cabinet.create({
+    data: { nom: "Atlas Gestion", raisonSociale: "Atlas Gestion SARL", ice: "001234567000021", rc: "45678", adresse: "12, boulevard Zerktouni, Casablanca", telephone: "+212522000010", email: "contact@atlas-gestion.ma", parametresJson: { seuil_recouvrement: 70, delai_justificatifs_jours: 7 } },
+  });
+  await prisma.cabinetMembre.createMany({
+    data: [
+      { cabinetId: cabinet.id, utilisateurId: syndicUser.id, role: "CABINET_ADMIN" },
+      { cabinetId: cabinet.id, utilisateurId: gestionnaireCabinet.id, role: "CABINET_GESTIONNAIRE" },
+    ],
+  });
+  const palmiers = await prisma.copropriete.create({
+    data: { nom: "Résidence Les Palmiers", adresse: "8, avenue des Palmiers, Quartier Racine", ville: "Casablanca", typeResidence: "IMMEUBLE_COLLECTIF", nbLots: 3, totalTantiemes: "1000.00", cabinetId: cabinet.id, comptesBancairesJson: [{ libelle: "Compte syndicat", banque: "Banque Populaire", rib: "190780000234567890123456" }] },
+  });
+  const lotsPalmiers = await Promise.all([["P-A1", "400.00"], ["P-A2", "300.00"], ["P-A3", "300.00"]].map(([n, t]) => prisma.lot.create({ data: { coproprieteId: palmiers.id, typeLot: "APPARTEMENT", numero: n!, tantiemes: t!, statut: "OCCUPE" } })));
+  await prisma.budgetAg.create({ data: { coproprieteId: palmiers.id, exercice, montantTotal: "60000.00", statut: "ACTIF" } });
+  await prisma.appelDeFonds.create({
+    data: { coproprieteId: palmiers.id, periode: `${exercice}-${String(new Date().getMonth() + 1).padStart(2, "0")}`, type: "CHARGES_COURANTES", montantTotal: "5000.00", dateEcheance: jour(-10), statut: "EMIS", lignes: { create: [{ lotId: lotsPalmiers[0]!.id, montantDu: "2000.00", montantPaye: "2000.00", statut: "PAYE" }, { lotId: lotsPalmiers[1]!.id, montantDu: "1500.00", statut: "IMPAYE", niveauEscalade: "N1" }, { lotId: lotsPalmiers[2]!.id, montantDu: "1500.00", statut: "IMPAYE", niveauEscalade: "N1" }] } },
+  });
+  await prisma.incident.create({ data: { coproprieteId: palmiers.id, categorie: "ASCENSEUR", sousCategorie: "Ascenseur bloqué", description: "Cabine bloquée au 3e depuis ce matin.", partie: "COMMUNE", urgence: "URGENTE", statut: "OUVERT", creePar: gestionnaireCabinet.id, slaDeadline: new Date(Date.now() + 4 * 3600 * 1000) } });
+  // Accès posés par le cabinet (réconciliation cabinet_appliquer_acces) : la gestionnaire est SYNDIC des Palmiers.
+  await prisma.roleUtilisateur.create({ data: { utilisateurId: gestionnaireCabinet.id, coproprieteId: palmiers.id, role: "SYNDIC", cabinetId: cabinet.id } });
+  const contratHonoraires = await prisma.contrat.create({
+    data: { coproprieteId: copro.id, type: "SYNDIC_PROFESSIONNEL", libelle: "Honoraires de syndic — Atlas Gestion", dateDebut: new Date(`${exercice}-01-01`), tacite: true, periodicite: "MENSUELLE", montantPeriode: "2500.00", notes: "Contrat créé par le mandat du cabinet (M25).", creeParId: syndicUser.id, statut: "ACTIF" },
+  });
+  await prisma.contratLog.create({ data: { coproprieteId: copro.id, contratId: contratHonoraires.id, type: "CREE", acteurId: syndicUser.id, detailsJson: { cabinet: "Atlas Gestion" } } });
+  await prisma.cabinetCopropriete.createMany({
+    data: [
+      { cabinetId: cabinet.id, coproprieteId: copro.id, gestionnairePrincipalId: syndicUser.id, dateDebutMandat: new Date(`${exercice}-01-01`), resolutionAgId: resolutionComptes.id, honorairesMensuels: "2500.00", contratId: contratHonoraires.id, statut: "ACTIF", confirmeParId: syndicUser.id, confirmeLe: jour(-250) },
+      { cabinetId: cabinet.id, coproprieteId: palmiers.id, gestionnairePrincipalId: gestionnaireCabinet.id, dateDebutMandat: jour(-90), honorairesMensuels: "1800.00", statut: "ACTIF", confirmeParId: syndicUser.id, confirmeLe: jour(-90) },
+    ],
+  });
+  await prisma.copropriete.update({ where: { id: copro.id }, data: { cabinetId: cabinet.id } });
+  await prisma.roleUtilisateur.updateMany({ where: { utilisateurId: syndicUser.id, coproprieteId: copro.id, role: "SYNDIC" }, data: { cabinetId: cabinet.id } });
+  await prisma.cabinetPrestataire.createMany({
+    data: [
+      { cabinetId: cabinet.id, nom: "Otis Maroc", specialite: "Ascenseur", telephone: "+212522000000", email: "contact@otis.ma", ice: "001234567000089" },
+      { cabinetId: cabinet.id, nom: "Clean Pro Services", specialite: "Nettoyage", telephone: "+212661000000" },
+    ],
+  });
+  await prisma.cabinetLog.createMany({
+    data: [
+      { cabinetId: cabinet.id, type: "CABINET_CREE", acteurId: syndicUser.id, detailsJson: { nom: "Atlas Gestion" }, horodatage: jour(-260) },
+      { cabinetId: cabinet.id, type: "MEMBRE_AJOUTE", acteurId: syndicUser.id, detailsJson: { utilisateur_id: gestionnaireCabinet.id, role: "CABINET_GESTIONNAIRE" }, horodatage: jour(-255) },
+      { cabinetId: cabinet.id, type: "MANDAT_CONFIRME", acteurId: syndicUser.id, coproprieteId: copro.id, detailsJson: { honoraires_mensuels: "2500.00" }, horodatage: jour(-250) },
+      { cabinetId: cabinet.id, type: "MANDAT_CONFIRME", acteurId: syndicUser.id, coproprieteId: palmiers.id, detailsJson: { honoraires_mensuels: "1800.00" }, horodatage: jour(-90) },
+      { cabinetId: cabinet.id, type: "ACCES_APPLIQUE", acteurId: syndicUser.id, detailsJson: { voulus: 2, desactives: 0 }, horodatage: jour(-90) },
+    ],
+  });
+  await prisma.$executeRawUnsafe("REFRESH MATERIALIZED VIEW public.portefeuille_kpi");
+
   console.log("Seed terminé :", {
     personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
     rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
     parkings: { emplacements: 8, attributions: 3, vehicules: 4, badges: 4, redevance: periodeRedevance },
     import: { job: importJob.id, soldeOuvertureA3: appelOuverture.id },
+    cabinet: { id: cabinet.id, palmiers: palmiers.id, gestionnaire: gestionnaireCabinet.telephone },
     copropriete: copro.nom,
     utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },

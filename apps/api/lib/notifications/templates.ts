@@ -599,6 +599,23 @@ const IMPORT: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, IMPORT);
 
+// ── M25 — Cabinet / portefeuille (Doc A §8) ────────────────────────────────────────────────
+const CABINET: Record<string, Entree> = {
+  MANDAT_PROPOSE: {
+    FR: { titre: "{{cabinet}} propose de prendre le mandat de {{residence}}", corps: "Confirmez la passation depuis Paramètres → Cabinet : votre rôle de syndic sera transféré au gestionnaire désigné ({{gestionnaire}})." },
+    AR: { titre: "{{cabinet}} يقترح تولّي وكالة {{residence}}", corps: "أكّدوا التسليم من الإعدادات → المكتب: سينتقل دور السنديك إلى المسيّر المعيّن ({{gestionnaire}})." },
+  },
+  MANDAT_CONFIRME: {
+    FR: { titre: "Mandat confirmé : {{residence}}", corps: "Vous êtes désormais syndic de {{residence}} pour le compte de {{cabinet}}. Vos accès sont actifs à la prochaine connexion." },
+    AR: { titre: "تم تأكيد الوكالة: {{residence}}", corps: "أنتم الآن سنديك {{residence}} لحساب {{cabinet}}. تُفعَّل صلاحياتكم عند الاتصال التالي." },
+  },
+  MANDAT_TERMINE: {
+    FR: { titre: "Fin de mandat : {{residence}}", corps: "Le mandat de {{cabinet}} prend fin le {{date_fin}} ; les accès du cabinet sont révoqués." },
+    AR: { titre: "انتهاء الوكالة: {{residence}}", corps: "تنتهي وكالة {{cabinet}} في {{date_fin}}؛ تُلغى صلاحيات المكتب." },
+  },
+};
+Object.assign(TEMPLATES, CABINET);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

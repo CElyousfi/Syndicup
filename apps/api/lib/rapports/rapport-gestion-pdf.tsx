@@ -36,6 +36,7 @@ function RapportDocument({ d, langue, variante, logo }: { d: RapportGestionDonne
           <View>
             {logo ? <Image style={s.logo} src={logo} /> : null}
             <Text style={s.marque}>{d.copropriete.nom}</Text>
+            {d.cabinet ? <Text style={s.sous}>{langue === "ar" ? `تحت إدارة ${d.cabinet.nom}` : `Géré par ${d.cabinet.nom}`}{d.cabinet.raison_sociale ? ` — ${d.cabinet.raison_sociale}` : ""}</Text> : null}
             <Text style={s.sous}>{d.copropriete.adresse}, {d.copropriete.ville}</Text>
             <Text style={s.sous}>{d.copropriete.nb_lots} lots</Text>
           </View>

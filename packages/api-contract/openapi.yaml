@@ -40,6 +40,8 @@ tags:
   - name: Communication
   - name: Tâches
     description: "Suivi des décisions (résolutions d'AG adoptées), échéances de contrats, incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles (M22, Doc A §6, §8)."
+  - name: Cabinet
+    description: "Cabinet de syndic professionnel : équipe (admin, gestionnaires, comptables), mandats sur les copropriétés (proposés puis confirmés par le syndic en place, ou créées directement), portefeuille (KPI par copropriété, vue matérialisée rafraîchie toutes les 15 min), agenda et alertes transverses, annuaire de prestataires, marque sur les PDF. L'accès à une copropriété passe UNIQUEMENT par role_utilisateur (SYNDIC / SYNDIC_COMPTABLE) posé par cabinet_appliquer_acces (M25, Doc A §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M25)."
   - name: Import
     description: "Import Excel / csv et onboarding d'une résidence en une heure (Doc A §11) : lots + propriétaires (invitations pré-remplies, jamais envoyées seules), soldes d'ouverture (première ligne du relevé), prestataires, contrats, véhicules / badges, personnel ; checklist de démarrage ; résidence de démonstration (M24 — ⚠️ module absent du Master Spec, signalé ROADMAP M24)."
   - name: Parkings
@@ -2578,6 +2580,143 @@ components:
         demo_expire_le: { type: string, format: date-time, nullable: true }
         invitation_syndic: { type: object, properties: { id: { type: string, format: uuid }, code: { type: string }, expire_le: { type: string, format: date-time } } }
         lots: { type: integer }
+
+    # ── M25 — Cabinet / portefeuille (Doc A §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M25) ──
+    RoleCabinet: { type: string, enum: [CABINET_ADMIN, CABINET_GESTIONNAIRE, CABINET_COMPTABLE] }
+    StatutMandat: { type: string, enum: [EN_ATTENTE, ACTIF, TERMINE] }
+    Cabinet:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nom: { type: string }
+        raisonSociale: { type: string, nullable: true }
+        ice: { type: string, nullable: true }
+        rc: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        telephone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        logoStoragePath: { type: string, nullable: true }
+        statut: { type: string, enum: [ACTIF, SUSPENDU] }
+        parametres: { type: object, properties: { seuil_recouvrement: { type: number }, delai_justificatifs_jours: { type: integer } } }
+        nbMembres: { type: integer }
+        nbMandats: { type: integer }
+        monRole: { type: string, nullable: true, description: "Rôle de l'appelant dans ce cabinet (SUPER_ADMIN pour l'opérateur)." }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    CabinetCreate:
+      type: object
+      required: [nom]
+      properties:
+        nom: { type: string }
+        raison_sociale: { type: string, nullable: true }
+        ice: { type: string, nullable: true, pattern: "^[0-9]{15}$" }
+        rc: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        telephone: { type: string, nullable: true }
+        email: { type: string, format: email, nullable: true }
+        parametres: { type: object, nullable: true, properties: { seuil_recouvrement: { type: number }, delai_justificatifs_jours: { type: integer } } }
+        admin_utilisateur_id: { type: string, format: uuid, nullable: true, description: "Compte qui devient CABINET_ADMIN (défaut : l'opérateur appelant)." }
+    CabinetMembre:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        utilisateurId: { type: string, format: uuid }
+        nom: { type: string, nullable: true }
+        prenom: { type: string, nullable: true }
+        role: { $ref: "#/components/schemas/RoleCabinet" }
+        actif: { type: boolean }
+        nbCoproprietes: { type: integer, description: Copropriétés dont il est gestionnaire principal. }
+        creeLe: { type: string, format: date-time }
+    CabinetMandat:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cabinetId: { type: string, format: uuid }
+        copropriete: { type: object, properties: { id: { type: string, format: uuid }, nom: { type: string }, ville: { type: string }, nbLots: { type: integer }, estDemo: { type: boolean } } }
+        gestionnairePrincipalId: { type: string, format: uuid, nullable: true, description: "Membre du cabinet qui devient SYNDIC de la copropriété." }
+        dateDebutMandat: { type: string, format: date }
+        dateFinMandat: { type: string, format: date, nullable: true }
+        resolutionAgId: { type: string, format: uuid, nullable: true }
+        honorairesMensuels: { type: string, nullable: true, example: "2500.00", description: "→ contrat SYNDIC_PROFESSIONNEL (M19) dont les échéances alimentent les dépenses HONORAIRES_SYNDIC (M16)." }
+        contratId: { type: string, format: uuid, nullable: true }
+        statut: { $ref: "#/components/schemas/StatutMandat" }
+        confirmeParId: { type: string, format: uuid, nullable: true }
+        confirmeLe: { type: string, format: date-time, nullable: true }
+        actif: { type: boolean }
+        creeLe: { type: string, format: date-time }
+    MandatCreate:
+      type: object
+      required: [date_debut_mandat]
+      properties:
+        copropriete_id: { type: string, format: uuid, description: "Copropriété existante : mandat EN_ATTENTE jusqu'à confirmation par son SYNDIC." }
+        nouvelle_copropriete: { type: object, description: "Créée par le cabinet : mandat ACTIF immédiatement.", properties: { nom: { type: string }, adresse: { type: string }, ville: { type: string }, type_residence: { type: string }, nb_lots: { type: integer } } }
+        gestionnaire_principal_id: { type: string, format: uuid, nullable: true }
+        date_debut_mandat: { type: string, format: date }
+        date_fin_mandat: { type: string, format: date, nullable: true }
+        resolution_ag_id: { type: string, format: uuid, nullable: true }
+        honoraires_mensuels: { type: string, nullable: true }
+    LignePortefeuille:
+      type: object
+      properties:
+        mandat_id: { type: string, format: uuid }
+        copropriete_id: { type: string, format: uuid }
+        nom: { type: string }
+        ville: { type: string }
+        gestionnaire_principal_id: { type: string, format: uuid, nullable: true }
+        date_debut_mandat: { type: string, format: date }
+        honoraires_mensuels: { type: string, nullable: true }
+        nb_lots: { type: integer }
+        appele: { type: string }
+        encaisse: { type: string }
+        taux_recouvrement: { type: number, nullable: true }
+        impayes_montant: { type: string }
+        impayes_nb_lots: { type: integer }
+        justificatifs_en_attente: { type: integer }
+        justificatif_plus_ancien: { type: string, format: date-time, nullable: true }
+        incidents_ouverts: { type: integer }
+        incidents_urgents: { type: integer }
+        taches_retard: { type: integer }
+        prochaine_ag: { type: string, format: date-time, nullable: true }
+        contrats_expirant_30j: { type: integer }
+        assurance_active: { type: boolean }
+        sejours_lcd_aujourdhui: { type: integer }
+        derniere_activite: { type: string, format: date-time, nullable: true }
+        calcule_le: { type: string, format: date-time }
+        alertes: { type: array, items: { type: string, enum: [ASSURANCE_ABSENTE, RECOUVREMENT_FAIBLE, TACHES_EN_RETARD, JUSTIFICATIFS_EN_ATTENTE, INCIDENTS_URGENTS] } }
+    EvenementAgendaCabinet:
+      type: object
+      properties:
+        type: { type: string, enum: [AG, ECHEANCE_CONTRAT, TACHE, PAIE, FIN_MANDAT] }
+        date: { type: string, format: date-time }
+        copropriete_id: { type: string, format: uuid }
+        copropriete: { type: string }
+        titre: { type: string }
+        lien: { type: string, description: Chemin relatif dans la copropriété. }
+        id: { type: string, format: uuid }
+        retard: { type: boolean }
+    AlerteCabinet:
+      type: object
+      properties:
+        code: { type: string }
+        niveau: { type: string, enum: [danger, warn, info] }
+        copropriete_id: { type: string, format: uuid }
+        copropriete: { type: string }
+        valeur: { nullable: true }
+        lien: { type: string }
+    CabinetPrestataire:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        cabinetId: { type: string, format: uuid }
+        nom: { type: string }
+        specialite: { type: string }
+        telephone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        ice: { type: string, nullable: true }
+        rc: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        creeLe: { type: string, format: date-time }
 
   responses:
     ValidationError:
@@ -7574,4 +7713,167 @@ paths:
       requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { nom: { type: string }, jours: { type: integer, minimum: 1, maximum: 90, default: 30 } } } } } }
       responses:
         "201": { description: Créée, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/DemoCopropriete" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+
+  # ── M25 — Cabinet / portefeuille (Doc A §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M25) ──
+  /cabinets:
+    get:
+      tags: [Cabinet]
+      summary: Mes cabinets (membre actif) ; SUPER_ADMIN — tous. Aucune copropriété requise (identité JWT).
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Cabinet" } } } } } } }
+    post:
+      tags: [Cabinet]
+      summary: Créer un cabinet (SUPER_ADMIN) — l'administrateur désigné devient CABINET_ADMIN.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/CabinetCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Cabinet" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /cabinets/{id}:
+    get:
+      tags: [Cabinet]
+      summary: Fiche du cabinet (membres actifs).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Cabinet" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Cabinet]
+      summary: Modifier (CABINET_ADMIN) ; `statut` réservé à l'opérateur.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { nom: { type: string }, raison_sociale: { type: string, nullable: true }, ice: { type: string, nullable: true }, rc: { type: string, nullable: true }, adresse: { type: string, nullable: true }, telephone: { type: string, nullable: true }, email: { type: string, nullable: true }, parametres: { type: object, nullable: true }, statut: { type: string, enum: [ACTIF, SUSPENDU] } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /cabinets/{id}/membres:
+    get:
+      tags: [Cabinet]
+      summary: Équipe du cabinet.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/CabinetMembre" } } } } } } }
+    post:
+      tags: [Cabinet]
+      summary: "Ajouter un membre (CABINET_ADMIN) par id, téléphone ou e-mail d'un compte existant — aucun compte créé ; les accès aux copropriétés (SYNDIC / SYNDIC_COMPTABLE) sont réconciliés dans la même transaction."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [role], properties: { utilisateur_id: { type: string, format: uuid }, telephone: { type: string }, email: { type: string, format: email }, role: { $ref: "#/components/schemas/RoleCabinet" } } } } } }
+      responses:
+        "201": { description: Ajouté }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /cabinets/{id}/membres/{membreId}:
+    patch:
+      tags: [Cabinet]
+      summary: "Changer le rôle ou retirer (`actif: false`) — les rôles de copropriété posés par le cabinet sont révoqués atomiquement ; un cabinet garde un administrateur."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: membreId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { role: { $ref: "#/components/schemas/RoleCabinet" }, actif: { type: boolean } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /cabinets/{id}/coproprietes:
+    get:
+      tags: [Cabinet]
+      summary: Mandats du cabinet (en attente, actifs, terminés).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/CabinetMandat" } } } } } } }
+    post:
+      tags: [Cabinet]
+      summary: "Proposer un mandat sur une copropriété existante (EN_ATTENTE : son SYNDIC est notifié MANDAT_PROPOSE et confirme) ou créer une copropriété gérée directement (ACTIF : le gestionnaire principal devient SYNDIC). 409 MANDAT_EXISTANT."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/MandatCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/CabinetMandat" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /cabinets/{id}/coproprietes/{coproId}:
+    patch:
+      tags: [Cabinet]
+      summary: "Modifier un mandat (`coproId` = id du mandat) : gestionnaire principal (accès réconciliés), fin, honoraires, résolution."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: coproId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { gestionnaire_principal_id: { type: string, format: uuid, nullable: true }, date_fin_mandat: { type: string, format: date, nullable: true }, honoraires_mensuels: { type: string, nullable: true }, resolution_ag_id: { type: string, format: uuid, nullable: true } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /cabinets/{id}/coproprietes/{coproId}/confirmer:
+    post:
+      tags: [Cabinet]
+      summary: "Le SYNDIC en place confirme la passation (contexte X-Copropriete-Id = `coproId`) : atomique — son rôle SYNDIC est cédé au gestionnaire principal, la copropriété est rattachée, les accès du cabinet posés, contrat d'honoraires créé ; audit MANDAT_CONFIRME, notification MANDAT_CONFIRME."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: coproId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { mandat_id: { type: string, format: uuid }, statut: { type: string }, syndics_cedes: { type: integer } } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /cabinets/{id}/coproprietes/{coproId}/terminer:
+    post:
+      tags: [Cabinet]
+      summary: "Fin de mandat (CABINET_ADMIN, `coproId` = id du mandat) : accès du cabinet révoqués dans la même transaction, copropriété détachée ; audit MANDAT_TERMINE, notification au conseil et au gestionnaire."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: coproId, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { date_fin: { type: string, format: date }, motif: { type: string, nullable: true } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /cabinets/{id}/portefeuille:
+    get:
+      tags: [Cabinet]
+      summary: "Portefeuille : une ligne par copropriété visible (ADMIN / COMPTABLE : toutes ; GESTIONNAIRE : les siennes) — KPI de la vue matérialisée `portefeuille_kpi` (rafraîchie toutes les 15 min), alertes calculées avec les paramètres du cabinet, `meta.totaux` ; tri ; csv / xlsx."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - { name: q, in: query, schema: { type: string } }
+        - { name: alerte, in: query, schema: { type: string, enum: ["1", "true"] }, description: Seulement les copropriétés en alerte. }
+        - { name: sort, in: query, schema: { type: string }, description: "nom | taux_recouvrement | impayes_montant | incidents_ouverts | taches_retard | prochaine_ag | derniere_activite, suffixe `:asc` / `:desc`." }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/LignePortefeuille" } }, meta: { type: object } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /cabinets/{id}/agenda:
+    get:
+      tags: [Cabinet]
+      summary: "Agenda fusionné : AG, échéances de contrats, tâches (retard compris), paie, fins de mandat — sur les copropriétés visibles ; `?jours=60` (7–180)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: jours, in: query, schema: { type: integer, minimum: 7, maximum: 180, default: 60 } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { du: { type: string, format: date }, au: { type: string, format: date }, evenements: { type: array, items: { $ref: "#/components/schemas/EvenementAgendaCabinet" } } } } } } } } }
+  /cabinets/{id}/alertes:
+    get:
+      tags: [Cabinet]
+      summary: "Alertes transverses : assurance absente, recouvrement < seuil du cabinet, tâches en retard, justificatifs en attente > N jours, incidents urgents."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { items: { type: array, items: { $ref: "#/components/schemas/AlerteCabinet" } }, parametres: { type: object }, calcule_le: { type: string, format: date-time, nullable: true } } } } } } } }
+  /cabinets/{id}/prestataires:
+    get:
+      tags: [Cabinet]
+      summary: Annuaire de prestataires du cabinet (modèles).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/CabinetPrestataire" } } } } } } }
+    post:
+      tags: [Cabinet]
+      summary: Ajouter un modèle (admin / gestionnaire).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nom, specialite], properties: { nom: { type: string }, specialite: { type: string }, telephone: { type: string, nullable: true }, email: { type: string, nullable: true }, ice: { type: string, nullable: true }, rc: { type: string, nullable: true }, adresse: { type: string, nullable: true }, notes: { type: string, nullable: true } } } } } }
+      responses:
+        "201": { description: Créé }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /cabinets/{id}/prestataires/{pid}/copier:
+    post:
+      tags: [Cabinet]
+      summary: "Copier le modèle dans une copropriété du portefeuille visible (ligne `prestataire` propre — copie, jamais référence ; idempotent par `cabinet_prestataire_id`)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: pid, in: path, required: true, schema: { type: string, format: uuid } }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [copropriete_id], properties: { copropriete_id: { type: string, format: uuid } } } } } }
+      responses:
+        "201": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { prestataire_id: { type: string, format: uuid }, copie: { type: boolean } } } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /coproprietes/{id}/mandat:
+    get:
+      tags: [Cabinet]
+      summary: "Mandat de cabinet proposé / actif sur la copropriété courante (syndic, conseil, comptable) : fiche publique du cabinet, gestionnaire principal, `peutConfirmer`. Null sans mandat."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }

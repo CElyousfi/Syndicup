@@ -80,7 +80,12 @@ export type ErrorCode =
   // M24 — import / onboarding.
   | "IMPORT_FICHIER_ILLISIBLE"
   | "IMPORT_STATUT_INVALIDE"
-  | "DEMO_INTERDIT";
+  | "DEMO_INTERDIT"
+  // M25 — cabinet.
+  | "CABINET_STATUT_INVALIDE"
+  | "MANDAT_EXISTANT"
+  | "MANDAT_STATUT_INVALIDE"
+  | "CONFLIT_SYNDIC";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -141,6 +146,10 @@ const STATUS: Record<ErrorCode, number> = {
   IMPORT_FICHIER_ILLISIBLE: 422,
   IMPORT_STATUT_INVALIDE: 422,
   DEMO_INTERDIT: 422,
+  CABINET_STATUT_INVALIDE: 422,
+  MANDAT_EXISTANT: 409,
+  MANDAT_STATUT_INVALIDE: 422,
+  CONFLIT_SYNDIC: 409,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {

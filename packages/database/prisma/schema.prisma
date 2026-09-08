@@ -84,6 +84,9 @@ enum RoleType {
   // §2) : gestionnaire de location courte durée (conciergerie, proche) désigné par le propriétaire,
   // scopé aux lots via lot_location_courte_duree.gestionnaire_id — jamais à toute la copropriété.
   GESTIONNAIRE_LCD
+  // M25 — ⚠️ valeur ABSENTE du Master Spec, ajoutée et signalée : comptable d'un cabinet de syndic,
+  // lecture seule des finances d'une copropriété (rôle posé UNIQUEMENT par cabinet_appliquer_acces).
+  SYNDIC_COMPTABLE
 }
 
 // ============================================================================
@@ -273,6 +276,10 @@ model Copropriete {
   parametresPaieJson               Json?                     @map("parametres_paie_json")
   // M24 — Résidence de démonstration (SUPER_ADMIN, prospect) : exclue des exports / rapports transverses,
   // purgée par le job `demo-purge-quotidien` après `demo_expire_le` (⚠️ colonnes ajoutées et signalées).
+  // M25 — cabinet de syndic mandaté (⚠️ colonne ajoutée et signalée) ; l'accès des membres du cabinet passe
+  // UNIQUEMENT par role_utilisateur (posé par cabinet_appliquer_acces), jamais par cette colonne.
+  cabinetId                        String?                   @map("cabinet_id") @db.Uuid
+  cabinet                          Cabinet?                  @relation(fields: [cabinetId], references: [id])
   estDemo                          Boolean                   @default(false) @map("est_demo")
   demoExpireLe                     DateTime?                 @map("demo_expire_le") @db.Timestamptz
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
@@ -282,6 +289,8 @@ model Copropriete {
   importJobs              ImportJob[]
   importJobLogs           ImportJobLog[]
   soldesOuverture         SoldeOuverture[]
+  mandatsCabinet          CabinetCopropriete[]
+  cabinetLogs             CabinetLog[]
   invitations             Invitation[]
   lots                    Lot[]
   espacesCommuns          EspaceCommun[]
@@ -401,6 +410,10 @@ model Utilisateur {
   badgesRemis              Badge[]                   @relation("BadgeRemisPar")
   attributionsCreees       AttributionEmplacement[]  @relation("AttributionCreateur")
   importsLances            ImportJob[]               @relation("ImportLanceur")
+  cabinets                 CabinetMembre[]
+  mandatsGeres             CabinetCopropriete[]      @relation("MandatGestionnaire")
+  mandatsConfirmes         CabinetCopropriete[]      @relation("MandatConfirmateur")
+  cabinetLogsActeur        CabinetLog[]              @relation("CabinetLogActeur")
 
   @@map("utilisateur")
 }
@@ -414,6 +427,9 @@ model RoleUtilisateur {
   role          RoleType
   actif         Boolean     @default(true)
   creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  // M25 — rôle posé par un cabinet (cabinet_appliquer_acces) : retiré avec le membre ou le mandat (⚠️ ajout signalé).
+  cabinetId     String?     @map("cabinet_id") @db.Uuid
+  cabinet       Cabinet?    @relation(fields: [cabinetId], references: [id])
   // Contrainte Master Spec 2.4 : un seul role='SYNDIC' actif=true par copropriété —
   // index unique partiel en SQL brut dans la migration M1 (non supporté par Prisma).
 
@@ -1262,31 +1278,34 @@ enum StatutIncident {
 // prestataire peut être géré uniquement par référence (nom/contact) sans jamais avoir de compte
 // applicatif — dans ce cas il n'a simplement aucune visibilité RLS sur ses tickets via l'app.
 model Prestataire {
-  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String      @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
-  nom           String
-  specialite    String
-  contact       String
-  actif         Boolean     @default(true)
-  utilisateurId String?     @unique @map("utilisateur_id") @db.Uuid
+  id                   String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId        String              @map("copropriete_id") @db.Uuid
+  copropriete          Copropriete         @relation(fields: [coproprieteId], references: [id])
+  nom                  String
+  specialite           String
+  contact              String
+  // M25 — copie d'un modèle de l'annuaire du cabinet (⚠️ colonne ajoutée et signalée) : chaque copropriété garde sa ligne (RLS).
+  cabinetPrestataireId String?             @map("cabinet_prestataire_id") @db.Uuid
+  cabinetPrestataire   CabinetPrestataire? @relation(fields: [cabinetPrestataireId], references: [id])
+  actif                Boolean             @default(true)
+  utilisateurId        String?             @unique @map("utilisateur_id") @db.Uuid
   // M16 — fiche fournisseur (Doc A §8.3 transparence prestataires, §3.6 devis). `contact`
   // conservé pour compatibilité ; la migration m16 recopie sa valeur dans `telephone` quand
   // elle ressemble à un numéro.
-  ice           String? // Identifiant Commun de l'Entreprise
-  rc            String? // Registre du commerce
-  adresse       String?
-  email         String?
-  telephone     String?
+  ice                  String? // Identifiant Commun de l'Entreprise
+  rc                   String? // Registre du commerce
+  adresse              String?
+  email                String?
+  telephone            String?
   // RIB : JAMAIS renvoyé en clair par la liste/fiche (4 derniers caractères seulement) —
   // lecture complète réservée au syndic via GET /prestataires/{id}/rib, auditée
   // (PRESTATAIRE_RIB_CONSULTE).
-  rib           String?
-  notes         String?
+  rib                  String?
+  notes                String?
   // Moyenne des notes 1–5 laissées sur les incidents résolus (incident.note_prestataire),
   // recalculée à chaque évaluation — jamais saisie directement.
-  noteMoyenne   Decimal?    @map("note_moyenne") @db.Decimal(3, 2)
-  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  noteMoyenne          Decimal?            @map("note_moyenne") @db.Decimal(3, 2)
+  creeLe               DateTime            @default(now()) @map("cree_le") @db.Timestamptz
 
   incidentsAssignes Incident[]
   depenses          Depense[]
@@ -1477,6 +1496,7 @@ model AgResolution {
   contrats                Contrat[]
   taches                  Tache[]
   attributionsEmplacement AttributionEmplacement[]
+  mandatsCabinet          CabinetCopropriete[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -2133,9 +2153,10 @@ model Contrat {
   creeLe                DateTime      @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe             DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
 
-  echeances ContratEcheance[]
-  logs      ContratLog[]
-  depenses  Depense[]
+  echeances     ContratEcheance[]
+  logs          ContratLog[]
+  depenses      Depense[]
+  mandatCabinet CabinetCopropriete?
 
   @@index([coproprieteId, statut])
   @@index([coproprieteId, type])
@@ -2925,4 +2946,149 @@ model SoldeOuverture {
 
   @@unique([coproprieteId, lotId])
   @@map("solde_ouverture")
+}
+
+// ============================================================================
+// M25 — CABINET / PORTEFEUILLE MULTI-RÉSIDENCES (Doc A §8) — ⚠️ module absent du Master Spec, signalé ROADMAP M25
+// ============================================================================
+
+enum StatutCabinet {
+  ACTIF
+  SUSPENDU
+}
+
+enum RoleCabinet {
+  CABINET_ADMIN
+  CABINET_GESTIONNAIRE
+  CABINET_COMPTABLE
+}
+
+enum StatutMandat {
+  EN_ATTENTE
+  ACTIF
+  TERMINE
+}
+
+enum TypeCabinetLog {
+  CABINET_CREE
+  CABINET_MODIFIE
+  MEMBRE_AJOUTE
+  MEMBRE_MODIFIE
+  MEMBRE_RETIRE
+  MANDAT_PROPOSE
+  MANDAT_CONFIRME
+  MANDAT_MODIFIE
+  MANDAT_TERMINE
+  ACCES_APPLIQUE
+  PRESTATAIRE_MODELE
+}
+
+/// Cabinet de syndic professionnel : plusieurs copropriétés, une petite équipe. L'accès à une copropriété passe
+/// UNIQUEMENT par role_utilisateur (posé / retiré par cabinet_appliquer_acces) — jamais par cabinet_membre en RLS.
+model Cabinet {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nom             String
+  raisonSociale   String?       @map("raison_sociale")
+  ice             String?
+  rc              String?
+  adresse         String?
+  telephone       String?
+  email           String?
+  logoStoragePath String?       @map("logo_storage_path")
+  statut          StatutCabinet @default(ACTIF)
+  /// { seuil_recouvrement: 70, delai_justificatifs_jours: 7 } — alertes du portefeuille (jamais de valeur légale).
+  parametresJson  Json?         @map("parametres_json")
+  creeLe          DateTime      @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe       DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
+
+  membres      CabinetMembre[]
+  coproprietes Copropriete[]
+  mandats      CabinetCopropriete[]
+  logs         CabinetLog[]
+  prestataires CabinetPrestataire[]
+  rolesPoses   RoleUtilisateur[]
+
+  @@map("cabinet")
+}
+
+model CabinetMembre {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cabinetId     String      @map("cabinet_id") @db.Uuid
+  cabinet       Cabinet     @relation(fields: [cabinetId], references: [id])
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  role          RoleCabinet
+  actif         Boolean     @default(true)
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@unique([cabinetId, utilisateurId])
+  @@index([utilisateurId])
+  @@map("cabinet_membre")
+}
+
+/// Mandat d'un cabinet sur une copropriété : proposé par le cabinet, confirmé par le SYNDIC en place (ou créé directement).
+model CabinetCopropriete {
+  id                      String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cabinetId               String        @map("cabinet_id") @db.Uuid
+  cabinet                 Cabinet       @relation(fields: [cabinetId], references: [id])
+  coproprieteId           String        @map("copropriete_id") @db.Uuid
+  copropriete             Copropriete   @relation(fields: [coproprieteId], references: [id])
+  gestionnairePrincipalId String?       @map("gestionnaire_principal_id") @db.Uuid
+  gestionnairePrincipal   Utilisateur?  @relation("MandatGestionnaire", fields: [gestionnairePrincipalId], references: [id])
+  dateDebutMandat         DateTime      @map("date_debut_mandat") @db.Date
+  dateFinMandat           DateTime?     @map("date_fin_mandat") @db.Date
+  resolutionAgId          String?       @map("resolution_ag_id") @db.Uuid
+  resolutionAg            AgResolution? @relation(fields: [resolutionAgId], references: [id])
+  /// Honoraires mensuels → contrat SYNDIC_PROFESSIONNEL (M19) dont les échéances alimentent les dépenses HONORAIRES_SYNDIC (M16).
+  honorairesMensuels      Decimal?      @map("honoraires_mensuels") @db.Decimal(14, 2)
+  contratId               String?       @unique @map("contrat_id") @db.Uuid
+  contrat                 Contrat?      @relation(fields: [contratId], references: [id])
+  statut                  StatutMandat  @default(EN_ATTENTE)
+  confirmeParId           String?       @map("confirme_par_id") @db.Uuid
+  confirmePar             Utilisateur?  @relation("MandatConfirmateur", fields: [confirmeParId], references: [id])
+  confirmeLe              DateTime?     @map("confirme_le") @db.Timestamptz
+  actif                   Boolean       @default(true)
+  creeLe                  DateTime      @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([cabinetId])
+  @@index([coproprieteId])
+  @@map("cabinet_copropriete")
+}
+
+/// Journal append-only du cabinet (membres, mandats, accès appliqués).
+model CabinetLog {
+  id            String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cabinetId     String         @map("cabinet_id") @db.Uuid
+  cabinet       Cabinet        @relation(fields: [cabinetId], references: [id])
+  type          TypeCabinetLog
+  acteurId      String?        @map("acteur_id") @db.Uuid
+  acteur        Utilisateur?   @relation("CabinetLogActeur", fields: [acteurId], references: [id])
+  coproprieteId String?        @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete?   @relation(fields: [coproprieteId], references: [id])
+  detailsJson   Json?          @map("details_json")
+  horodatage    DateTime       @default(now()) @db.Timestamptz
+
+  @@index([cabinetId, horodatage])
+  @@map("cabinet_log")
+}
+
+/// Annuaire de prestataires du cabinet : modèles copiés dans une copropriété (jamais référencés — RLS par copropriété).
+model CabinetPrestataire {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cabinetId  String   @map("cabinet_id") @db.Uuid
+  cabinet    Cabinet  @relation(fields: [cabinetId], references: [id])
+  nom        String
+  specialite String
+  telephone  String?
+  email      String?
+  ice        String?
+  rc         String?
+  adresse    String?
+  notes      String?
+  creeLe     DateTime @default(now()) @map("cree_le") @db.Timestamptz
+
+  copies Prestataire[]
+
+  @@index([cabinetId])
+  @@map("cabinet_prestataire")
 }

@@ -24,7 +24,10 @@ export type Role =
   | "PERSONNE_MORALE_REPRESENTANT"
   // M15 — ⚠️ hors Master Spec Partie 4.2 (signalé) : gestionnaire de location courte durée,
   // scopé aux lots via lot_location_courte_duree.gestionnaire_id.
-  | "GESTIONNAIRE_LCD";
+  | "GESTIONNAIRE_LCD"
+  // M25 — ⚠️ hors Master Spec (signalé) : comptable d\'un cabinet de syndic, lecture seule des finances,
+  // rôle posé uniquement par cabinet_appliquer_acces (jamais par invitation).
+  | "SYNDIC_COMPTABLE";
 
 /**
  * Une action peut être :
@@ -54,6 +57,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // Détail de SA copropriété : tout membre du tenant (les données sensibles — params légaux,
   // politique de recouvrement — ne sont pas nominatives ; la fiche copro est le contexte commun).
   "coproprietes.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -73,6 +77,7 @@ export const PERMISSIONS: PermissionMatrix = {
     PROPRIETAIRE: false,
   },
   "coproprietes.lire_config": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -106,12 +111,14 @@ export const PERMISSIONS: PermissionMatrix = {
 
   // ── Finances (Master Spec Partie 4.2) ────────────────────────────────────
   "finances.voir_agrege_copropriete": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
     PROPRIETAIRE: "scoped", // "taux global uniquement" — pas le détail nominatif
   },
   "finances.voir_impaye_autre_lot": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -137,6 +144,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // Lecture large : transparence budgétaire (Doc A §10.2 "Détail budget par poste visible
   // dans app") — le budget est un agrégat, pas une donnée nominative.
   "finances.lire_budget": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -151,6 +159,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // appliquée par la policy RLS "tenant_isolation" sur `appel_de_fonds_lot` (défense en
   // profondeur, Partie 1.6) — cette entrée ne fait que gater l'accès à l'endpoint lui-même.
   "finances.lister_appels_de_fonds": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -161,6 +170,7 @@ export const PERMISSIONS: PermissionMatrix = {
     PRESTATAIRE: false,
   },
   "finances.voir_solde_lot": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -187,6 +197,7 @@ export const PERMISSIONS: PermissionMatrix = {
     INDIVISAIRE: "scoped",
   },
   "finances.voir_quittance": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -371,6 +382,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // résident ne lit les dépenses PAYEE que via la vue de transparence (M18) — la policy RLS sur
   // `depense` ne lui montre déjà que celles-là.
   "depenses.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -406,6 +418,7 @@ export const PERMISSIONS: PermissionMatrix = {
   },
   // Export CSV des dépenses (journalisé — CNDP : qui a extrait quoi, quand).
   "depenses.exporter": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -439,6 +452,7 @@ export const PERMISSIONS: PermissionMatrix = {
   },
   // Lire : syndic / conseil (tout), résident (ses lots — RLS), gardien (ce qu'il a saisi — RLS).
   "justificatifs.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -471,6 +485,7 @@ export const PERMISSIONS: PermissionMatrix = {
   //    signalé dans ROADMAP M18) ──
   // Tableau de bord syndic / conseil, grand livre, liste et détail des rapports de gestion.
   "rapports.syndic.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -485,6 +500,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // « Où va mon argent » : vue agrégée anonymisée (jamais de donnée par lot) — tout membre de la
   // copropriété, locataires compris (Doc A §3.5). Gardien / prestataire / gestionnaire LCD : non.
   "rapports.transparence.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -508,6 +524,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // Exports (csv / xlsx) des listes de gestion : lots, impayés, paiements, dépenses, grand livre,
   // incidents… — syndic et conseil ; chaque export est tracé dans export_log (CNDP).
   "exports.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -527,6 +544,7 @@ export const PERMISSIONS: PermissionMatrix = {
   // Relevé de charges d'un lot (« état daté », Doc A §11) : syndic / conseil pour tout lot ; le
   // propriétaire (indivisaire, représentant) pour SES lots — RLS + vérification applicative.
   "exports.releve_lot": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -541,6 +559,7 @@ export const PERMISSIONS: PermissionMatrix = {
   //    §12.3 : contrats prestataires = syndic_only / conseil — ⚠️ module absent du Master Spec 4.2,
   //    signalé dans ROADMAP M19) ──
   "contrats.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -840,6 +859,7 @@ export const PERMISSIONS: PermissionMatrix = {
     PROPRIETAIRE: false,
   },
   "lots.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -1153,6 +1173,7 @@ export const PERMISSIONS: PermissionMatrix = {
     GARDIEN: false,
   },
   "import.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -1161,6 +1182,7 @@ export const PERMISSIONS: PermissionMatrix = {
   },
   // Checklist de démarrage : syndic (et conseil, lecture) ; jamais un résident.
   "onboarding.lire": {
+    SYNDIC_COMPTABLE: true, // M25 — lecture seule (cabinet)
     SUPER_ADMIN: true,
     SYNDIC: true,
     CONSEIL_SYNDICAL: true,
@@ -1172,6 +1194,22 @@ export const PERMISSIONS: PermissionMatrix = {
     SUPER_ADMIN: true,
     SYNDIC: false,
     CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  // ── M25 — Cabinet / portefeuille (Doc A §8) — ⚠️ module absent du Master Spec, signalé ROADMAP M25 ──
+  // Les droits « cabinet » se résolvent par cabinet_membre (cabinet_role_courant), pas par ce tableau ;
+  // ces deux entrées ne portent que les gestes réalisés dans un contexte copropriété.
+  "cabinet.mandat.confirmer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  "cabinet.mandat.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    SYNDIC_COMPTABLE: true,
     PROPRIETAIRE: false,
   },
 };

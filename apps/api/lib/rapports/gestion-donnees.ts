@@ -4,6 +4,7 @@
  * Construit par `construireDonneesRapport` à partir des mêmes fonctions que le tableau de bord et
  * le grand livre → réconciliable (test rapports.test.ts).
  */
+import { marqueCabinet } from "../cabinet/cabinet";
 import type { TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { calculerBudgetVsRealise, type BudgetVsRealise } from "../depenses/rapports";
@@ -16,6 +17,8 @@ export interface RapportGestionDonnees {
   exercice: string;
   genere_le: string;
   copropriete: { id: string; nom: string; adresse: string; ville: string; nb_lots: number; logo_storage_path: string | null };
+  /** M25 — cabinet de syndic mandataire (marque en en-tête), null sans mandat actif. */
+  cabinet?: { nom: string; raison_sociale: string | null } | null;
   syndic: { id: string; nom: string | null };
   president_conseil: { id: string | null; nom: string | null };
   budget_ag_id: string | null;
@@ -58,6 +61,7 @@ export async function construireDonneesRapport(db: TenantDb, ctx: TenantContext,
     exercice,
     genere_le: maintenant.toISOString(),
     copropriete: { id: copro.id, nom: copro.nom, adresse: copro.adresse, ville: copro.ville, nb_lots: copro.nbLots, logo_storage_path: copro.logoStoragePath },
+    cabinet: await marqueCabinet(db, ctx.coproprieteId).then((c) => (c ? { nom: c.nom, raison_sociale: c.raisonSociale } : null)),
     syndic: { id: ctx.utilisateurId, nom: nomComplet(syndic) },
     president_conseil: { id: president?.utilisateur.id ?? null, nom: nomComplet(president?.utilisateur) },
     budget_ag_id: budgetAgId ?? bvr.budget?.id ?? null,

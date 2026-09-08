@@ -16,6 +16,7 @@ function ReleveDocument({ r, langue }: { r: ReleveLot; langue: LanguePdf }) {
           <View>
             <Text style={s.marque}>{r.copropriete.nom}</Text>
             <Text style={s.sous}>{r.copropriete.adresse}, {r.copropriete.ville}</Text>
+            {r.cabinet ? <Text style={s.sous}>{langue === "ar" ? `تحت إدارة ${r.cabinet.nom}` : `Géré par ${r.cabinet.nom}`}</Text> : null}
           </View>
           <View>
             <Text style={s.titre}>{t.releve}</Text>

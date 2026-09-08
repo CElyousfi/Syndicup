@@ -24,6 +24,7 @@ const ROLES: readonly Role[] = [
   "PRESTATAIRE",
   "PERSONNE_MORALE_REPRESENTANT",
   "GESTIONNAIRE_LCD",
+  "SYNDIC_COMPTABLE",
 ];
 
 /**
