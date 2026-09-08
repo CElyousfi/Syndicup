@@ -332,11 +332,15 @@ export async function supprimerVehicule(ctx: TenantContext, id: string) {
 export async function rechercherVehicule(ctx: TenantContext, brut: string) {
   if (can("vehicules.rechercher", ctx.role) !== true) throw new PermissionRefuseeError("La recherche de plaque est réservée au gardien et au syndic.");
   const immatriculation = normaliserImmatriculation(brut);
+  // Comparaison sans tirets : le gardien tape « 12345a6 » ou « 12345 A 6 » pour « 12345-A-6 ».
+  const compact = (v: string) => v.replace(/-/g, "");
+  const cle = compact(immatriculation);
   return withTenant(ctx, async (db) => {
-    const rows = await db.vehicule.findMany({ where: { coproprieteId: ctx.coproprieteId, actif: true, OR: [{ immatriculation }, { immatriculation: { contains: immatriculation } }] }, orderBy: { immatriculation: "asc" }, take: 10 });
+    const actifs = await db.vehicule.findMany({ where: { coproprieteId: ctx.coproprieteId, actif: true }, orderBy: { immatriculation: "asc" } });
+    const rows = actifs.filter((r) => compact(r.immatriculation).includes(cle)).slice(0, 10);
     const lots = await numerosLots(db, rows.map((r) => r.lotId));
     await audit(db, ctx, "VEHICULE_RECHERCHE", "vehicule", rows[0]?.id ?? "00000000-0000-0000-0000-000000000000", undefined, { immatriculation, resultats: rows.length });
-    const exact = rows.find((r) => r.immatriculation === immatriculation) ?? null;
+    const exact = rows.find((r) => compact(r.immatriculation) === cle) ?? null;
     return { immatriculation, exact: exact ? presenterVehicule(exact, lots) : null, similaires: rows.filter((r) => r.id !== exact?.id).map((r) => presenterVehicule(r, lots)) };
   });
 }

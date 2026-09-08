@@ -497,6 +497,9 @@ export interface Incident {
   photos: string[];
   /** M15 — séjour de location courte durée lié (nuisance pendant un séjour). */
   sejourId: string | null;
+  /** M23 — « véhicule sur ma place » : emplacement concerné et plaque signalée. */
+  emplacementId?: string | null;
+  immatriculationSignalee?: string | null;
   // M16 — évaluation du prestataire (créateur du ticket ou syndic, après RESOLU/FERME).
   notePrestataire?: number | null;
   commentairePrestataire?: string | null;
@@ -774,6 +777,10 @@ export interface Visite {
   visiteurNom: string;
   statut: StatutVisite;
   horodatage: string;
+  /** M23 — place visiteur attribuée par le gardien (plaque, heure limite). */
+  emplacementId?: string | null;
+  immatriculation?: string | null;
+  heureLimite?: string | null;
 }
 
 // ── Espaces communs ─────────────────────────────────────────────────────────
@@ -1495,4 +1502,85 @@ export interface ExecutionResolution {
   resultat: string;
   necessite_execution: boolean;
   taches: { tache_id: string; titre: string; statut: StatutTache; date_echeance: string | null; terminee_le: string | null; en_retard: boolean }[];
+}
+
+// ── M23 — Parkings et caves (Doc A §4 — ⚠️ module absent du Master Spec, signalé ROADMAP M23) ──
+export type TypeEmplacement = "PARKING_COMMUN" | "PARKING_VISITEUR" | "PARKING_PMR" | "MOTO" | "VELO" | "CAVE_COMMUNE";
+export type StatutEmplacement = "DISPONIBLE" | "ATTRIBUE" | "HORS_SERVICE";
+export type TypeAttributionEmplacement = "ATTRIBUTION_AG" | "ROTATION" | "LOCATION_INTERNE" | "TEMPORAIRE";
+export type TypeVehicule = "VOITURE" | "MOTO" | "UTILITAIRE";
+export type TypeBadge = "BADGE_PIETON" | "TELECOMMANDE_PARKING" | "CLE_CAVE" | "CARTE_ASCENSEUR";
+export type StatutBadge = "ACTIF" | "PERDU" | "DESACTIVE" | "RESTITUE";
+export interface AttributionEmplacement {
+  id: string;
+  emplacementId: string;
+  lotId: string;
+  lotNumero: string | null;
+  type: TypeAttributionEmplacement;
+  dateDebut: string;
+  dateFin: string | null;
+  resolutionAgId: string | null;
+  redevanceMensuelle: string | null;
+  notes: string | null;
+  active: boolean;
+  creePar: IdentiteCourte | null;
+  creeLe: string;
+  emplacement?: { id: string; code: string; type: TypeEmplacement; niveau: string | null; statut: StatutEmplacement };
+}
+export interface Emplacement {
+  id: string;
+  coproprieteId: string;
+  type: TypeEmplacement;
+  code: string;
+  niveau: string | null;
+  attribuable: boolean;
+  statut: StatutEmplacement;
+  notes: string | null;
+  nbAttributions: number;
+  attributionCourante: AttributionEmplacement | null;
+  visiteurOccupee?: boolean;
+  creeLe: string;
+  modifieLe: string;
+}
+export interface EmplacementDetail extends Emplacement { attributions: AttributionEmplacement[] }
+export interface PlanEmplacements {
+  niveaux: { niveau: string; emplacements: Emplacement[] }[];
+  totaux: { total: number; attribues: number; disponibles: number; hors_service: number; visiteurs: number; visiteurs_occupees: number };
+}
+export interface Vehicule {
+  id: string;
+  coproprieteId: string;
+  lotId: string;
+  lotNumero: string | null;
+  utilisateurId: string | null;
+  immatriculation: string;
+  marque: string | null;
+  couleur: string | null;
+  type: TypeVehicule;
+  actif: boolean;
+  creeLe: string;
+  modifieLe: string;
+}
+export interface RechercheVehicule { immatriculation: string; exact: Vehicule | null; similaires: Vehicule[] }
+export interface BadgeAcces {
+  id: string;
+  coproprieteId: string;
+  lotId: string;
+  lotNumero: string | null;
+  type: TypeBadge;
+  identifiant: string;
+  statut: StatutBadge;
+  remisLe: string;
+  remisPar: IdentiteCourte | null;
+  restitueLe: string | null;
+  cautionMontant: string | null;
+  cautionPaiement: { id: string; montant: string; methode: string } | null;
+  notes: string | null;
+  creeLe: string;
+  tache_id?: string | null;
+}
+export interface VisiteursAujourdhui {
+  visites: { visite_id: string; visiteur_nom: string; lot: string | null; immatriculation: string | null; heure_limite: string | null; depassee: boolean; emplacement: { id: string; code: string; niveau: string | null } | null; horodatage: string }[];
+  sejours: { sejour_id: string; voyageur: string; lot: string | null; immatriculation: string | null; date_depart: string; emplacement: { id: string; code: string; niveau: string | null } | null }[];
+  places_libres: { id: string; code: string; niveau: string | null }[];
 }

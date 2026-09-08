@@ -17,6 +17,7 @@ export function IncidentForm({
   lots,
   sejours = [],
   sejourInitial,
+  emplacements = [],
 }: {
   dict: Dict;
   locale: Locale;
@@ -24,6 +25,8 @@ export function IncidentForm({
   /** M15 — séjours de location courte durée en cours (vide = sélecteur masqué). */
   sejours?: Array<{ id: string; lotId: string; libelle: string }>;
   sejourInitial?: string;
+  /** M23 — emplacements (parking / cave commune) visibles : « véhicule sur ma place ». */
+  emplacements?: Array<{ id: string; code: string; type: string }>;
 }) {
   const i = dict.incidents;
   const [state, action] = useActionState(signalerIncident, IDLE);
@@ -201,6 +204,24 @@ export function IncidentForm({
               </option>
             ))}
           </Select>
+        </Field>
+      ) : null}
+
+      {categorie === "PARKING" && emplacements.length > 0 ? (
+        <Field label={i.emplacementConcerne} htmlFor="emplacement_id" hint={i.emplacementConcerneAide} optionalLabel={dict.common.optional} error={fieldError(state, "emplacement_id")}>
+          <Select id="emplacement_id" name="emplacement_id" defaultValue="">
+            <option value="">{dict.common.none}</option>
+            {emplacements.map((x) => (
+              <option key={x.id} value={x.id}>
+                {x.code} · {dict.enumsParkings.typeEmplacement[x.type as keyof typeof dict.enumsParkings.typeEmplacement] ?? x.type}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      ) : null}
+      {categorie === "PARKING" ? (
+        <Field label={i.immatriculationSignalee} htmlFor="immatriculation_signalee" hint={i.immatriculationSignaleeAide} optionalLabel={dict.common.optional} error={fieldError(state, "immatriculation_signalee")}>
+          <Input id="immatriculation_signalee" name="immatriculation_signalee" maxLength={24} placeholder="12345-A-6" dir="ltr" className="font-mono uppercase text-start" />
         </Field>
       ) : null}
 

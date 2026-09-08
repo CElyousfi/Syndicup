@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
-import type { LcdSejour, Lot } from "../../../../../lib/api/types";
+import type { Emplacement, LcdSejour, Lot } from "../../../../../lib/api/types";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { IncidentForm } from "./incident-form";
 
@@ -18,9 +18,11 @@ export default async function NouvelIncidentPage({
   if (ctx.role === "PRESTATAIRE") redirect(`/${locale}/tableau-de-bord`);
 
   // M15 — séjours en cours visibles par l'appelant (RLS) : lien facultatif nuisance ↔ séjour.
-  const [lotsRes, sejoursRes] = await Promise.all([
+  const [lotsRes, sejoursRes, emplacementsRes] = await Promise.all([
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
     apiFetch<LcdSejour[]>("/lcd/sejours", { searchParams: { statut: "EN_COURS" } }),
+    // M23 — emplacements de la résidence (« véhicule sur ma place », cave forcée…).
+    apiFetch<Emplacement[]>("/emplacements", { searchParams: { limit: 500 } }),
   ]);
   const sejours = (sejoursRes.ok ? sejoursRes.data : []).map((s) => ({
     id: s.id,
@@ -40,6 +42,7 @@ export default async function NouvelIncidentPage({
         lots={(lotsRes.ok ? lotsRes.data : []).map((l) => ({ id: l.id, numero: l.numero }))}
         sejours={sejours}
         sejourInitial={sp.sejour}
+        emplacements={(emplacementsRes.ok ? emplacementsRes.data : []).map((x) => ({ id: x.id, code: x.code, type: x.type }))}
       />
     </div>
   );

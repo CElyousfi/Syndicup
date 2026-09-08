@@ -12,6 +12,8 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { CBell, CDoor, IconCircle } from "../../../../components/ui/color-icons";
 import { visiteVariant } from "../../../../lib/status";
 import { EnregistrerVisiteModal, RepondreVisiteForm } from "./visite-actions";
+import { PlaceVisiteurModal } from "../parkings/parkings-client";
+import type { Emplacement } from "../../../../lib/api/types";
 
 export async function generateMetadata({
   params,
@@ -38,10 +40,13 @@ export default async function VisitesPage({
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const resident = !gardien && !gestion && !ctx.roles.includes("CONSEIL_SYNDICAL");
 
-  const [visitesRes, lotsRes] = await Promise.all([
+  const [visitesRes, lotsRes, placesRes] = await Promise.all([
     apiFetch<Visite[]>("/visites"),
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
+    // M23 — places visiteurs en service (gardien / syndic : attribution à la visite).
+    gardien || gestion ? apiFetch<Emplacement[]>("/emplacements", { searchParams: { type: "PARKING_VISITEUR", limit: 100 } }) : Promise.resolve(null),
   ]);
+  const placesVisiteurs = (placesRes?.ok ? placesRes.data : []).filter((x) => x.statut !== "HORS_SERVICE").map((x) => ({ id: x.id, code: x.code, niveau: x.niveau }));
   const visites = visitesRes.ok ? visitesRes.data : [];
   const lots = lotsRes.ok ? lotsRes.data : [];
   const lotParId = new Map(lots.map((l) => [l.id, l.numero]));
@@ -85,8 +90,12 @@ export default async function VisitesPage({
           <p className="mt-0.5 text-[13px] text-soft">
             {dict.invitations.lot} {lotParId.get(visite.lotId) ?? "—"} ·{" "}
             {formatDateHeure(visite.horodatage, ctx.locale)}
+            {visite.emplacementId ? <span dir="ltr"> · {dict.parkings.placeVisiteur} {placesVisiteurs.find((x) => x.id === visite.emplacementId)?.code ?? ""}{visite.immatriculation ? ` · ${visite.immatriculation}` : ""}</span> : null}
           </p>
         </div>
+        {(gardien || gestion) && placesVisiteurs.length > 0 && new Date(visite.horodatage).toDateString() === aujourdhui ? (
+          <PlaceVisiteurModal dict={dict} locale={ctx.locale} visite={visite} places={placesVisiteurs} />
+        ) : null}
         {peutRepondre ? (
           <RepondreVisiteForm dict={dict} locale={ctx.locale} visiteId={visite.id} />
         ) : (

@@ -336,3 +336,12 @@ export const IconTasks = (p: SVGProps<SVGSVGElement>) => (
     <path d="M14 16h4" />
   </svg>
 );
+export const IconCar = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M5 13l1.6-4.5A2 2 0 0 1 8.5 7h7a2 2 0 0 1 1.9 1.5L19 13" />
+    <rect x="3" y="13" width="18" height="6" rx="1.5" />
+    <circle cx="7.5" cy="16" r="1" />
+    <circle cx="16.5" cy="16" r="1" />
+    <path d="M5 19v1.5M19 19v1.5" />
+  </svg>
+);

@@ -38,6 +38,11 @@ export function lienNotification(
   // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
   if (templateCode === "TACHES_EN_RETARD_HEBDO") return p("/taches?retard=1");
   if (templateCode.startsWith("TACHE_")) return id("tache_id") ? p(`/taches/${id("tache_id")}`) : p("/taches");
+  // M23 — parkings : attribution / expiration → fiche emplacement ; badges → registre ; véhicule gênant → incident ; visiteur → visites.
+  if (templateCode.startsWith("ATTRIBUTION_")) return id("emplacement_id") ? p(`/parkings/${id("emplacement_id")}`) : p("/parkings");
+  if (templateCode.startsWith("BADGE_")) return p("/parkings?onglet=badges");
+  if (templateCode === "VEHICULE_MAL_STATIONNE") return id("incident_id") ? p(`/incidents/${id("incident_id")}`) : p("/parkings");
+  if (templateCode === "VISITEUR_DEPASSEMENT") return p("/parkings?onglet=visiteurs");
   // M21 — tableau d'affichage : annonce, commentaire, sondage, récapitulatif.
   if (templateCode.startsWith("ANNONCE_")) return id("annonce_id") ? p(`/affichage/${id("annonce_id")}`) : p("/affichage");
   if (templateCode.startsWith("SONDAGE_")) return id("sondage_id") ? p(`/affichage/sondages/${id("sondage_id")}`) : p("/affichage");

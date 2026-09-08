@@ -35,7 +35,7 @@ import {
   IconWallet,
   IconSuitcase,
   IconWrench,
-  IconX, IconReceipt, IconPie, IconHandshake, IconMegaphone, IconTasks } from "../ui/icons";
+  IconX, IconReceipt, IconPie, IconHandshake, IconMegaphone, IconTasks, IconCar } from "../ui/icons";
 
 const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   grid: IconGrid,
@@ -61,6 +61,7 @@ const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>>
   handshake: IconHandshake,
   megaphone: IconMegaphone,
   tasks: IconTasks,
+  car: IconCar,
 };
 
 export interface FrameLabels {

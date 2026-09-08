@@ -154,3 +154,6 @@ export const sondageVariant = map({ BROUILLON: "outline", OUVERT: "ok", CLOS: "n
 // M22 — tâches.
 export const tacheVariant = map({ A_FAIRE: "outline", EN_COURS: "info", BLOQUEE: "danger", TERMINEE: "ok", ANNULEE: "neutral" });
 export const prioriteVariant = map({ BASSE: "neutral", NORMALE: "outline", HAUTE: "warn", CRITIQUE: "danger" });
+// M23 — parkings.
+export const emplacementVariant = map({ DISPONIBLE: "ok", ATTRIBUE: "info", HORS_SERVICE: "neutral" });
+export const badgeAccesVariant = map({ ACTIF: "ok", PERDU: "danger", DESACTIVE: "neutral", RESTITUE: "outline" });

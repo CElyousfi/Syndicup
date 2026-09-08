@@ -5,6 +5,7 @@ import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
 import { getLots } from "../../../../../lib/finances-data";
 import type {
+  EmplacementDetail,
   BudgetAg,
   BudgetPoste,
   Incident,
@@ -25,6 +26,7 @@ import { CAlert, CSend, CWrench, IconCircle } from "../../../../../components/ui
 import { depenseVariant, incidentVariant, urgenceVariant } from "../../../../../lib/status";
 import { AssignerModal, ChangerStatutModal } from "./incident-actions";
 import { CreerDepenseIncidentModal, EvaluerPrestataireModal } from "./incident-depense-modals";
+import { NotifierVehiculeModal } from "../../parkings/parkings-client";
 
 type IncidentAvecJournal = Incident & { logs: IncidentLog[]; createur?: IncidentCreateur | null };
 
@@ -65,6 +67,9 @@ export default async function IncidentDetailPage({
     url: `/api/incident-photo?id=${encodeURIComponent(id)}&n=${n}`,
   }));
   const prestataires = prestatairesRes?.ok ? prestatairesRes.data : [];
+  // M23 — code de l'emplacement concerné (lecture tenant, RLS).
+  const emplacementRes = incident.emplacementId ? await apiFetch<EmplacementDetail>(`/emplacements/${incident.emplacementId}`) : null;
+  const emplacementCode = emplacementRes?.ok ? emplacementRes.data.code : null;
   const prestataireAssigne = prestataires.find((p) => p.id === incident.assigneAId);
   // M16 — dépenses liées (syndic / conseil) et évaluation du prestataire (créateur ou syndic, RESOLU/FERME).
   const conseil = ctx.roles.includes("CONSEIL_SYNDICAL");
@@ -137,6 +142,9 @@ export default async function IncidentDetailPage({
                 statutActuel={incident.statut}
               />
             ) : null}
+            {(syndic || ctx.roles.includes("GARDIEN")) && (incident.immatriculationSignalee || incident.categorie === "PARKING") ? (
+              <NotifierVehiculeModal dict={dict} locale={ctx.locale} incidentId={id} immatriculation={incident.immatriculationSignalee ?? null} />
+            ) : null}
             {syndic ? (
               <AssignerModal
                 dict={dict}
@@ -168,6 +176,16 @@ export default async function IncidentDetailPage({
               <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-body">
                 {incident.description}
               </p>
+            </Card>
+          ) : null}
+
+          {incident.immatriculationSignalee || incident.emplacementId ? (
+            <Card>
+              <SectionHeader title={dict.enums.categorieIncident.PARKING} />
+              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
+                {incident.immatriculationSignalee ? <div><dt className="text-[12px] text-faint">{i.immatriculationSignalee}</dt><dd className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{incident.immatriculationSignalee}</dd></div> : null}
+                {incident.emplacementId ? <div><dt className="text-[12px] text-faint">{i.emplacementConcerne}</dt><dd className="text-sm text-ink-strong"><Link href={`/${locale}/parkings/${incident.emplacementId}`} className="font-mono text-action hover:underline" dir="ltr">{emplacementCode ?? dict.parkings.titre}</Link></dd></div> : null}
+              </dl>
             </Card>
           ) : null}
 

@@ -28,7 +28,8 @@ export type IconKey =
   | "pie"
   | "handshake"
   | "megaphone"
-  | "tasks";
+  | "tasks"
+  | "car";
 
 export interface NavItem {
   href: string;
@@ -90,6 +91,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   // M22 — tâches : syndic + conseil (registre), gardien (les siennes).
   const taches: NavItem = { href: p("/taches"), label: d.taches, icon: "tasks" };
   const mesTaches: NavItem = { href: p("/taches"), label: d.mesTaches, icon: "tasks" };
+  // M23 — parkings, véhicules, badges : syndic / conseil / gardien (plan, registres) ; résidents (leurs lots).
+  const parkings: NavItem = { href: p("/parkings"), label: d.parkings, icon: "car" };
   const espaces: NavItem = { href: p("/espaces-communs"), label: d.espaces, icon: "home" };
   const reservations: NavItem = {
     href: p("/reservations"),
@@ -140,7 +143,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [affichage, taches, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
+          items: [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
         { label: s.administration, items: [membres, invitations, parametres] },
       ];
@@ -151,7 +154,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.vieCollective, items: [affichage, taches, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
-          items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
+          items: [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
       ];
     case "PROPRIETAIRE":
@@ -161,7 +164,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         { label: s.finances, items: [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
         { label: s.vieCollective, items: [affichage, ag, incidents(dict.incidents.mesSignalements), litiges] },
-        { label: s.quotidien, items: [espaces, reservations, visites, lcd, documents] },
+        { label: s.quotidien, items: [espaces, reservations, visites, parkings, lcd, documents] },
       ];
     case "GESTIONNAIRE_LCD":
       // Gestionnaire désigné sur un lot : le module LCD, les incidents (nuisances pendant un
@@ -178,14 +181,14 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
           label: s.vieCollective,
           items: [affichage, incidents(dict.incidents.mesSignalements), litiges],
         },
-        { label: s.quotidien, items: [lots(dict.lots.mesLots), espaces, reservations, visites, documents] },
+        { label: s.quotidien, items: [lots(dict.lots.mesLots), espaces, reservations, visites, parkings, documents] },
       ];
     case "GARDIEN":
       return [
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [affichage, mesTaches, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
+          items: [affichage, mesTaches, visites, parkings, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":

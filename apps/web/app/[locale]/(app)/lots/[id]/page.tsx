@@ -29,8 +29,9 @@ import { ConfirmDelete } from "../../../../../components/ui/confirm-delete";
 import { supprimerLot } from "../actions";
 import { ContesterModal } from "../../../../../components/finances/contester-modal";
 import { LotLcdCard } from "../../../../../components/lcd/lot-lcd-card";
+import { LotParkingsSection } from "./lot-parkings";
 
-type Onglet = "propriete" | "occupation" | "finances" | "historique";
+type Onglet = "propriete" | "occupation" | "finances" | "historique" | "parkings";
 
 export default async function LotDetailPage({
   params,
@@ -53,8 +54,8 @@ export default async function LotDetailPage({
   const voitFinances = soldeRes.ok;
 
   const onglets: Onglet[] = voitFinances
-    ? ["propriete", "occupation", "finances", "historique"]
-    : ["propriete", "occupation", "historique"];
+    ? ["propriete", "occupation", "finances", "parkings", "historique"]
+    : ["propriete", "occupation", "parkings", "historique"];
   const ongletActif: Onglet = onglets.includes(sp.onglet as Onglet)
     ? (sp.onglet as Onglet)
     : "propriete";
@@ -366,6 +367,8 @@ export default async function LotDetailPage({
           </TableCard>
         </div>
       ) : null}
+
+      {ongletActif === "parkings" ? <LotParkingsSection dict={dict} locale={ctx.locale} lot={lot} gestion={gestion} /> : null}
 
       {ongletActif === "historique" ? (
         anciens.length === 0 ? (

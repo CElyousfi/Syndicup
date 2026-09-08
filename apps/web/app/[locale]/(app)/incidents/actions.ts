@@ -75,6 +75,9 @@ export async function signalerIncident(_prev: FormState, fd: FormData): Promise<
       urgence: champ(fd, "urgence"),
       ...(photos.length > 0 ? { photos } : {}),
       ...(sejourId !== "" ? { sejour_id: sejourId } : {}),
+      // M23 — véhicule sur ma place / emplacement concerné.
+      ...(champ(fd, "emplacement_id") !== "" ? { emplacement_id: champ(fd, "emplacement_id") } : {}),
+      ...(champ(fd, "immatriculation_signalee") !== "" ? { immatriculation_signalee: champ(fd, "immatriculation_signalee") } : {}),
     },
   });
   if (!res.ok) return fromApiError(res);
