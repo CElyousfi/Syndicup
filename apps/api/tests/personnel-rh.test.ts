@@ -23,6 +23,7 @@ import type { TenantContext } from "../lib/tenant/context";
 import { calculerPaie, joursOuvrables, type ParametresPaie } from "../lib/personnel/paie";
 import { annulerConge, creerFichePaie, deciderConge, definirParametresPaie, demanderConge, evaluer, lireCnss, listerConges, listerEvaluations, listerFichesPaie, listerFichesPaieCopropriete, listerPresences, modifierPersonnelRh, obtenirPersonnel, pdfFichePaie, planning, pointer, saisirPresences, validerFichePaie, PermissionRefuseeError, RhError } from "../lib/personnel/rh";
 import { listerPersonnel } from "../lib/personnel/personnel";
+import { exporterConges, exporterPersonnel } from "../lib/personnel/rh";
 import { executerPaieMensuelle, executerRappelConges } from "../lib/personnel/jobs";
 import { payerDepense } from "../lib/depenses/depenses";
 
@@ -73,6 +74,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await admin.exportLog.deleteMany({ where: { coproprieteId: copro } });
   await admin.idempotencyKey.deleteMany({ where: { coproprieteId: copro } });
   await admin.notification.deleteMany({ where: { coproprieteId: copro } });
   await admin.personnelLog.deleteMany({ where: { coproprieteId: copro } });
@@ -278,5 +280,18 @@ describe("M20 — congés, présences, évaluations, planning, jobs", () => {
     // Append-only : le rôle applicatif n'a pas d'UPDATE sur personnel_log.
     const log = await admin.personnelLog.findFirstOrThrow({ where: { coproprieteId: copro } });
     await expect(withTenant(S(), (db) => db.personnelLog.update({ where: { id: log.id }, data: { type: "FICHE_MODIFIEE" } }))).rejects.toThrow();
+  });
+
+  it("exports csv : registre (syndic, sans n° CNSS, journalisé) ; congés (employé : les siens seulement) ; conseil refusé sur le registre", async () => {
+    const reg = await exporterPersonnel(S(), "csv");
+    expect(reg.entetes).not.toContain("numero_cnss");
+    expect(reg.nbLignes).toBeGreaterThanOrEqual(2);
+    expect(JSON.stringify(reg.lignes)).not.toContain("123456789");
+    await expect(exporterPersonnel(C(), "csv")).rejects.toThrow(PermissionRefuseeError);
+    const tous = await exporterConges(S(), {}, "csv");
+    const miens = await exporterConges(K(), {}, "csv");
+    expect(tous.nbLignes).toBeGreaterThanOrEqual(miens.nbLignes);
+    expect(miens.lignes.every((l) => l[0] === miens.lignes[0]?.[0])).toBe(true);
+    expect(await admin.exportLog.count({ where: { coproprieteId: copro, type: { in: ["PERSONNEL", "CONGES"] } } })).toBe(3);
   });
 });

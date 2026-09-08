@@ -4042,6 +4042,8 @@ paths:
     get:
       tags: [Personnel]
       summary: Registre du personnel gardien — lecture ouverte à tout membre du tenant (Doc A §9, fiche visible des résidents).
+      parameters:
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M20 — export journalisé (syndic), jamais le n° CNSS." }
       responses:
         "200":
           description: OK
@@ -6133,6 +6135,7 @@ paths:
       parameters:
         - { name: statut, in: query, schema: { type: string, enum: [DEMANDE, APPROUVE, REFUSE, ANNULE] } }
         - { name: annee, in: query, schema: { type: string, pattern: '^\d{4}$' } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M20 — export journalisé (export_log)." }
       responses:
         "200":
           description: OK

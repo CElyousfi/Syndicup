@@ -16,6 +16,7 @@ import { Avatar } from "../../../../components/ui/avatar";
 import { personnelVariant } from "../../../../lib/status";
 import { IconUsers } from "../../../../components/ui/icons";
 import { ChangerPresenceModal, CreerFicheModal } from "./personnel-modals";
+import { ExportButtons } from "../../../../components/ui/export-buttons";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -51,6 +52,7 @@ export default async function PersonnelPage({ params }: { params: Promise<{ loca
           <div className="flex flex-wrap gap-2">
             {gestion || conseil ? <ButtonLink href={p("/personnel/planning")} variant="secondary">{pe.planning}</ButtonLink> : null}
             {gestion ? <ButtonLink href={p("/personnel/paie")} variant="secondary">{pe.paieMois}</ButtonLink> : null}
+            {gestion ? <ExportButtons ressource="personnel" filtres={{}} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx }} /> : null}
             {gestion ? <CreerFicheModal dict={dict} locale={ctx.locale} loges={loges} /> : null}
           </div>
         }

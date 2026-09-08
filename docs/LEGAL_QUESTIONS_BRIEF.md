@@ -355,6 +355,52 @@ le contrôle que si `seuil_contrat_ag` est renseigné par le syndic.
 préalable du conseil, préavis minimal de résiliation). Le module prolonge d'une période égale et
 notifie le syndic ; le préavis est un paramètre libre par contrat.
 
+## 11. Personnel salarié : CNSS, AMO, IR, SMIG, congés payés, contrat de travail (module M20)
+
+| Paramètre (`copropriete.parametres_paie_json`) | Valeur provisoire (seed de démonstration, jamais en dur) | Statut |
+|---|---|---|
+| `smig_mensuel` | 3 200,00 MAD (avertissement « sous SMIG », non bloquant) | PROVISOIRE |
+| `taux_cnss_salarial` / `plafond_cnss` | 4,48 % / 6 000,00 MAD | PROVISOIRE |
+| `taux_amo_salarial` | 2,26 % | PROVISOIRE |
+| `taux_cnss_patronal` / `taux_allocations_familiales` / `taux_amo_patronal` / `taux_formation_pro` | 8,98 % / 6,40 % / 4,11 % / 1,60 % | PROVISOIRE |
+| `taux_frais_professionnels` / `plafond_frais_professionnels_mensuel` | 25 % / 2 500,00 MAD | PROVISOIRE |
+| `tranches_ir` (barème annuel) | 0 % ≤ 40 000 ; 10 % ≤ 60 000 (−4 000) ; 20 % ≤ 80 000 (−10 000) ; 30 % ≤ 100 000 (−18 000) ; 34 % ≤ 180 000 (−22 000) ; 37 % au-delà (−27 400) | PROVISOIRE |
+| `jours_conge_annuels` | 18 jours ouvrables (NULL = solde non calculé, jamais deviné) | PROVISOIRE |
+| `jours_ouvres_mois` / `retenue_absence_injustifiee` | 26 / true | PROVISOIRE |
+
+Sans ces paramètres, `POST /personnel/{id}/fiches-paie/{fid}/valider` répond 422
+`PAIE_PARAMETRES_NON_CONFIGURES` ; le brouillon « brut seul » reste consultable. Le PDF porte la
+mention « aide au calcul générée à partir des paramètres saisis par le syndic — pas un bulletin
+certifié ».
+
+### 11.1 — Le syndicat des copropriétaires comme employeur
+
+**À confirmer :** formalités d'immatriculation CNSS du syndicat (affiliation employeur), déclaration
+des salaires, régime AMO obligatoire pour un gardien d'immeuble, existence d'un contrat type ou de
+règles spécifiques (logement de service, astreintes). Le module ne produit ni déclaration CNSS ni
+DSN : il conserve les données pour que le syndic les reporte.
+
+### 11.2 — Barèmes applicables et mises à jour
+
+**À confirmer :** taux CNSS / AMO / formation professionnelle en vigueur, plafond CNSS, barème IR
+annuel et abattement pour frais professionnels, SMIG applicable (le gardiennage relève-t-il du
+SMIG ou d'un minimum conventionnel ?), et le rythme de mise à jour légale. Chaque changement de
+valeur devra être saisi par le syndic (les fiches validées conservent les paramètres appliqués dans
+`details_json` — pas de recalcul rétroactif).
+
+### 11.3 — Congés, absences, certificats
+
+**À confirmer :** durée légale des congés payés (1,5 jour ouvrable par mois ?), décompte en jours
+ouvrables (lundi → samedi) tel qu'implémenté, majorations d'ancienneté, congés exceptionnels, délai
+de remise du certificat médical, retenue sur salaire des absences injustifiées et sa base de calcul.
+
+### 11.4 — Données RH et rétention
+
+**À confirmer :** durée de conservation des fiches de paie et du dossier après le départ (le
+statut `PARTI` conserve tout ; aucune purge n'est implémentée), accès de l'employé à ses propres
+données (le module donne accès aux fiches, congés et présences), et caractère sensible du n° CNSS
+(masqué partout, lecture complète auditée).
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.

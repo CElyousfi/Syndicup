@@ -523,6 +523,70 @@ créées par la reconduction soient notifiées dans le même passage (rejeu = 0 
   saisie et transitions depuis le mobile (web-first, voir parité) ; exports personnel / parkings
   (M20 / M23).
 
+## M20 — Personnel RH : paie, congés, présences, évaluations
+
+*Réf. Doc A §9 (gardien : présence, loge, fiche visible), §8 (le syndicat employeur, salaires
+dans les charges). Domaine : `17-personnel-rh.md`. Juridique : brief §11. Branche
+`feature/m20-personnel`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : valeurs `StatutPersonnel.PRE_EMBAUCHE` / `PARTI` ;
+enums `PostePersonnel`, `TypeContratTravail`, `StatutFichePaie`, `TypeConge`, `StatutConge`,
+`StatutPresence`, `TypePersonnelLog` ; colonnes RH sur `personnel` (poste, type_contrat,
+date_embauche, date_fin_contrat, salaire_brut_mensuel, numero_cnss, document_contrat_id,
+contact_urgence, horaires_json, notes, fin_contrat_notifie_le, modifie_le) ; tables `fiche_paie`,
+`conge`, `evaluation_personnel`, `presence_personnel`, `personnel_log` (append-only) ; colonne
+`copropriete.parametres_paie_json` ; colonnes `depense.personnel_id` / `periode_paie` ; type de
+document `CERTIFICAT_CONGE` ; marqueurs `conge.rappel_envoye_le` ; permissions `personnel.rh.lire`
+(GARDIEN scoped), `personnel.rh.gerer`, `personnel.conges.demander`, `personnel.conges.approuver`,
+`personnel.evaluer` (syndic + conseil), `personnel.presence.saisir`, `personnel.planning.lire` ;
+codes `PAIE_PARAMETRES_NON_CONFIGURES`, `PAIE_STATUT_INVALIDE`, `CONGE_STATUT_INVALIDE`,
+`CONGE_SOLDE_INSUFFISANT`, `PERSONNEL_STATUT_INVALIDE`. **Écarts par rapport au prompt** : (1) le
+PDF de paie est rendu à la demande depuis `fiche_paie.details_json` (l'employé lit sa fiche sans
+nouvelle visibilité de document : le Document stocké reste SYNDIC_ONLY) ; (2) le certificat de
+congé envoyé par l'employé est rattaché comme Document à l'approbation par le syndic (chemin gardé
+dans `personnel_log`), les employés n'ayant pas le droit d'écrire `document` ; (3) le job de paie
+tourne le 25 (brouillons + `PAIE_A_VALIDER`) et porte aussi l'alerte de fin de CDD ; (4) le
+paiement d'une fiche = paiement de la dépense liée (aucun second flux d'argent) ; (5) les
+évaluations et la saisie de paie restent web-first sur le mobile.
+
+- [x] **Livré (06/09)** — Migration `..._m20_personnel_rh` : colonnes / tables, CHECKs (périodes,
+  dates, notes 1-5), fonctions `personnel_utilisateur_id` / `personnel_copropriete_id`, RLS :
+  `fiche_paie` syndic + employé, `conge` syndic / conseil + employé (INSERT propre),
+  `evaluation_personnel` syndic + conseil, `presence_personnel` syndic / conseil + employé (écriture
+  propre), `personnel_log` GRANT SELECT+INSERT. Seed Al Amal : gardien CDI (horaires, CNSS, contrat
+  signé) + agent d'entretien CDD finissant sous 25 jours (`+212600000009`), paramètres de paie
+  PROVISOIRES, fiche PAYEE du mois précédent (dépense liée) + brouillon, congé approuvé avec
+  remplaçant + demande maladie en attente, présences, évaluations, journal RH.
+- [x] **Livré (06/09)** — API tag `Personnel RH` (26 opérations) : dossier (`PATCH /personnel/{id}`,
+  contrat signé, `PARTI` libère la loge), `GET /personnel/{id}/cnss` audité, paramètres de paie
+  (`GET/PATCH /coproprietes/{id}/parametres-paie`), fiches (préparer / recalculer, valider avec
+  Idempotency-Key → dépense PERSONNEL soumise dans la même transaction, payer via la dépense, PDF
+  FR/AR), paie du mois (`GET /personnel/fiches-paie?periode=`), congés (demande propre ou au nom,
+  approbation avec remplaçant et présences posées, refus motivé, annulation, filtres, export),
+  présences (saisie en masse, `POST /personnel/me/presence` idempotent, période), évaluations,
+  planning hebdomadaire, exports csv / xlsx `PERSONNEL` / `CONGES` sans CNSS. Jobs
+  `personnel-mensuel` (25) et `personnel-conges-rappel`. Notifications FR/AR `PAIE_A_VALIDER`,
+  `PAIE_VALIDEE`, `CONGE_DEMANDE`, `CONGE_APPROUVE`, `CONGE_REFUSE`, `CONGE_EN_ATTENTE_RAPPEL`,
+  `CONTRAT_TRAVAIL_FIN_PROCHE`. Hook M16 `payerDepense` → fiche PAYEE. Tests
+  `tests/personnel-rh.test.ts` (9) : table de cas de paie (SMIG, plafond, absences), masquage par
+  rôle + CNSS audité, validation refusée sans paramètres (rien d'écrit), validation idempotente avec
+  dépense, RLS employé / collègue / conseil, congés (jours ouvrables, chevauchement, solde,
+  annulation), pointage idempotent, jobs rejoués, `personnel_log` append-only, exports.
+- [x] **Livré (06/09)** — Web : `personnel/` (poste, liens dossier / planning / paie du mois,
+  export), `personnel/[id]` (onglets fiche / paie / congés / présences / évaluations, modale du
+  dossier avec horaires 7 × 2 plages et contrat, n° CNSS à la demande, préparer / valider / payer une
+  fiche, PDF dans la visionneuse, demande et décision de congé, grille des présences du mois,
+  pointage, évaluation), `personnel/planning`, `personnel/paie`, `personnel/me` (gardien),
+  Paramètres → Paie (taux, barème IR, congés), navigation « Mon dossier » du gardien, FR/AR RTL.
+- [x] **Livré (06/09)** — Mobile `features/personnel/personnel_rh_screens.dart` : dossier (fiche,
+  fiches de paie + PDF, congés avec demande / annulation / décision syndic, présences du mois),
+  « Mon dossier » avec pointage **hors-ligne** (Drift v3 `presences_queue`, `presence_sync.dart`,
+  Idempotency-Key = id de ligne), planning hebdomadaire, bannière des congés à décider, deep-links
+  `CONGE_*` / `PAIE_*` / `CONTRAT_TRAVAIL_FIN_PROCHE` ; test routeur M20.
+- [ ] **Non livré / à confirmer** : déclarations CNSS / DSN et bordereaux (hors périmètre, brief
+  §11.1) ; recalcul rétroactif des fiches validées ; tâches M22 de fin de CDD ; saisie de paie et
+  évaluations sur mobile (web-first, voir parité) ; purge / rétention du dossier après départ.
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

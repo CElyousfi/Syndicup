@@ -4,13 +4,20 @@ import { tenantFromRequest } from "../../../../lib/http/request-context";
 import { ok, failZod } from "../../../../lib/http/respond";
 import { readIdempotencyKey } from "../../../../lib/http/idempotency";
 import { mapErreurRh } from "../../../../lib/personnel/http";
-import { demanderConge, listerConges } from "../../../../lib/personnel/rh";
+import { demanderConge, exporterConges, listerConges } from "../../../../lib/personnel/rh";
+import { formatDemande, reponseExport } from "../../../../lib/http/export";
 import { congeCreateSchema, congesFiltresSchema } from "../../../../lib/personnel/schemas";
 async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
-    const parsed = congesFiltresSchema.safeParse(Object.fromEntries(new URL(req.url).searchParams));
+    const url = new URL(req.url);
+    const parsed = congesFiltresSchema.safeParse(Object.fromEntries([...url.searchParams.entries()].filter(([k]) => k !== "format")));
     if (!parsed.success) return failZod(parsed.error);
+    const format = formatDemande(url);
+    if (format !== "json") {
+      const { entetes, lignes } = await exporterConges(ctx, parsed.data, format);
+      return reponseExport(format, "conges", entetes, lignes);
+    }
     return ok(await listerConges(ctx, null, parsed.data));
   } catch (e) { const m = mapErreurRh(e); if (m) return m; throw e; }
 }

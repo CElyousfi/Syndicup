@@ -15,6 +15,7 @@ import { envoyerNotification } from "../notifications/notifications";
 import { withTenantIdempotent } from "../http/idempotency";
 import type { ErrorCode } from "../http/respond";
 import { money, toApiString } from "../money";
+import { journaliserExport, type CelluleCsv, type FormatExport } from "../http/export";
 import { assertCheminDansPerimetre, attacherDocument, preparerUploadModule, urlsSigneesDocuments } from "../documents/attach";
 import { creerDepenseDb, soumettreDepenseDb } from "../depenses/depenses";
 import { calculerPaie, joursOuvrables, lireParametresPaie, type ParametresPaie, type ResultatPaie } from "./paie";
@@ -528,6 +529,34 @@ export async function listerConges(ctx: TenantContext, personnelId: string | nul
     if (filtres.annee) where = { ...where, dateDebut: { gte: dateUtc(`${filtres.annee}-01-01`), lt: dateUtc(`${Number(filtres.annee) + 1}-01-01`) } };
     const rows = await db.conge.findMany({ where, include: congeInclude, orderBy: [{ statut: "asc" }, { dateDebut: "desc" }] });
     return presenterConges(db, rows);
+  });
+}
+
+/** Export csv / xlsx du registre (syndic) — jamais le n° CNSS (règle « jamais en clair dans une liste »). */
+export const ENTETES_PERSONNEL = ["nom", "prenom", "telephone", "poste", "statut", "type_contrat", "date_embauche", "date_fin_contrat", "salaire_brut_mensuel", "logement", "contact_urgence"];
+export async function exporterPersonnel(ctx: TenantContext, format: FormatExport): Promise<{ entetes: string[]; lignes: CelluleCsv[][]; nbLignes: number }> {
+  if (can("exports.lire", ctx.role) !== true || can("personnel.rh.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Rôle non autorisé à exporter le personnel.");
+  return withTenant(ctx, async (db) => {
+    const rows = await db.personnel.findMany({ where: { coproprieteId: ctx.coproprieteId }, include: { logementLot: { select: { numero: true } } }, orderBy: { creeLe: "asc" } });
+    const noms = await nomsUtilisateurs(db, rows.map((r) => r.utilisateurId));
+    const lignes: CelluleCsv[][] = rows.map((r) => {
+      const u = noms.get(r.utilisateurId);
+      return [u?.nom ?? "", u?.prenom ?? "", u?.telephone ?? "", r.poste, r.statut, r.typeContrat ?? "", r.dateEmbauche ? isoDate(r.dateEmbauche) : "", r.dateFinContrat ? isoDate(r.dateFinContrat) : "", r.salaireBrutMensuel ? toApiString(r.salaireBrutMensuel) : "", r.logementLot?.numero ?? "", r.contactUrgence ?? ""];
+    });
+    await journaliserExport(db, ctx, { type: "PERSONNEL", filtres: {}, nbLignes: lignes.length, format });
+    return { entetes: ENTETES_PERSONNEL, lignes, nbLignes: lignes.length };
+  });
+}
+
+/** Export csv / xlsx des congés (syndic / conseil : tous ; employé : les siens) — journalisé. */
+export const ENTETES_CONGES = ["employe", "poste", "type", "date_debut", "date_fin", "nb_jours", "statut", "motif", "motif_refus", "remplacant", "traite_le"];
+export async function exporterConges(ctx: TenantContext, filtres: { statut?: string; annee?: string }, format: FormatExport): Promise<{ entetes: string[]; lignes: CelluleCsv[][]; nbLignes: number }> {
+  if (can("exports.lire", ctx.role) !== true && can("personnel.conges.demander", ctx.role) !== "scoped") throw new PermissionRefuseeError("Rôle non autorisé à exporter les congés.");
+  const rows = await listerConges(ctx, null, filtres);
+  return withTenant(ctx, async (db) => {
+    const lignes: CelluleCsv[][] = rows.map((c) => [c.personnel.nom ?? "", c.personnel.poste, c.type, isoDate(c.dateDebut), isoDate(c.dateFin), toApiString(c.nbJours), c.statut, c.motif ?? "", c.motifRefus ?? "", c.remplacant?.nom ?? "", c.traiteLe ? c.traiteLe.toISOString() : ""]);
+    await journaliserExport(db, ctx, { type: "CONGES", filtres: filtres as Record<string, unknown>, nbLignes: lignes.length, format });
+    return { entetes: ENTETES_CONGES, lignes, nbLignes: lignes.length };
   });
 }
 

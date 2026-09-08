@@ -45,7 +45,8 @@ flutter run --dart-define=API_BASE_URL=http://192.168.1.10:3001/v1   # télépho
 ```
 
 Comptes de démonstration (Supabase local, OTP de test `123456`) : `+212600000001` syndic,
-`+212600000002` propriétaire (AR), `+212600000005` locataire, `+212600000006` gardien ;
+`+212600000002` propriétaire (AR), `+212600000005` locataire, `+212600000006` gardien,
+`+212600000009` agent d'entretien (AR, CDD — M20 ; relancer `supabase stop && supabase start` pour charger le `test_otp`) ;
 e-mail `syndic.alamal@example.ma` / `SyndicUp2026!`.
 
 ## Builds

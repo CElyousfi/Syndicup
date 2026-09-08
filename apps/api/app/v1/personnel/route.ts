@@ -12,10 +12,18 @@ import {
 } from "../../../lib/personnel/personnel";
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
+import { formatDemande, reponseExport } from "../../../lib/http/export";
+import { exporterPersonnel } from "../../../lib/personnel/rh";
 
 async function handleGET(req: Request) {
   try {
     const ctx = await tenantFromRequest(req);
+    // M20 — export csv / xlsx journalisé (syndic) ; sans n° CNSS.
+    const format = formatDemande(new URL(req.url));
+    if (format !== "json") {
+      const { entetes, lignes } = await exporterPersonnel(ctx, format);
+      return reponseExport(format, "personnel", entetes, lignes);
+    }
     const rows = await listerPersonnel(ctx);
     return ok(rows);
   } catch (e) {

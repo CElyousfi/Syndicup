@@ -124,7 +124,7 @@ async function main() {
 
   // M20 — agent d'entretien salariée de la copropriété (rôle applicatif GARDIEN : seul rôle « personnel »).
   const agentUser = await prisma.utilisateur.create({
-    data: { telephone: "+212600000008", nom: "El Fassi", prenom: "Fatima", languePreferee: "AR", statutCompte: "ACTIF" },
+    data: { telephone: "+212600000009", nom: "El Fassi", prenom: "Fatima", languePreferee: "AR", statutCompte: "ACTIF" },
   });
 
   // M16 — membre du conseil syndical (approuve les dépenses au-dessus du seuil, Doc A §8.3).
