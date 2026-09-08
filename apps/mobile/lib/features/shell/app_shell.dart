@@ -76,6 +76,7 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(tachesProvider);
     }
     if (t == 'IMPORT_TERMINE' || t == 'INVITATION_ACCEPTEE') ref.invalidate(onboardingProvider);
+    if (t.startsWith('MANDAT_')) { ref.invalidate(cabinetsProvider); ref.invalidate(appContextProvider); }
     if (t.startsWith('ATTRIBUTION_') || t.startsWith('BADGE_') || t == 'VISITEUR_DEPASSEMENT') {
       ref.invalidate(planEmplacementsProvider);
       ref.invalidate(attributionsProvider);

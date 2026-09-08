@@ -25,6 +25,9 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   }
   // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
   // M24 — import terminé : le tableau de bord (l'import se pilote sur le web).
+  // M25 — mandat de cabinet : la proposition se confirme sur le web (Paramètres) ; le mobile ouvre l'espace cabinet.
+  if (templateCode == 'MANDAT_PROPOSE') return '/parametres';
+  if (templateCode == 'MANDAT_CONFIRME' || templateCode == 'MANDAT_TERMINE') return '/cabinet';
   if (templateCode == 'IMPORT_TERMINE') return '/tableau-de-bord';
   // M23 — parkings : attribution / expiration → fiche emplacement ; badges → registre ; véhicule gênant → incident ; visiteur → places du jour.
   if (templateCode.startsWith('ATTRIBUTION_')) return id('emplacement_id') != null ? '/parkings/${id('emplacement_id')}' : '/parkings';

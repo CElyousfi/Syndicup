@@ -47,6 +47,7 @@ IconData navIcon(String key) => switch (key) {
       'megaphone' => Icons.campaign_rounded,
       'tasks' => Icons.task_alt_rounded,
       'car' => Icons.directions_car_rounded,
+      'briefcase' => Icons.business_center_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -80,6 +81,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final mesTaches = NavItem('/taches', d.mesTaches, 'tasks');
   // M23 — parkings, véhicules, badges : gestion / conseil / gardien (plan, registres) ; résidents (leurs lots).
   final parkings = NavItem('/parkings', d.parkings, 'car');
+  // M25 — espace cabinet (portefeuille, alertes, agenda) : lecture ; affiché quand l'utilisateur est membre d'un cabinet.
+  final cabinet = NavItem('/cabinet', d.cabinet, 'briefcase');
   final espaces = NavItem('/espaces-communs', d.espaces, 'home');
   final reservations = NavItem('/reservations', d.reservations, 'calendar');
   final visites = NavItem('/visites', d.visites, 'door');
@@ -108,7 +111,14 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [affichage, taches, ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents]),
-        NavSection(s.administration, [membres, invitations, parametres]),
+        NavSection(s.administration, [cabinet, membres, invitations, parametres]),
+      ];
+    case 'SYNDIC_COMPTABLE':
+      // M25 — comptable d'un cabinet : lecture seule des finances.
+      return [
+        NavSection(null, [dashboard]),
+        NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
+        NavSection(s.quotidien, [lots(), contrats, documents, cabinet]),
       ];
     case 'CONSEIL_SYNDICAL':
       return [
@@ -161,6 +171,7 @@ const Map<String, List<String>> _tabsParRole = {
   'LOCATAIRE': ['grid', 'megaphone', 'wrench', 'calendar'],
   'GARDIEN': ['grid', 'door', 'suitcase', 'wrench'],
   'GESTIONNAIRE_LCD': ['grid', 'suitcase', 'wrench', 'file'],
+  'SYNDIC_COMPTABLE': ['grid', 'coins', 'pie', 'briefcase'],
   'PRESTATAIRE': ['grid', 'wrench'],
 };
 

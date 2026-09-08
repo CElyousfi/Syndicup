@@ -35,6 +35,7 @@ import '../../features/personnel/personnel_rh_screens.dart';
 import '../../features/communication/communication_screens.dart';
 import '../../features/taches/taches_screens.dart';
 import '../../features/parkings/parkings_screens.dart';
+import '../../features/cabinet/cabinet_screens.dart';
 import '../../features/profil/profil_screens.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
@@ -137,6 +138,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/taches/:id', builder: (_, s) => TacheDetailScreen(id: s.pathParameters['id']!)),
           // M23 — parkings & badges : plan / véhicules / badges / visiteurs, fiche emplacement.
           GoRoute(path: '/parkings', builder: (_, s) => ParkingsScreen(onglet: s.uri.queryParameters['onglet'])),
+          // M25 — espace cabinet (lecture : portefeuille, alertes, agenda).
+          GoRoute(path: '/cabinet', builder: (_, s) => CabinetScreen(cabinetId: s.uri.queryParameters['cabinet'])),
           GoRoute(path: '/parkings/:id', builder: (_, s) => EmplacementDetailScreen(id: s.pathParameters['id']!)),
           // M21 — tableau d'affichage : fil, annonce, sondage.
           GoRoute(path: '/affichage', builder: (_, __) => const AffichageScreen()),

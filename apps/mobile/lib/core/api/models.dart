@@ -1502,3 +1502,44 @@ class OnboardingChecklist {
   const OnboardingChecklist({required this.etapes, required this.faites, required this.total, required this.progression, required this.complet, required this.estDemo});
   factory OnboardingChecklist.fromJson(Map<String, dynamic> j) => OnboardingChecklist(etapes: _list(j['etapes'], EtapeOnboarding.fromJson), faites: _in(j, 'faites') ?? 0, total: _in(j, 'total') ?? 0, progression: _in(j, 'progression') ?? 0, complet: _b(j, 'complet'), estDemo: _b(j, 'est_demo'));
 }
+
+// ── M25 — Cabinet / portefeuille (Doc A §8) ─────────────────────────────────
+class Cabinet {
+  final String id, nom, statut;
+  final String? raisonSociale, telephone, email, monRole;
+  final int nbMembres, nbMandats;
+  final Map<String, dynamic> parametres;
+  const Cabinet({required this.id, required this.nom, required this.statut, this.raisonSociale, this.telephone, this.email, this.monRole, required this.nbMembres, required this.nbMandats, this.parametres = const {}});
+  factory Cabinet.fromJson(Map<String, dynamic> j) => Cabinet(id: _s(j, 'id'), nom: _s(j, 'nom'), statut: _s(j, 'statut'), raisonSociale: _sn(j, 'raisonSociale'), telephone: _sn(j, 'telephone'), email: _sn(j, 'email'), monRole: _sn(j, 'monRole'), nbMembres: _in(j, 'nbMembres') ?? 0, nbMandats: _in(j, 'nbMandats') ?? 0, parametres: _map(j['parametres']) ?? const {});
+}
+
+class LignePortefeuille {
+  final String mandatId, coproprieteId, nom, ville, appele, encaisse, impayesMontant, calculeLe;
+  final String? honorairesMensuels, prochaineAg, derniereActivite, justificatifPlusAncien;
+  final double? tauxRecouvrement;
+  final int nbLots, impayesNbLots, justificatifsEnAttente, incidentsOuverts, incidentsUrgents, tachesRetard, contratsExpirant30j, sejoursLcdAujourdhui;
+  final bool assuranceActive;
+  final List<String> alertes;
+  const LignePortefeuille({required this.mandatId, required this.coproprieteId, required this.nom, required this.ville, required this.appele, required this.encaisse, required this.impayesMontant, required this.calculeLe, this.honorairesMensuels, this.prochaineAg, this.derniereActivite, this.justificatifPlusAncien, this.tauxRecouvrement, required this.nbLots, required this.impayesNbLots, required this.justificatifsEnAttente, required this.incidentsOuverts, required this.incidentsUrgents, required this.tachesRetard, required this.contratsExpirant30j, required this.sejoursLcdAujourdhui, required this.assuranceActive, required this.alertes});
+  factory LignePortefeuille.fromJson(Map<String, dynamic> j) => LignePortefeuille(
+        mandatId: _s(j, 'mandat_id'), coproprieteId: _s(j, 'copropriete_id'), nom: _s(j, 'nom'), ville: _s(j, 'ville'), appele: _s(j, 'appele'), encaisse: _s(j, 'encaisse'), impayesMontant: _s(j, 'impayes_montant'), calculeLe: _s(j, 'calcule_le'),
+        honorairesMensuels: _sn(j, 'honoraires_mensuels'), prochaineAg: _sn(j, 'prochaine_ag'), derniereActivite: _sn(j, 'derniere_activite'), justificatifPlusAncien: _sn(j, 'justificatif_plus_ancien'),
+        tauxRecouvrement: (j['taux_recouvrement'] as num?)?.toDouble(),
+        nbLots: _in(j, 'nb_lots') ?? 0, impayesNbLots: _in(j, 'impayes_nb_lots') ?? 0, justificatifsEnAttente: _in(j, 'justificatifs_en_attente') ?? 0, incidentsOuverts: _in(j, 'incidents_ouverts') ?? 0, incidentsUrgents: _in(j, 'incidents_urgents') ?? 0, tachesRetard: _in(j, 'taches_retard') ?? 0, contratsExpirant30j: _in(j, 'contrats_expirant_30j') ?? 0, sejoursLcdAujourdhui: _in(j, 'sejours_lcd_aujourdhui') ?? 0,
+        assuranceActive: _b(j, 'assurance_active'), alertes: ((j['alertes'] as List?) ?? const []).map((e) => e.toString()).toList(),
+      );
+}
+
+class AlerteCabinet {
+  final String code, niveau, coproprieteId, copropriete, lien;
+  final String? valeur;
+  const AlerteCabinet({required this.code, required this.niveau, required this.coproprieteId, required this.copropriete, required this.lien, this.valeur});
+  factory AlerteCabinet.fromJson(Map<String, dynamic> j) => AlerteCabinet(code: _s(j, 'code'), niveau: _s(j, 'niveau'), coproprieteId: _s(j, 'copropriete_id'), copropriete: _s(j, 'copropriete'), lien: _s(j, 'lien'), valeur: _sn(j, 'valeur'));
+}
+
+class EvenementAgendaCabinet {
+  final String type, date, coproprieteId, copropriete, titre, lien, id;
+  final bool retard;
+  const EvenementAgendaCabinet({required this.type, required this.date, required this.coproprieteId, required this.copropriete, required this.titre, required this.lien, required this.id, required this.retard});
+  factory EvenementAgendaCabinet.fromJson(Map<String, dynamic> j) => EvenementAgendaCabinet(type: _s(j, 'type'), date: _s(j, 'date'), coproprieteId: _s(j, 'copropriete_id'), copropriete: _s(j, 'copropriete'), titre: _s(j, 'titre'), lien: _s(j, 'lien'), id: _s(j, 'id'), retard: _b(j, 'retard'));
+}

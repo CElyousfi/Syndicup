@@ -9,7 +9,7 @@ import 'session.dart';
 /// Rôles du système (Master Spec 4.1) — priorité descendante pour le rôle principal.
 const List<String> rolePriorite = [
   'SUPER_ADMIN', 'SYNDIC', 'CONSEIL_SYNDICAL', 'PROPRIETAIRE', 'INDIVISAIRE',
-  'PERSONNE_MORALE_REPRESENTANT', 'GESTIONNAIRE_LCD', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE',
+  'PERSONNE_MORALE_REPRESENTANT', 'SYNDIC_COMPTABLE', 'GESTIONNAIRE_LCD', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE',
 ];
 
 /// Contexte applicatif d'une session prête — équivalent mobile de apps/web/lib/app-context.ts.
@@ -30,6 +30,8 @@ class AppContext {
   /// Gestion : syndic ou opérateur plateforme.
   bool get isGestion => isSyndic || isSuperAdmin;
   bool get isConseil => has('CONSEIL_SYNDICAL');
+  /// M25 — comptable d'un cabinet de syndic : lecture seule des finances.
+  bool get isComptable => has('SYNDIC_COMPTABLE');
   bool get isGardien => has('GARDIEN');
   bool get isPrestataire => role == 'PRESTATAIRE';
   bool get isLocataire => role == 'LOCATAIRE';
@@ -43,9 +45,9 @@ class AppContext {
   /// Résident (propriétaire, indivisaire, personne morale, locataire) sans casquette de gestion.
   bool get isResident => !isGestion && !isConseil && !isGardien && !isPrestataire;
   /// Lecture financière étendue : syndic, conseil, super admin.
-  bool get voitFinancesGlobales => isGestion || isConseil;
+  bool get voitFinancesGlobales => isGestion || isConseil || isComptable;
   // M16 — dépenses : le syndic gère et paie, le conseil lit et approuve au-dessus du seuil.
-  bool get voitDepenses => isGestion || isConseil;
+  bool get voitDepenses => isGestion || isConseil || isComptable;
   bool get gereDepenses => isGestion;
   bool get approuveDepenses => isGestion || isConseil;
   bool get voitAg => !isLocataire && !isGardien && !isPrestataire && role != 'GESTIONNAIRE_LCD';

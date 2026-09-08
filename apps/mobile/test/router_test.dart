@@ -148,4 +148,14 @@ void main() {
   test('M24 : deep-link import terminé → tableau de bord (import web-first)', () {
     expect(lienNotification('IMPORT_TERMINE', {'import_job_id': 'i1'}), '/tableau-de-bord');
   });
+  test('M25 : comptable de cabinet = finances en lecture + espace cabinet ; le syndic voit l\'espace cabinet en administration', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths('SYNDIC_COMPTABLE'), containsAll(['/rapports', '/depenses', '/cabinet']));
+    expect(paths('SYNDIC_COMPTABLE'), isNot(contains('/ag')));
+    expect(paths('SYNDIC'), contains('/cabinet'));
+    for (final r in ['PROPRIETAIRE', 'LOCATAIRE', 'GARDIEN', 'PRESTATAIRE']) {
+      expect(paths(r), isNot(contains('/cabinet')), reason: r);
+    }
+    expect(buildTabs(buildNav(ctxFor('SYNDIC_COMPTABLE'), dictFr), ctxFor('SYNDIC_COMPTABLE'), dictFr).map((t) => t.path), contains('/cabinet'));
+  });
 }

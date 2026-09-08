@@ -210,6 +210,21 @@ final executionResolutionProvider = FutureProvider.autoDispose.family<ExecutionR
   return unwrap(await ref.watch(apiClientProvider).get('/ag/${k.agId}/resolutions/${k.resolutionId}/execution', parse: (j) => ExecutionResolution.fromJson(asMap(j))));
 });
 
+// ── M25 — Cabinet (lecture : portefeuille, alertes, agenda) ──────────────────
+final cabinetsProvider = FutureProvider.autoDispose<List<Cabinet>>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<Cabinet>>('/cabinets', parse: (j) => parseList(j, Cabinet.fromJson));
+  return r.dataOrNull ?? const [];
+});
+final portefeuilleProvider = FutureProvider.autoDispose.family<List<LignePortefeuille>, String>((ref, cabinetId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/cabinets/$cabinetId/portefeuille', parse: (j) => parseList(j, LignePortefeuille.fromJson)));
+});
+final alertesCabinetProvider = FutureProvider.autoDispose.family<List<AlerteCabinet>, String>((ref, cabinetId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/cabinets/$cabinetId/alertes', parse: (j) => _list(asMap(j)['items'], AlerteCabinet.fromJson)));
+});
+final agendaCabinetProvider = FutureProvider.autoDispose.family<List<EvenementAgendaCabinet>, String>((ref, cabinetId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/cabinets/$cabinetId/agenda', query: {'jours': 60}, parse: (j) => _list(asMap(j)['evenements'], EvenementAgendaCabinet.fromJson)));
+});
+
 // ── M24 — Onboarding (syndic / conseil) ──────────────────────────────────────
 final onboardingProvider = FutureProvider.autoDispose<OnboardingChecklist?>((ref) async {
   final id = ref.watch(appContextProvider).coproprieteId;
@@ -473,3 +488,5 @@ final echeancierProchainProvider = FutureProvider.autoDispose<List<ContratEchean
   String iso(DateTime d) => d.toIso8601String().substring(0, 10);
   return unwrap(await ref.watch(apiClientProvider).get('/contrats/echeancier', query: {'from': iso(now), 'to': iso(now.add(const Duration(days: 30)))}, parse: (j) => parseList(asMap(j)['echeances'], ContratEcheance.fromJson)));
 });
+
+List<T> _list<T>(dynamic v, T Function(Map<String, dynamic>) f) => v is List ? v.map((e) => f((e as Map).cast<String, dynamic>())).toList() : const [];
