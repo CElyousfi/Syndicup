@@ -1007,6 +1007,75 @@ export const PERMISSIONS: PermissionMatrix = {
     CONSEIL_SYNDICAL: false,
     PROPRIETAIRE: false,
   },
+  // ── M21 — Communication (Doc A §8 information des copropriétaires, §12 confidentialité) —
+  //    ⚠️ module absent du Master Spec 4.2, signalé dans ROADMAP M21 ──
+  // Tableau d'affichage : tout membre lit ce que son audience lui destine (la RLS filtre l'audience).
+  "annonces.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GESTIONNAIRE_LCD: true,
+  },
+  // Rédiger, publier, archiver : syndic et conseil (la catégorie URGENCE reste au syndic, vérifié en code).
+  "annonces.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  "annonces.commenter": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GESTIONNAIRE_LCD: true,
+  },
+  // Modération (masquer un commentaire) : syndic seul.
+  "annonces.moderer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
+  // Sondages consultatifs (jamais un vote d'AG, Doc A §6) : syndic + conseil créent ; l'audience répond.
+  "sondages.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  "sondages.repondre": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: true,
+    LOCATAIRE: true,
+    INDIVISAIRE: true,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+    PERSONNE_MORALE_REPRESENTANT: true,
+    GESTIONNAIRE_LCD: true,
+  },
+  // Contacts utiles : lecture par tous (RLS tenant), gestion syndic.
+  "contacts.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+  },
 };
 
 /**

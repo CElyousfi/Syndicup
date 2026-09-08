@@ -304,6 +304,9 @@ model Copropriete {
   evaluationsPersonnel EvaluationPersonnel[]
   presencesPersonnel   PresencePersonnel[]
   personnelLogs        PersonnelLog[]
+  annonces             Annonce[]
+  sondages             Sondage[]
+  contactsUtiles       ContactUtile[]
 
   @@map("copropriete")
 }
@@ -311,20 +314,24 @@ model Copropriete {
 // Table globale (pas de copropriete_id — Master Spec Partie 1.6) : un utilisateur peut avoir des
 // rôles dans plusieurs copropriétés. Sa visibilité est restreinte par policy RLS (voir migration).
 model Utilisateur {
-  id             String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email          String?                 @unique
-  telephone      String?                 @unique
-  nom            String?
-  prenom         String?
-  languePreferee LanguePreferee          @default(FR) @map("langue_preferee")
-  statutCompte   StatutCompteUtilisateur @default(INVITE) @map("statut_compte")
-  raisonSociale  String?                 @map("raison_sociale")
-  rcNumero       String?                 @map("rc_numero")
+  id                          String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                       String?                 @unique
+  telephone                   String?                 @unique
+  nom                         String?
+  prenom                      String?
+  languePreferee              LanguePreferee          @default(FR) @map("langue_preferee")
+  // M21 — ⚠️ colonne ABSENTE du Master Spec, ajoutée et signalée (ROADMAP M21) : préférences de
+  // notification `{ digest_hebdo: bool, canaux: { ANNONCE: "PUSH"|"EMAIL"|"SMS"|"AUCUN", ... } }`
+  // respectées par le digest hebdomadaire ; nulle = comportement par défaut.
+  preferencesNotificationJson Json?                   @map("preferences_notification_json")
+  statutCompte                StatutCompteUtilisateur @default(INVITE) @map("statut_compte")
+  raisonSociale               String?                 @map("raison_sociale")
+  rcNumero                    String?                 @map("rc_numero")
   // M13 — CNDP (Loi 09-08) : point de départ de la rétention / horodatage d'anonymisation.
-  desactiveLe    DateTime?               @map("desactive_le") @db.Timestamptz
-  anonymiseLe    DateTime?               @map("anonymise_le") @db.Timestamptz
-  creeLe         DateTime                @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe      DateTime                @updatedAt @map("modifie_le") @db.Timestamptz
+  desactiveLe                 DateTime?               @map("desactive_le") @db.Timestamptz
+  anonymiseLe                 DateTime?               @map("anonymise_le") @db.Timestamptz
+  creeLe                      DateTime                @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe                   DateTime                @updatedAt @map("modifie_le") @db.Timestamptz
 
   roles                    RoleUtilisateur[]
   invitationsEmises        Invitation[]              @relation("InvitationEmetteur")
@@ -364,6 +371,12 @@ model Utilisateur {
   evaluationsDonnees       EvaluationPersonnel[]     @relation("EvaluationEvaluateur")
   presencesSaisies         PresencePersonnel[]       @relation("PresenceSaisisseur")
   personnelLogsActeur      PersonnelLog[]            @relation("PersonnelLogActeur")
+  annoncesCreees           Annonce[]                 @relation("AnnonceAuteur")
+  annonceLectures          AnnonceLecture[]
+  annonceCommentaires      AnnonceCommentaire[]      @relation("CommentaireAuteur")
+  commentairesMasques      AnnonceCommentaire[]      @relation("CommentaireModerateur")
+  sondagesCrees            Sondage[]                 @relation("SondageAuteur")
+  sondageReponses          SondageReponse[]
 
   @@map("utilisateur")
 }
@@ -426,6 +439,9 @@ model Lot {
   typeUsage     TypeUsageLot? @map("type_usage")
   numero        String
   etage         Int?
+  // M21 — ⚠️ colonne ABSENTE du Master Spec, ajoutée et signalée (ROADMAP M21) : bâtiment / bloc
+  // d'une résidence à plusieurs immeubles (Doc A §10) — cible de l'audience BATIMENT des annonces.
+  batiment      String?
   tantiemes     Decimal       @db.Decimal(14, 2)
   superficie    Decimal?      @db.Decimal(10, 2)
   statut        StatutLot     @default(VACANT)
@@ -568,6 +584,9 @@ model Document {
   contratsTravail    Personnel[]            @relation("PersonnelContratTravail")
   fichesPaie         FichePaie[]            @relation("FichePaieDocument")
   congesCertificats  Conge[]                @relation("CongeCertificat")
+  // M21 — pièce jointe d'une annonce (type ANNONCE_PJ) — ⚠️ colonne de liaison ajoutée et signalée.
+  annonceId          String?                @map("annonce_id") @db.Uuid
+  annonce            Annonce?               @relation("AnnonceDocument", fields: [annonceId], references: [id])
 
   @@index([coproprieteId])
   @@map("document")
@@ -2293,4 +2312,162 @@ model PersonnelLog {
 
   @@index([personnelId, horodatage])
   @@map("personnel_log")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M21 — COMMUNICATION : tableau d'affichage (annonces), sondages consultatifs, contacts utiles
+// (Doc A §8 obligations d'information du syndic, §12 confidentialité). ⚠️ Module ABSENT du Master
+// Spec Partie 2 — enums, tables et colonnes ci-dessous ajoutés et signalés (ROADMAP M21).
+// Un sondage n'est JAMAIS un vote d'AG (Doc A §6) : aucune valeur juridique, pondération purement
+// informative ; les réponses individuelles ne sont jamais exposées (agrégats via fonction SQL).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum CategorieAnnonce {
+  INFORMATION
+  TRAVAUX
+  COUPURE
+  SECURITE
+  URGENCE
+  AG
+  CONVIVIALITE
+  REGLEMENT
+}
+
+enum AudienceCommunication {
+  TOUS
+  PROPRIETAIRES
+  OCCUPANTS
+  CONSEIL
+  BATIMENT
+}
+
+enum StatutAnnonce {
+  BROUILLON
+  PUBLIEE
+  ARCHIVEE
+}
+
+enum StatutSondage {
+  BROUILLON
+  OUVERT
+  CLOS
+}
+
+model Annonce {
+  id                  String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId       String                @map("copropriete_id") @db.Uuid
+  copropriete         Copropriete           @relation(fields: [coproprieteId], references: [id])
+  auteurId            String                @map("auteur_id") @db.Uuid
+  auteur              Utilisateur           @relation("AnnonceAuteur", fields: [auteurId], references: [id])
+  titre               String
+  /// Sous-ensemble Markdown (gras, italique, listes, liens) — assaini côté API avant écriture.
+  contenu             String
+  categorie           CategorieAnnonce
+  audience            AudienceCommunication @default(TOUS)
+  /// Renseigné quand audience = BATIMENT (doit correspondre à `lot.batiment`).
+  batiment            String?
+  epingle             Boolean               @default(false)
+  publieLe            DateTime?             @map("publie_le") @db.Timestamptz
+  expireLe            DateTime?             @map("expire_le") @db.Timestamptz
+  statut              StatutAnnonce         @default(BROUILLON)
+  commentairesActives Boolean               @default(true) @map("commentaires_actives")
+  creeLe              DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe           DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
+
+  lectures      AnnonceLecture[]
+  commentaires  AnnonceCommentaire[]
+  piecesJointes Document[]           @relation("AnnonceDocument")
+
+  @@index([coproprieteId, statut, epingle, publieLe])
+  @@map("annonce")
+}
+
+/// Accusé de lecture — le syndic voit des comptes (« lu par 34/52 »), jamais les résidents entre eux.
+model AnnonceLecture {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  annonceId     String      @map("annonce_id") @db.Uuid
+  annonce       Annonce     @relation(fields: [annonceId], references: [id])
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  luLe          DateTime    @default(now()) @map("lu_le") @db.Timestamptz
+
+  @@unique([annonceId, utilisateurId])
+  @@map("annonce_lecture")
+}
+
+model AnnonceCommentaire {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  annonceId   String       @map("annonce_id") @db.Uuid
+  annonce     Annonce      @relation(fields: [annonceId], references: [id])
+  auteurId    String       @map("auteur_id") @db.Uuid
+  auteur      Utilisateur  @relation("CommentaireAuteur", fields: [auteurId], references: [id])
+  contenu     String
+  /// Modération (syndic) : le commentaire reste en base, masqué pour tous sauf le syndic.
+  masqueParId String?      @map("masque_par_id") @db.Uuid
+  masquePar   Utilisateur? @relation("CommentaireModerateur", fields: [masqueParId], references: [id])
+  masqueLe    DateTime?    @map("masque_le") @db.Timestamptz
+  creeLe      DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([annonceId, creeLe])
+  @@map("annonce_commentaire")
+}
+
+model Sondage {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId        String                @map("copropriete_id") @db.Uuid
+  copropriete          Copropriete           @relation(fields: [coproprieteId], references: [id])
+  auteurId             String                @map("auteur_id") @db.Uuid
+  auteur               Utilisateur           @relation("SondageAuteur", fields: [auteurId], references: [id])
+  question             String
+  description          String?
+  /// `[{ id, libelle }]` — 2 à 10 options.
+  optionsJson          Json                  @map("options_json")
+  choixMultiple        Boolean               @default(false) @map("choix_multiple")
+  anonyme              Boolean               @default(true)
+  audience             AudienceCommunication @default(TOUS)
+  batiment             String?
+  /// Pondération INFORMATIVE par tantièmes des lots du répondant — jamais un vote d'AG (Doc A §6).
+  ponderationTantiemes Boolean               @default(false) @map("ponderation_tantiemes")
+  dateFin              DateTime              @map("date_fin") @db.Timestamptz
+  statut               StatutSondage         @default(BROUILLON)
+  ouvertLe             DateTime?             @map("ouvert_le") @db.Timestamptz
+  closLe               DateTime?             @map("clos_le") @db.Timestamptz
+  creeLe               DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe            DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
+
+  reponses SondageReponse[]
+
+  @@index([coproprieteId, statut, dateFin])
+  @@map("sondage")
+}
+
+/// Réponse — l'utilisateur est stocké pour l'unicité ; RLS : chacun ne lit que la sienne, les
+/// résultats passent par `sondage_resultats(uuid)` (agrégats seulement, SECURITY DEFINER).
+model SondageReponse {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sondageId     String      @map("sondage_id") @db.Uuid
+  sondage       Sondage     @relation(fields: [sondageId], references: [id])
+  utilisateurId String      @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur @relation(fields: [utilisateurId], references: [id])
+  /// `["opt-id", …]`
+  choixJson     Json        @map("choix_json")
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@unique([sondageId, utilisateurId])
+  @@map("sondage_reponse")
+}
+
+/// Numéros utiles (pompiers, police, régie, ascensoriste…) — tap-to-call ; seedés par résidence.
+model ContactUtile {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String      @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  libelle       String
+  telephone     String
+  ordre         Int         @default(0)
+  creeLe        DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime    @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([coproprieteId, ordre])
+  @@map("contact_utile")
 }

@@ -35,6 +35,8 @@ export const RATE_LIMITS = {
   authAttempt: () => ({ max: envInt("RATE_LIMIT_AUTH_MAX", 10), windowMs: 15 * 60_000 }),
   /** Écriture financière : 30 / minute / utilisateur (Partie 3.4). */
   ecritureFinanciere: () => ({ max: envInt("RATE_LIMIT_FINANCE_MAX", 30), windowMs: 60_000 }),
+  /** M21 — commentaires du tableau d'affichage : 10 / 10 minutes / utilisateur (anti-spam). */
+  commentaire: () => ({ max: envInt("RATE_LIMIT_COMMENTAIRE_MAX", 10), windowMs: 10 * 60_000 }),
   /** Webhook CMI : par IP — la vraie authentification est la signature HMAC. */
   webhookCmi: () => ({ max: envInt("RATE_LIMIT_CMI_WEBHOOK_MAX", 120), windowMs: 60_000 }),
 } as const;

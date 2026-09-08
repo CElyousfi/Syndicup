@@ -853,6 +853,65 @@ async function main() {
   ] });
   await logRh(personnelGardien.id, "EVALUATION", 30, { periode: `${new Date().getUTCFullYear()}-S1`, note: 5 });
 
+
+  // ── M21 — Communication : bâtiments, contacts utiles, tableau d'affichage, sondages (Doc A §8, §12) ──
+  // Bâtiments (colonne lot.batiment, ⚠️ ajout signalé M21) : A1 / A2 dans le bâtiment A, A3 dans le B.
+  await prisma.lot.updateMany({ where: { id: { in: [lotA1.id, lotA2.id, parkingP1.id, loge.id] } }, data: { batiment: "A" } });
+  await prisma.lot.updateMany({ where: { id: lotA3.id }, data: { batiment: "B" } });
+  // Numéros nationaux + contacts propres à la résidence (tap-to-call).
+  await prisma.contactUtile.createMany({
+    data: [
+      { coproprieteId: copro.id, libelle: "Pompiers / Protection civile", telephone: "15", ordre: 1 },
+      { coproprieteId: copro.id, libelle: "Police", telephone: "19", ordre: 2 },
+      { coproprieteId: copro.id, libelle: "Gendarmerie royale", telephone: "177", ordre: 3 },
+      { coproprieteId: copro.id, libelle: "SAMU", telephone: "141", ordre: 4 },
+      { coproprieteId: copro.id, libelle: "Lydec (eau / électricité) — dépannage", telephone: "+212 522 31 20 20", ordre: 5 },
+      { coproprieteId: copro.id, libelle: "Ascensoriste (astreinte 24h/24)", telephone: "+212 522 44 55 66", ordre: 6 },
+      { coproprieteId: copro.id, libelle: "Loge du gardien", telephone: "+212 600 00 00 06", ordre: 7 },
+    ],
+  });
+  const heure = (deltaJours: number, h: number) => { const d = jour(deltaJours); d.setUTCHours(h, 0, 0, 0); return d; };
+  const annonce = (data: Omit<Parameters<typeof prisma.annonce.create>[0]["data"], "coproprieteId">) => prisma.annonce.create({ data: { coproprieteId: copro.id, ...data } });
+  // 1. URGENCE épinglée (syndic) : coupure d'eau ce soir — lue par une partie des résidents, commentée.
+  const annCoupure = await annonce({ auteurId: syndicUser.id, titre: "Coupure d'eau ce soir de 20h à 23h", contenu: "Lydec intervient sur la conduite principale de la rue des Orangers.\n\n- Pensez à faire vos réserves.\n- L'ascenseur reste en service.\n\nContact : voir **Contacts utiles**.", categorie: "URGENCE", audience: "TOUS", epingle: true, statut: "PUBLIEE", publieLe: heure(0, 9), expireLe: heure(1, 6), commentairesActives: true, creeLe: heure(0, 8) });
+  await prisma.annonceLecture.createMany({ data: [{ annonceId: annCoupure.id, utilisateurId: proprietaireA.id, luLe: heure(0, 9) }, { annonceId: annCoupure.id, utilisateurId: locataire.id, luLe: heure(0, 10) }, { annonceId: annCoupure.id, utilisateurId: gardienUser.id, luLe: heure(0, 9) }] });
+  const comm1 = await prisma.annonceCommentaire.create({ data: { annonceId: annCoupure.id, auteurId: locataire.id, contenu: "Merci pour l'info, la pression était déjà faible ce matin.", creeLe: heure(0, 10) } });
+  await prisma.annonceCommentaire.create({ data: { annonceId: annCoupure.id, auteurId: syndicUser.id, contenu: "Oui, c'est lié : Lydec purge le réseau avant l'intervention.", creeLe: heure(0, 11) } });
+  await prisma.annonceCommentaire.create({ data: { annonceId: annCoupure.id, auteurId: proprietaireMRE.id, contenu: "Encore une coupure, c'est n'importe quoi ce syndic !!!", masqueParId: syndicUser.id, masqueLe: heure(0, 12), creeLe: heure(0, 11) } });
+  // 2. TRAVAUX — ravalement du bâtiment B (audience BATIMENT « B »), avec pièce jointe.
+  const annRavalement = await annonce({ auteurId: syndicUser.id, titre: "Ravalement de la façade du bâtiment B", contenu: "Les échafaudages seront montés **lundi prochain** pour six semaines.\n\n- Merci de libérer les balcons.\n- Les fenêtres seront protégées par des films.\n\nLe planning détaillé est en pièce jointe.", categorie: "TRAVAUX", audience: "BATIMENT", batiment: "B", epingle: false, statut: "PUBLIEE", publieLe: heure(-3, 10), commentairesActives: true, creeLe: heure(-3, 9) });
+  await prisma.document.create({ data: { coproprieteId: copro.id, type: "ANNONCE_PJ", nom: "planning-ravalement-batiment-B.pdf", visibilite: "PUBLIC_COPROPRIETE", storagePath: `${copro.id}/communication/seed-planning-ravalement.pdf`, creePar: syndicUser.id, annonceId: annRavalement.id, creeLe: heure(-3, 9) } });
+  await prisma.annonceLecture.createMany({ data: [{ annonceId: annRavalement.id, utilisateurId: indivisaire1.id, luLe: heure(-2, 8) }] });
+  // 3. AG — convocation à venir (audience PROPRIETAIRES), publiée par le conseil.
+  const annAg = await annonce({ auteurId: conseilUser.id, titre: "Assemblée générale : ordre du jour disponible", contenu: "L'ordre du jour de la prochaine AG est consultable dans l'application. Les procurations doivent parvenir au syndic **48 h avant** la séance.", categorie: "AG", audience: "PROPRIETAIRES", epingle: false, statut: "PUBLIEE", publieLe: heure(-6, 18), commentairesActives: false, creeLe: heure(-6, 17) });
+  await prisma.annonceLecture.createMany({ data: [{ annonceId: annAg.id, utilisateurId: proprietaireA.id, luLe: heure(-5, 8) }, { annonceId: annAg.id, utilisateurId: proprietaireMRE.id, luLe: heure(-4, 20) }] });
+  // 4. CONVIVIALITÉ — ftour de la résidence (TOUS), publiée il y a 12 jours.
+  await annonce({ auteurId: syndicUser.id, titre: "Ftour de la résidence samedi soir", contenu: "Rendez-vous dans la cour à partir de 19h30. Chacun apporte un plat ; le syndic offre les boissons.", categorie: "CONVIVIALITE", audience: "TOUS", epingle: false, statut: "PUBLIEE", publieLe: heure(-12, 12), commentairesActives: true, creeLe: heure(-12, 11) });
+  // 5. RÈGLEMENT — rappel (CONSEIL), 6. brouillon programmé, 7. archivée.
+  await annonce({ auteurId: syndicUser.id, titre: "Rappel : encombrants et parties communes", contenu: "Les encombrants déposés dans le hall seront enlevés aux frais de leur propriétaire (règlement de copropriété, art. 12).", categorie: "REGLEMENT", audience: "TOUS", epingle: false, statut: "PUBLIEE", publieLe: heure(-20, 9), commentairesActives: true, creeLe: heure(-20, 9) });
+  await annonce({ auteurId: syndicUser.id, titre: "Contrôle annuel de l'ascenseur", contenu: "Le technicien passera jeudi matin ; l'ascenseur sera indisponible de 9h à 12h.", categorie: "INFORMATION", audience: "TOUS", epingle: false, statut: "BROUILLON", publieLe: heure(2, 8), commentairesActives: true, creeLe: heure(0, 14) });
+  await annonce({ auteurId: syndicUser.id, titre: "Nettoyage des cuves d'eau (terminé)", contenu: "Les cuves ont été nettoyées et désinfectées le mois dernier.", categorie: "COUPURE", audience: "TOUS", epingle: false, statut: "ARCHIVEE", publieLe: heure(-45, 9), expireLe: heure(-40, 9), commentairesActives: true, creeLe: heure(-45, 9) });
+  // Sondages : un OUVERT pondéré (repeindre le hall — propriétaires), un CLOS (horaires du gardien — tous), un brouillon.
+  const sondageHall = await prisma.sondage.create({ data: { coproprieteId: copro.id, auteurId: syndicUser.id, question: "Repeindre le hall d'entrée cette année ?", description: "Devis obtenu : 18 000 MAD (fonds de réserve). Sondage consultatif avant inscription à l'ordre du jour de l'AG.", optionsJson: [{ id: "oui", libelle: "Oui, cette année" }, { id: "plus_tard", libelle: "Plutôt l'année prochaine" }, { id: "non", libelle: "Non, pas prioritaire" }], choixMultiple: false, anonyme: true, audience: "PROPRIETAIRES", ponderationTantiemes: true, dateFin: heure(10, 18), statut: "OUVERT", ouvertLe: heure(-4, 10), creeLe: heure(-5, 10) } });
+  await prisma.sondageReponse.createMany({ data: [{ sondageId: sondageHall.id, utilisateurId: proprietaireA.id, choixJson: ["oui"], creeLe: heure(-3, 9) }, { sondageId: sondageHall.id, utilisateurId: indivisaire1.id, choixJson: ["plus_tard"], creeLe: heure(-2, 20) }] });
+  const sondageGardien = await prisma.sondage.create({ data: { coproprieteId: copro.id, auteurId: conseilUser.id, question: "Quels créneaux de présence du gardien privilégier ?", optionsJson: [{ id: "matin", libelle: "Tôt le matin (6h-8h)" }, { id: "soir", libelle: "Le soir (18h-21h)" }, { id: "weekend", libelle: "Le week-end" }], choixMultiple: true, anonyme: true, audience: "TOUS", ponderationTantiemes: false, dateFin: heure(-15, 18), statut: "CLOS", ouvertLe: heure(-30, 10), closLe: heure(-15, 18), creeLe: heure(-31, 10) } });
+  await prisma.sondageReponse.createMany({ data: [
+    { sondageId: sondageGardien.id, utilisateurId: proprietaireA.id, choixJson: ["soir", "weekend"], creeLe: heure(-28, 9) },
+    { sondageId: sondageGardien.id, utilisateurId: locataire.id, choixJson: ["soir"], creeLe: heure(-27, 21) },
+    { sondageId: sondageGardien.id, utilisateurId: proprietaireMRE.id, choixJson: ["weekend"], creeLe: heure(-25, 9) },
+    { sondageId: sondageGardien.id, utilisateurId: indivisaire2.id, choixJson: ["matin", "soir"], creeLe: heure(-20, 12) },
+  ] });
+  await prisma.sondage.create({ data: { coproprieteId: copro.id, auteurId: syndicUser.id, question: "Installer des bornes de recharge au parking ?", optionsJson: [{ id: "oui", libelle: "Oui" }, { id: "non", libelle: "Non" }], choixMultiple: false, anonyme: true, audience: "PROPRIETAIRES", ponderationTantiemes: true, dateFin: heure(30, 18), statut: "BROUILLON", creeLe: heure(0, 15) } });
+  // Préférences de notification : le MRE ne veut que le digest par e-mail, le gardien rien le lundi.
+  await prisma.utilisateur.update({ where: { id: proprietaireMRE.id }, data: { preferencesNotificationJson: { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: false } } });
+  await prisma.utilisateur.update({ where: { id: gardienUser.id }, data: { preferencesNotificationJson: { digest_hebdo: false, canal_digest: "PUSH", annonces_push: true } } });
+  await prisma.auditLog.createMany({ data: [
+    { coproprieteId: copro.id, acteurId: syndicUser.id, action: "ANNONCE_PUBLIEE", entite: "annonce", entiteId: annCoupure.id, apresJson: { statut: "PUBLIEE", destinataires: 8 }, horodatage: heure(0, 9) },
+    { coproprieteId: copro.id, acteurId: syndicUser.id, action: "COMMENTAIRE_MASQUE", entite: "annonce_commentaire", entiteId: comm1.id, apresJson: { masque: true }, horodatage: heure(0, 12) },
+    { coproprieteId: copro.id, acteurId: syndicUser.id, action: "SONDAGE_OUVERT", entite: "sondage", entiteId: sondageHall.id, apresJson: { statut: "OUVERT" }, horodatage: heure(-4, 10) },
+    { coproprieteId: copro.id, acteurId: conseilUser.id, action: "SONDAGE_CLOS", entite: "sondage", entiteId: sondageGardien.id, apresJson: { statut: "CLOS", nb_reponses: 4 }, horodatage: heure(-15, 18) },
+  ] });
+
   console.log("Seed terminé :", {
     personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
@@ -865,6 +924,7 @@ async function main() {
     depenses: { payees: 3, approuvee: depReparation.id, aApprouver: depFacade.id, brouillon: depBrouillon.id, rejetee: depDeco.id, reserve: depPompe.id },
     appelDeFonds: periode,
     ag: ag.id,
+    communication: { annonces: 7, sondages: { ouvert: sondageHall.id, clos: sondageGardien.id } },
     invitationEnAttente: invitation.code,
   });
 }

@@ -37,7 +37,8 @@ tags:
   - name: Rapports
   - name: Contrats
   - name: Personnel RH
-    description: Location courte durée (M15, Doc A §10.2) — côté copropriété uniquement (règlement, sécurité, nuisances).
+  - name: Communication
+    description: "Tableau d'affichage, sondages consultatifs (jamais un vote d'AG, Doc A §6), contacts utiles, préférences de notification (M21)."
 
 components:
   securitySchemes:
@@ -2050,6 +2051,115 @@ components:
             type: object
             description: "Fiche (masquée selon le rôle) + jours[] : { date, plages[], conge, presence }."
 
+    Annonce:
+      type: object
+      description: "Annonce du tableau d'affichage. `nbLectures` n'est renseigné que pour le syndic / conseil (Doc A §12 : les résidents ne voient jamais qui a lu)."
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        auteur: { type: object, properties: { id: { type: string, format: uuid }, nom: { type: string, nullable: true }, prenom: { type: string, nullable: true } } }
+        titre: { type: string }
+        contenu: { type: string, description: "Markdown restreint, assaini." }
+        apercu: { type: string }
+        categorie: { type: string, enum: [INFORMATION, TRAVAUX, COUPURE, SECURITE, URGENCE, AG, CONVIVIALITE, REGLEMENT] }
+        audience: { type: string, enum: [TOUS, PROPRIETAIRES, OCCUPANTS, CONSEIL, BATIMENT] }
+        batiment: { type: string, nullable: true }
+        epingle: { type: boolean }
+        publieLe: { type: string, format: date-time, nullable: true }
+        expireLe: { type: string, format: date-time, nullable: true }
+        statut: { type: string, enum: [BROUILLON, PUBLIEE, ARCHIVEE] }
+        commentairesActives: { type: boolean }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+        lu: { type: boolean }
+        nbCommentaires: { type: integer }
+        nbLectures: { type: integer, nullable: true }
+    AnnonceDetail:
+      allOf:
+        - $ref: "#/components/schemas/Annonce"
+        - type: object
+          properties:
+            piecesJointes: { type: array, items: { type: object, properties: { document_id: { type: string, format: uuid }, nom: { type: string }, type: { type: string }, url: { type: string } } } }
+            commentaires: { type: array, items: { $ref: "#/components/schemas/AnnonceCommentaire" } }
+            nbDestinataires: { type: integer, nullable: true }
+    AnnonceCommentaire:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        auteur: { type: object, properties: { id: { type: string, format: uuid }, nom: { type: string, nullable: true }, prenom: { type: string, nullable: true } } }
+        contenu: { type: string }
+        masque: { type: boolean }
+        creeLe: { type: string, format: date-time }
+        mien: { type: boolean }
+    AnnonceCreate:
+      type: object
+      required: [titre, contenu, categorie]
+      properties:
+        titre: { type: string, maxLength: 200 }
+        contenu: { type: string, maxLength: 20000 }
+        categorie: { type: string, enum: [INFORMATION, TRAVAUX, COUPURE, SECURITE, URGENCE, AG, CONVIVIALITE, REGLEMENT] }
+        audience: { type: string, enum: [TOUS, PROPRIETAIRES, OCCUPANTS, CONSEIL, BATIMENT], default: TOUS }
+        batiment: { type: string, nullable: true, description: "Requis pour BATIMENT (= lot.batiment)." }
+        epingle: { type: boolean, default: false }
+        expire_le: { type: string, format: date-time, nullable: true }
+        commentaires_actives: { type: boolean, default: true }
+        pieces_jointes: { type: array, maxItems: 10, items: { type: object, required: [storage_path, nom], properties: { storage_path: { type: string }, nom: { type: string } } } }
+    Sondage:
+      type: object
+      description: "Sondage CONSULTATIF — `mention` rappelle qu'il n'a aucune valeur de vote d'AG. `resultats` = agrégats seulement (jamais un répondant), présents pour la gestion, après réponse ou à la clôture."
+      properties:
+        id: { type: string, format: uuid }
+        question: { type: string }
+        description: { type: string, nullable: true }
+        options: { type: array, items: { type: object, properties: { id: { type: string }, libelle: { type: string } } } }
+        choixMultiple: { type: boolean }
+        anonyme: { type: boolean }
+        audience: { type: string, enum: [TOUS, PROPRIETAIRES, OCCUPANTS, CONSEIL, BATIMENT] }
+        batiment: { type: string, nullable: true }
+        ponderationTantiemes: { type: boolean }
+        dateFin: { type: string, format: date-time }
+        statut: { type: string, enum: [BROUILLON, OUVERT, CLOS] }
+        ouvertLe: { type: string, format: date-time, nullable: true }
+        closLe: { type: string, format: date-time, nullable: true }
+        maReponse: { type: array, nullable: true, items: { type: string } }
+        mention: { type: string }
+        resultats: { allOf: [{ $ref: "#/components/schemas/SondageResultats" }], nullable: true }
+    SondageResultats:
+      type: object
+      properties:
+        nb_reponses: { type: integer }
+        nb_destinataires: { type: integer }
+        tantiemes_exprimes: { type: string }
+        ponderation_tantiemes: { type: boolean }
+        options: { type: array, items: { type: object, properties: { id: { type: string }, libelle: { type: string }, nb: { type: integer }, pourcentage: { type: number }, tantiemes: { type: string }, pourcentage_tantiemes: { type: number } } } }
+        mention: { type: string }
+    SondageCreate:
+      type: object
+      required: [question, options, date_fin]
+      properties:
+        question: { type: string, maxLength: 300 }
+        description: { type: string, nullable: true }
+        options: { type: array, minItems: 2, maxItems: 10, items: { type: object, required: [libelle], properties: { id: { type: string }, libelle: { type: string } } } }
+        choix_multiple: { type: boolean, default: false }
+        anonyme: { type: boolean, default: true }
+        audience: { type: string, enum: [TOUS, PROPRIETAIRES, OCCUPANTS, CONSEIL, BATIMENT], default: TOUS }
+        batiment: { type: string, nullable: true }
+        ponderation_tantiemes: { type: boolean, default: false, description: "Pondération INFORMATIVE par tantièmes." }
+        date_fin: { type: string, format: date-time }
+    ContactUtile:
+      type: object
+      required: [libelle, telephone]
+      properties:
+        id: { type: string, format: uuid, readOnly: true }
+        libelle: { type: string, maxLength: 120 }
+        telephone: { type: string }
+        ordre: { type: integer, default: 0 }
+    PreferencesNotification:
+      type: object
+      properties:
+        digest_hebdo: { type: boolean, default: true }
+        canal_digest: { type: string, enum: [PUSH, EMAIL, SMS, AUCUN], default: EMAIL }
+        annonces_push: { type: boolean, default: true }
   responses:
     ValidationError:
       description: Payload invalide.
@@ -6338,4 +6448,248 @@ paths:
       responses:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+
+  /annonces:
+    get:
+      tags: [Communication]
+      summary: "Tableau d'affichage — annonces visibles de l'appelant (audience filtrée par la RLS), épinglées d'abord ; `meta.non_lues` ; export csv / xlsx (gestion)."
+      parameters:
+        - { name: categorie, in: query, schema: { type: string, enum: [INFORMATION, TRAVAUX, COUPURE, SECURITE, URGENCE, AG, CONVIVIALITE, REGLEMENT] } }
+        - { name: statut, in: query, schema: { type: string, enum: [BROUILLON, PUBLIEE, ARCHIVEE] }, description: "Gestion seulement (un résident ne voit que PUBLIEE)." }
+        - { name: audience, in: query, schema: { type: string, enum: [TOUS, PROPRIETAIRES, OCCUPANTS, CONSEIL, BATIMENT] } }
+        - { name: non_lues, in: query, schema: { type: string, enum: ["1", "true"] } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string }, description: "publie_le | cree_le | titre | categorie, suffixe `:asc` / `:desc`." }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M21 — export journalisé (export_log), gestion." }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Annonce" } } } }
+    post:
+      tags: [Communication]
+      summary: "Créer une annonce (brouillon) — syndic / conseil ; la catégorie URGENCE est réservée au syndic. Contenu assaini (Markdown restreint)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnnonceCreate" } } } }
+      responses:
+        "201": { description: Créée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/upload-url:
+    post:
+      tags: [Communication]
+      summary: "URL signée d'upload d'une pièce jointe (périmètre `<copropriete>/communication/`)."
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nom_fichier, content_type], properties: { nom_fichier: { type: string }, content_type: { type: string } } } } } }
+      responses:
+        "201": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /annonces/{id}:
+    get:
+      tags: [Communication]
+      summary: Détail d'une annonce (pièces jointes signées, commentaires visibles, cible pour la gestion).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/AnnonceDetail" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Communication]
+      summary: Modifier une annonce (syndic / conseil ; une annonce archivée ne se modifie plus).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AnnonceCreate" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Communication]
+      summary: Supprimer un brouillon (une annonce publiée s'archive).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/{id}/publier:
+    post:
+      tags: [Communication]
+      summary: "Publier (Idempotency-Key) — immédiat ou programmé (`publie_le` futur → reste brouillon jusqu'au job horaire). Fan-out : ANNONCE_PUBLIEE (push / centre in-app selon préférences) ; URGENCE → ANNONCE_URGENTE push + SMS si configuré."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { publie_le: { type: string, format: date-time, nullable: true } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/{id}/archiver:
+    post:
+      tags: [Communication]
+      summary: Archiver (audit ANNONCE_ARCHIVEE ; historique et lectures conservés).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/{id}/lu:
+    post:
+      tags: [Communication]
+      summary: Accusé de lecture de l'appelant (idempotent — unique annonce / utilisateur).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /annonces/{id}/lectures:
+    get:
+      tags: [Communication]
+      summary: "Statistiques de lecture (syndic / conseil) — « lu par n / N » et liste des lecteurs ; jamais exposées aux résidents."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /annonces/{id}/commentaires:
+    post:
+      tags: [Communication]
+      summary: "Commenter une annonce publiée (limite : 10 / 10 min / utilisateur ; 422 COMMENTAIRES_DESACTIVES). L'auteur de l'annonce est notifié."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [contenu], properties: { contenu: { type: string, maxLength: 2000 } } } } } }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+        "429": { description: Rate limit dépassé (10 commentaires / 10 min). }
+  /annonces/{id}/commentaires/{cid}/masquer:
+    post:
+      tags: [Communication]
+      summary: "Modération (syndic) — masque le commentaire pour tous sauf le syndic et son auteur ; audit COMMENTAIRE_MASQUE."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: cid, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /sondages:
+    get:
+      tags: [Communication]
+      summary: "Sondages consultatifs visibles (audience) — ouverts d'abord ; `maReponse` par sondage."
+      parameters:
+        - { name: statut, in: query, schema: { type: string, enum: [BROUILLON, OUVERT, CLOS] } }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string }, description: "date_fin | cree_le | question, suffixe `:asc` / `:desc`." }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Sondage" } } } } } } }
+    post:
+      tags: [Communication]
+      summary: "Créer un sondage (brouillon) — syndic / conseil. Jamais un vote d'AG (Doc A §6)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SondageCreate" } } } }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /sondages/{id}:
+    get:
+      tags: [Communication]
+      summary: Détail (ma réponse, résultats agrégés si visibles).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Sondage" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Communication]
+      summary: Modifier un brouillon (un sondage ouvert ne se modifie plus).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/SondageCreate" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Communication]
+      summary: Supprimer un brouillon.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /sondages/{id}/ouvrir:
+    post:
+      tags: [Communication]
+      summary: "Ouvrir (Idempotency-Key) — SONDAGE_OUVERT à l'audience ; audit."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /sondages/{id}/clore:
+    post:
+      tags: [Communication]
+      summary: "Clore (Idempotency-Key) — SONDAGE_CLOS avec le nombre de réponses ; les sondages échus sont clos par le job horaire."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /sondages/{id}/repondre:
+    post:
+      tags: [Communication]
+      summary: "Répondre (Idempotency-Key) — une seule réponse par membre (409 SONDAGE_DEJA_REPONDU), choix parmi les options (422 SONDAGE_CHOIX_INVALIDE) ; renvoie le sondage avec ses résultats agrégés."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [choix], properties: { choix: { type: array, items: { type: string } } } } } } }
+      responses:
+        "201": { description: Réponse enregistrée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /sondages/{id}/resultats:
+    get:
+      tags: [Communication]
+      summary: "Résultats agrégés (pondérés et non pondérés) — jamais un répondant ; visibles de la gestion, après réponse ou à la clôture."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/SondageResultats" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contacts-utiles:
+    get:
+      tags: [Communication]
+      summary: Contacts utiles de la résidence (tout membre) — tap-to-call.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/ContactUtile" } } } } } } }
+    post:
+      tags: [Communication]
+      summary: Ajouter un contact (syndic).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContactUtile" } } } }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /contacts-utiles/{id}:
+    patch:
+      tags: [Communication]
+      summary: Modifier un contact (syndic).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ContactUtile" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    delete:
+      tags: [Communication]
+      summary: Supprimer un contact (syndic).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /users/me/preferences-notification:
+    get:
+      tags: [Communication]
+      summary: Préférences de notification de l'appelant (digest hebdomadaire, canal, push des annonces).
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/PreferencesNotification" } } } } } }
+    put:
+      tags: [Communication]
+      summary: Remplacer les préférences de notification.
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/PreferencesNotification" } } } }
+      responses:
+        "200": { description: OK }
         "422": { $ref: "#/components/responses/ValidationError" }

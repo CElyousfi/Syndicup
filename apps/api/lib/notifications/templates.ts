@@ -503,6 +503,35 @@ const PERSONNEL_RH: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, PERSONNEL_RH);
 
+// ── M21 — Communication (Doc A §8, §12) ────────────────────────────────────────────────────
+const COMMUNICATION: Record<string, Entree> = {
+  ANNONCE_PUBLIEE: {
+    FR: { titre: "Nouvelle annonce : {{titre}}", corps: "{{apercu}}" },
+    AR: { titre: "إعلان جديد: {{titre}}", corps: "{{apercu}}" },
+  },
+  ANNONCE_URGENTE: {
+    FR: { titre: "URGENT — {{titre}}", corps: "{{apercu}}" },
+    AR: { titre: "عاجل — {{titre}}", corps: "{{apercu}}" },
+  },
+  ANNONCE_COMMENTAIRE: {
+    FR: { titre: "Nouveau commentaire sur « {{titre}} »", corps: "{{auteur}} : {{apercu}}" },
+    AR: { titre: "تعليق جديد على « {{titre}} »", corps: "{{auteur}}: {{apercu}}" },
+  },
+  SONDAGE_OUVERT: {
+    FR: { titre: "Votre avis : {{question}}", corps: "Sondage ouvert jusqu'au {{date_fin}} — consultatif, sans valeur de vote d'AG." },
+    AR: { titre: "رأيكم: {{question}}", corps: "استطلاع مفتوح حتى {{date_fin}} — استشاري، ليس تصويتًا في الجمع العام." },
+  },
+  SONDAGE_CLOS: {
+    FR: { titre: "Résultats du sondage : {{question}}", corps: "{{nb_reponses}} réponse(s). Les résultats sont consultables dans l'application (sondage consultatif, sans valeur juridique)." },
+    AR: { titre: "نتائج الاستطلاع: {{question}}", corps: "{{nb_reponses}} إجابة. النتائج متاحة في التطبيق (استطلاع استشاري بلا قيمة قانونية)." },
+  },
+  COMMUNICATION_DIGEST: {
+    FR: { titre: "Cette semaine dans votre résidence", corps: "{{nb_annonces}} annonce(s) non lue(s), {{nb_sondages}} sondage(s) ouvert(s). {{titres}}" },
+    AR: { titre: "هذا الأسبوع في إقامتكم", corps: "{{nb_annonces}} إعلان غير مقروء، {{nb_sondages}} استطلاع مفتوح. {{titres}}" },
+  },
+};
+Object.assign(TEMPLATES, COMMUNICATION);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

@@ -14,8 +14,9 @@ import { depensesFactures } from "../../../inngest/functions/depenses-factures";
 import { justificatifsRelance } from "../../../inngest/functions/justificatifs-relance";
 import { contratsEcheances, contratsAssurance } from "../../../inngest/functions/contrats-echeances";
 import { personnelMensuel, personnelCongesRappel } from "../../../inngest/functions/personnel-rh";
+import { communicationDigestHebdo, communicationProgrammees } from "../../../inngest/functions/communication";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance, contratsEcheances, contratsAssurance, personnelMensuel, personnelCongesRappel],
+  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance, contratsEcheances, contratsAssurance, personnelMensuel, personnelCongesRappel, communicationDigestHebdo, communicationProgrammees],
 });
