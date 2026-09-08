@@ -119,4 +119,16 @@ void main() {
     expect(lienNotification('SONDAGE_OUVERT', {'sondage_id': 's1'}), '/affichage/sondages/s1');
     expect(lienNotification('COMMUNICATION_DIGEST', {}), '/affichage');
   });
+  test('M22 : tâches pour le syndic, le conseil et le gardien (les siennes) ; deep-links tâche / retards', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    for (final r in ['SYNDIC', 'CONSEIL_SYNDICAL', 'GARDIEN']) {
+      expect(paths(r), contains('/taches'), reason: r);
+    }
+    for (final r in ['PROPRIETAIRE', 'LOCATAIRE', 'PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/taches')), reason: r);
+    }
+    expect(lienNotification('TACHE_ASSIGNEE', {'tache_id': 't1'}), '/taches/t1');
+    expect(lienNotification('TACHE_ECHEANCE', {'tache_id': 't1'}), '/taches/t1');
+    expect(lienNotification('TACHES_EN_RETARD_HEBDO', {'nb': '3'}), '/taches');
+  });
 }

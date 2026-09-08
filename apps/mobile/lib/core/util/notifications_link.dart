@@ -23,6 +23,9 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('JUSTIFICATIF_') || templateCode == 'PAIEMENT_VALIDE' || templateCode == 'PAIEMENT_ESPECES_SAISI') {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
+  // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
+  if (templateCode == 'TACHES_EN_RETARD_HEBDO') return '/taches';
+  if (templateCode.startsWith('TACHE_')) return id('tache_id') != null ? '/taches/${id('tache_id')}' : '/taches';
   // M21 — tableau d'affichage : annonce, commentaire, sondage, récapitulatif hebdomadaire.
   if (templateCode.startsWith('ANNONCE_')) return id('annonce_id') != null ? '/affichage/${id('annonce_id')}' : '/affichage';
   if (templateCode.startsWith('SONDAGE_')) return id('sondage_id') != null ? '/affichage/sondages/${id('sondage_id')}' : '/affichage';

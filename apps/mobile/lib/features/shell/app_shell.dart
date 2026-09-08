@@ -71,6 +71,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(contratsProvider);
       ref.invalidate(assuranceProvider);
     }
+    if (t.startsWith('TACHE')) {
+      ref.invalidate(mesTachesProvider);
+      ref.invalidate(tachesProvider);
+    }
     if (t.startsWith('ANNONCE_') || t.startsWith('SONDAGE_') || t == 'COMMUNICATION_DIGEST') {
       ref.invalidate(annoncesProvider);
       ref.invalidate(annoncesNonLuesProvider);

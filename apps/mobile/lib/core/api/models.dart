@@ -412,9 +412,10 @@ class Contestation {
 class AgResolution {
   final String id, agId, texte, typeMajorite, resultat;
   final int ordre;
-  const AgResolution({required this.id, required this.agId, required this.ordre, required this.texte, required this.typeMajorite, required this.resultat});
+  final bool necessiteExecution;
+  const AgResolution({required this.id, required this.agId, required this.ordre, required this.texte, required this.typeMajorite, required this.resultat, this.necessiteExecution = false});
   factory AgResolution.fromJson(Map<String, dynamic> j) => AgResolution(
-        id: _s(j, 'id'), agId: _s(j, 'agId'), ordre: _in(j, 'ordre') ?? 0, texte: _s(j, 'texte'), typeMajorite: _s(j, 'typeMajorite'), resultat: _s(j, 'resultat'),
+        id: _s(j, 'id'), agId: _s(j, 'agId'), ordre: _in(j, 'ordre') ?? 0, texte: _s(j, 'texte'), typeMajorite: _s(j, 'typeMajorite'), resultat: _s(j, 'resultat'), necessiteExecution: _b(j, 'necessiteExecution'),
       );
 }
 
@@ -1334,4 +1335,49 @@ class PreferencesNotification {
   const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true});
   factory PreferencesNotification.fromJson(Map<String, dynamic> j) => PreferencesNotification(digestHebdo: j['digest_hebdo'] is bool ? j['digest_hebdo'] as bool : true, canalDigest: _sn(j, 'canal_digest') ?? 'EMAIL', annoncesPush: j['annonces_push'] is bool ? j['annonces_push'] as bool : true);
   Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush};
+}
+
+// ── M22 — Tâches ─────────────────────────────────────────────────────────────
+class ChecklistItem {
+  final String id, libelle;
+  final bool fait;
+  const ChecklistItem({required this.id, required this.libelle, required this.fait});
+  factory ChecklistItem.fromJson(Map<String, dynamic> j) => ChecklistItem(id: _s(j, 'id'), libelle: _s(j, 'libelle'), fait: _b(j, 'fait'));
+}
+
+class Tache {
+  final String id, titre, origine, priorite, statut, creeLe;
+  final String? description, dateEcheance, termineeLe, recurrenceFrequence, recurrenceParenteId;
+  final IdentiteCourte? assignee, creePar;
+  final List<ChecklistItem>? checklist;
+  final int checklistFaits, nbCommentaires, nbPiecesJointes;
+  final bool visibleConseil, enRetard, peutMettreAJour, peutModifier;
+  final Map<String, dynamic>? resolutionAg, contratEcheance, incident, rapportGestion;
+  final List<Map<String, dynamic>> piecesJointes, commentaires, journal;
+  final bool? deja;
+  final String? suivanteId;
+  const Tache({required this.id, required this.titre, required this.origine, required this.priorite, required this.statut, required this.creeLe, this.description, this.dateEcheance, this.termineeLe, this.recurrenceFrequence, this.recurrenceParenteId, this.assignee, this.creePar, this.checklist, required this.checklistFaits, required this.nbCommentaires, required this.nbPiecesJointes, required this.visibleConseil, required this.enRetard, this.peutMettreAJour = false, this.peutModifier = false, this.resolutionAg, this.contratEcheance, this.incident, this.rapportGestion, this.piecesJointes = const [], this.commentaires = const [], this.journal = const [], this.deja, this.suivanteId});
+  factory Tache.fromJson(Map<String, dynamic> j) => Tache(
+        id: _s(j, 'id'), titre: _s(j, 'titre'), origine: _s(j, 'origine'), priorite: _s(j, 'priorite'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+        description: _sn(j, 'description'), dateEcheance: _sn(j, 'dateEcheance'), termineeLe: _sn(j, 'termineeLe'),
+        recurrenceFrequence: j['recurrence'] is Map ? _sn((j['recurrence'] as Map).cast<String, dynamic>(), 'frequence') : null, recurrenceParenteId: _sn(j, 'recurrenceParenteId'),
+        assignee: j['assignee'] is Map ? IdentiteCourte.fromJson(_map(j['assignee'])) : null, creePar: j['creePar'] is Map ? IdentiteCourte.fromJson(_map(j['creePar'])) : null,
+        checklist: j['checklist'] is List ? _list(j['checklist'], ChecklistItem.fromJson) : null, checklistFaits: _in(j, 'checklistFaits') ?? 0,
+        nbCommentaires: _in(j, 'nbCommentaires') ?? 0, nbPiecesJointes: _in(j, 'nbPiecesJointes') ?? 0, visibleConseil: _b(j, 'visibleConseil'), enRetard: _b(j, 'enRetard'),
+        peutMettreAJour: _b(j, 'peutMettreAJour'), peutModifier: _b(j, 'peutModifier'),
+        resolutionAg: _map(j['resolutionAg']), contratEcheance: _map(j['contratEcheance']), incident: _map(j['incident']), rapportGestion: _map(j['rapportGestion']),
+        piecesJointes: ((j['piecesJointes'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+        commentaires: ((j['commentaires'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+        journal: ((j['journal'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+        deja: j['deja'] is bool ? j['deja'] as bool : null, suivanteId: _sn(j, 'suivante_id'),
+      );
+  bool get ouverte => statut == 'A_FAIRE' || statut == 'EN_COURS' || statut == 'BLOQUEE';
+}
+
+class ExecutionResolution {
+  final String resolutionId, resultat;
+  final bool necessiteExecution;
+  final List<Map<String, dynamic>> taches;
+  const ExecutionResolution({required this.resolutionId, required this.resultat, required this.necessiteExecution, required this.taches});
+  factory ExecutionResolution.fromJson(Map<String, dynamic> j) => ExecutionResolution(resolutionId: _s(j, 'resolution_id'), resultat: _s(j, 'resultat'), necessiteExecution: _b(j, 'necessite_execution'), taches: ((j['taches'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList());
 }

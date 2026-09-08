@@ -436,6 +436,34 @@ suppose un consentement : à confirmer avec la déclaration CNDP.
 convocation ou d'affichage réglementaire ? Le module la traite comme une information : la
 convocation reste celle du module AG (délais légaux, PV).
 
+## 13. Exécution des résolutions d'AG, obligations récurrentes du syndic (module M22)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| `copropriete.delai_execution_resolution_jours` | **NULL par défaut** (60 jours posés par le seed de démonstration) — échéance de la tâche « Exécuter la résolution » ; non configuré = tâche sans échéance, jamais une valeur devinée | PROVISOIRE |
+| Visibilité du suivi d'exécution | tout membre voyant l'AG lit le titre, le statut et les dates de la tâche liée ; jamais l'assigné(e) ni les commentaires | PROVISOIRE |
+| Rappels | J-3, J-0, retard à l'assigné(e) ; synthèse hebdomadaire des retards au syndic et au conseil | PROVISOIRE |
+
+### 13.1 — Délai d'exécution d'une décision d'AG
+
+**À confirmer :** la Loi 18-00 ou le règlement de copropriété type imposent-ils un délai au syndic
+pour exécuter une résolution adoptée (travaux votés, changement de prestataire), et quelle est la
+sanction du retard (responsabilité du syndic, révocation) ? Le module n'applique aucune sanction :
+il trace et rappelle.
+
+### 13.2 — Preuve d'exécution
+
+**À confirmer :** la clôture d'une tâche « Exécuter la résolution » (avec photo, commentaire,
+journal horodaté) a-t-elle une valeur de preuve envers les copropriétaires ou l'AG suivante ?
+Faut-il un compte rendu formel d'exécution au PV de l'AG suivante ? Le module conserve le journal
+append-only et les pièces jointes.
+
+### 13.3 — Obligations récurrentes légales
+
+**À confirmer :** la liste des obligations périodiques du syndic à pré-remplir (contrôle des
+extincteurs, entretien ascenseur, déclarations CNSS, assurance, rapport annuel) et leurs fréquences
+légales. Le module fournit la récurrence (mensuelle → annuelle) sans liste imposée.
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.

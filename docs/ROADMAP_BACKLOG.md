@@ -655,6 +655,67 @@ nationaux (15, 19, 177, 141) — le CHECK initial (≥ 3 caractères) a été as
   brouillons collaboratifs ; traduction automatique FR ↔ AR du contenu ; rétention / anonymisation
   des commentaires (brief §12.3).
 
+## M22 — Tâches et suivi des décisions
+
+*Réf. Doc A §6 (exécution des résolutions), §8 (obligations du syndic), §12. Domaine :
+`19-taches.md`. Juridique : brief §13. Branche `feature/m22-taches`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `OrigineTache`, `PrioriteTache`,
+`StatutTache`, `TypeTacheLog` ; tables `tache`, `tache_commentaire`, `tache_log` (append-only) ;
+colonnes `ag_resolution.necessite_execution`, `copropriete.delai_execution_resolution_jours`
+(paramètre légal nullable, PROVISOIRE brief §13), `document.tache_id` (pièces jointes TACHE_PJ),
+`tache.rapport_gestion_id` et `tache.recurrence_parente_id` (idempotence des hooks et de la
+récurrence), marqueurs `rappel_j3_le` / `rappel_j0_le` / `rappel_retard_le` ; FK
+`contrat_echeance.tache_id` (posée en M19, désormais unique) ; fonctions SQL `tache_visible`,
+`tache_copropriete_id`, `resolution_execution` (SECURITY DEFINER) ; permissions `taches.gerer`,
+`taches.lire` (GARDIEN scoped), `taches.maj_propre` (CONSEIL / GARDIEN scoped) ; codes
+`TACHE_STATUT_INVALIDE`, `TACHE_ASSIGNEE_INVALIDE`. **Écarts par rapport au prompt** : (1) pas de
+DELETE : une tâche s'annule (statut ANNULEE, historique conservé) ; (2) la récurrence est un objet
+`{ frequence }` fermé (mensuelle / trimestrielle / semestrielle / annuelle), pas un sous-ensemble
+RRULE libre ; (3) l'annulation d'une échéance de contrat annule sa tâche et sa réalisation la
+termine (bidirectionnel) ; (4) la policy d'insertion de `tache` autorise l'assigné(e) à créer
+l'occurrence suivante de SA tâche récurrente (migration `m22_recurrence_assignee`, même module —
+sinon un gardien ne pourrait pas clore une tâche récurrente hors-ligne) ; (5) la photo de fin de
+tâche s'envoie en ligne, seul le statut est mis en file hors-ligne.
+
+- [x] **Livré (08/09)** — Migrations `..._m22_taches` (tables, CHECKs, fonctions, RLS : syndic tout,
+  conseil `visible_conseil`, assigné(e) ses tâches ; lectures et journal append-only) et
+  `..._m22_recurrence_assignee`. Seed Al Amal : résolution « pompe » marquée à exécuter avec sa tâche
+  TERMINEE, tâches d'échéances du contrat ascenseur, dépense d'incident à régler (EN_COURS),
+  rapport à soumettre (en retard, rappels posés), cuves d'eau trimestrielles (occurrence précédente
+  terminée par le gardien, suivante en cours avec checklist), extincteurs BLOQUEE (conseil),
+  déclaration CNSS mensuelle invisible du conseil ; `delai_execution_resolution_jours` (PROVISOIRE).
+- [x] **Livré (08/09)** — API tag `Tâches` (12 opérations) : liste filtrée (statut, priorité,
+  origine, assigné, retard, ouvertes, q ; `meta.par_statut` / `meta.retard`), export csv / xlsx,
+  création, upload-url, détail (pièces signées, commentaires, journal), modification, statut
+  (transitions, commentaire, photo, récurrence, échéance de contrat réalisée, rejouable), assignation,
+  checklist (remplacement ou bascule), commentaires, mes-taches, retard, suivi d'exécution d'une
+  résolution (copropriétaires). Hooks : `finaliserResolution` (ADOPTEE + `necessite_execution`),
+  `regenererEcheances` / `ajouterEcheance` (synchronisation des tâches d'échéances), incident RESOLU
+  avec dépense en attente, rapport GENERE / soumis. Job `taches-rappels-quotidien`. Notifications
+  FR/AR `TACHE_ASSIGNEE`, `TACHE_STATUT`, `TACHE_COMMENTAIRE`, `TACHE_ECHEANCE`,
+  `TACHES_EN_RETARD_HEBDO`. Audit `TACHE_CREEE/MODIFIEE/STATUT_CHANGE/ASSIGNEE`. `PATCH
+  /coproprietes/{id}` et `POST /ag/{id}/resolutions` étendus. Tests `tests/taches.test.ts` (7) :
+  hooks idempotents (résolution, échéances — jamais pour un PAIEMENT —, incident, rapport), RLS
+  (gardien ses tâches, conseil sans les cachées, propriétaire refusé, journal append-only),
+  checklist + clôture par le gardien avec récurrence créée une seule fois et rejeu `deja`,
+  réassignation + commentaire, suivi d'exécution sans l'assigné, job J-3 / J-0 / retard / hebdo
+  rejouable.
+- [x] **Livré (08/09)** — Web : `taches/` (liste + kanban, statistiques, filtres, export),
+  `taches/[id]` (checklist cochable, commentaires, journal, pièces jointes, objet source, statut avec
+  photo, assignation, annulation), `taches/nouveau` et `[id]/modifier`, suivi d'exécution par
+  résolution sur la fiche AG, case « nécessite exécution », délai d'exécution dans Paramètres →
+  légaux, bandeau des retards sur le tableau de bord syndic, navigation « Tâches » (syndic, conseil)
+  et « Mes tâches » (gardien), FR/AR RTL.
+- [x] **Livré (08/09)** — Mobile `features/taches/taches_screens.dart` : mes tâches / registre
+  filtré, fiche (checklist, statut avec photo, commentaires, journal, objet source), statut
+  **hors-ligne** (Drift v4 `taches_queue`, `taches_sync.dart`), ligne d'exécution sur la fiche AG,
+  case « nécessite exécution », onglet « Tâches » du gardien, deep-links, invalidation temps réel ;
+  test routeur M22.
+- [ ] **Non livré / à confirmer** : RRULE libre (jours fixes, fin de récurrence) ; modèles
+  d'obligations légales pré-remplis (brief §13.3) ; création / assignation depuis le mobile
+  (web-first, voir parité) ; rattachement d'une annonce TRAVAUX à une tâche.
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

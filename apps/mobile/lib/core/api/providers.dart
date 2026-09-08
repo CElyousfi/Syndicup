@@ -193,6 +193,22 @@ final preferencesNotificationProvider = FutureProvider.autoDispose<PreferencesNo
   return r.dataOrNull ?? const PreferencesNotification();
 });
 
+// ── M22 — Tâches ─────────────────────────────────────────────────────────────
+final mesTachesProvider = FutureProvider.autoDispose<List<Tache>>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/taches/mes-taches', parse: (j) => parseList(j, Tache.fromJson)));
+});
+/// Registre (syndic / conseil) — clé = statut ou 'OUVERTES' / 'RETARD' / 'TOUTES'.
+final tachesProvider = FutureProvider.autoDispose.family<List<Tache>, String>((ref, filtre) async {
+  final query = <String, Object?>{'limit': 100, if (filtre == 'OUVERTES') 'ouvertes': '1', if (filtre == 'RETARD') 'retard': '1', if (filtre != 'OUVERTES' && filtre != 'RETARD' && filtre != 'TOUTES') 'statut': filtre};
+  return unwrap(await ref.watch(apiClientProvider).get('/taches', query: query, parse: (j) => parseList(j, Tache.fromJson)));
+});
+final tacheProvider = FutureProvider.autoDispose.family<Tache, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/taches/$id', parse: (j) => Tache.fromJson(asMap(j))));
+});
+final executionResolutionProvider = FutureProvider.autoDispose.family<ExecutionResolution, ({String agId, String resolutionId})>((ref, k) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/ag/${k.agId}/resolutions/${k.resolutionId}/execution', parse: (j) => ExecutionResolution.fromJson(asMap(j))));
+});
+
 final visitesProvider = FutureProvider.autoDispose<List<Visite>>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/visites', parse: (j) => parseList(j, Visite.fromJson)));
 });

@@ -43,3 +43,6 @@ const Map<String, BadgeVariant> echeanceVariant = {'A_VENIR': BadgeVariant.info,
 const Map<String, BadgeVariant> annonceVariant = {'BROUILLON': BadgeVariant.outline, 'PUBLIEE': BadgeVariant.ok, 'ARCHIVEE': BadgeVariant.neutral};
 const Map<String, BadgeVariant> categorieAnnonceVariant = {'INFORMATION': BadgeVariant.info, 'TRAVAUX': BadgeVariant.warn, 'COUPURE': BadgeVariant.warn, 'SECURITE': BadgeVariant.danger, 'URGENCE': BadgeVariant.danger, 'AG': BadgeVariant.ink, 'CONVIVIALITE': BadgeVariant.ok, 'REGLEMENT': BadgeVariant.neutral};
 const Map<String, BadgeVariant> sondageVariant = {'BROUILLON': BadgeVariant.outline, 'OUVERT': BadgeVariant.ok, 'CLOS': BadgeVariant.neutral};
+// M22 — tâches.
+const Map<String, BadgeVariant> tacheVariant = {'A_FAIRE': BadgeVariant.outline, 'EN_COURS': BadgeVariant.info, 'BLOQUEE': BadgeVariant.danger, 'TERMINEE': BadgeVariant.ok, 'ANNULEE': BadgeVariant.neutral};
+const Map<String, BadgeVariant> prioriteVariant = {'BASSE': BadgeVariant.neutral, 'NORMALE': BadgeVariant.outline, 'HAUTE': BadgeVariant.warn, 'CRITIQUE': BadgeVariant.danger};

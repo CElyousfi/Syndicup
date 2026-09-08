@@ -68,6 +68,26 @@ class PresencesQueue extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// M22 — changement de statut d'une tâche par l'assigné(e) (POST /taches/{id}/statut) hors-ligne :
+/// ligne locale d'abord, rejeu à l'identique (le serveur renvoie `deja` sur un même statut).
+class TachesQueue extends Table {
+  TextColumn get id => text()();
+  TextColumn get coproprieteId => text()();
+  TextColumn get tacheId => text()();
+  /// A_FAIRE | EN_COURS | BLOQUEE | TERMINEE
+  TextColumn get statut => text()();
+  TextColumn get commentaire => text().nullable()();
+  /// Libellé d'affichage hors-ligne (titre de la tâche).
+  TextColumn get libelle => text().nullable()();
+  DateTimeColumn get creeLe => dateTime()();
+  IntColumn get tentatives => integer().withDefault(const Constant(0))();
+  TextColumn get derniereErreur => text().nullable()();
+  BoolColumn get definitif => boolean().withDefault(const Constant(false))();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 /// Cache de lecture du gardien (lots + visites du jour) pour consulter le planning hors-ligne.
 class CacheEntries extends Table {
   TextColumn get cle => text()();
@@ -78,12 +98,12 @@ class CacheEntries extends Table {
   Set<Column> get primaryKey => {cle};
 }
 
-@DriftDatabase(tables: [VisitesQueue, LcdActionsQueue, PresencesQueue, CacheEntries])
+@DriftDatabase(tables: [VisitesQueue, LcdActionsQueue, PresencesQueue, TachesQueue, CacheEntries])
 class LocalDatabase extends _$LocalDatabase {
   LocalDatabase([QueryExecutor? executor]) : super(executor ?? driftDatabase(name: 'syndicup_offline'));
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -93,6 +113,8 @@ class LocalDatabase extends _$LocalDatabase {
           if (from < 2) await m.createTable(lcdActionsQueue);
           // v3 (M20) : file des pointages de présence.
           if (from < 3) await m.createTable(presencesQueue);
+          // v4 (M22) : file des changements de statut de tâches.
+          if (from < 4) await m.createTable(tachesQueue);
         },
       );
 
@@ -157,6 +179,26 @@ class LocalDatabase extends _$LocalDatabase {
         'UPDATE presences_queue SET tentatives = tentatives + 1 WHERE id = ?',
         variables: [Variable.withString(id)],
         updates: {presencesQueue},
+      );
+
+  // ── File des tâches (M22) ──
+  Stream<List<TachesQueueData>> watchTachesQueue() =>
+      (select(tachesQueue)..orderBy([(t) => OrderingTerm.asc(t.creeLe)])).watch();
+
+  Future<List<TachesQueueData>> pendingTaches() =>
+      (select(tachesQueue)..where((t) => t.definitif.equals(false))..orderBy([(t) => OrderingTerm.asc(t.creeLe)])).get();
+
+  Future<void> enqueueTache(TachesQueueCompanion v) => into(tachesQueue).insert(v, mode: InsertMode.insertOrReplace);
+
+  Future<void> removeTache(String id) => (delete(tachesQueue)..where((t) => t.id.equals(id))).go();
+
+  Future<void> markTacheFailure(String id, String erreur, {bool definitif = false}) =>
+      (update(tachesQueue)..where((t) => t.id.equals(id))).write(TachesQueueCompanion(derniereErreur: Value(erreur), definitif: Value(definitif)));
+
+  Future<void> bumpTacheAttempts(String id) => customUpdate(
+        'UPDATE taches_queue SET tentatives = tentatives + 1 WHERE id = ?',
+        variables: [Variable.withString(id)],
+        updates: {tachesQueue},
       );
 
   Future<void> putCache(String cle, String json) =>

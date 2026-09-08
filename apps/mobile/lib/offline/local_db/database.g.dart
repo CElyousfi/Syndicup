@@ -1808,6 +1808,644 @@ class PresencesQueueCompanion extends UpdateCompanion<PresencesQueueData> {
   }
 }
 
+class $TachesQueueTable extends TachesQueue
+    with TableInfo<$TachesQueueTable, TachesQueueData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TachesQueueTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _coproprieteIdMeta = const VerificationMeta(
+    'coproprieteId',
+  );
+  @override
+  late final GeneratedColumn<String> coproprieteId = GeneratedColumn<String>(
+    'copropriete_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tacheIdMeta = const VerificationMeta(
+    'tacheId',
+  );
+  @override
+  late final GeneratedColumn<String> tacheId = GeneratedColumn<String>(
+    'tache_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _statutMeta = const VerificationMeta('statut');
+  @override
+  late final GeneratedColumn<String> statut = GeneratedColumn<String>(
+    'statut',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _commentaireMeta = const VerificationMeta(
+    'commentaire',
+  );
+  @override
+  late final GeneratedColumn<String> commentaire = GeneratedColumn<String>(
+    'commentaire',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _libelleMeta = const VerificationMeta(
+    'libelle',
+  );
+  @override
+  late final GeneratedColumn<String> libelle = GeneratedColumn<String>(
+    'libelle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _creeLeMeta = const VerificationMeta('creeLe');
+  @override
+  late final GeneratedColumn<DateTime> creeLe = GeneratedColumn<DateTime>(
+    'cree_le',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _tentativesMeta = const VerificationMeta(
+    'tentatives',
+  );
+  @override
+  late final GeneratedColumn<int> tentatives = GeneratedColumn<int>(
+    'tentatives',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _derniereErreurMeta = const VerificationMeta(
+    'derniereErreur',
+  );
+  @override
+  late final GeneratedColumn<String> derniereErreur = GeneratedColumn<String>(
+    'derniere_erreur',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _definitifMeta = const VerificationMeta(
+    'definitif',
+  );
+  @override
+  late final GeneratedColumn<bool> definitif = GeneratedColumn<bool>(
+    'definitif',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("definitif" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    coproprieteId,
+    tacheId,
+    statut,
+    commentaire,
+    libelle,
+    creeLe,
+    tentatives,
+    derniereErreur,
+    definitif,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'taches_queue';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TachesQueueData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    } else if (isInserting) {
+      context.missing(_idMeta);
+    }
+    if (data.containsKey('copropriete_id')) {
+      context.handle(
+        _coproprieteIdMeta,
+        coproprieteId.isAcceptableOrUnknown(
+          data['copropriete_id']!,
+          _coproprieteIdMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_coproprieteIdMeta);
+    }
+    if (data.containsKey('tache_id')) {
+      context.handle(
+        _tacheIdMeta,
+        tacheId.isAcceptableOrUnknown(data['tache_id']!, _tacheIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_tacheIdMeta);
+    }
+    if (data.containsKey('statut')) {
+      context.handle(
+        _statutMeta,
+        statut.isAcceptableOrUnknown(data['statut']!, _statutMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_statutMeta);
+    }
+    if (data.containsKey('commentaire')) {
+      context.handle(
+        _commentaireMeta,
+        commentaire.isAcceptableOrUnknown(
+          data['commentaire']!,
+          _commentaireMeta,
+        ),
+      );
+    }
+    if (data.containsKey('libelle')) {
+      context.handle(
+        _libelleMeta,
+        libelle.isAcceptableOrUnknown(data['libelle']!, _libelleMeta),
+      );
+    }
+    if (data.containsKey('cree_le')) {
+      context.handle(
+        _creeLeMeta,
+        creeLe.isAcceptableOrUnknown(data['cree_le']!, _creeLeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_creeLeMeta);
+    }
+    if (data.containsKey('tentatives')) {
+      context.handle(
+        _tentativesMeta,
+        tentatives.isAcceptableOrUnknown(data['tentatives']!, _tentativesMeta),
+      );
+    }
+    if (data.containsKey('derniere_erreur')) {
+      context.handle(
+        _derniereErreurMeta,
+        derniereErreur.isAcceptableOrUnknown(
+          data['derniere_erreur']!,
+          _derniereErreurMeta,
+        ),
+      );
+    }
+    if (data.containsKey('definitif')) {
+      context.handle(
+        _definitifMeta,
+        definitif.isAcceptableOrUnknown(data['definitif']!, _definitifMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  TachesQueueData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TachesQueueData(
+      id:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}id'],
+          )!,
+      coproprieteId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}copropriete_id'],
+          )!,
+      tacheId:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}tache_id'],
+          )!,
+      statut:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.string,
+            data['${effectivePrefix}statut'],
+          )!,
+      commentaire: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}commentaire'],
+      ),
+      libelle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}libelle'],
+      ),
+      creeLe:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.dateTime,
+            data['${effectivePrefix}cree_le'],
+          )!,
+      tentatives:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.int,
+            data['${effectivePrefix}tentatives'],
+          )!,
+      derniereErreur: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}derniere_erreur'],
+      ),
+      definitif:
+          attachedDatabase.typeMapping.read(
+            DriftSqlType.bool,
+            data['${effectivePrefix}definitif'],
+          )!,
+    );
+  }
+
+  @override
+  $TachesQueueTable createAlias(String alias) {
+    return $TachesQueueTable(attachedDatabase, alias);
+  }
+}
+
+class TachesQueueData extends DataClass implements Insertable<TachesQueueData> {
+  final String id;
+  final String coproprieteId;
+  final String tacheId;
+
+  /// A_FAIRE | EN_COURS | BLOQUEE | TERMINEE
+  final String statut;
+  final String? commentaire;
+
+  /// Libellé d'affichage hors-ligne (titre de la tâche).
+  final String? libelle;
+  final DateTime creeLe;
+  final int tentatives;
+  final String? derniereErreur;
+  final bool definitif;
+  const TachesQueueData({
+    required this.id,
+    required this.coproprieteId,
+    required this.tacheId,
+    required this.statut,
+    this.commentaire,
+    this.libelle,
+    required this.creeLe,
+    required this.tentatives,
+    this.derniereErreur,
+    required this.definitif,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['copropriete_id'] = Variable<String>(coproprieteId);
+    map['tache_id'] = Variable<String>(tacheId);
+    map['statut'] = Variable<String>(statut);
+    if (!nullToAbsent || commentaire != null) {
+      map['commentaire'] = Variable<String>(commentaire);
+    }
+    if (!nullToAbsent || libelle != null) {
+      map['libelle'] = Variable<String>(libelle);
+    }
+    map['cree_le'] = Variable<DateTime>(creeLe);
+    map['tentatives'] = Variable<int>(tentatives);
+    if (!nullToAbsent || derniereErreur != null) {
+      map['derniere_erreur'] = Variable<String>(derniereErreur);
+    }
+    map['definitif'] = Variable<bool>(definitif);
+    return map;
+  }
+
+  TachesQueueCompanion toCompanion(bool nullToAbsent) {
+    return TachesQueueCompanion(
+      id: Value(id),
+      coproprieteId: Value(coproprieteId),
+      tacheId: Value(tacheId),
+      statut: Value(statut),
+      commentaire:
+          commentaire == null && nullToAbsent
+              ? const Value.absent()
+              : Value(commentaire),
+      libelle:
+          libelle == null && nullToAbsent
+              ? const Value.absent()
+              : Value(libelle),
+      creeLe: Value(creeLe),
+      tentatives: Value(tentatives),
+      derniereErreur:
+          derniereErreur == null && nullToAbsent
+              ? const Value.absent()
+              : Value(derniereErreur),
+      definitif: Value(definitif),
+    );
+  }
+
+  factory TachesQueueData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TachesQueueData(
+      id: serializer.fromJson<String>(json['id']),
+      coproprieteId: serializer.fromJson<String>(json['coproprieteId']),
+      tacheId: serializer.fromJson<String>(json['tacheId']),
+      statut: serializer.fromJson<String>(json['statut']),
+      commentaire: serializer.fromJson<String?>(json['commentaire']),
+      libelle: serializer.fromJson<String?>(json['libelle']),
+      creeLe: serializer.fromJson<DateTime>(json['creeLe']),
+      tentatives: serializer.fromJson<int>(json['tentatives']),
+      derniereErreur: serializer.fromJson<String?>(json['derniereErreur']),
+      definitif: serializer.fromJson<bool>(json['definitif']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'coproprieteId': serializer.toJson<String>(coproprieteId),
+      'tacheId': serializer.toJson<String>(tacheId),
+      'statut': serializer.toJson<String>(statut),
+      'commentaire': serializer.toJson<String?>(commentaire),
+      'libelle': serializer.toJson<String?>(libelle),
+      'creeLe': serializer.toJson<DateTime>(creeLe),
+      'tentatives': serializer.toJson<int>(tentatives),
+      'derniereErreur': serializer.toJson<String?>(derniereErreur),
+      'definitif': serializer.toJson<bool>(definitif),
+    };
+  }
+
+  TachesQueueData copyWith({
+    String? id,
+    String? coproprieteId,
+    String? tacheId,
+    String? statut,
+    Value<String?> commentaire = const Value.absent(),
+    Value<String?> libelle = const Value.absent(),
+    DateTime? creeLe,
+    int? tentatives,
+    Value<String?> derniereErreur = const Value.absent(),
+    bool? definitif,
+  }) => TachesQueueData(
+    id: id ?? this.id,
+    coproprieteId: coproprieteId ?? this.coproprieteId,
+    tacheId: tacheId ?? this.tacheId,
+    statut: statut ?? this.statut,
+    commentaire: commentaire.present ? commentaire.value : this.commentaire,
+    libelle: libelle.present ? libelle.value : this.libelle,
+    creeLe: creeLe ?? this.creeLe,
+    tentatives: tentatives ?? this.tentatives,
+    derniereErreur:
+        derniereErreur.present ? derniereErreur.value : this.derniereErreur,
+    definitif: definitif ?? this.definitif,
+  );
+  TachesQueueData copyWithCompanion(TachesQueueCompanion data) {
+    return TachesQueueData(
+      id: data.id.present ? data.id.value : this.id,
+      coproprieteId:
+          data.coproprieteId.present
+              ? data.coproprieteId.value
+              : this.coproprieteId,
+      tacheId: data.tacheId.present ? data.tacheId.value : this.tacheId,
+      statut: data.statut.present ? data.statut.value : this.statut,
+      commentaire:
+          data.commentaire.present ? data.commentaire.value : this.commentaire,
+      libelle: data.libelle.present ? data.libelle.value : this.libelle,
+      creeLe: data.creeLe.present ? data.creeLe.value : this.creeLe,
+      tentatives:
+          data.tentatives.present ? data.tentatives.value : this.tentatives,
+      derniereErreur:
+          data.derniereErreur.present
+              ? data.derniereErreur.value
+              : this.derniereErreur,
+      definitif: data.definitif.present ? data.definitif.value : this.definitif,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TachesQueueData(')
+          ..write('id: $id, ')
+          ..write('coproprieteId: $coproprieteId, ')
+          ..write('tacheId: $tacheId, ')
+          ..write('statut: $statut, ')
+          ..write('commentaire: $commentaire, ')
+          ..write('libelle: $libelle, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('tentatives: $tentatives, ')
+          ..write('derniereErreur: $derniereErreur, ')
+          ..write('definitif: $definitif')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    coproprieteId,
+    tacheId,
+    statut,
+    commentaire,
+    libelle,
+    creeLe,
+    tentatives,
+    derniereErreur,
+    definitif,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TachesQueueData &&
+          other.id == this.id &&
+          other.coproprieteId == this.coproprieteId &&
+          other.tacheId == this.tacheId &&
+          other.statut == this.statut &&
+          other.commentaire == this.commentaire &&
+          other.libelle == this.libelle &&
+          other.creeLe == this.creeLe &&
+          other.tentatives == this.tentatives &&
+          other.derniereErreur == this.derniereErreur &&
+          other.definitif == this.definitif);
+}
+
+class TachesQueueCompanion extends UpdateCompanion<TachesQueueData> {
+  final Value<String> id;
+  final Value<String> coproprieteId;
+  final Value<String> tacheId;
+  final Value<String> statut;
+  final Value<String?> commentaire;
+  final Value<String?> libelle;
+  final Value<DateTime> creeLe;
+  final Value<int> tentatives;
+  final Value<String?> derniereErreur;
+  final Value<bool> definitif;
+  final Value<int> rowid;
+  const TachesQueueCompanion({
+    this.id = const Value.absent(),
+    this.coproprieteId = const Value.absent(),
+    this.tacheId = const Value.absent(),
+    this.statut = const Value.absent(),
+    this.commentaire = const Value.absent(),
+    this.libelle = const Value.absent(),
+    this.creeLe = const Value.absent(),
+    this.tentatives = const Value.absent(),
+    this.derniereErreur = const Value.absent(),
+    this.definitif = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TachesQueueCompanion.insert({
+    required String id,
+    required String coproprieteId,
+    required String tacheId,
+    required String statut,
+    this.commentaire = const Value.absent(),
+    this.libelle = const Value.absent(),
+    required DateTime creeLe,
+    this.tentatives = const Value.absent(),
+    this.derniereErreur = const Value.absent(),
+    this.definitif = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : id = Value(id),
+       coproprieteId = Value(coproprieteId),
+       tacheId = Value(tacheId),
+       statut = Value(statut),
+       creeLe = Value(creeLe);
+  static Insertable<TachesQueueData> custom({
+    Expression<String>? id,
+    Expression<String>? coproprieteId,
+    Expression<String>? tacheId,
+    Expression<String>? statut,
+    Expression<String>? commentaire,
+    Expression<String>? libelle,
+    Expression<DateTime>? creeLe,
+    Expression<int>? tentatives,
+    Expression<String>? derniereErreur,
+    Expression<bool>? definitif,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (coproprieteId != null) 'copropriete_id': coproprieteId,
+      if (tacheId != null) 'tache_id': tacheId,
+      if (statut != null) 'statut': statut,
+      if (commentaire != null) 'commentaire': commentaire,
+      if (libelle != null) 'libelle': libelle,
+      if (creeLe != null) 'cree_le': creeLe,
+      if (tentatives != null) 'tentatives': tentatives,
+      if (derniereErreur != null) 'derniere_erreur': derniereErreur,
+      if (definitif != null) 'definitif': definitif,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TachesQueueCompanion copyWith({
+    Value<String>? id,
+    Value<String>? coproprieteId,
+    Value<String>? tacheId,
+    Value<String>? statut,
+    Value<String?>? commentaire,
+    Value<String?>? libelle,
+    Value<DateTime>? creeLe,
+    Value<int>? tentatives,
+    Value<String?>? derniereErreur,
+    Value<bool>? definitif,
+    Value<int>? rowid,
+  }) {
+    return TachesQueueCompanion(
+      id: id ?? this.id,
+      coproprieteId: coproprieteId ?? this.coproprieteId,
+      tacheId: tacheId ?? this.tacheId,
+      statut: statut ?? this.statut,
+      commentaire: commentaire ?? this.commentaire,
+      libelle: libelle ?? this.libelle,
+      creeLe: creeLe ?? this.creeLe,
+      tentatives: tentatives ?? this.tentatives,
+      derniereErreur: derniereErreur ?? this.derniereErreur,
+      definitif: definitif ?? this.definitif,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (coproprieteId.present) {
+      map['copropriete_id'] = Variable<String>(coproprieteId.value);
+    }
+    if (tacheId.present) {
+      map['tache_id'] = Variable<String>(tacheId.value);
+    }
+    if (statut.present) {
+      map['statut'] = Variable<String>(statut.value);
+    }
+    if (commentaire.present) {
+      map['commentaire'] = Variable<String>(commentaire.value);
+    }
+    if (libelle.present) {
+      map['libelle'] = Variable<String>(libelle.value);
+    }
+    if (creeLe.present) {
+      map['cree_le'] = Variable<DateTime>(creeLe.value);
+    }
+    if (tentatives.present) {
+      map['tentatives'] = Variable<int>(tentatives.value);
+    }
+    if (derniereErreur.present) {
+      map['derniere_erreur'] = Variable<String>(derniereErreur.value);
+    }
+    if (definitif.present) {
+      map['definitif'] = Variable<bool>(definitif.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TachesQueueCompanion(')
+          ..write('id: $id, ')
+          ..write('coproprieteId: $coproprieteId, ')
+          ..write('tacheId: $tacheId, ')
+          ..write('statut: $statut, ')
+          ..write('commentaire: $commentaire, ')
+          ..write('libelle: $libelle, ')
+          ..write('creeLe: $creeLe, ')
+          ..write('tentatives: $tentatives, ')
+          ..write('derniereErreur: $derniereErreur, ')
+          ..write('definitif: $definitif, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $CacheEntriesTable extends CacheEntries
     with TableInfo<$CacheEntriesTable, CacheEntry> {
   @override
@@ -2085,6 +2723,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     this,
   );
   late final $PresencesQueueTable presencesQueue = $PresencesQueueTable(this);
+  late final $TachesQueueTable tachesQueue = $TachesQueueTable(this);
   late final $CacheEntriesTable cacheEntries = $CacheEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
@@ -2094,6 +2733,7 @@ abstract class _$LocalDatabase extends GeneratedDatabase {
     visitesQueue,
     lcdActionsQueue,
     presencesQueue,
+    tachesQueue,
     cacheEntries,
   ];
 }
@@ -3024,6 +3664,317 @@ typedef $$PresencesQueueTableProcessedTableManager =
       PresencesQueueData,
       PrefetchHooks Function()
     >;
+typedef $$TachesQueueTableCreateCompanionBuilder =
+    TachesQueueCompanion Function({
+      required String id,
+      required String coproprieteId,
+      required String tacheId,
+      required String statut,
+      Value<String?> commentaire,
+      Value<String?> libelle,
+      required DateTime creeLe,
+      Value<int> tentatives,
+      Value<String?> derniereErreur,
+      Value<bool> definitif,
+      Value<int> rowid,
+    });
+typedef $$TachesQueueTableUpdateCompanionBuilder =
+    TachesQueueCompanion Function({
+      Value<String> id,
+      Value<String> coproprieteId,
+      Value<String> tacheId,
+      Value<String> statut,
+      Value<String?> commentaire,
+      Value<String?> libelle,
+      Value<DateTime> creeLe,
+      Value<int> tentatives,
+      Value<String?> derniereErreur,
+      Value<bool> definitif,
+      Value<int> rowid,
+    });
+
+class $$TachesQueueTableFilterComposer
+    extends Composer<_$LocalDatabase, $TachesQueueTable> {
+  $$TachesQueueTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tacheId => $composableBuilder(
+    column: $table.tacheId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get definitif => $composableBuilder(
+    column: $table.definitif,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TachesQueueTableOrderingComposer
+    extends Composer<_$LocalDatabase, $TachesQueueTable> {
+  $$TachesQueueTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get tacheId => $composableBuilder(
+    column: $table.tacheId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statut => $composableBuilder(
+    column: $table.statut,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get libelle => $composableBuilder(
+    column: $table.libelle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get creeLe => $composableBuilder(
+    column: $table.creeLe,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get definitif => $composableBuilder(
+    column: $table.definitif,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TachesQueueTableAnnotationComposer
+    extends Composer<_$LocalDatabase, $TachesQueueTable> {
+  $$TachesQueueTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get coproprieteId => $composableBuilder(
+    column: $table.coproprieteId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get tacheId =>
+      $composableBuilder(column: $table.tacheId, builder: (column) => column);
+
+  GeneratedColumn<String> get statut =>
+      $composableBuilder(column: $table.statut, builder: (column) => column);
+
+  GeneratedColumn<String> get commentaire => $composableBuilder(
+    column: $table.commentaire,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get libelle =>
+      $composableBuilder(column: $table.libelle, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get creeLe =>
+      $composableBuilder(column: $table.creeLe, builder: (column) => column);
+
+  GeneratedColumn<int> get tentatives => $composableBuilder(
+    column: $table.tentatives,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get derniereErreur => $composableBuilder(
+    column: $table.derniereErreur,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get definitif =>
+      $composableBuilder(column: $table.definitif, builder: (column) => column);
+}
+
+class $$TachesQueueTableTableManager
+    extends
+        RootTableManager<
+          _$LocalDatabase,
+          $TachesQueueTable,
+          TachesQueueData,
+          $$TachesQueueTableFilterComposer,
+          $$TachesQueueTableOrderingComposer,
+          $$TachesQueueTableAnnotationComposer,
+          $$TachesQueueTableCreateCompanionBuilder,
+          $$TachesQueueTableUpdateCompanionBuilder,
+          (
+            TachesQueueData,
+            BaseReferences<_$LocalDatabase, $TachesQueueTable, TachesQueueData>,
+          ),
+          TachesQueueData,
+          PrefetchHooks Function()
+        > {
+  $$TachesQueueTableTableManager(_$LocalDatabase db, $TachesQueueTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer:
+              () => $$TachesQueueTableFilterComposer($db: db, $table: table),
+          createOrderingComposer:
+              () => $$TachesQueueTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer:
+              () =>
+                  $$TachesQueueTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<String> coproprieteId = const Value.absent(),
+                Value<String> tacheId = const Value.absent(),
+                Value<String> statut = const Value.absent(),
+                Value<String?> commentaire = const Value.absent(),
+                Value<String?> libelle = const Value.absent(),
+                Value<DateTime> creeLe = const Value.absent(),
+                Value<int> tentatives = const Value.absent(),
+                Value<String?> derniereErreur = const Value.absent(),
+                Value<bool> definitif = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TachesQueueCompanion(
+                id: id,
+                coproprieteId: coproprieteId,
+                tacheId: tacheId,
+                statut: statut,
+                commentaire: commentaire,
+                libelle: libelle,
+                creeLe: creeLe,
+                tentatives: tentatives,
+                derniereErreur: derniereErreur,
+                definitif: definitif,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String id,
+                required String coproprieteId,
+                required String tacheId,
+                required String statut,
+                Value<String?> commentaire = const Value.absent(),
+                Value<String?> libelle = const Value.absent(),
+                required DateTime creeLe,
+                Value<int> tentatives = const Value.absent(),
+                Value<String?> derniereErreur = const Value.absent(),
+                Value<bool> definitif = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TachesQueueCompanion.insert(
+                id: id,
+                coproprieteId: coproprieteId,
+                tacheId: tacheId,
+                statut: statut,
+                commentaire: commentaire,
+                libelle: libelle,
+                creeLe: creeLe,
+                tentatives: tentatives,
+                derniereErreur: derniereErreur,
+                definitif: definitif,
+                rowid: rowid,
+              ),
+          withReferenceMapper:
+              (p0) =>
+                  p0
+                      .map(
+                        (e) => (
+                          e.readTable(table),
+                          BaseReferences(db, table, e),
+                        ),
+                      )
+                      .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TachesQueueTableProcessedTableManager =
+    ProcessedTableManager<
+      _$LocalDatabase,
+      $TachesQueueTable,
+      TachesQueueData,
+      $$TachesQueueTableFilterComposer,
+      $$TachesQueueTableOrderingComposer,
+      $$TachesQueueTableAnnotationComposer,
+      $$TachesQueueTableCreateCompanionBuilder,
+      $$TachesQueueTableUpdateCompanionBuilder,
+      (
+        TachesQueueData,
+        BaseReferences<_$LocalDatabase, $TachesQueueTable, TachesQueueData>,
+      ),
+      TachesQueueData,
+      PrefetchHooks Function()
+    >;
 typedef $$CacheEntriesTableCreateCompanionBuilder =
     CacheEntriesCompanion Function({
       required String cle,
@@ -3206,6 +4157,8 @@ class $LocalDatabaseManager {
       $$LcdActionsQueueTableTableManager(_db, _db.lcdActionsQueue);
   $$PresencesQueueTableTableManager get presencesQueue =>
       $$PresencesQueueTableTableManager(_db, _db.presencesQueue);
+  $$TachesQueueTableTableManager get tachesQueue =>
+      $$TachesQueueTableTableManager(_db, _db.tachesQueue);
   $$CacheEntriesTableTableManager get cacheEntries =>
       $$CacheEntriesTableTableManager(_db, _db.cacheEntries);
 }

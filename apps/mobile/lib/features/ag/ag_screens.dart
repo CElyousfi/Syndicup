@@ -15,6 +15,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../taches/taches_screens.dart';
 import '../documents/document_viewer_screen.dart';
 import '../dashboard/dashboard_screen.dart';
 
@@ -179,7 +180,7 @@ class AgDetailScreen extends ConsumerWidget {
                 EmptyState(title: d.ag.aucuneResolution, hint: ctx.isGestion ? d.ag.aucuneResolutionAide : null, icon: Icons.list_alt_rounded, actionLabel: ctx.isGestion && a.statut == 'PLANIFIEE' ? d.ag.ajouterResolution : null, onAction: () => _ajouterResolution(context, ref, a))
               else
                 CardList([
-                  for (final r in resolutions)
+                  for (final r in resolutions) ...[
                     ListRow(
                       leading: Container(width: 34, height: 34, alignment: Alignment.center, decoration: const BoxDecoration(color: SuColors.actionTint, shape: BoxShape.circle), child: Text('${r.ordre}', style: t.labelMedium?.copyWith(color: SuColors.action))),
                       title: r.texte,
@@ -187,6 +188,9 @@ class AgDetailScreen extends ConsumerWidget {
                       trailing: StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
                       onTap: a.statut == 'CLOTUREE' || a.statut == 'EN_COURS' ? () => _resultats(context, ref, a, r, ctx) : null,
                     ),
+                    // M22 — suivi d'exécution d'une résolution adoptée (copropriétaires inclus).
+                    if (r.resultat == 'ADOPTEE') ExecutionResolutionLigne(agId: a.id, resolution: r),
+                  ],
                 ]),
               // E4 — procurations (résidents propriétaires ; AG convoquée).
               if (ctx.voitAg && !ctx.isGestion && (a.statut == 'CONVOQUEE' || a.statut == 'PLANIFIEE')) ...[
@@ -430,6 +434,7 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
   late final _ordre = TextEditingController(text: '${widget.ag.resolutions.length + 1}');
   final _texte = TextEditingController();
   String _maj = 'SIMPLE';
+  bool _execution = false;
   bool _loading = false;
   ApiFail? _fail;
   @override
@@ -443,6 +448,8 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
         SuField(label: d.ag.texteResolution, controller: _texte, maxLines: 4, required: true, error: fieldError(_fail, 'texte')),
         const SizedBox(height: 12),
         SuSelect<String>(label: d.ag.typeMajorite, value: _maj, options: const ['SIMPLE', 'DOUBLE', 'UNANIMITE'], labelOf: (v) => d.enums.typeMajorite[v] ?? v, onChanged: (v) => setState(() => _maj = v), help: d.enums.typeMajoriteAide[_maj]),
+        const SizedBox(height: 8),
+        SuCheckbox(value: _execution, onChanged: (v) => setState(() => _execution = v), label: d.taches.necessiteExecution),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
@@ -454,7 +461,7 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
               _loading = true;
               _fail = null;
             });
-            final r = await ref.read(apiClientProvider).post<dynamic>('/ag/${widget.ag.id}/resolutions', body: {'ordre': int.tryParse(_ordre.text) ?? 1, 'texte': _texte.text.trim(), 'type_majorite': _maj});
+            final r = await ref.read(apiClientProvider).post<dynamic>('/ag/${widget.ag.id}/resolutions', body: {'ordre': int.tryParse(_ordre.text) ?? 1, 'texte': _texte.text.trim(), 'type_majorite': _maj, 'necessite_execution': _execution});
             if (!mounted) return;
             if (r is ApiFail) {
               setState(() {
