@@ -57,6 +57,11 @@ afterAll(async () => {
   await admin.contratEcheance.deleteMany({ where: { contrat: { coproprieteId: copro } } });
   await admin.depenseLog.deleteMany({ where: { coproprieteId: copro } });
   await admin.depense.deleteMany({ where: { coproprieteId: copro } });
+  // M22 — tâches créées par les hooks (échéances de contrat).
+  await admin.tacheLog.deleteMany({ where: { coproprieteId: copro } });
+  await admin.tacheCommentaire.deleteMany({ where: { tache: { coproprieteId: copro } } });
+  await admin.contratEcheance.updateMany({ where: { contrat: { coproprieteId: copro } }, data: { tacheId: null } });
+  await admin.tache.deleteMany({ where: { coproprieteId: copro } });
   await admin.contrat.deleteMany({ where: { coproprieteId: copro } });
   await admin.document.deleteMany({ where: { coproprieteId: copro } });
   await admin.budgetPoste.deleteMany({ where: { budgetAg: { coproprieteId: copro } } });

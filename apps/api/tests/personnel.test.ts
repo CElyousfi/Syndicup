@@ -87,6 +87,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await admin.notification.deleteMany({ where: { coproprieteId: coproA } });
   await admin.visite.deleteMany({ where: { coproprieteId: coproA } });
+  await admin.personnelLog.deleteMany({ where: { coproprieteId: coproA } });
   await admin.personnel.deleteMany({ where: { coproprieteId: coproA } });
   await admin.auditLog.deleteMany({ where: { coproprieteId: coproA } });
   await admin.lotProprietaire.deleteMany({ where: { lotId: { in: [lotAlice, lotBob] } } });

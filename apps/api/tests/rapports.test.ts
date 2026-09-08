@@ -95,6 +95,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await admin.exportLog.deleteMany({ where: { coproprieteId: copro } });
+  // M22 — tâches créées par le hook « rapport à soumettre ».
+  await admin.tacheLog.deleteMany({ where: { coproprieteId: copro } });
+  await admin.tacheCommentaire.deleteMany({ where: { tache: { coproprieteId: copro } } });
+  await admin.tache.deleteMany({ where: { coproprieteId: copro } });
   await admin.rapportGestion.deleteMany({ where: { coproprieteId: copro } });
   await admin.agVote.deleteMany({ where: { resolution: { agId } } });
   await admin.agResolution.deleteMany({ where: { agId } });
