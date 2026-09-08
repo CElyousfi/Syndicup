@@ -1102,6 +1102,48 @@ export const PERMISSIONS: PermissionMatrix = {
     PROPRIETAIRE: false,
     GARDIEN: "scoped",
   },
+  // ── M23 — Parkings et caves (Doc A §4) — ⚠️ module absent du Master Spec 4.2, signalé ROADMAP M23 ──
+  "parkings.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Plan, attributions, badges : syndic / conseil / gardien tout ; résidents : leurs lots (RLS).
+  "parkings.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: "scoped",
+    LOCATAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    GESTIONNAIRE_LCD: "scoped",
+    GARDIEN: true,
+    PRESTATAIRE: false,
+  },
+  // Déclarer / modifier les véhicules et signaler un badge perdu pour SES lots ; syndic tout.
+  "vehicules.gerer_propres": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: "scoped",
+    LOCATAIRE: "scoped",
+    INDIVISAIRE: "scoped",
+    PERSONNE_MORALE_REPRESENTANT: "scoped",
+    GARDIEN: false,
+    PRESTATAIRE: false,
+  },
+  // Recherche de plaque (contrôle d'accès, « véhicule sur ma place ») — auditée ; jamais un résident.
+  "vehicules.rechercher": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: true,
+    PRESTATAIRE: false,
+  },
 };
 
 /**

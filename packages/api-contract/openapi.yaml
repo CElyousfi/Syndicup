@@ -40,6 +40,8 @@ tags:
   - name: Communication
   - name: Tâches
     description: "Suivi des décisions (résolutions d'AG adoptées), échéances de contrats, incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles (M22, Doc A §6, §8)."
+  - name: Parkings
+    description: "Emplacements non titrés (communs, visiteurs, PMR, moto, vélo, caves communes), attributions (AG / rotation / location interne / temporaire, redevance mensuelle → appel REDEVANCE_PARKING), véhicules déclarés (plaque unique), badges / télécommandes (caution M17), places visiteurs du gardien, « véhicule sur ma place » (M23, Doc A §4 — ⚠️ module absent du Master Spec, signalé ROADMAP M23)."
     description: "Tableau d'affichage, sondages consultatifs (jamais un vote d'AG, Doc A §6), contacts utiles, préférences de notification (M21)."
 
 components:
@@ -918,6 +920,8 @@ components:
           description: >
             Chemins storage retournés par POST /incidents/upload-url — chacun doit vivre dans
             le périmètre de la copropriété courante (revérifié côté service).
+        emplacement_id: { type: string, format: uuid, nullable: true, description: "M23 — emplacement concerné (« véhicule sur ma place »)." }
+        immatriculation_signalee: { type: string, nullable: true, minLength: 2, maxLength: 24, description: "M23 — plaque du véhicule gênant (normalisée MAJUSCULES / tirets)." }
 
     IncidentChangerStatut:
       type: object
@@ -1482,6 +1486,7 @@ components:
         piece_identite_type: { $ref: "#/components/schemas/TypePieceIdentite", nullable: true }
         piece_identite_fin: { type: string, nullable: true, maxLength: 4 }
         plaque_vehicule: { type: string, nullable: true }
+        emplacement_id: { type: string, format: uuid, nullable: true, description: "M23 — place visiteur attribuée au séjour (PARKING_VISITEUR en service, sinon 422 EMPLACEMENT_NON_VISITEUR)." }
         pieces_jointes: { type: array, maxItems: 10, items: { type: string } }
 
     # ── M18 — Rapports, rapport de gestion, exports, transparence (Doc A §8, §6, §3.5 — ⚠️ module absent du Master Spec, signalé ROADMAP M18) ──
@@ -2228,6 +2233,236 @@ components:
         resultat: { type: string }
         necessite_execution: { type: boolean }
         taches: { type: array, items: { type: object, properties: { tache_id: { type: string, format: uuid }, titre: { type: string }, statut: { type: string }, date_echeance: { type: string, format: date, nullable: true }, terminee_le: { type: string, format: date-time, nullable: true }, en_retard: { type: boolean } } } }
+    # ── M23 — Parkings et caves (Doc A §4 — ⚠️ module absent du Master Spec, signalé ROADMAP M23) ──
+    IdentiteCourte:
+      type: object
+      nullable: true
+      description: "Identité minimale (fonction SECURITY DEFINER communication_identites) — jamais de téléphone ni d'e-mail."
+      properties:
+        id: { type: string, format: uuid }
+        nom: { type: string, nullable: true }
+        prenom: { type: string, nullable: true }
+    TypeEmplacement:
+      type: string
+      enum: [PARKING_COMMUN, PARKING_VISITEUR, PARKING_PMR, MOTO, VELO, CAVE_COMMUNE]
+      description: "Emplacements NON titrés — les places titrées restent des lots PARKING / CAVE (charges par tantièmes)."
+    StatutEmplacement: { type: string, enum: [DISPONIBLE, ATTRIBUE, HORS_SERVICE] }
+    TypeAttributionEmplacement: { type: string, enum: [ATTRIBUTION_AG, ROTATION, LOCATION_INTERNE, TEMPORAIRE] }
+    TypeVehicule: { type: string, enum: [VOITURE, MOTO, UTILITAIRE] }
+    TypeBadge: { type: string, enum: [BADGE_PIETON, TELECOMMANDE_PARKING, CLE_CAVE, CARTE_ASCENSEUR] }
+    StatutBadge: { type: string, enum: [ACTIF, PERDU, DESACTIVE, RESTITUE] }
+    Immatriculation:
+      type: string
+      minLength: 2
+      maxLength: 24
+      description: "Normalisée côté serveur : MAJUSCULES, espaces / points → tiret (« 12345 a 6 » → « 12345-A-6 »). Unique par copropriété (409 IMMATRICULATION_EXISTANTE)."
+    AttributionEmplacement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        emplacementId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        lotNumero: { type: string, nullable: true }
+        type: { $ref: "#/components/schemas/TypeAttributionEmplacement" }
+        dateDebut: { type: string, format: date }
+        dateFin: { type: string, format: date, nullable: true, description: "Dernier jour d'occupation (inclus)." }
+        resolutionAgId: { type: string, format: uuid, nullable: true }
+        redevanceMensuelle: { type: string, nullable: true, example: "150.00", description: "Appelée le 1er du mois (REDEVANCE_PARKING)." }
+        notes: { type: string, nullable: true }
+        active: { type: boolean }
+        creePar: { $ref: "#/components/schemas/IdentiteCourte" }
+        creeLe: { type: string, format: date-time }
+    Emplacement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/TypeEmplacement" }
+        code: { type: string, example: "P-12" }
+        niveau: { type: string, nullable: true, example: "-1" }
+        attribuable: { type: boolean, description: "Toujours false pour PARKING_VISITEUR ; une place PMR n'est jamais attribuée nominativement." }
+        statut: { $ref: "#/components/schemas/StatutEmplacement" }
+        notes: { type: string, nullable: true }
+        nbAttributions: { type: integer }
+        attributionCourante: { allOf: [{ $ref: "#/components/schemas/AttributionEmplacement" }], nullable: true }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    EmplacementDetail:
+      allOf:
+        - $ref: "#/components/schemas/Emplacement"
+        - type: object
+          properties:
+            attributions: { type: array, items: { $ref: "#/components/schemas/AttributionEmplacement" } }
+    EmplacementCreate:
+      type: object
+      required: [type, code]
+      properties:
+        type: { $ref: "#/components/schemas/TypeEmplacement" }
+        code: { type: string, minLength: 1, maxLength: 30 }
+        niveau: { type: string, nullable: true, maxLength: 30 }
+        attribuable: { type: boolean, default: true }
+        notes: { type: string, nullable: true }
+    EmplacementUpdate:
+      type: object
+      properties:
+        type: { $ref: "#/components/schemas/TypeEmplacement" }
+        code: { type: string, minLength: 1, maxLength: 30 }
+        niveau: { type: string, nullable: true, maxLength: 30 }
+        attribuable: { type: boolean }
+        statut: { type: string, enum: [DISPONIBLE, HORS_SERVICE], description: "HORS_SERVICE refusé tant qu'une attribution est en cours (422)." }
+        notes: { type: string, nullable: true }
+    EmplacementAttribuer:
+      type: object
+      required: [lot_id, type, date_debut]
+      properties:
+        lot_id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/TypeAttributionEmplacement" }
+        date_debut: { type: string, format: date }
+        date_fin: { type: string, format: date, nullable: true, description: "Obligatoire pour TEMPORAIRE." }
+        resolution_ag_id: { type: string, format: uuid, nullable: true, description: "Résolution ADOPTEE (attribution votée en AG)." }
+        redevance_mensuelle: { type: string, nullable: true, example: "150.00" }
+        notes: { type: string, nullable: true }
+    EmplacementLiberer:
+      type: object
+      properties:
+        date_fin: { type: string, format: date, description: "Dernier jour d'occupation ; absent = la place est libre dès aujourd'hui." }
+        motif: { type: string, nullable: true }
+    PlanEmplacements:
+      type: object
+      properties:
+        niveaux:
+          type: array
+          items:
+            type: object
+            properties:
+              niveau: { type: string }
+              emplacements: { type: array, items: { allOf: [{ $ref: "#/components/schemas/Emplacement" }, { type: object, properties: { visiteurOccupee: { type: boolean } } }] } }
+        totaux:
+          type: object
+          properties:
+            total: { type: integer }
+            attribues: { type: integer }
+            disponibles: { type: integer }
+            hors_service: { type: integer }
+            visiteurs: { type: integer }
+            visiteurs_occupees: { type: integer }
+    Vehicule:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        lotNumero: { type: string, nullable: true }
+        utilisateurId: { type: string, format: uuid, nullable: true, description: "Résident déclarant (null si saisi par le syndic)." }
+        immatriculation: { $ref: "#/components/schemas/Immatriculation" }
+        marque: { type: string, nullable: true }
+        couleur: { type: string, nullable: true }
+        type: { $ref: "#/components/schemas/TypeVehicule" }
+        actif: { type: boolean }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    VehiculeCreate:
+      type: object
+      required: [lot_id, immatriculation]
+      properties:
+        lot_id: { type: string, format: uuid, description: "Résident : un de SES lots (403 sinon)." }
+        immatriculation: { $ref: "#/components/schemas/Immatriculation" }
+        marque: { type: string, nullable: true, maxLength: 60 }
+        couleur: { type: string, nullable: true, maxLength: 40 }
+        type: { $ref: "#/components/schemas/TypeVehicule" }
+    VehiculeUpdate:
+      type: object
+      properties:
+        immatriculation: { $ref: "#/components/schemas/Immatriculation" }
+        marque: { type: string, nullable: true }
+        couleur: { type: string, nullable: true }
+        type: { $ref: "#/components/schemas/TypeVehicule" }
+        actif: { type: boolean }
+    RechercheVehicule:
+      type: object
+      properties:
+        immatriculation: { type: string, description: "Plaque normalisée recherchée." }
+        exact: { allOf: [{ $ref: "#/components/schemas/Vehicule" }], nullable: true }
+        similaires: { type: array, items: { $ref: "#/components/schemas/Vehicule" } }
+    Badge:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        lotId: { type: string, format: uuid }
+        lotNumero: { type: string, nullable: true }
+        type: { $ref: "#/components/schemas/TypeBadge" }
+        identifiant: { type: string, example: "TC-0007" }
+        statut: { $ref: "#/components/schemas/StatutBadge" }
+        remisLe: { type: string, format: date }
+        remisPar: { $ref: "#/components/schemas/IdentiteCourte" }
+        restitueLe: { type: string, format: date, nullable: true }
+        cautionMontant: { type: string, nullable: true, example: "300.00" }
+        cautionPaiement:
+          type: object
+          nullable: true
+          description: "Paiement M17 encaissant la caution (même lot)."
+          properties:
+            id: { type: string, format: uuid }
+            montant: { type: string }
+            methode: { type: string }
+        notes: { type: string, nullable: true }
+        creeLe: { type: string, format: date-time }
+    BadgeCreate:
+      type: object
+      required: [lot_id, type, identifiant, remis_le]
+      properties:
+        lot_id: { type: string, format: uuid }
+        type: { $ref: "#/components/schemas/TypeBadge" }
+        identifiant: { type: string, minLength: 1, maxLength: 60, description: "Unique par (copropriété, type) — 409 BADGE_IDENTIFIANT_EXISTANT." }
+        remis_le: { type: string, format: date }
+        caution_montant: { type: string, nullable: true, example: "300.00" }
+        caution_paiement_id: { type: string, format: uuid, nullable: true, description: "Paiement du même lot (422 BADGE_STATUT_INVALIDE sinon)." }
+        notes: { type: string, nullable: true }
+    BadgeUpdate:
+      type: object
+      properties:
+        identifiant: { type: string, minLength: 1, maxLength: 60 }
+        caution_montant: { type: string, nullable: true }
+        caution_paiement_id: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+    VisiteEmplacement:
+      type: object
+      required: [emplacement_id]
+      properties:
+        emplacement_id: { type: string, format: uuid, nullable: true, description: "Place PARKING_VISITEUR en service (422 EMPLACEMENT_NON_VISITEUR) ; null = retirer." }
+        immatriculation: { allOf: [{ $ref: "#/components/schemas/Immatriculation" }], nullable: true }
+        heure_limite: { type: string, format: date-time, nullable: true, description: "Au-delà : VISITEUR_DEPASSEMENT au gardien (job quotidien)." }
+    VisiteursAujourdhui:
+      type: object
+      properties:
+        visites:
+          type: array
+          items:
+            type: object
+            properties:
+              visite_id: { type: string, format: uuid }
+              visiteur_nom: { type: string }
+              lot: { type: string, nullable: true }
+              immatriculation: { type: string, nullable: true }
+              heure_limite: { type: string, format: date-time, nullable: true }
+              depassee: { type: boolean }
+              emplacement: { type: object, properties: { id: { type: string, format: uuid }, code: { type: string }, niveau: { type: string, nullable: true } } }
+              horodatage: { type: string, format: date-time }
+        sejours:
+          type: array
+          description: "Séjours LCD (M15) avec place visiteur."
+          items:
+            type: object
+            properties:
+              sejour_id: { type: string, format: uuid }
+              voyageur: { type: string }
+              lot: { type: string, nullable: true }
+              immatriculation: { type: string, nullable: true }
+              date_depart: { type: string, format: date }
+              emplacement: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, code: { type: string }, niveau: { type: string, nullable: true } } }
+        places_libres: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, code: { type: string }, niveau: { type: string, nullable: true } } } }
+
   responses:
     ValidationError:
       description: Payload invalide.
@@ -6876,3 +7111,234 @@ paths:
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ExecutionResolution" } } } } } }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  # ── M23 — Parkings et caves (Doc A §4 — ⚠️ module absent du Master Spec, signalé ROADMAP M23) ──
+  /emplacements:
+    get:
+      tags: [Parkings]
+      summary: "Emplacements non titrés (syndic / conseil / gardien : tous ; résident : lecture du plan) — filtres, `meta.par_statut`, export csv / xlsx."
+      parameters:
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TypeEmplacement" } }
+        - { name: niveau, in: query, schema: { type: string } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutEmplacement" } }
+        - { name: q, in: query, schema: { type: string }, description: Recherche sur le code. }
+        - { name: sort, in: query, schema: { type: string }, description: "code | niveau | type | statut, suffixe `:asc` / `:desc`." }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: limit, in: query, schema: { type: integer, minimum: 1, maximum: 500, default: 100 } }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Emplacement" } }, meta: { type: object } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Parkings]
+      summary: "Créer un emplacement (syndic) — code unique par copropriété (409 EMPLACEMENT_CODE_EXISTANT) ; une place visiteur est forcée non attribuable."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/EmplacementCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Emplacement" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /emplacements/plan:
+    get:
+      tags: [Parkings]
+      summary: "Plan par niveau (grille, pas de CAO) avec occupation : attribution courante, places visiteurs occupées aujourd'hui, totaux."
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/PlanEmplacements" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /emplacements/attributions:
+    get:
+      tags: [Parkings]
+      summary: "Attributions visibles de l'appelant (résident : ses lots via RLS ; syndic / conseil / gardien : toutes, filtre `lot_id`)."
+      parameters: [{ name: lot_id, in: query, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/AttributionEmplacement" } } } } } } }
+  /emplacements/{id}:
+    get:
+      tags: [Parkings]
+      summary: Fiche avec l'historique des attributions.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/EmplacementDetail" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Parkings]
+      summary: "Modifier (syndic) — HORS_SERVICE impossible tant qu'une attribution est en cours (422 EMPLACEMENT_STATUT_INVALIDE)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/EmplacementUpdate" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Parkings]
+      summary: Supprimer (syndic) — uniquement sans historique (attribution / visite) ; sinon HORS_SERVICE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /emplacements/{id}/attribuer:
+    post:
+      tags: [Parkings]
+      summary: "Attribuer à un lot (syndic) — AG (résolution ADOPTEE), rotation, location interne (redevance), temporaire (date de fin obligatoire). Chevauchement de période → 409 ATTRIBUTION_CHEVAUCHEMENT ; notification ATTRIBUTION_EMPLACEMENT aux résidents du lot ; audité."
+      parameters:
+        - $ref: "#/components/parameters/LotId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/EmplacementAttribuer" } } } }
+      responses:
+        "201": { description: Attribué, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/EmplacementDetail" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /emplacements/{id}/liberer:
+    post:
+      tags: [Parkings]
+      summary: "Clore l'attribution en cours (syndic) — la place redevient DISPONIBLE, résidents prévenus (ATTRIBUTION_EXPIREE)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { $ref: "#/components/schemas/EmplacementLiberer" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/EmplacementDetail" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /vehicules:
+    get:
+      tags: [Parkings]
+      summary: "Véhicules déclarés — résident : ses lots (RLS) ; syndic / conseil / gardien : tous."
+      parameters:
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: actif, in: query, schema: { type: string, enum: ["1", "0", "true", "false"] } }
+        - { name: q, in: query, schema: { type: string }, description: Fragment de plaque. }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Vehicule" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Parkings]
+      summary: "Déclarer un véhicule — résident pour SES lots (403 sinon), syndic pour tout lot ; plaque normalisée, unique par copropriété (409 IMMATRICULATION_EXISTANTE) ; audité."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/VehiculeCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Vehicule" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /vehicules/recherche:
+    get:
+      tags: [Parkings]
+      summary: "Recherche de plaque (gardien / syndic UNIQUEMENT — jamais un résident) : plaque → lot ; chaque recherche est AUDITÉE (VEHICULE_RECHERCHE)."
+      parameters: [{ name: immatriculation, in: query, required: true, schema: { type: string, minLength: 2 } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/RechercheVehicule" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /vehicules/plaques-actives:
+    get:
+      tags: [Parkings]
+      summary: "Plaques actives → lot (gardien / syndic) — cache hors-ligne de l'app gardien."
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { type: object, properties: { immatriculation: { type: string }, lot: { type: string, nullable: true }, marque: { type: string, nullable: true }, couleur: { type: string, nullable: true }, type: { $ref: "#/components/schemas/TypeVehicule" } } } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /vehicules/{id}:
+    patch:
+      tags: [Parkings]
+      summary: Modifier (résident pour ses lots, syndic).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/VehiculeUpdate" } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Vehicule" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+    delete:
+      tags: [Parkings]
+      summary: "Retirer = désactiver (`actif: false`, historique conservé)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /badges:
+    get:
+      tags: [Parkings]
+      summary: "Registre des badges / télécommandes / clés — résident : ses lots (RLS) ; syndic / conseil / gardien : tous."
+      parameters:
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: type, in: query, schema: { $ref: "#/components/schemas/TypeBadge" } }
+        - { name: statut, in: query, schema: { $ref: "#/components/schemas/StatutBadge" } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Badge" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Parkings]
+      summary: "Remettre un badge (syndic) — caution éventuelle liée à un paiement M17 du même lot ; notification BADGE_REMIS ; audité."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BadgeCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Badge" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /badges/{id}:
+    patch:
+      tags: [Parkings]
+      summary: Modifier identifiant / caution / notes (syndic).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/BadgeUpdate" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /badges/{id}/perdu:
+    post:
+      tags: [Parkings]
+      summary: "Déclarer perdu (résident pour ses lots — policy RLS dédiée ACTIF → PERDU — ou syndic) : notification BADGE_PERDU au syndic ; côté syndic, tâche M22 « Désactiver le badge … » créée une seule fois (`tache_id`)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { commentaire: { type: string, nullable: true }, creer_tache: { type: boolean, default: true } } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { allOf: [{ $ref: "#/components/schemas/Badge" }, { type: object, properties: { tache_id: { type: string, format: uuid, nullable: true } } }] } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /badges/{id}/restituer:
+    post:
+      tags: [Parkings]
+      summary: "Restitution (syndic) — caution rendue ou non tracée en audit_log (BADGE_RESTITUE)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { restitue_le: { type: string, format: date }, caution_rendue: { type: boolean, default: true } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /badges/{id}/desactiver:
+    post:
+      tags: [Parkings]
+      summary: Désactiver (syndic) — après perte ou départ.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /parkings/visiteurs/aujourdhui:
+    get:
+      tags: [Parkings]
+      summary: "Places visiteurs du jour (gardien / syndic) : visites et séjours LCD placés, dépassements d'heure limite, places libres."
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/VisiteursAujourdhui" } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /visites/{id}/emplacement:
+    post:
+      tags: [Parkings]
+      summary: "Attribuer une place visiteur à une visite (gardien pour SES visites, syndic) : plaque + heure limite ; place déjà occupée → 409 ; non-visiteur → 422 EMPLACEMENT_NON_VISITEUR ; audité."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/VisiteEmplacement" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /incidents/{id}/notifier-vehicule:
+    post:
+      tags: [Parkings]
+      summary: "« Véhicule sur ma place » (gardien / syndic) : la plaque signalée sur l'incident (ou fournie) est recherchée (AUDITÉE) et les résidents du lot propriétaire reçoivent VEHICULE_MAL_STATIONNE ; plaque inconnue → 422 IMMATRICULATION_INCONNUE (véhicule extérieur, procédure fourrière selon règlement)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { immatriculation: { $ref: "#/components/schemas/Immatriculation" }, message: { type: string, nullable: true, maxLength: 500 } } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: object, properties: { immatriculation: { type: string }, lot: { type: string, nullable: true }, notifies: { type: integer } } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }

@@ -45,6 +45,9 @@ export const incidentCreateSchema = z.object({
   photos: z.array(cheminPhotoIncident).max(5).optional(),
   // M15 — « signalement facilité » : nuisance liée au séjour LCD en cours (ou terminé ≤ 7 j).
   sejour_id: z.string().uuid().nullish(),
+  // M23 — « véhicule sur ma place » : emplacement concerné et plaque signalée (normalisée côté service).
+  emplacement_id: z.string().uuid().nullish(),
+  immatriculation_signalee: z.string().min(2).max(24).nullish(),
 });
 export type IncidentCreateInput = z.infer<typeof incidentCreateSchema>;
 

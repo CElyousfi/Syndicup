@@ -162,6 +162,8 @@ export const sejourUpdateSchema = z
     piece_identite_type: z.enum(TYPES_PIECE_IDENTITE).nullish(),
     piece_identite_fin: sejourBase.piece_identite_fin,
     plaque_vehicule: z.string().min(1).max(20).nullish(),
+    // M23 — place visiteur attribuée au séjour (PARKING_VISITEUR uniquement, vérifié côté service).
+    emplacement_id: z.string().uuid().nullish(),
     pieces_jointes: z.array(cheminPieceJointeSejour).max(MAX_PIECES_JOINTES_SEJOUR).optional(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), "Aucun champ à modifier.")

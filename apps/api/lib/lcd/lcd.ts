@@ -484,7 +484,7 @@ export async function designerGestionnaire(ctx: TenantContext, id: string, input
 
 // ── Séjours ────────────────────────────────────────────────────────────────
 
-const sejourInclude = { lot: { select: { id: true, numero: true, typeLot: true } } } as const;
+const sejourInclude = { lot: { select: { id: true, numero: true, typeLot: true } }, emplacement: { select: { id: true, code: true, niveau: true } } } as const;
 
 async function notifierRoles(
   db: TenantDb,
@@ -716,6 +716,12 @@ export async function modifierSejour(ctx: TenantContext, id: string, input: Sejo
     const heure = input.heure_arrivee_prevue === undefined ? avant.heureArriveePrevue : (input.heure_arrivee_prevue ?? null);
     await verifierReglesSejour(db, { parametres, lotId: avant.lotId, arrivee, depart, heure, nbVoyageurs, exclureSejourId: id, now });
     assertPiecesDansPerimetre(ctx, input.pieces_jointes);
+    // M23 — place visiteur : uniquement un emplacement PARKING_VISITEUR en service.
+    if (input.emplacement_id) {
+      const e = await db.emplacement.findUnique({ where: { id: input.emplacement_id }, select: { type: true, statut: true } });
+      if (!e) throw new IntrouvableError("Emplacement introuvable.");
+      if (e.type !== "PARKING_VISITEUR" || e.statut === "HORS_SERVICE") throw new LcdError("EMPLACEMENT_NON_VISITEUR", "Choisissez une place visiteur en service.");
+    }
 
     const apres = await db.sejourCourteDuree.update({
       where: { id },
@@ -730,6 +736,7 @@ export async function modifierSejour(ctx: TenantContext, id: string, input: Sejo
         ...(input.piece_identite_type !== undefined ? { pieceIdentiteType: input.piece_identite_type ?? null } : {}),
         ...(input.piece_identite_fin !== undefined ? { pieceIdentiteFin: input.piece_identite_fin?.toUpperCase() ?? null } : {}),
         ...(input.plaque_vehicule !== undefined ? { plaqueVehicule: input.plaque_vehicule ?? null } : {}),
+        ...(input.emplacement_id !== undefined ? { emplacementId: input.emplacement_id ?? null } : {}),
         ...(input.pieces_jointes !== undefined ? { piecesJointes: input.pieces_jointes } : {}),
       },
       include: sejourInclude,

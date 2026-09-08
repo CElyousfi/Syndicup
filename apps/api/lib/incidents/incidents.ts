@@ -2,6 +2,7 @@
  * Service incidents/prestataires — M7 (Master Spec Partie 2.2, Doc A §5). Toutes les écritures
  * passent par withTenant (RLS + contexte tenant, CLAUDE.md §1.8).
  */
+import { normaliserImmatriculation } from "../parkings/schemas";
 import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
@@ -104,11 +105,21 @@ export async function creerIncident(ctx: TenantContext, input: IncidentCreateInp
       });
       sejourId = sejour.id;
     }
+    // M23 — emplacement (visible sous RLS) et plaque signalée normalisée.
+    let emplacementId: string | null = null;
+    if (input.emplacement_id) {
+      const e = await db.emplacement.findUnique({ where: { id: input.emplacement_id }, select: { id: true } });
+      if (!e) throw new IncidentIntrouvableError("Emplacement introuvable.");
+      emplacementId = e.id;
+    }
+    const immatriculationSignalee = input.immatriculation_signalee ? normaliserImmatriculation(input.immatriculation_signalee) || null : null;
     const incident = await db.incident.create({
       data: {
         coproprieteId: ctx.coproprieteId,
         lotId: input.lot_id ?? (sejourId ? (await db.sejourCourteDuree.findUnique({ where: { id: sejourId }, select: { lotId: true } }))?.lotId ?? null : null),
         sejourId,
+        emplacementId,
+        immatriculationSignalee,
         categorie: input.categorie,
         sousCategorie: input.sous_categorie,
         description: input.description ?? null,

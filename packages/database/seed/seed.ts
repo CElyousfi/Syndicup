@@ -965,10 +965,90 @@ async function main() {
     [{ type: "CREEE", il: 20 }]
   );
 
+  // ── M23 — Parkings et caves (Doc A §4) : emplacements non titrés, attributions, véhicules, badges ──
+  // (le lot PARKING P1 reste un lot titré — charges par tantièmes ; ici les places communes / visiteurs.)
+  const emp = (data: { type: "PARKING_COMMUN" | "PARKING_VISITEUR" | "PARKING_PMR" | "MOTO" | "VELO" | "CAVE_COMMUNE"; code: string; niveau?: string; attribuable?: boolean; statut?: "DISPONIBLE" | "ATTRIBUE" | "HORS_SERVICE"; notes?: string }) =>
+    prisma.emplacement.create({ data: { coproprieteId: copro.id, type: data.type, code: data.code, niveau: data.niveau ?? null, attribuable: data.attribuable ?? true, statut: data.statut ?? "DISPONIBLE", notes: data.notes ?? null } });
+  const [empV1, empV2, empC12, empC13, empPmr, empMoto, empVelo, empCave] = await Promise.all([
+    emp({ type: "PARKING_VISITEUR", code: "P-V1", niveau: "-1", attribuable: false }),
+    emp({ type: "PARKING_VISITEUR", code: "P-V2", niveau: "-1", attribuable: false }),
+    emp({ type: "PARKING_COMMUN", code: "P-12", niveau: "-1", statut: "ATTRIBUE", notes: "Place commune louée en interne (décision AG)." }),
+    emp({ type: "PARKING_COMMUN", code: "P-13", niveau: "-1" }),
+    emp({ type: "PARKING_PMR", code: "P-PMR", niveau: "0", attribuable: false, notes: "Réservée — jamais attribuée (Doc A §4)." }),
+    emp({ type: "MOTO", code: "M-1", niveau: "-1", statut: "ATTRIBUE" }),
+    emp({ type: "VELO", code: "LV-1", niveau: "0", attribuable: false, notes: "Local vélos collectif." }),
+    emp({ type: "CAVE_COMMUNE", code: "CC-2", niveau: "-2", statut: "HORS_SERVICE", notes: "Infiltration — en attente de travaux." }),
+  ]);
+  // Attributions : P-12 loué en interne au lot A2 (redevance 150 MAD / mois, résolution d'AG), M-1 en rotation
+  // annuelle au lot A3, une attribution TEMPORAIRE expirée sur P-13 (lot A1, déménagement) déjà notifiée.
+  const attribP12 = await prisma.attributionEmplacement.create({
+    data: { coproprieteId: copro.id, emplacementId: empC12.id, lotId: lotA2.id, type: "LOCATION_INTERNE", dateDebut: new Date(`${exercice}-01-01`), dateFin: null, resolutionAgId: resolutionPompe.id, redevanceMensuelle: "150.00", notes: "Location interne votée en AG — redevance appelée mensuellement.", creeParId: syndicUser.id, creeLe: jour(-250) },
+  });
+  await prisma.attributionEmplacement.create({
+    data: { coproprieteId: copro.id, emplacementId: empMoto.id, lotId: lotA3.id, type: "ROTATION", dateDebut: jour(-100), dateFin: jour(265), creeParId: syndicUser.id, creeLe: jour(-100) },
+  });
+  await prisma.attributionEmplacement.create({
+    data: { coproprieteId: copro.id, emplacementId: empC13.id, lotId: lotA1.id, type: "TEMPORAIRE", dateDebut: jour(-40), dateFin: jour(-33), notes: "Déménagement — camionnette une semaine.", creeParId: syndicUser.id, creeLe: jour(-41), expireeNotifieeLe: jour(-32) },
+  });
+  // Véhicules déclarés (plaque normalisée MAJUSCULES, unique par copropriété) : A1, A2 (locataire), A3 (moto).
+  const [vehA1, vehA2] = await Promise.all([
+    prisma.vehicule.create({ data: { coproprieteId: copro.id, lotId: lotA1.id, utilisateurId: proprietaireA.id, immatriculation: "12345-A-6", marque: "Dacia Logan", couleur: "Blanc", type: "VOITURE" } }),
+    prisma.vehicule.create({ data: { coproprieteId: copro.id, lotId: lotA2.id, utilisateurId: locataire.id, immatriculation: "98765-B-40", marque: "Renault Clio", couleur: "Gris", type: "VOITURE" } }),
+    prisma.vehicule.create({ data: { coproprieteId: copro.id, lotId: lotA3.id, utilisateurId: indivisaire1.id, immatriculation: "4567-C-12", marque: "Yamaha", couleur: "Noir", type: "MOTO" } }),
+    prisma.vehicule.create({ data: { coproprieteId: copro.id, lotId: lotA1.id, utilisateurId: proprietaireA.id, immatriculation: "11111-A-1", marque: "Peugeot 208", couleur: "Rouge", type: "VOITURE", actif: false } }),
+  ]);
+  // Badges / télécommandes / clés : télécommande A1 avec caution 300 MAD, badge piéton A2 perdu (tâche créée), clé cave A3 restituée.
+  const badgeTelecommandeA1 = await prisma.badge.create({
+    data: { coproprieteId: copro.id, lotId: lotA1.id, type: "TELECOMMANDE_PARKING", identifiant: "TC-0007", statut: "ACTIF", remisLe: jour(-200), remisParId: syndicUser.id, cautionMontant: "300.00", notes: "Caution encaissée en espèces (reçu n° 2026-014)." },
+  });
+  const badgePerduA2 = await prisma.badge.create({
+    data: { coproprieteId: copro.id, lotId: lotA2.id, type: "BADGE_PIETON", identifiant: "BP-0042", statut: "PERDU", remisLe: jour(-300), remisParId: syndicUser.id, cautionMontant: "100.00", notes: "Perdu le mois dernier — déclaré par le locataire." },
+  });
+  await prisma.badge.create({
+    data: { coproprieteId: copro.id, lotId: lotA2.id, type: "BADGE_PIETON", identifiant: "BP-0058", statut: "ACTIF", remisLe: jour(-25), remisParId: syndicUser.id, cautionMontant: "100.00", notes: "Remplacement du BP-0042." },
+  });
+  await prisma.badge.create({
+    data: { coproprieteId: copro.id, lotId: lotA3.id, type: "CLE_CAVE", identifiant: "CLE-CC-1", statut: "RESTITUE", remisLe: jour(-400), remisParId: syndicUser.id, restitueLe: jour(-15), cautionMontant: null },
+  });
+  await tacheSeed(
+    { titre: `Désactiver le badge perdu BP-0042 (BADGE_PIETON) — lot A2`, description: "Désactivation physique sur la centrale / le portail, puis remise d'un remplacement (dépense éventuelle).", origine: "SYSTEME", assigneeId: syndicUser.id, priorite: "HAUTE", statut: "TERMINEE", dateEcheance: jour(-28), termineeLe: jour(-26), visibleConseil: true, creeLe: jour(-30) },
+    [{ type: "CREEE", il: 30, details: { origine: "SYSTEME", systeme: true } }, { type: "STATUT_CHANGE", il: 26, details: { de: "A_FAIRE", vers: "TERMINEE" }, acteur: syndicUser.id }]
+  );
+  // Place visiteur : visite du jour autorisée par le gardien sur P-V1 (plaque, heure limite dépassée → job VISITEUR_DEPASSEMENT).
+  const visiteParking = await prisma.visite.create({
+    data: { coproprieteId: copro.id, gardienId: gardienUser.id, lotId: lotA1.id, visiteurNom: "Karim Bennani (livraison)", statut: "AUTORISE", horodatage: new Date(Date.now() - 3 * 3600 * 1000), emplacementId: empV1.id, immatriculation: "55555-D-9", heureLimite: new Date(Date.now() - 30 * 60 * 1000) },
+  });
+  // Séjour LCD en cours : place visiteur P-V2 attribuée au voyageur (plaque déjà sur le séjour).
+  await prisma.sejourCourteDuree.update({ where: { id: sejourEnCours.id }, data: { emplacementId: empV2.id } });
+  // « Véhicule sur ma place » : incident PARKING du lot A2 sur P-12 avec plaque signalée (celle du véhicule de A1).
+  const incidentVehicule = await prisma.incident.create({
+    data: { coproprieteId: copro.id, lotId: lotA2.id, categorie: "PARKING", sousCategorie: "Véhicule sur ma place", description: "Une Dacia blanche occupe la place P-12 depuis ce matin.", partie: "COMMUNE", urgence: "NORMALE", statut: "OUVERT", creePar: locataire.id, slaDeadline: new Date(Date.now() + 48 * 3600 * 1000), emplacementId: empC12.id, immatriculationSignalee: vehA1.immatriculation, photos: [] },
+  });
+  await prisma.incidentLog.create({ data: { incidentId: incidentVehicule.id, statutAvant: null, statutApres: "OUVERT", acteurId: locataire.id, commentaire: "Signalement depuis la fiche parking." } });
+  // Redevance du mois précédent : appel de fonds REDEVANCE_PARKING (⚠️ valeur d'enum ajoutée) émis par le job, réglé par A2.
+  const moisPrecedent = new Date(); moisPrecedent.setUTCDate(1); moisPrecedent.setUTCMonth(moisPrecedent.getUTCMonth() - 1);
+  const periodeRedevance = moisPrecedent.toISOString().slice(0, 7);
+  const appelRedevance = await prisma.appelDeFonds.create({
+    data: { coproprieteId: copro.id, periode: periodeRedevance, type: "REDEVANCE_PARKING", montantTotal: "150.00", dateEcheance: new Date(`${periodeRedevance}-15`), statut: "EMIS", lignes: { create: [{ lotId: lotA2.id, montantDu: "150.00", montantPaye: "150.00", statut: "PAYE" }] } },
+    include: { lignes: true },
+  });
+  const paiementRedevance = await prisma.paiement.create({
+    data: { lotId: lotA2.id, appelDeFondsLotId: appelRedevance.lignes[0]!.id, montant: "150.00", methode: "ESPECES", statut: "VALIDE", payeurUtilisateurId: locataire.id, enregistreParId: syndicUser.id, dateValeur: new Date(`${periodeRedevance}-10`) },
+  });
+  void paiementRedevance; void badgeTelecommandeA1; void badgePerduA2; void vehA2; void visiteParking; void attribP12;
+  await prisma.auditLog.createMany({
+    data: [
+      { coproprieteId: copro.id, acteurId: syndicUser.id, action: "EMPLACEMENT_ATTRIBUE", entite: "emplacement", entiteId: empC12.id, apresJson: { attribution_id: attribP12.id, lot_id: lotA2.id, type: "LOCATION_INTERNE", redevance_mensuelle: "150.00" }, horodatage: jour(-250) },
+      { coproprieteId: copro.id, acteurId: gardienUser.id, action: "VEHICULE_RECHERCHE", entite: "vehicule", entiteId: vehA1.id, apresJson: { immatriculation: vehA1.immatriculation, resultats: 1 }, horodatage: new Date(Date.now() - 2 * 3600 * 1000) },
+      { coproprieteId: copro.id, acteurId: locataire.id, action: "BADGE_PERDU", entite: "badge", entiteId: badgePerduA2.id, avantJson: { statut: "ACTIF" }, apresJson: { statut: "PERDU" }, horodatage: jour(-30) },
+    ],
+  });
+
   console.log("Seed terminé :", {
     personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
     rapports: { approuve: rapportPrecedent.id, genere: rapportCourant.id },
+    parkings: { emplacements: 8, attributions: 3, vehicules: 4, badges: 4, redevance: periodeRedevance },
     copropriete: copro.nom,
     utilisateurs: 9,
     lcd: { declaration: declarationLcd.id, sejourEnCours: sejourEnCours.id, sejourPrevu: sejourPrevu.id },

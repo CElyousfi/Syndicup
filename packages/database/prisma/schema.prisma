@@ -274,44 +274,48 @@ model Copropriete {
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
-  rolesUtilisateur     RoleUtilisateur[]
-  invitations          Invitation[]
-  lots                 Lot[]
-  espacesCommuns       EspaceCommun[]
-  auditLogs            AuditLog[]
-  budgetsAg            BudgetAg[]
-  appelsDeFonds        AppelDeFonds[]
-  fondsReserve         FondsReserve?
-  prestataires         Prestataire[]
-  incidents            Incident[]
-  assembleesGenerales  AssembleeGenerale[]
-  documents            Document[]
-  notifications        Notification[]
-  personnel            Personnel[]
-  visites              Visite[]
-  litiges              ConflitLitige[]
-  declarationsLcd      LotLocationCourteDuree[]
-  sejoursLcd           SejourCourteDuree[]
-  sejourEvenements     SejourEvenement[]
-  idempotencyKeys      IdempotencyKey[]
-  sessionsCmi          PaiementCmiSession[]
-  depenses             Depense[]
-  depenseLogs          DepenseLog[]
-  justificatifs        JustificatifPaiement[]
-  rapportsGestion      RapportGestion[]
-  exportLogs           ExportLog[]
-  contrats             Contrat[]
-  contratLogs          ContratLog[]
-  fichesPaie           FichePaie[]
-  conges               Conge[]
-  evaluationsPersonnel EvaluationPersonnel[]
-  presencesPersonnel   PresencePersonnel[]
-  personnelLogs        PersonnelLog[]
-  annonces             Annonce[]
-  sondages             Sondage[]
-  contactsUtiles       ContactUtile[]
-  taches               Tache[]
-  tacheLogs            TacheLog[]
+  rolesUtilisateur        RoleUtilisateur[]
+  invitations             Invitation[]
+  lots                    Lot[]
+  espacesCommuns          EspaceCommun[]
+  auditLogs               AuditLog[]
+  budgetsAg               BudgetAg[]
+  appelsDeFonds           AppelDeFonds[]
+  fondsReserve            FondsReserve?
+  prestataires            Prestataire[]
+  incidents               Incident[]
+  assembleesGenerales     AssembleeGenerale[]
+  documents               Document[]
+  notifications           Notification[]
+  personnel               Personnel[]
+  visites                 Visite[]
+  litiges                 ConflitLitige[]
+  declarationsLcd         LotLocationCourteDuree[]
+  sejoursLcd              SejourCourteDuree[]
+  sejourEvenements        SejourEvenement[]
+  idempotencyKeys         IdempotencyKey[]
+  sessionsCmi             PaiementCmiSession[]
+  depenses                Depense[]
+  depenseLogs             DepenseLog[]
+  justificatifs           JustificatifPaiement[]
+  rapportsGestion         RapportGestion[]
+  exportLogs              ExportLog[]
+  contrats                Contrat[]
+  contratLogs             ContratLog[]
+  fichesPaie              FichePaie[]
+  conges                  Conge[]
+  evaluationsPersonnel    EvaluationPersonnel[]
+  presencesPersonnel      PresencePersonnel[]
+  personnelLogs           PersonnelLog[]
+  annonces                Annonce[]
+  sondages                Sondage[]
+  contactsUtiles          ContactUtile[]
+  taches                  Tache[]
+  tacheLogs               TacheLog[]
+  emplacements            Emplacement[]
+  attributionsEmplacement AttributionEmplacement[]
+  vehicules               Vehicule[]
+  badges                  Badge[]
 
   @@map("copropriete")
 }
@@ -386,6 +390,9 @@ model Utilisateur {
   tachesCreees             Tache[]                   @relation("TacheCreateur")
   tacheCommentaires        TacheCommentaire[]
   tacheLogsActeur          TacheLog[]                @relation("TacheLogActeur")
+  vehicules                Vehicule[]
+  badgesRemis              Badge[]                   @relation("BadgeRemisPar")
+  attributionsCreees       AttributionEmplacement[]  @relation("AttributionCreateur")
 
   @@map("utilisateur")
 }
@@ -460,21 +467,24 @@ model Lot {
   creeLe        DateTime      @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe     DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
 
-  proprietaires    LotProprietaire[]
-  occupants        LotOccupant[]
-  successions      Succession[]
-  invitations      Invitation[]
-  appelsDeFondsLot AppelDeFondsLot[]
-  paiements        Paiement[]
-  incidents        Incident[]
-  agVotes          AgVote[]
-  agProcurations   AgProcuration[]
-  reservations     ReservationEspaceCommun[]
-  personnelLoges   Personnel[]
-  visites          Visite[]
-  declarationsLcd  LotLocationCourteDuree[]
-  sejoursLcd       SejourCourteDuree[]
-  justificatifs    JustificatifPaiement[]
+  proprietaires           LotProprietaire[]
+  occupants               LotOccupant[]
+  successions             Succession[]
+  invitations             Invitation[]
+  appelsDeFondsLot        AppelDeFondsLot[]
+  paiements               Paiement[]
+  incidents               Incident[]
+  agVotes                 AgVote[]
+  agProcurations          AgProcuration[]
+  reservations            ReservationEspaceCommun[]
+  personnelLoges          Personnel[]
+  visites                 Visite[]
+  declarationsLcd         LotLocationCourteDuree[]
+  attributionsEmplacement AttributionEmplacement[]
+  vehicules               Vehicule[]
+  badges                  Badge[]
+  sejoursLcd              SejourCourteDuree[]
+  justificatifs           JustificatifPaiement[]
 
   @@index([coproprieteId])
   @@map("lot")
@@ -731,16 +741,21 @@ model Personnel {
 // même logique que les autres tables M4/M7/M9 (une policy RLS de tenant isolation directe est
 // non négociable, CLAUDE.md §1.8).
 model Visite {
-  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId String       @map("copropriete_id") @db.Uuid
-  copropriete   Copropriete  @relation(fields: [coproprieteId], references: [id])
-  gardienId     String       @map("gardien_id") @db.Uuid
-  gardien       Utilisateur  @relation("VisiteGardien", fields: [gardienId], references: [id])
-  lotId         String       @map("lot_id") @db.Uuid
-  lot           Lot          @relation(fields: [lotId], references: [id])
-  visiteurNom   String       @map("visiteur_nom")
-  statut        StatutVisite @default(EN_ATTENTE)
-  horodatage    DateTime     @default(now()) @db.Timestamptz
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId   String       @map("copropriete_id") @db.Uuid
+  copropriete     Copropriete  @relation(fields: [coproprieteId], references: [id])
+  gardienId       String       @map("gardien_id") @db.Uuid
+  gardien         Utilisateur  @relation("VisiteGardien", fields: [gardienId], references: [id])
+  lotId           String       @map("lot_id") @db.Uuid
+  lot             Lot          @relation(fields: [lotId], references: [id])
+  visiteurNom     String       @map("visiteur_nom")
+  statut          StatutVisite @default(EN_ATTENTE)
+  horodatage      DateTime     @default(now()) @db.Timestamptz
+  // M23 — place visiteur attribuée par le gardien à l'arrivée (⚠️ colonnes ajoutées et signalées).
+  emplacementId   String?      @map("emplacement_id") @db.Uuid
+  emplacement     Emplacement? @relation(fields: [emplacementId], references: [id])
+  immatriculation String?
+  heureLimite     DateTime?    @map("heure_limite") @db.Timestamptz
 
   @@index([coproprieteId])
   @@index([lotId])
@@ -892,6 +907,9 @@ enum TypeAppelDeFonds {
   REGULARISATION
   URGENCE
   DEMARRAGE
+  // M23 — ⚠️ valeur ABSENTE du Master Spec, ajoutée et signalée : redevance mensuelle d'usage d'un
+  // emplacement commun attribué (Doc A §4, décision d'AG), appelée par le job parkings-redevances-mensuel.
+  REDEVANCE_PARKING
 }
 
 enum StatutAppelDeFonds {
@@ -1080,6 +1098,7 @@ model Paiement {
   documentId          String?               @map("document_id") @db.Uuid
   document            Document?             @relation("PaiementPreuve", fields: [documentId], references: [id])
   horodatage          DateTime              @default(now()) @db.Timestamptz
+  badgesCaution       Badge[]               @relation("BadgeCaution")
 
   @@index([lotId])
   @@index([appelDeFondsLotId])
@@ -1251,46 +1270,50 @@ model Prestataire {
 }
 
 model Incident {
-  taches                 Tache[]
-  id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  coproprieteId          String             @map("copropriete_id") @db.Uuid
-  copropriete            Copropriete        @relation(fields: [coproprieteId], references: [id])
+  taches                  Tache[]
+  id                      String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId           String             @map("copropriete_id") @db.Uuid
+  copropriete             Copropriete        @relation(fields: [coproprieteId], references: [id])
   // Nullable : incident en partie commune, pas rattaché à un lot précis (Master Spec Partie 2.2).
-  lotId                  String?            @map("lot_id") @db.Uuid
-  lot                    Lot?               @relation(fields: [lotId], references: [id])
-  categorie              CategorieIncident
-  sousCategorie          String             @map("sous_categorie")
+  lotId                   String?            @map("lot_id") @db.Uuid
+  lot                     Lot?               @relation(fields: [lotId], references: [id])
+  categorie               CategorieIncident
+  sousCategorie           String             @map("sous_categorie")
   // Doc A §5 assume un signalement en texte libre en plus de la catégorie ("Signalement…") —
   // absent du tableau Master Spec littéral, ajouté comme complément nécessaire (nullable, la
   // catégorie/sous-catégorie suffisent déjà à qualifier l'incident).
-  description            String?
-  partie                 PartieIncident
-  urgence                UrgenceIncident
-  statut                 StatutIncident     @default(OUVERT)
-  creePar                String             @map("cree_par") @db.Uuid
-  createur               Utilisateur        @relation("IncidentCreateur", fields: [creePar], references: [id])
-  assigneAId             String?            @map("assigne_a") @db.Uuid
-  assigneA               Prestataire?       @relation(fields: [assigneAId], references: [id])
+  description             String?
+  partie                  PartieIncident
+  urgence                 UrgenceIncident
+  statut                  StatutIncident     @default(OUVERT)
+  creePar                 String             @map("cree_par") @db.Uuid
+  createur                Utilisateur        @relation("IncidentCreateur", fields: [creePar], references: [id])
+  assigneAId              String?            @map("assigne_a") @db.Uuid
+  assigneA                Prestataire?       @relation(fields: [assigneAId], references: [id])
   // Calculé à la création à partir de `urgence` (voir apps/api/lib/incidents/incidents.ts —
   // simplification signalée : delai par palier d'urgence, pas la grille fine par
   // catégorie/sous-catégorie de Doc A §5.1 qui va de 30 min à 1 semaine selon le cas précis).
-  slaDeadline            DateTime?          @map("sla_deadline") @db.Timestamptz
+  slaDeadline             DateTime?          @map("sla_deadline") @db.Timestamptz
   // Photos du signalement (Doc A §5 : signalement illustré) — chemins storage dans le bucket
   // privé `documents` sous `<copropriete_id>/incidents/…`, max 5, accès via URL signée 15 min
   // (même règle que les documents, Master Spec Partie 9.3). Ajout signalé : champ absent du
   // tableau Master Spec littéral, nécessaire au signalement photo mobile.
-  photos                 String[]           @default([])
+  photos                  String[]           @default([])
+  // M23 — « véhicule sur ma place » : emplacement concerné et plaque signalée (⚠️ colonnes ajoutées et signalées).
+  emplacementId           String?            @map("emplacement_id") @db.Uuid
+  emplacement             Emplacement?       @relation(fields: [emplacementId], references: [id])
+  immatriculationSignalee String?            @map("immatriculation_signalee")
   // M15 — « signalement facilité » (Doc A §10.2) : nuisance liée au séjour LCD en cours.
-  sejourId               String?            @map("sejour_id") @db.Uuid
-  sejour                 SejourCourteDuree? @relation(fields: [sejourId], references: [id])
+  sejourId                String?            @map("sejour_id") @db.Uuid
+  sejour                  SejourCourteDuree? @relation(fields: [sejourId], references: [id])
   // M16 — évaluation du prestataire après RESOLU/FERME (Doc A §8.3 « syndic favorise certains
   // prestataires » → transparence) : note 1–5 + commentaire, une seule fois, par le créateur du
   // ticket ou le syndic ; alimente prestataire.note_moyenne. CHECK 1..5 en migration.
-  notePrestataire        Int?               @map("note_prestataire")
-  commentairePrestataire String?            @map("commentaire_prestataire")
-  evalueLe               DateTime?          @map("evalue_le") @db.Timestamptz
-  creeLe                 DateTime           @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe              DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
+  notePrestataire         Int?               @map("note_prestataire")
+  commentairePrestataire  String?            @map("commentaire_prestataire")
+  evalueLe                DateTime?          @map("evalue_le") @db.Timestamptz
+  creeLe                  DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe               DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
 
   logs     IncidentLog[]
   depenses Depense[]
@@ -1419,12 +1442,13 @@ model AgResolution {
   creeLe             DateTime             @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe          DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
-  votes                 AgVote[]
-  coproprietesRegimeLcd Copropriete[]    @relation("CoproprieteRegimeLcdResolution")
-  depenses              Depense[]
-  rapportsGestion       RapportGestion[]
-  contrats              Contrat[]
-  taches                Tache[]
+  votes                   AgVote[]
+  coproprietesRegimeLcd   Copropriete[]            @relation("CoproprieteRegimeLcdResolution")
+  depenses                Depense[]
+  rapportsGestion         RapportGestion[]
+  contrats                Contrat[]
+  taches                  Tache[]
+  attributionsEmplacement AttributionEmplacement[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1590,6 +1614,9 @@ model SejourCourteDuree {
   // 4 derniers caractères uniquement (CNDP — minimisation).
   pieceIdentiteFin     String?                @map("piece_identite_fin") @db.VarChar(4)
   plaqueVehicule       String?                @map("plaque_vehicule")
+  // M23 — place visiteur attribuée au séjour (⚠️ colonne ajoutée et signalée).
+  emplacementId        String?                @map("emplacement_id") @db.Uuid
+  emplacement          Emplacement?           @relation(fields: [emplacementId], references: [id])
   // Pièces jointes (confirmation de réservation, photos d'arrivée / d'état des lieux) — chemins
   // storage `<copropriete>/lcd/sejours/…` dans le bucket privé, URL signée 15 min, 10 max.
   // JAMAIS une pièce d'identité (minimisation CNDP — LEGAL_QUESTIONS_BRIEF §7.3).
@@ -2611,4 +2638,154 @@ model TacheLog {
 
   @@index([tacheId, horodatage])
   @@map("tache_log")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M23 — PARKINGS ET CAVES : emplacements non titrés (les places titrées restent des lots PARKING /
+// CAVE avec leurs charges), attributions (AG, rotation, location interne, temporaire), véhicules
+// déclarés, badges / télécommandes, places visiteurs (Doc A §4). ⚠️ Module ABSENT du Master Spec
+// Partie 2 — enums, tables et colonnes ci-dessous ajoutés et signalés (ROADMAP M23).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum TypeEmplacement {
+  PARKING_COMMUN
+  PARKING_VISITEUR
+  PARKING_PMR
+  MOTO
+  VELO
+  CAVE_COMMUNE
+}
+
+enum StatutEmplacement {
+  DISPONIBLE
+  ATTRIBUE
+  HORS_SERVICE
+}
+
+enum TypeAttributionEmplacement {
+  ATTRIBUTION_AG
+  ROTATION
+  LOCATION_INTERNE
+  TEMPORAIRE
+}
+
+enum TypeVehicule {
+  VOITURE
+  MOTO
+  UTILITAIRE
+}
+
+enum TypeBadge {
+  BADGE_PIETON
+  TELECOMMANDE_PARKING
+  CLE_CAVE
+  CARTE_ASCENSEUR
+}
+
+enum StatutBadge {
+  ACTIF
+  PERDU
+  DESACTIVE
+  RESTITUE
+}
+
+/// Place ou cave commune (pas un lot) : code unique par copropriété, niveau libre (SS1, RDC…).
+model Emplacement {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String            @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete       @relation(fields: [coproprieteId], references: [id])
+  type          TypeEmplacement
+  code          String
+  niveau        String?
+  attribuable   Boolean           @default(true)
+  statut        StatutEmplacement @default(DISPONIBLE)
+  notes         String?
+  creeLe        DateTime          @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime          @updatedAt @map("modifie_le") @db.Timestamptz
+
+  attributions AttributionEmplacement[]
+  visites      Visite[]
+  sejours      SejourCourteDuree[]
+  incidents    Incident[]
+
+  @@unique([coproprieteId, code])
+  @@index([coproprieteId, type, niveau])
+  @@map("emplacement")
+}
+
+/// Attribution d'un emplacement à un lot bénéficiaire — jamais deux attributions actives qui se chevauchent.
+model AttributionEmplacement {
+  id                 String                     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId      String                     @map("copropriete_id") @db.Uuid
+  copropriete        Copropriete                @relation(fields: [coproprieteId], references: [id])
+  emplacementId      String                     @map("emplacement_id") @db.Uuid
+  emplacement        Emplacement                @relation(fields: [emplacementId], references: [id])
+  lotId              String                     @map("lot_id") @db.Uuid
+  lot                Lot                        @relation(fields: [lotId], references: [id])
+  type               TypeAttributionEmplacement
+  dateDebut          DateTime                   @map("date_debut") @db.Date
+  dateFin            DateTime?                  @map("date_fin") @db.Date
+  resolutionAgId     String?                    @map("resolution_ag_id") @db.Uuid
+  resolutionAg       AgResolution?              @relation(fields: [resolutionAgId], references: [id])
+  /// Redevance d'usage votée par l'AG (MAD / mois) — appelée par le job mensuel (REDEVANCE_PARKING).
+  redevanceMensuelle Decimal?                   @map("redevance_mensuelle") @db.Decimal(14, 2)
+  notes              String?
+  /// Job quotidien : fin d'attribution notifiée une seule fois.
+  expireeNotifieeLe  DateTime?                  @map("expiree_notifiee_le") @db.Timestamptz
+  creeParId          String?                    @map("cree_par_id") @db.Uuid
+  creePar            Utilisateur?               @relation("AttributionCreateur", fields: [creeParId], references: [id])
+  creeLe             DateTime                   @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe          DateTime                   @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@index([emplacementId, dateDebut])
+  @@index([lotId])
+  @@map("attribution_emplacement")
+}
+
+/// Véhicule déclaré par un lot — plaque normalisée (majuscules, sans espaces), unique par copropriété.
+model Vehicule {
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId   String       @map("copropriete_id") @db.Uuid
+  copropriete     Copropriete  @relation(fields: [coproprieteId], references: [id])
+  lotId           String       @map("lot_id") @db.Uuid
+  lot             Lot          @relation(fields: [lotId], references: [id])
+  utilisateurId   String?      @map("utilisateur_id") @db.Uuid
+  utilisateur     Utilisateur? @relation(fields: [utilisateurId], references: [id])
+  immatriculation String
+  marque          String?
+  couleur         String?
+  type            TypeVehicule @default(VOITURE)
+  actif           Boolean      @default(true)
+  creeLe          DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe       DateTime     @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@unique([coproprieteId, immatriculation])
+  @@index([lotId])
+  @@map("vehicule")
+}
+
+/// Badge, télécommande, clé, carte — remis à un lot, avec caution optionnelle (paiement M17).
+model Badge {
+  id                String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId     String       @map("copropriete_id") @db.Uuid
+  copropriete       Copropriete  @relation(fields: [coproprieteId], references: [id])
+  lotId             String       @map("lot_id") @db.Uuid
+  lot               Lot          @relation(fields: [lotId], references: [id])
+  type              TypeBadge
+  identifiant       String
+  statut            StatutBadge  @default(ACTIF)
+  remisLe           DateTime     @map("remis_le") @db.Date
+  remisParId        String?      @map("remis_par_id") @db.Uuid
+  remisPar          Utilisateur? @relation("BadgeRemisPar", fields: [remisParId], references: [id])
+  restitueLe        DateTime?    @map("restitue_le") @db.Date
+  cautionMontant    Decimal?     @map("caution_montant") @db.Decimal(14, 2)
+  cautionPaiementId String?      @map("caution_paiement_id") @db.Uuid
+  cautionPaiement   Paiement?    @relation("BadgeCaution", fields: [cautionPaiementId], references: [id])
+  notes             String?
+  creeLe            DateTime     @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe         DateTime     @updatedAt @map("modifie_le") @db.Timestamptz
+
+  @@unique([coproprieteId, type, identifiant])
+  @@index([lotId])
+  @@map("badge")
 }

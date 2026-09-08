@@ -557,6 +557,35 @@ const TACHES: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, TACHES);
 
+// ── M23 — Parkings (Doc A §4) ─────────────────────────────────────────────────────────────
+const PARKINGS: Record<string, Entree> = {
+  ATTRIBUTION_EMPLACEMENT: {
+    FR: { titre: "Emplacement {{code}} attribué au lot {{lot}}", corps: "Du {{date_debut}} au {{date_fin}}. Redevance mensuelle : {{redevance}} MAD." },
+    AR: { titre: "تم إسناد الموقف {{code}} للشقة {{lot}}", corps: "من {{date_debut}} إلى {{date_fin}}. الإتاوة الشهرية: {{redevance}} درهم." },
+  },
+  ATTRIBUTION_EXPIREE: {
+    FR: { titre: "Fin d'attribution de l'emplacement {{code}}", corps: "L'attribution prend fin le {{date_fin}} : merci de libérer la place." },
+    AR: { titre: "انتهاء إسناد الموقف {{code}}", corps: "ينتهي الإسناد في {{date_fin}}: يرجى إخلاء الموقف." },
+  },
+  BADGE_REMIS: {
+    FR: { titre: "Badge remis : {{type}} {{identifiant}}", corps: "Lot {{lot}}. En cas de perte, signalez-le dans l'application pour le désactiver." },
+    AR: { titre: "تم تسليم الشارة: {{type}} {{identifiant}}", corps: "الشقة {{lot}}. في حال الضياع، أبلغوا عبر التطبيق لتعطيلها." },
+  },
+  BADGE_PERDU: {
+    FR: { titre: "Badge déclaré perdu : {{type}} {{identifiant}}", corps: "Lot {{lot}} — à désactiver physiquement (tâche créée)." },
+    AR: { titre: "شارة مُعلَنة ضائعة: {{type}} {{identifiant}}", corps: "الشقة {{lot}} — يجب تعطيلها فعليًا (تم إنشاء مهمة)." },
+  },
+  VEHICULE_MAL_STATIONNE: {
+    FR: { titre: "Votre véhicule {{immatriculation}} gêne", corps: "Il occupe l'emplacement {{emplacement}}. Merci de le déplacer sans délai. {{message}}" },
+    AR: { titre: "سيارتكم {{immatriculation}} تعرقل", corps: "تشغل الموقف {{emplacement}}. يرجى نقلها فورًا. {{message}}" },
+  },
+  VISITEUR_DEPASSEMENT: {
+    FR: { titre: "Place visiteur {{code}} : heure limite dépassée", corps: "{{visiteur}} (lot {{lot}}, {{immatriculation}}) devait libérer la place à {{heure_limite}}." },
+    AR: { titre: "موقف الزوار {{code}}: تجاوز الوقت المحدد", corps: "{{visiteur}} (الشقة {{lot}}، {{immatriculation}}) كان عليه إخلاء الموقف في {{heure_limite}}." },
+  },
+};
+Object.assign(TEMPLATES, PARKINGS);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }
