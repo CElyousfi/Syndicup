@@ -107,4 +107,16 @@ void main() {
     expect(lienNotification('PAIE_A_VALIDER', {'periode': '2026-09'}), '/personnel');
     expect(lienNotification('CONTRAT_TRAVAIL_FIN_PROCHE', {'personnel_id': 'p1'}), '/personnel/p1');
   });
+  test('M21 : tableau d\'affichage pour tout membre sauf le prestataire ; onglet résident ; deep-links annonce / sondage / digest', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    for (final r in ['SYNDIC', 'CONSEIL_SYNDICAL', 'PROPRIETAIRE', 'LOCATAIRE', 'GARDIEN', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), contains('/affichage'), reason: r);
+    }
+    expect(paths('PRESTATAIRE'), isNot(contains('/affichage')));
+    expect(buildTabs(buildNav(ctxFor('PROPRIETAIRE'), dictFr), ctxFor('PROPRIETAIRE'), dictFr).map((t) => t.path), contains('/affichage'));
+    expect(lienNotification('ANNONCE_PUBLIEE', {'annonce_id': 'a1'}), '/affichage/a1');
+    expect(lienNotification('ANNONCE_URGENTE', {'annonce_id': 'a1'}), '/affichage/a1');
+    expect(lienNotification('SONDAGE_OUVERT', {'sondage_id': 's1'}), '/affichage/sondages/s1');
+    expect(lienNotification('COMMUNICATION_DIGEST', {}), '/affichage');
+  });
 }

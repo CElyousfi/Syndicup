@@ -18,6 +18,8 @@ import '../../core/push/push_service.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../../core/api/providers.dart';
+import '../communication/communication_screens.dart';
 import '../shell/app_shell.dart';
 
 /// J1 — profil : nom, prénom, langue (change le sens de lecture), identifiants, rôles.
@@ -102,6 +104,12 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
           for (final r in p.roles)
             ListRow(leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac, size: 36), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
         ]),
+        SectionHeader(d.communication.preferences),
+        SuCard(onTap: () async {
+          final prefs = await ref.read(preferencesNotificationProvider.future);
+          if (!context.mounted) return;
+          await showFormSheet<void>(context, title: d.communication.preferences, builder: (_) => PreferencesNotificationSheet(initial: prefs));
+        }, child: Row(children: [const IconCircle(Icons.notifications_active_outlined, tone: Tone.sand, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.communication.preferences, style: t.titleSmall), Text(d.communication.preferencesAide, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)])), const ChevronEnd()])),
         SectionHeader(d.profil.donnees),
         SuCard(onTap: () => context.push('/profil/donnees'), child: Row(children: [const IconCircle(Icons.shield_outlined, tone: Tone.sage, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.profil.donneesTitre, style: t.titleSmall), Text(d.profil.donneesCorps, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)])), const ChevronEnd()])),
         const SizedBox(height: 24),

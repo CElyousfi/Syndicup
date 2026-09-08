@@ -1238,3 +1238,100 @@ class EtatAssurance {
   const EtatAssurance({required this.immeubleActive, required this.rcActive, required this.nbPolices});
   factory EtatAssurance.fromJson(Map<String, dynamic> j) => EtatAssurance(immeubleActive: _b(j, 'immeuble_active'), rcActive: _b(j, 'rc_active'), nbPolices: ((j['polices'] as List?) ?? const []).length);
 }
+
+// ── M21 — Communication ──────────────────────────────────────────────────────
+class IdentiteCourte {
+  final String id;
+  final String? nom, prenom;
+  const IdentiteCourte({required this.id, this.nom, this.prenom});
+  factory IdentiteCourte.fromJson(Map<String, dynamic>? j) => j == null ? const IdentiteCourte(id: '') : IdentiteCourte(id: _s(j, 'id'), nom: _sn(j, 'nom'), prenom: _sn(j, 'prenom'));
+  String get affichage {
+    final n = [prenom, nom].whereType<String>().where((x) => x.isNotEmpty).join(' ');
+    return n.isEmpty ? '—' : n;
+  }
+}
+
+class AnnonceCommentaire {
+  final String id, contenu, creeLe;
+  final IdentiteCourte auteur;
+  final bool masque, mien;
+  const AnnonceCommentaire({required this.id, required this.contenu, required this.creeLe, required this.auteur, required this.masque, required this.mien});
+  factory AnnonceCommentaire.fromJson(Map<String, dynamic> j) => AnnonceCommentaire(id: _s(j, 'id'), contenu: _s(j, 'contenu'), creeLe: _s(j, 'creeLe'), auteur: IdentiteCourte.fromJson(_map(j['auteur'])), masque: _b(j, 'masque'), mien: _b(j, 'mien'));
+}
+
+/// Annonce du tableau d'affichage — `nbLectures` n'est renseigné que pour la gestion.
+class Annonce {
+  final String id, titre, contenu, apercu, categorie, audience, statut, creeLe;
+  final String? batiment, publieLe, expireLe;
+  final bool epingle, commentairesActives, lu;
+  final int nbCommentaires;
+  final int? nbLectures, nbDestinataires;
+  final IdentiteCourte auteur;
+  final List<AnnonceCommentaire> commentaires;
+  final List<Map<String, dynamic>> piecesJointes;
+  const Annonce({required this.id, required this.titre, required this.contenu, required this.apercu, required this.categorie, required this.audience, required this.statut, required this.creeLe, this.batiment, this.publieLe, this.expireLe, required this.epingle, required this.commentairesActives, required this.lu, required this.nbCommentaires, this.nbLectures, this.nbDestinataires, required this.auteur, this.commentaires = const [], this.piecesJointes = const []});
+  factory Annonce.fromJson(Map<String, dynamic> j) => Annonce(
+        id: _s(j, 'id'), titre: _s(j, 'titre'), contenu: _s(j, 'contenu'), apercu: _s(j, 'apercu'), categorie: _s(j, 'categorie'), audience: _s(j, 'audience'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'),
+        batiment: _sn(j, 'batiment'), publieLe: _sn(j, 'publieLe'), expireLe: _sn(j, 'expireLe'), epingle: _b(j, 'epingle'), commentairesActives: _b(j, 'commentairesActives'), lu: _b(j, 'lu'),
+        nbCommentaires: _in(j, 'nbCommentaires') ?? 0, nbLectures: _in(j, 'nbLectures'), nbDestinataires: _in(j, 'nbDestinataires'), auteur: IdentiteCourte.fromJson(_map(j['auteur'])),
+        commentaires: _list(j['commentaires'], AnnonceCommentaire.fromJson), piecesJointes: ((j['piecesJointes'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+      );
+}
+
+class SondageOption {
+  final String id, libelle;
+  const SondageOption({required this.id, required this.libelle});
+  factory SondageOption.fromJson(Map<String, dynamic> j) => SondageOption(id: _s(j, 'id'), libelle: _s(j, 'libelle'));
+}
+
+class SondageResultatOption {
+  final String id, libelle, tantiemes;
+  final int nb;
+  final double pourcentage, pourcentageTantiemes;
+  const SondageResultatOption({required this.id, required this.libelle, required this.nb, required this.pourcentage, required this.tantiemes, required this.pourcentageTantiemes});
+  factory SondageResultatOption.fromJson(Map<String, dynamic> j) => SondageResultatOption(id: _s(j, 'id'), libelle: _s(j, 'libelle'), nb: _in(j, 'nb') ?? 0, pourcentage: (j['pourcentage'] as num?)?.toDouble() ?? 0, tantiemes: _s(j, 'tantiemes'), pourcentageTantiemes: (j['pourcentage_tantiemes'] as num?)?.toDouble() ?? 0);
+}
+
+class SondageResultats {
+  final int nbReponses, nbDestinataires;
+  final String tantiemesExprimes;
+  final bool ponderationTantiemes;
+  final List<SondageResultatOption> options;
+  const SondageResultats({required this.nbReponses, required this.nbDestinataires, required this.tantiemesExprimes, required this.ponderationTantiemes, required this.options});
+  factory SondageResultats.fromJson(Map<String, dynamic> j) => SondageResultats(nbReponses: _in(j, 'nb_reponses') ?? 0, nbDestinataires: _in(j, 'nb_destinataires') ?? 0, tantiemesExprimes: _s(j, 'tantiemes_exprimes'), ponderationTantiemes: _b(j, 'ponderation_tantiemes'), options: _list(j['options'], SondageResultatOption.fromJson));
+}
+
+/// Sondage consultatif — jamais un vote d'AG ; `resultats` = agrégats seulement.
+class Sondage {
+  final String id, question, audience, statut, dateFin, creeLe;
+  final String? description, batiment, ouvertLe, closLe;
+  final bool choixMultiple, anonyme, ponderationTantiemes;
+  final List<SondageOption> options;
+  final List<String>? maReponse;
+  final SondageResultats? resultats;
+  final IdentiteCourte auteur;
+  const Sondage({required this.id, required this.question, required this.audience, required this.statut, required this.dateFin, required this.creeLe, this.description, this.batiment, this.ouvertLe, this.closLe, required this.choixMultiple, required this.anonyme, required this.ponderationTantiemes, required this.options, this.maReponse, this.resultats, required this.auteur});
+  factory Sondage.fromJson(Map<String, dynamic> j) => Sondage(
+        id: _s(j, 'id'), question: _s(j, 'question'), audience: _s(j, 'audience'), statut: _s(j, 'statut'), dateFin: _s(j, 'dateFin'), creeLe: _s(j, 'creeLe'),
+        description: _sn(j, 'description'), batiment: _sn(j, 'batiment'), ouvertLe: _sn(j, 'ouvertLe'), closLe: _sn(j, 'closLe'),
+        choixMultiple: _b(j, 'choixMultiple'), anonyme: _b(j, 'anonyme'), ponderationTantiemes: _b(j, 'ponderationTantiemes'),
+        options: _list(j['options'], SondageOption.fromJson), maReponse: j['maReponse'] is List ? (j['maReponse'] as List).map((e) => e.toString()).toList() : null,
+        resultats: j['resultats'] is Map ? SondageResultats.fromJson((j['resultats'] as Map).cast<String, dynamic>()) : null, auteur: IdentiteCourte.fromJson(_map(j['auteur'])),
+      );
+  bool get ouvertEncore => statut == 'OUVERT' && (DateTime.tryParse(dateFin)?.isAfter(DateTime.now()) ?? false);
+}
+
+class ContactUtile {
+  final String id, libelle, telephone;
+  final int ordre;
+  const ContactUtile({required this.id, required this.libelle, required this.telephone, required this.ordre});
+  factory ContactUtile.fromJson(Map<String, dynamic> j) => ContactUtile(id: _s(j, 'id'), libelle: _s(j, 'libelle'), telephone: _s(j, 'telephone'), ordre: _in(j, 'ordre') ?? 0);
+}
+
+class PreferencesNotification {
+  final bool digestHebdo, annoncesPush;
+  final String canalDigest;
+  const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true});
+  factory PreferencesNotification.fromJson(Map<String, dynamic> j) => PreferencesNotification(digestHebdo: j['digest_hebdo'] is bool ? j['digest_hebdo'] as bool : true, canalDigest: _sn(j, 'canal_digest') ?? 'EMAIL', annoncesPush: j['annonces_push'] is bool ? j['annonces_push'] as bool : true);
+  Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush};
+}

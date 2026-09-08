@@ -39,3 +39,7 @@ const Map<String, BadgeVariant> trancheVariant = {'0_30': BadgeVariant.info, '31
 // M19 — contrats et échéances.
 const Map<String, BadgeVariant> contratVariant = {'BROUILLON': BadgeVariant.outline, 'ACTIF': BadgeVariant.ok, 'SUSPENDU': BadgeVariant.warn, 'RESILIE': BadgeVariant.neutral, 'EXPIRE': BadgeVariant.danger};
 const Map<String, BadgeVariant> echeanceVariant = {'A_VENIR': BadgeVariant.info, 'DEPENSE_GENEREE': BadgeVariant.ok, 'REALISEE': BadgeVariant.ok, 'MANQUEE': BadgeVariant.danger, 'ANNULEE': BadgeVariant.neutral};
+// M21 — communication.
+const Map<String, BadgeVariant> annonceVariant = {'BROUILLON': BadgeVariant.outline, 'PUBLIEE': BadgeVariant.ok, 'ARCHIVEE': BadgeVariant.neutral};
+const Map<String, BadgeVariant> categorieAnnonceVariant = {'INFORMATION': BadgeVariant.info, 'TRAVAUX': BadgeVariant.warn, 'COUPURE': BadgeVariant.warn, 'SECURITE': BadgeVariant.danger, 'URGENCE': BadgeVariant.danger, 'AG': BadgeVariant.ink, 'CONVIVIALITE': BadgeVariant.ok, 'REGLEMENT': BadgeVariant.neutral};
+const Map<String, BadgeVariant> sondageVariant = {'BROUILLON': BadgeVariant.outline, 'OUVERT': BadgeVariant.ok, 'CLOS': BadgeVariant.neutral};

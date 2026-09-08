@@ -165,6 +165,34 @@ final planningProvider = FutureProvider.autoDispose.family<PlanningSemaine, Stri
   return unwrap(await ref.watch(apiClientProvider).get('/personnel/planning', query: semaine == null ? null : {'semaine': semaine}, parse: (j) => PlanningSemaine.fromJson(asMap(j))));
 });
 
+// ── M21 — Communication ──────────────────────────────────────────────────────
+/// Annonces visibles (épinglées d'abord) ; clé = catégorie ou null.
+final annoncesProvider = FutureProvider.autoDispose.family<List<Annonce>, String?>((ref, categorie) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/annonces', query: {'limit': 50, if (categorie != null) 'categorie': categorie}, parse: (j) => parseList(j, Annonce.fromJson)));
+});
+/// Nombre d'annonces non lues (badge) — `meta.total` de la liste filtrée.
+final annoncesNonLuesProvider = FutureProvider.autoDispose<int>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<Annonce>>('/annonces', query: {'non_lues': '1', 'limit': 1}, parse: (j) => parseList(j, Annonce.fromJson));
+  return r is ApiOk<List<Annonce>> ? (r.meta.total ?? r.data.length) : 0;
+});
+final annonceProvider = FutureProvider.autoDispose.family<Annonce, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/annonces/$id', parse: (j) => Annonce.fromJson(asMap(j))));
+});
+final sondagesProvider = FutureProvider.autoDispose<List<Sondage>>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/sondages', query: {'limit': 20}, parse: (j) => parseList(j, Sondage.fromJson)));
+});
+final sondageProvider = FutureProvider.autoDispose.family<Sondage, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/sondages/$id', parse: (j) => Sondage.fromJson(asMap(j))));
+});
+final contactsUtilesProvider = FutureProvider.autoDispose<List<ContactUtile>>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<ContactUtile>>('/contacts-utiles', parse: (j) => parseList(j, ContactUtile.fromJson));
+  return r.dataOrNull ?? const [];
+});
+final preferencesNotificationProvider = FutureProvider.autoDispose<PreferencesNotification>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<PreferencesNotification>('/users/me/preferences-notification', parse: (j) => PreferencesNotification.fromJson(asMap(j)));
+  return r.dataOrNull ?? const PreferencesNotification();
+});
+
 final visitesProvider = FutureProvider.autoDispose<List<Visite>>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/visites', parse: (j) => parseList(j, Visite.fromJson)));
 });

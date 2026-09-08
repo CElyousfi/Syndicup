@@ -32,6 +32,7 @@ import '../../features/notifications/notifications_screen.dart';
 import '../../features/parametres/parametres_screen.dart';
 import '../../features/personnel/personnel_screen.dart';
 import '../../features/personnel/personnel_rh_screens.dart';
+import '../../features/communication/communication_screens.dart';
 import '../../features/profil/profil_screens.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
@@ -129,6 +130,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           // M19 — contrats (syndic / conseil, lecture).
           GoRoute(path: '/contrats', builder: (_, __) => const ContratsScreen()),
           GoRoute(path: '/contrats/:id', builder: (_, s) => ContratDetailScreen(id: s.pathParameters['id']!)),
+          // M21 — tableau d'affichage : fil, annonce, sondage.
+          GoRoute(path: '/affichage', builder: (_, __) => const AffichageScreen()),
+          GoRoute(path: '/affichage/sondages/:id', builder: (_, s) => SondageScreen(id: s.pathParameters['id']!)),
+          GoRoute(path: '/affichage/:id', builder: (_, s) => AnnonceDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/rapports/transparence', builder: (_, __) => const TransparenceScreen()),
           GoRoute(path: '/depenses/:id', builder: (_, s) => DepenseDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/espaces-communs', builder: (_, __) => const EspacesScreen()),

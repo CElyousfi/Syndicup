@@ -401,6 +401,41 @@ statut `PARTI` conserve tout ; aucune purge n'est implémentée), accès de l'em
 données (le module donne accès aux fiches, congés et présences), et caractère sensible du n° CNSS
 (masqué partout, lecture complète auditée).
 
+## 12. Tableau d'affichage, commentaires, sondages consultatifs, données de communication (module M21)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| Nature d'un sondage | CONSULTATIF — mention systématique « aucune valeur de vote d'assemblée générale » (API, UI, notifications) ; pondération par tantièmes purement informative | PROVISOIRE |
+| Modération des commentaires | masquage par le syndic (contenu conservé, visible de l'auteur et du syndic, audit `COMMENTAIRE_MASQUE`) ; jamais de suppression | PROVISOIRE |
+| Accusés de lecture | comptes « lu par n / N » et liste des lecteurs visibles du syndic et du conseil seulement ; jamais entre résidents | PROVISOIRE |
+| Récapitulatif hebdomadaire | lundi 09:00, désactivable par l'utilisateur, canal au choix ; URGENCE toujours envoyée (push + SMS si fournisseur) | PROVISOIRE |
+
+### 12.1 — Un sondage peut-il engager la copropriété ?
+
+**À confirmer :** la Loi 18-00 réserve les décisions à l'AG ; un sondage en ligne ne peut-il jamais
+valoir consultation écrite ou vote par correspondance, même à l'unanimité ? Le module l'affirme
+partout (mention obligatoire) et n'offre aucune passerelle vers `ag_resolution`.
+
+### 12.2 — Responsabilité éditoriale des commentaires
+
+**À confirmer :** responsabilité du syndicat / du syndic pour les propos tenus par un résident sur le
+tableau d'affichage (diffamation, injure), obligation de modération, délai de retrait, conservation
+du commentaire masqué comme preuve. Le module masque sans supprimer et journalise la modération.
+
+### 12.3 — Données de communication et CNDP
+
+**À confirmer :** les accusés de lecture (qui a ouvert quoi, quand) sont-ils une donnée personnelle
+soumise à information préalable (déclaration CNDP, §6) ? Durée de conservation des annonces,
+commentaires, réponses de sondage et lectures après le départ d'un résident (anonymisation §5 :
+l'auteur d'un commentaire anonymisé garde son texte ?). Le SMS d'urgence vers tous les membres
+suppose un consentement : à confirmer avec la déclaration CNDP.
+
+### 12.4 — Annonces à valeur légale
+
+**À confirmer :** une annonce de catégorie AG (ordre du jour, rappel) peut-elle tenir lieu de
+convocation ou d'affichage réglementaire ? Le module la traite comme une information : la
+convocation reste celle du module AG (délais légaux, PV).
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.

@@ -587,6 +587,74 @@ paiement d'une fiche = paiement de la dépense liée (aucun second flux d'argent
   §11.1) ; recalcul rétroactif des fiches validées ; tâches M22 de fin de CDD ; saisie de paie et
   évaluations sur mobile (web-first, voir parité) ; purge / rétention du dossier après départ.
 
+## M21 — Communication : tableau d'affichage, sondages, contacts utiles
+
+*Réf. Doc A §8 (information des copropriétaires), §12 (confidentialité), §6 (seule l'AG décide).
+Domaine : `18-communication.md`. Juridique : brief §12. Branche `feature/m21-communication`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `CategorieAnnonce`, `AudienceCommunication`,
+`StatutAnnonce`, `StatutSondage` ; tables `annonce`, `annonce_lecture`, `annonce_commentaire`,
+`sondage`, `sondage_reponse`, `contact_utile` ; colonnes `utilisateur.preferences_notification_json`
+(préférences de notification, absente du Master Spec — le prompt demandait de la signaler),
+`lot.batiment` (cible de l'audience BATIMENT, absente du modèle `lot`), `document.annonce_id`
+(pièces jointes ANNONCE_PJ) ; fonctions SQL `communication_audience_ok`, `annonce_visible`,
+`sondage_visible`, `sondage_resultats`, `sondage_participation`, `communication_identites`
+(SECURITY DEFINER) ; permissions `annonces.lire / gerer / commenter / moderer`, `sondages.gerer /
+repondre`, `contacts.gerer` ; codes `ANNONCE_STATUT_INVALIDE`, `COMMENTAIRES_DESACTIVES`,
+`SONDAGE_STATUT_INVALIDE`, `SONDAGE_DEJA_REPONDU` (409), `SONDAGE_CHOIX_INVALIDE` ; plafond
+`RATE_LIMIT_COMMENTAIRE_MAX` (10 / 10 min). **Écarts par rapport au prompt** : (1) la publication
+programmée garde l'annonce en BROUILLON (invisible) et un job horaire la publie — pas de statut
+supplémentaire ; (2) le digest « e-mail » par défaut suit le repli SMS existant quand l'utilisateur
+n'a pas d'e-mail (comportement de `envoyerNotification`) ; (3) le test « négatif sur la vue SQL » est
+porté par la policy RLS de `sondage_reponse` (chacun ne lit que la sienne, même le syndic) et par la
+fonction agrégée — pas de vue ; (4) les pièces jointes, la modification d'un brouillon et la gestion
+des contacts restent web-first sur le mobile (parité) ; (5) contacts utiles seedés avec les numéros
+nationaux (15, 19, 177, 141) — le CHECK initial (≥ 3 caractères) a été assoupli par migration.
+
+- [x] **Livré (08/09)** — Migrations `..._m21_communication` (tables, CHECKs, fonctions d'audience
+  et de résultats agrégés, RLS : annonces / sondages lus par audience ou gestion, lectures et réponses
+  append-only et propres à chacun, commentaires modérables par le syndic, contacts tenant),
+  `..._m21_identites_fn`, `..._m21_contact_telephone_court`. Seed Al Amal : bâtiments A / B, 7
+  contacts utiles, 7 annonces (URGENCE épinglée commentée avec un commentaire masqué, TRAVAUX
+  bâtiment B avec pièce jointe, AG propriétaires, convivialité, règlement, brouillon programmé,
+  archivée), 3 sondages (ouvert pondéré avec réponses, clos multi-choix, brouillon), préférences.
+- [x] **Livré (08/09)** — API tag `Communication` (27 opérations) : annonces (liste filtrée par
+  audience + `meta.non_lues`, export csv / xlsx, création assainie, upload-url, détail avec pièces
+  signées et commentaires, modification, suppression d'un brouillon, publication immédiate /
+  programmée avec fan-out et SMS d'urgence, archivage, accusé de lecture idempotent, statistiques de
+  lecture, commentaire limité en débit, modération), sondages (liste, création, détail avec ma
+  réponse et résultats agrégés, modification / suppression d'un brouillon, ouvrir, clore, répondre
+  409 / 422, résultats pondérés et non pondérés), contacts utiles (CRUD), préférences de
+  notification. `PATCH /lots/{id}` accepte `batiment`. Jobs `communication-digest-hebdo` (lundi 09:00,
+  idempotent par semaine ISO, préférences respectées) et `communication-programmees-horaire`.
+  Notifications FR/AR `ANNONCE_PUBLIEE`, `ANNONCE_URGENTE`, `ANNONCE_COMMENTAIRE`, `SONDAGE_OUVERT`,
+  `SONDAGE_CLOS`, `COMMUNICATION_DIGEST`. Audit `ANNONCE_CREEE/MODIFIEE/PUBLIEE/PROGRAMMEE/ARCHIVEE/
+  SUPPRIMEE`, `COMMENTAIRE_MASQUE`, `SONDAGE_CREE/MODIFIE/OUVERT/CLOS/SUPPRIME`, `CONTACT_UTILE_*`.
+  Tests `tests/communication.test.ts` (10) : assainissement, audience PROPRIETAIRES (RLS + fan-out :
+  le locataire ne reçoit rien), audience BATIMENT, URGENCE push + SMS, lectures (comptes gestion,
+  liste interdite au résident, RLS), commentaires / modération / désactivation, publication
+  programmée par le job (une fois), sondage (ouverture, 409 double réponse, choix contrôlés, résultats
+  pondérés 60 / 40 sans jamais un répondant, RLS négative sur `sondage_reponse`), clôture manuelle /
+  automatique, digest idempotent et préférences, contacts.
+- [x] **Livré (08/09)** — Web : `affichage/` (fil épinglé, catégories, brouillons / archivées pour la
+  gestion, badge non lues, sondages, contacts tap-to-call, export), `affichage/[id]` (Markdown rendu
+  sans HTML, pièces jointes dans la visionneuse, commentaires + modération, accusé de lecture
+  automatique, lectures « lu par n / N » pour la gestion, publier / programmer / archiver / supprimer),
+  `affichage/nouveau` et `[id]/modifier` (composer : audience, bâtiment, expiration, épingle,
+  commentaires, pièces jointes, brouillon ou publication immédiate), `affichage/sondages/nouveau` et
+  `[id]` (réponse, résultats en barres, ouvrir / clore), `affichage/contacts` (syndic), préférences
+  de notification dans le profil, carte « Tableau d'affichage » du tableau de bord résident, champ
+  bâtiment sur le formulaire de lot, navigation pour tous les rôles sauf prestataire, FR/AR RTL.
+- [x] **Livré (08/09)** — Mobile `features/communication/communication_screens.dart` : fil (chips de
+  catégorie, badge non lues, sondages, contacts tap-to-call), détail (lecture automatique, pièces
+  jointes, commentaires, modération / publier / archiver pour la gestion, « lu par n / N »), sondage
+  (réponse, résultats, ouvrir / clore), composer d'annonce et de sondage (feuilles), préférences dans
+  le profil, section du tableau de bord résident, onglet « Annonces » des résidents, deep-links,
+  invalidation temps réel ; test routeur M21.
+- [ ] **Non livré / à confirmer** : pièces jointes depuis le mobile ; envoi WhatsApp (canal phase 2) ;
+  brouillons collaboratifs ; traduction automatique FR ↔ AR du contenu ; rétention / anonymisation
+  des commentaires (brief §12.3).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

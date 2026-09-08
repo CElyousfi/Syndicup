@@ -16,6 +16,7 @@ import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../documents/documents_screen.dart';
+import '../communication/communication_screens.dart';
 import '../shell/app_shell.dart';
 
 /// B1→B5 : LE tableau de bord est différent par rôle.
@@ -344,6 +345,9 @@ class _DashResident extends ConsumerWidget {
     final visites = ref.watch(visitesProvider);
     final notifs = ref.watch(notificationsProvider);
     final documents = ref.watch(documentsProvider);
+    // M21 : dernières annonces du tableau d'affichage + non lues.
+    final annonces = ref.watch(annoncesProvider(null)).valueOrNull ?? const <Annonce>[];
+    final annoncesNonLues = ref.watch(annoncesNonLuesProvider).valueOrNull ?? 0;
     // M15 : séjours LCD (propriétaires, gestionnaire) — liste vide pour les autres.
     final sejoursLcd = ctx.declareSejoursLcd ? (ref.watch(lcdSejoursProvider).valueOrNull ?? const <LcdSejour>[]) : const <LcdSejour>[];
 
@@ -357,6 +361,8 @@ class _DashResident extends ConsumerWidget {
       ref.invalidate(visitesProvider);
       ref.invalidate(notificationsProvider);
       ref.invalidate(documentsProvider);
+      ref.invalidate(annoncesProvider);
+      ref.invalidate(annoncesNonLuesProvider);
     }
 
     final mesLots = (lots.valueOrNull ?? const <Lot>[]).where((x) => x.concerne(ctx.profil.id)).toList();
@@ -398,6 +404,8 @@ class _DashResident extends ConsumerWidget {
           ] else ...[
             SuBanner(tone: BannerTone.info, title: md.noFinancesTitle, body: md.noFinancesBody),
           ],
+          SectionHeader(d.communication.titre, subtitle: annoncesNonLues > 0 ? fill(d.communication.nonLues, {'n': '$annoncesNonLues'}) : null, actionLabel: d.common.seeAll, onAction: () => context.push('/affichage')),
+          if (annonces.isEmpty) SuCard(child: Text(d.communication.aucune, style: t.bodySmall)) else for (final a in annonces.take(3)) Padding(padding: const EdgeInsets.only(bottom: 10), child: AnnonceCard(a)),
           SectionHeader(d.dash.raccourcis),
           TwoCols([
             StatTile(label: d.nav.incidents, value: '${mesIncidents.length}', tone: Tone.sand, hint: d.dash.signalerIncident, onTap: () => context.push('/incidents/nouveau')),

@@ -44,6 +44,7 @@ IconData navIcon(String key) => switch (key) {
       'receipt' => Icons.receipt_long_rounded,
       'pie' => Icons.pie_chart_rounded,
       'handshake' => Icons.handshake_rounded,
+      'megaphone' => Icons.campaign_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -70,6 +71,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   final prestataires = NavItem('/prestataires', d.prestataires, 'send');
   // M19 — contrats, assurances, échéances (syndic gère sur le web ; mobile : lecture + push).
   final contrats = NavItem('/contrats', d.contrats, 'handshake');
+  // M21 — tableau d'affichage (annonces, sondages, contacts utiles) : tout membre sauf le prestataire.
+  final affichage = NavItem('/affichage', d.affichage, 'megaphone');
   final espaces = NavItem('/espaces-communs', d.espaces, 'home');
   final reservations = NavItem('/reservations', d.reservations, 'calendar');
   final visites = NavItem('/visites', d.visites, 'door');
@@ -96,7 +99,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
       return [
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
-        NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
+        NavSection(s.vieCollective, [affichage, ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
       ];
@@ -104,7 +107,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
       return [
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
-        NavSection(s.vieCollective, [ag, incidents(), reservations, litiges]),
+        NavSection(s.vieCollective, [affichage, ag, incidents(), reservations, litiges]),
         NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
       ];
     case 'PROPRIETAIRE':
@@ -113,26 +116,26 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
       return [
         NavSection(null, [dashboard]),
         NavSection(s.finances, [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets]),
-        NavSection(s.vieCollective, [ag, incidents(dict.incidents.mesSignalements), litiges]),
+        NavSection(s.vieCollective, [affichage, ag, incidents(dict.incidents.mesSignalements), litiges]),
         NavSection(s.quotidien, [espaces, reservations, visites, lcd, documents]),
       ];
     case 'GESTIONNAIRE_LCD':
       return [
         NavSection(null, [dashboard, lcd]),
-        NavSection(s.vieCollective, [incidents(dict.incidents.mesSignalements)]),
+        NavSection(s.vieCollective, [affichage, incidents(dict.incidents.mesSignalements)]),
         NavSection(s.quotidien, [documents, notifications]),
       ];
     case 'LOCATAIRE':
       return [
         NavSection(null, [dashboard]),
         NavSection(s.finances, [payer, transparence]),
-        NavSection(s.vieCollective, [incidents(dict.incidents.mesSignalements), litiges]),
+        NavSection(s.vieCollective, [affichage, incidents(dict.incidents.mesSignalements), litiges]),
         NavSection(s.quotidien, [lots(dict.lots.mesLots), espaces, reservations, visites, documents]),
       ];
     case 'GARDIEN':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.quotidien, [visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents]),
+        NavSection(s.quotidien, [affichage, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents]),
       ];
     default: // PRESTATAIRE
       return [
@@ -145,10 +148,10 @@ const Map<String, List<String>> _tabsParRole = {
   'SUPER_ADMIN': ['shield', 'building'],
   'SYNDIC': ['grid', 'coins', 'wrench', 'building'],
   'CONSEIL_SYNDICAL': ['grid', 'coins', 'wrench', 'building'],
-  'PROPRIETAIRE': ['grid', 'chart', 'wrench', 'home'],
-  'INDIVISAIRE': ['grid', 'chart', 'wrench', 'home'],
-  'PERSONNE_MORALE_REPRESENTANT': ['grid', 'chart', 'wrench', 'home'],
-  'LOCATAIRE': ['grid', 'wrench', 'calendar', 'file'],
+  'PROPRIETAIRE': ['grid', 'megaphone', 'chart', 'wrench'],
+  'INDIVISAIRE': ['grid', 'megaphone', 'chart', 'wrench'],
+  'PERSONNE_MORALE_REPRESENTANT': ['grid', 'megaphone', 'chart', 'wrench'],
+  'LOCATAIRE': ['grid', 'megaphone', 'wrench', 'calendar'],
   'GARDIEN': ['grid', 'door', 'suitcase', 'wrench'],
   'GESTIONNAIRE_LCD': ['grid', 'suitcase', 'wrench', 'file'],
   'PRESTATAIRE': ['grid', 'wrench'],

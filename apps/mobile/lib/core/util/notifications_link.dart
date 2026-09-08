@@ -23,6 +23,10 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
   if (templateCode.startsWith('JUSTIFICATIF_') || templateCode == 'PAIEMENT_VALIDE' || templateCode == 'PAIEMENT_ESPECES_SAISI') {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
+  // M21 — tableau d'affichage : annonce, commentaire, sondage, récapitulatif hebdomadaire.
+  if (templateCode.startsWith('ANNONCE_')) return id('annonce_id') != null ? '/affichage/${id('annonce_id')}' : '/affichage';
+  if (templateCode.startsWith('SONDAGE_')) return id('sondage_id') != null ? '/affichage/sondages/${id('sondage_id')}' : '/affichage';
+  if (templateCode == 'COMMUNICATION_DIGEST') return '/affichage';
   // M20 — personnel RH : congés (syndic → dossier de l'employé ; employé → son dossier), paie, fin de CDD.
   if (templateCode.startsWith('CONGE_')) return id('personnel_id') != null ? '/personnel/${id('personnel_id')}?onglet=conges' : '/personnel/me?onglet=conges';
   if (templateCode == 'PAIE_VALIDEE') return id('personnel_id') != null ? '/personnel/${id('personnel_id')}?onglet=paie' : '/personnel/me?onglet=paie';
