@@ -24,6 +24,11 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
   // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
+  // M23 — parkings : attribution / expiration → fiche emplacement ; badges → registre ; véhicule gênant → incident ; visiteur → places du jour.
+  if (templateCode.startsWith('ATTRIBUTION_')) return id('emplacement_id') != null ? '/parkings/${id('emplacement_id')}' : '/parkings';
+  if (templateCode.startsWith('BADGE_')) return '/parkings?onglet=badges';
+  if (templateCode == 'VEHICULE_MAL_STATIONNE') return id('incident_id') != null ? '/incidents/${id('incident_id')}' : '/parkings';
+  if (templateCode == 'VISITEUR_DEPASSEMENT') return '/parkings?onglet=visiteurs';
   if (templateCode == 'TACHES_EN_RETARD_HEBDO') return '/taches';
   if (templateCode.startsWith('TACHE_')) return id('tache_id') != null ? '/taches/${id('tache_id')}' : '/taches';
   // M21 — tableau d'affichage : annonce, commentaire, sondage, récapitulatif hebdomadaire.

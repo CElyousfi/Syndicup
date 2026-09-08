@@ -75,6 +75,12 @@ class _AppShellState extends ConsumerState<AppShell> {
       ref.invalidate(mesTachesProvider);
       ref.invalidate(tachesProvider);
     }
+    if (t.startsWith('ATTRIBUTION_') || t.startsWith('BADGE_') || t == 'VISITEUR_DEPASSEMENT') {
+      ref.invalidate(planEmplacementsProvider);
+      ref.invalidate(attributionsProvider);
+      ref.invalidate(badgesProvider);
+      ref.invalidate(visiteursAujourdhuiProvider);
+    }
     if (t.startsWith('ANNONCE_') || t.startsWith('SONDAGE_') || t == 'COMMUNICATION_DIGEST') {
       ref.invalidate(annoncesProvider);
       ref.invalidate(annoncesNonLuesProvider);

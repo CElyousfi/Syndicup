@@ -18,6 +18,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../depenses/depenses_screens.dart';
+import '../parkings/parkings_screens.dart' show notifierVehiculeGenant;
 import '../shell/app_shell.dart';
 
 IconData iconCategorie(String c) => switch (c) {
@@ -103,6 +104,9 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
   String _urgence = 'NORMALE';
   String? _lot;
   String? _sejour;
+  // M23 — « véhicule sur ma place » : emplacement concerné et plaque signalée (catégorie PARKING).
+  String? _emplacement;
+  final _plaque = TextEditingController();
   final _sous = TextEditingController();
   final _desc = TextEditingController();
   final List<XFile> _photos = [];
@@ -128,6 +132,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
     final t = Theme.of(context).textTheme;
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final mesLots = ctx.isResident ? lots.where((x) => x.concerne(ctx.profil.id)).toList() : lots;
+    final emplacements = ref.watch(planEmplacementsProvider).valueOrNull?.niveaux.expand((n) => n.emplacements).toList() ?? const <Emplacement>[];
     // Séjours LCD en cours (M15) : sélecteur affiché seulement s'il y en a (ou si un séjour est pré-lié).
     final sejoursEnCours = ref.watch(lcdSejoursEnCoursProvider).valueOrNull ?? const <LcdSejour>[];
     final sejourOptions = [...sejoursEnCours, if (_sejour != null && !sejoursEnCours.any((s) => s.id == _sejour)) null];
@@ -211,6 +216,12 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
           ),
           const SizedBox(height: 14),
         ],
+        if (_categorie == 'PARKING') ...[
+          SuSelect<String?>(label: d.incidents.emplacementConcerne, value: _emplacement, options: [null, ...emplacements.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : emplacements.where((x) => x.id == v).map((x) => '${x.code} · ${d.enumsParkings.typeEmplacement[x.type] ?? x.type}').firstOrNull ?? v, onChanged: (v) => setState(() => _emplacement = v), help: d.incidents.emplacementConcerneAide, error: fieldError(_fail, 'emplacement_id')),
+          const SizedBox(height: 14),
+          SuField(label: d.incidents.immatriculationSignalee, controller: _plaque, hint: '12345-A-6', help: d.incidents.immatriculationSignaleeAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'immatriculation_signalee'), keyboardType: TextInputType.visiblePassword),
+          const SizedBox(height: 14),
+        ],
         Text(d.incidents.photos, style: t.labelMedium?.copyWith(color: SuColors.ink)),
         const SizedBox(height: 6),
         Wrap(
@@ -275,6 +286,8 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
       'partie': _partie,
       'urgence': _urgence,
       if (_sejour != null) 'sejour_id': _sejour,
+      if (_categorie == 'PARKING' && _emplacement != null) 'emplacement_id': _emplacement,
+      if (_categorie == 'PARKING' && _plaque.text.trim().isNotEmpty) 'immatriculation_signalee': _plaque.text.trim(),
       if (chemins.isNotEmpty) 'photos': chemins,
     }, parse: (j) => Incident.fromJson(asMap(j)));
     if (!mounted) return;
@@ -406,6 +419,13 @@ class IncidentDetailScreen extends ConsumerWidget {
                 SectionHeader(d.depenses.depensesLiees, subtitle: i.totalDepenses == null ? null : '${d.depenses.totalDepensesLiees} : ${formatMAD(i.totalDepenses, l)}'),
                 CardList([for (final x in i.depenses) DepenseRow(x)]),
               ],
+              // M23 — plaque signalée / emplacement : le gardien ou le syndic prévient le lot propriétaire.
+              if (i.immatriculationSignalee != null || i.emplacementId != null)
+                SuCard(margin: const EdgeInsets.only(top: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (i.immatriculationSignalee != null) KeyValueRow(d.incidents.immatriculationSignalee, i.immatriculationSignalee!, mono: true),
+                  if (i.emplacementId != null) KeyValueRow(d.incidents.emplacementConcerne, d.parkings.titre, valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? TextButton(onPressed: () => context.push('/parkings/${i.emplacementId}'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)), child: Text(d.parkings.titre)) : null),
+                  if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(onPressed: () => notifierVehiculeGenant(context, ref, i), icon: const Icon(Icons.campaign_rounded, size: 18), label: Text(d.incidents.notifierVehicule))),
+                ])),
               if (peutChanger && i.statut != 'FERME') ...[
                 const SizedBox(height: 12),
                 FilledButton.icon(onPressed: () => _changerStatut(context, ref, i), icon: const Icon(Icons.swap_vert_rounded), label: Text(d.incidents.changerStatut)),

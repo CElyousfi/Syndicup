@@ -18,6 +18,7 @@ import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../rapports/rapports_screens.dart' show ReleveButton;
 import '../lcd/lcd_screens.dart';
+import '../parkings/parkings_screens.dart' show VehiculeForm;
 import '../shell/app_shell.dart';
 
 /// C1 — liste des lots (résident : ses lots ; syndic : tous, avec solde).
@@ -116,7 +117,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 4, vsync: this, initialIndex: widget.onglet == 'finances' ? 2 : 0);
+    _tabs = TabController(length: 5, vsync: this, initialIndex: widget.onglet == 'finances' ? 2 : widget.onglet == 'parkings' ? 3 : 0);
   }
 
   @override
@@ -150,7 +151,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
               ],
             ),
         ],
-        bottom: TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: d.lots.onglets.propriete), Tab(text: d.lots.onglets.occupation), Tab(text: d.lots.onglets.finances), Tab(text: d.lots.onglets.historique)]),
+        bottom: TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: d.lots.onglets.propriete), Tab(text: d.lots.onglets.occupation), Tab(text: d.lots.onglets.finances), Tab(text: d.lots.onglets.parkings), Tab(text: d.lots.onglets.historique)]),
       ),
       body: AsyncView(
         lot,
@@ -162,6 +163,7 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
             _Propriete(lot: x),
             _Occupation(lot: x),
             _Finances(lot: x),
+            _Parkings(lot: x),
             _Historique(lot: x),
           ],
         ),
@@ -486,6 +488,47 @@ class _Historique extends StatelessWidget {
                 for (final p in termines)
                   ListRow(leading: const IconCircle(Icons.swap_horiz_rounded, tone: Tone.neutral, size: 36), title: nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? p.utilisateurId.substring(0, 8), subtitle: '${formatDateCourte(p.dateDebut, l)} → ${formatDateCourte(p.dateFin, l)}'),
               ]),
+      ],
+    );
+  }
+}
+
+/// M23 — parkings & badges du lot : attributions, véhicules déclarés, badges (déclaration de véhicule ; perte de badge).
+class _Parkings extends ConsumerWidget {
+  const _Parkings({required this.lot});
+  final Lot lot;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ctx = ref.watch(appContextProvider);
+    final d = context.dict;
+    final p = d.parkings;
+    final e = d.enumsParkings;
+    final l = context.locale;
+    final t = Theme.of(context).textTheme;
+    final attributions = ref.watch(attributionsProvider(lot.id));
+    final vehicules = ref.watch(vehiculesProvider(lot.id));
+    final badges = ref.watch(badgesProvider(lot.id));
+    final peutDeclarer = ctx.isGestion || lot.concerne(ctx.profil.id);
+    Future<void> declarer() async {
+      final ok = await showFormSheet<bool>(context, title: p.declarerVehicule, builder: (_) => VehiculeForm(ctx: ctx, lotId: lot.id));
+      if (ok == true) ref.invalidate(vehiculesProvider);
+    }
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        _EnTete(lot),
+        SectionHeader(p.onglets.mesAttributions, actionLabel: ctx.isGestion || ctx.isConseil || ctx.isGardien ? p.titre : null, onAction: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings') : null),
+        AsyncView(attributions, onRetry: () => ref.invalidate(attributionsProvider(lot.id)), data: (rows) => rows.isEmpty
+            ? SuCard(child: Text(p.aucuneAttribution, style: t.bodySmall))
+            : CardList([for (final a in rows) ListRow(leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral, size: 36), title: '${a.emplacementCode} · ${e.typeAttribution[a.type] ?? a.type}', subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : p.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}', trailing: StatusBadge(a.active ? p.active : p.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true), onTap: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings/${a.emplacementId}') : null)])),
+        SectionHeader(p.vehicules, actionLabel: peutDeclarer ? p.declarerVehicule : null, onAction: peutDeclarer ? declarer : null),
+        AsyncView(vehicules, onRetry: () => ref.invalidate(vehiculesProvider(lot.id)), data: (rows) => rows.isEmpty
+            ? SuCard(child: Text(p.aucunVehicule, style: t.bodySmall))
+            : CardList([for (final v in rows) ListRow(leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral, size: 36), title: v.immatriculation, subtitle: '${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}', trailing: StatusBadge(v.actif ? p.actif : p.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true))])),
+        SectionHeader(p.badges),
+        AsyncView(badges, onRetry: () => ref.invalidate(badgesProvider(lot.id)), data: (rows) => rows.isEmpty
+            ? SuCard(child: Text(p.aucunBadge, style: t.bodySmall))
+            : CardList([for (final b in rows) ListRow(leading: IconCircle(Icons.badge_rounded, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral, size: 36), title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}', subtitle: '${p.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${p.caution} ${formatMAD(b.cautionMontant, l)}' : ''}', trailing: StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true))])),
       ],
     );
   }

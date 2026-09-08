@@ -514,7 +514,9 @@ class Incident {
   final int? notePrestataire;
   final String? commentairePrestataire, totalDepenses;
   final List<Depense> depenses;
-  const Incident({required this.id, required this.coproprieteId, this.lotId, required this.categorie, required this.sousCategorie, this.description, required this.partie, required this.urgence, required this.statut, required this.creePar, this.assigneAId, this.slaDeadline, this.photos = const [], required this.creeLe, required this.modifieLe, this.journal = const [], this.createur, this.notePrestataire, this.commentairePrestataire, this.totalDepenses, this.depenses = const []});
+  // M23 — « véhicule sur ma place » : emplacement concerné et plaque signalée.
+  final String? emplacementId, immatriculationSignalee;
+  const Incident({required this.id, required this.coproprieteId, this.lotId, required this.categorie, required this.sousCategorie, this.description, required this.partie, required this.urgence, required this.statut, required this.creePar, this.assigneAId, this.slaDeadline, this.photos = const [], required this.creeLe, required this.modifieLe, this.journal = const [], this.createur, this.notePrestataire, this.commentairePrestataire, this.totalDepenses, this.depenses = const [], this.emplacementId, this.immatriculationSignalee});
   factory Incident.fromJson(Map<String, dynamic> j) => Incident(
         id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), lotId: _sn(j, 'lotId'), categorie: _s(j, 'categorie'),
         sousCategorie: _s(j, 'sousCategorie'), description: _sn(j, 'description'), partie: _s(j, 'partie'), urgence: _s(j, 'urgence'),
@@ -524,6 +526,7 @@ class Incident {
         journal: _list(j['journal'] ?? j['logs'], IncidentLog.fromJson),
         createur: _map(j['createur']) == null ? null : IncidentActeur.fromJson(_map(j['createur'])!),
         notePrestataire: _in(j, 'notePrestataire'), commentairePrestataire: _sn(j, 'commentairePrestataire'), totalDepenses: _sn(j, 'total_depenses'),
+        emplacementId: _sn(j, 'emplacementId'), immatriculationSignalee: _sn(j, 'immatriculationSignalee'),
         depenses: _list(j['depenses'], Depense.fromJson),
       );
   bool get ouvert => statut == 'OUVERT' || statut == 'EN_COURS';
@@ -814,10 +817,13 @@ class PlanningPersonnel {
 
 class Visite {
   final String id, coproprieteId, gardienId, lotId, visiteurNom, statut, horodatage;
-  const Visite({required this.id, required this.coproprieteId, required this.gardienId, required this.lotId, required this.visiteurNom, required this.statut, required this.horodatage});
+  // M23 — place visiteur attribuée par le gardien (plaque, heure limite).
+  final String? emplacementId, immatriculation, heureLimite;
+  const Visite({required this.id, required this.coproprieteId, required this.gardienId, required this.lotId, required this.visiteurNom, required this.statut, required this.horodatage, this.emplacementId, this.immatriculation, this.heureLimite});
   factory Visite.fromJson(Map<String, dynamic> j) => Visite(
         id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), gardienId: _s(j, 'gardienId'), lotId: _s(j, 'lotId'),
         visiteurNom: _s(j, 'visiteurNom'), statut: _s(j, 'statut'), horodatage: _s(j, 'horodatage'),
+        emplacementId: _sn(j, 'emplacementId'), immatriculation: _sn(j, 'immatriculation'), heureLimite: _sn(j, 'heureLimite'),
       );
 }
 
@@ -1380,4 +1386,102 @@ class ExecutionResolution {
   final List<Map<String, dynamic>> taches;
   const ExecutionResolution({required this.resolutionId, required this.resultat, required this.necessiteExecution, required this.taches});
   factory ExecutionResolution.fromJson(Map<String, dynamic> j) => ExecutionResolution(resolutionId: _s(j, 'resolution_id'), resultat: _s(j, 'resultat'), necessiteExecution: _b(j, 'necessite_execution'), taches: ((j['taches'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList());
+}
+
+// ── M23 — Parkings et caves (Doc A §4) ───────────────────────────────────────
+class AttributionEmplacement {
+  final String id, emplacementId, lotId, type, dateDebut, creeLe;
+  final String? lotNumero, dateFin, resolutionAgId, redevanceMensuelle, notes;
+  final bool active;
+  final IdentiteCourte? creePar;
+  final Map<String, dynamic>? emplacement;
+  const AttributionEmplacement({required this.id, required this.emplacementId, required this.lotId, required this.type, required this.dateDebut, required this.creeLe, this.lotNumero, this.dateFin, this.resolutionAgId, this.redevanceMensuelle, this.notes, required this.active, this.creePar, this.emplacement});
+  factory AttributionEmplacement.fromJson(Map<String, dynamic> j) => AttributionEmplacement(
+        id: _s(j, 'id'), emplacementId: _s(j, 'emplacementId'), lotId: _s(j, 'lotId'), type: _s(j, 'type'), dateDebut: _s(j, 'dateDebut'), creeLe: _s(j, 'creeLe'),
+        lotNumero: _sn(j, 'lotNumero'), dateFin: _sn(j, 'dateFin'), resolutionAgId: _sn(j, 'resolutionAgId'), redevanceMensuelle: _sn(j, 'redevanceMensuelle'), notes: _sn(j, 'notes'),
+        active: _b(j, 'active'), creePar: j['creePar'] is Map ? IdentiteCourte.fromJson(_map(j['creePar'])) : null, emplacement: _map(j['emplacement']),
+      );
+  String get emplacementCode => '${emplacement?['code'] ?? '—'}';
+}
+
+class Emplacement {
+  final String id, type, code, statut, creeLe;
+  final String? niveau, notes;
+  final bool attribuable, visiteurOccupee;
+  final int nbAttributions;
+  final AttributionEmplacement? attributionCourante;
+  final List<AttributionEmplacement> attributions;
+  const Emplacement({required this.id, required this.type, required this.code, required this.statut, required this.creeLe, this.niveau, this.notes, required this.attribuable, this.visiteurOccupee = false, required this.nbAttributions, this.attributionCourante, this.attributions = const []});
+  factory Emplacement.fromJson(Map<String, dynamic> j) => Emplacement(
+        id: _s(j, 'id'), type: _s(j, 'type'), code: _s(j, 'code'), statut: _s(j, 'statut'), creeLe: _s(j, 'creeLe'), niveau: _sn(j, 'niveau'), notes: _sn(j, 'notes'),
+        attribuable: _b(j, 'attribuable', true), visiteurOccupee: _b(j, 'visiteurOccupee'), nbAttributions: _in(j, 'nbAttributions') ?? 0,
+        attributionCourante: j['attributionCourante'] is Map ? AttributionEmplacement.fromJson(_map(j['attributionCourante'])!) : null,
+        attributions: _list(j['attributions'], AttributionEmplacement.fromJson),
+      );
+  bool get occupee => statut == 'ATTRIBUE' || visiteurOccupee;
+}
+
+class PlanEmplacements {
+  final List<({String niveau, List<Emplacement> emplacements})> niveaux;
+  final int total, attribues, disponibles, horsService, visiteurs, visiteursOccupees;
+  const PlanEmplacements({required this.niveaux, required this.total, required this.attribues, required this.disponibles, required this.horsService, required this.visiteurs, required this.visiteursOccupees});
+  factory PlanEmplacements.fromJson(Map<String, dynamic> j) {
+    final t = _map(j['totaux']) ?? const {};
+    return PlanEmplacements(
+      niveaux: ((j['niveaux'] as List?) ?? const []).map((n) { final m = (n as Map).cast<String, dynamic>(); return (niveau: _s(m, 'niveau'), emplacements: _list(m['emplacements'], Emplacement.fromJson)); }).toList(),
+      total: _in(t, 'total') ?? 0, attribues: _in(t, 'attribues') ?? 0, disponibles: _in(t, 'disponibles') ?? 0, horsService: _in(t, 'hors_service') ?? 0, visiteurs: _in(t, 'visiteurs') ?? 0, visiteursOccupees: _in(t, 'visiteurs_occupees') ?? 0,
+    );
+  }
+}
+
+class Vehicule {
+  final String id, lotId, immatriculation, type, creeLe;
+  final String? lotNumero, utilisateurId, marque, couleur;
+  final bool actif;
+  const Vehicule({required this.id, required this.lotId, required this.immatriculation, required this.type, required this.creeLe, this.lotNumero, this.utilisateurId, this.marque, this.couleur, required this.actif});
+  factory Vehicule.fromJson(Map<String, dynamic> j) => Vehicule(
+        id: _s(j, 'id'), lotId: _s(j, 'lotId'), immatriculation: _s(j, 'immatriculation'), type: _s(j, 'type'), creeLe: _s(j, 'creeLe'),
+        lotNumero: _sn(j, 'lotNumero'), utilisateurId: _sn(j, 'utilisateurId'), marque: _sn(j, 'marque'), couleur: _sn(j, 'couleur'), actif: _b(j, 'actif', true),
+      );
+  String get description => [marque, couleur].whereType<String>().where((x) => x.isNotEmpty).join(' · ');
+}
+
+class RechercheVehicule {
+  final String immatriculation;
+  final Vehicule? exact;
+  final List<Vehicule> similaires;
+  const RechercheVehicule({required this.immatriculation, this.exact, this.similaires = const []});
+  factory RechercheVehicule.fromJson(Map<String, dynamic> j) => RechercheVehicule(immatriculation: _s(j, 'immatriculation'), exact: j['exact'] is Map ? Vehicule.fromJson(_map(j['exact'])!) : null, similaires: _list(j['similaires'], Vehicule.fromJson));
+}
+
+/// Plaque active (cache hors-ligne du gardien) : plaque → lot.
+class PlaqueActive {
+  final String immatriculation, type;
+  final String? lot, marque, couleur;
+  const PlaqueActive({required this.immatriculation, required this.type, this.lot, this.marque, this.couleur});
+  factory PlaqueActive.fromJson(Map<String, dynamic> j) => PlaqueActive(immatriculation: _s(j, 'immatriculation'), type: _s(j, 'type'), lot: _sn(j, 'lot'), marque: _sn(j, 'marque'), couleur: _sn(j, 'couleur'));
+  Map<String, dynamic> toJson() => {'immatriculation': immatriculation, 'type': type, 'lot': lot, 'marque': marque, 'couleur': couleur};
+}
+
+class BadgeAcces {
+  final String id, lotId, type, identifiant, statut, remisLe, creeLe;
+  final String? lotNumero, restitueLe, cautionMontant, notes, tacheId;
+  final IdentiteCourte? remisPar;
+  final Map<String, dynamic>? cautionPaiement;
+  const BadgeAcces({required this.id, required this.lotId, required this.type, required this.identifiant, required this.statut, required this.remisLe, required this.creeLe, this.lotNumero, this.restitueLe, this.cautionMontant, this.notes, this.tacheId, this.remisPar, this.cautionPaiement});
+  factory BadgeAcces.fromJson(Map<String, dynamic> j) => BadgeAcces(
+        id: _s(j, 'id'), lotId: _s(j, 'lotId'), type: _s(j, 'type'), identifiant: _s(j, 'identifiant'), statut: _s(j, 'statut'), remisLe: _s(j, 'remisLe'), creeLe: _s(j, 'creeLe'),
+        lotNumero: _sn(j, 'lotNumero'), restitueLe: _sn(j, 'restitueLe'), cautionMontant: _sn(j, 'cautionMontant'), notes: _sn(j, 'notes'), tacheId: _sn(j, 'tache_id'),
+        remisPar: j['remisPar'] is Map ? IdentiteCourte.fromJson(_map(j['remisPar'])) : null, cautionPaiement: _map(j['cautionPaiement']),
+      );
+}
+
+class VisiteursAujourdhui {
+  final List<Map<String, dynamic>> visites, sejours, placesLibres;
+  const VisiteursAujourdhui({required this.visites, required this.sejours, required this.placesLibres});
+  factory VisiteursAujourdhui.fromJson(Map<String, dynamic> j) => VisiteursAujourdhui(
+        visites: ((j['visites'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+        sejours: ((j['sejours'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+        placesLibres: ((j['places_libres'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
+      );
 }

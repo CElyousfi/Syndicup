@@ -131,4 +131,18 @@ void main() {
     expect(lienNotification('TACHE_ECHEANCE', {'tache_id': 't1'}), '/taches/t1');
     expect(lienNotification('TACHES_EN_RETARD_HEBDO', {'nb': '3'}), '/taches');
   });
+  test('M23 : parkings & badges pour tout membre sauf le prestataire et le gestionnaire LCD ; deep-links attribution / badge / véhicule gênant / visiteur', () {
+    List<String> paths(String r) => buildNav(ctxFor(r), dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    for (final r in ['SYNDIC', 'CONSEIL_SYNDICAL', 'PROPRIETAIRE', 'LOCATAIRE', 'GARDIEN']) {
+      expect(paths(r), contains('/parkings'), reason: r);
+    }
+    for (final r in ['PRESTATAIRE', 'GESTIONNAIRE_LCD']) {
+      expect(paths(r), isNot(contains('/parkings')), reason: r);
+    }
+    expect(lienNotification('ATTRIBUTION_EMPLACEMENT', {'emplacement_id': 'e1'}), '/parkings/e1');
+    expect(lienNotification('ATTRIBUTION_EXPIREE', {'emplacement_id': 'e1'}), '/parkings/e1');
+    expect(lienNotification('BADGE_PERDU', {'badge_id': 'b1'}), '/parkings?onglet=badges');
+    expect(lienNotification('VEHICULE_MAL_STATIONNE', {'incident_id': 'i1'}), '/incidents/i1');
+    expect(lienNotification('VISITEUR_DEPASSEMENT', {'visite_id': 'v1'}), '/parkings?onglet=visiteurs');
+  });
 }

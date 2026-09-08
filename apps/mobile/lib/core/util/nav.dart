@@ -46,6 +46,7 @@ IconData navIcon(String key) => switch (key) {
       'handshake' => Icons.handshake_rounded,
       'megaphone' => Icons.campaign_rounded,
       'tasks' => Icons.task_alt_rounded,
+      'car' => Icons.directions_car_rounded,
       _ => Icons.circle_outlined,
     };
 
@@ -77,6 +78,8 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
   // M22 — tâches : syndic / conseil (registre), gardien (les siennes).
   final taches = NavItem('/taches', d.taches, 'tasks');
   final mesTaches = NavItem('/taches', d.mesTaches, 'tasks');
+  // M23 — parkings, véhicules, badges : gestion / conseil / gardien (plan, registres) ; résidents (leurs lots).
+  final parkings = NavItem('/parkings', d.parkings, 'car');
   final espaces = NavItem('/espaces-communs', d.espaces, 'home');
   final reservations = NavItem('/reservations', d.reservations, 'calendar');
   final visites = NavItem('/visites', d.visites, 'door');
@@ -104,7 +107,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [affichage, taches, ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
+        NavSection(s.quotidien, [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents]),
         NavSection(s.administration, [membres, invitations, parametres]),
       ];
     case 'CONSEIL_SYNDICAL':
@@ -112,7 +115,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations]),
         NavSection(s.vieCollective, [affichage, taches, ag, incidents(), reservations, litiges]),
-        NavSection(s.quotidien, [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents]),
+        NavSection(s.quotidien, [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents]),
       ];
     case 'PROPRIETAIRE':
     case 'INDIVISAIRE':
@@ -121,7 +124,7 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets]),
         NavSection(s.vieCollective, [affichage, ag, incidents(dict.incidents.mesSignalements), litiges]),
-        NavSection(s.quotidien, [espaces, reservations, visites, lcd, documents]),
+        NavSection(s.quotidien, [espaces, reservations, visites, parkings, lcd, documents]),
       ];
     case 'GESTIONNAIRE_LCD':
       return [
@@ -134,12 +137,12 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(null, [dashboard]),
         NavSection(s.finances, [payer, transparence]),
         NavSection(s.vieCollective, [affichage, incidents(dict.incidents.mesSignalements), litiges]),
-        NavSection(s.quotidien, [lots(dict.lots.mesLots), espaces, reservations, visites, documents]),
+        NavSection(s.quotidien, [lots(dict.lots.mesLots), espaces, reservations, visites, parkings, documents]),
       ];
     case 'GARDIEN':
       return [
         NavSection(null, [dashboard]),
-        NavSection(s.quotidien, [affichage, mesTaches, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents]),
+        NavSection(s.quotidien, [affichage, mesTaches, visites, parkings, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents]),
       ];
     default: // PRESTATAIRE
       return [

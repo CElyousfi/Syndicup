@@ -209,6 +209,32 @@ final executionResolutionProvider = FutureProvider.autoDispose.family<ExecutionR
   return unwrap(await ref.watch(apiClientProvider).get('/ag/${k.agId}/resolutions/${k.resolutionId}/execution', parse: (j) => ExecutionResolution.fromJson(asMap(j))));
 });
 
+// ── M23 — Parkings ───────────────────────────────────────────────────────────
+final planEmplacementsProvider = FutureProvider.autoDispose<PlanEmplacements>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/emplacements/plan', parse: (j) => PlanEmplacements.fromJson(asMap(j))));
+});
+final emplacementProvider = FutureProvider.autoDispose.family<Emplacement, String>((ref, id) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/emplacements/$id', parse: (j) => Emplacement.fromJson(asMap(j))));
+});
+/// Attributions visibles (résident : ses lots via RLS ; gestion : toutes) — clé = lot_id ou ''.
+final attributionsProvider = FutureProvider.autoDispose.family<List<AttributionEmplacement>, String>((ref, lotId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/emplacements/attributions', query: {if (lotId.isNotEmpty) 'lot_id': lotId}, parse: (j) => parseList(j, AttributionEmplacement.fromJson)));
+});
+final vehiculesProvider = FutureProvider.autoDispose.family<List<Vehicule>, String>((ref, lotId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/vehicules', query: {if (lotId.isNotEmpty) 'lot_id': lotId}, parse: (j) => parseList(j, Vehicule.fromJson)));
+});
+final badgesProvider = FutureProvider.autoDispose.family<List<BadgeAcces>, String>((ref, lotId) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/badges', query: {if (lotId.isNotEmpty) 'lot_id': lotId}, parse: (j) => parseList(j, BadgeAcces.fromJson)));
+});
+/// Places visiteurs en service (gardien / syndic : attribution à une visite).
+final placesVisiteursProvider = FutureProvider.autoDispose<List<Emplacement>>((ref) async {
+  final r = await ref.watch(apiClientProvider).get<List<Emplacement>>('/emplacements', query: {'type': 'PARKING_VISITEUR', 'limit': 100}, parse: (j) => parseList(j, Emplacement.fromJson));
+  return (r.dataOrNull ?? const []).where((x) => x.statut != 'HORS_SERVICE').toList();
+});
+final visiteursAujourdhuiProvider = FutureProvider.autoDispose<VisiteursAujourdhui>((ref) async {
+  return unwrap(await ref.watch(apiClientProvider).get('/parkings/visiteurs/aujourdhui', parse: (j) => VisiteursAujourdhui.fromJson(asMap(j))));
+});
+
 final visitesProvider = FutureProvider.autoDispose<List<Visite>>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/visites', parse: (j) => parseList(j, Visite.fromJson)));
 });

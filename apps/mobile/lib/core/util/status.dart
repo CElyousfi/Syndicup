@@ -46,3 +46,6 @@ const Map<String, BadgeVariant> sondageVariant = {'BROUILLON': BadgeVariant.outl
 // M22 — tâches.
 const Map<String, BadgeVariant> tacheVariant = {'A_FAIRE': BadgeVariant.outline, 'EN_COURS': BadgeVariant.info, 'BLOQUEE': BadgeVariant.danger, 'TERMINEE': BadgeVariant.ok, 'ANNULEE': BadgeVariant.neutral};
 const Map<String, BadgeVariant> prioriteVariant = {'BASSE': BadgeVariant.neutral, 'NORMALE': BadgeVariant.outline, 'HAUTE': BadgeVariant.warn, 'CRITIQUE': BadgeVariant.danger};
+// M23 — parkings.
+const emplacementVariant = {'DISPONIBLE': BadgeVariant.ok, 'ATTRIBUE': BadgeVariant.info, 'HORS_SERVICE': BadgeVariant.neutral};
+const badgeAccesVariant = {'ACTIF': BadgeVariant.ok, 'PERDU': BadgeVariant.danger, 'DESACTIVE': BadgeVariant.neutral, 'RESTITUE': BadgeVariant.outline};

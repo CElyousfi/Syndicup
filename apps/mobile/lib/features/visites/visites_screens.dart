@@ -15,6 +15,7 @@ import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../shell/app_shell.dart';
+import '../parkings/parkings_screens.dart' show PlaceVisiteurSheet;
 
 /// H2 (gardien, hors-ligne assumé, file de sync visible) / H3 (résident : répondre).
 class VisitesScreen extends ConsumerStatefulWidget {
@@ -71,13 +72,26 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
     final mesLots = lots.where((x) => x.concerne(ctx.profil.id)).map((x) => x.id).toSet();
     final racine = !context.canPop();
 
+    // M23 — place visiteur (gardien pour ses visites du jour, syndic) : plaque + heure limite.
+    final aujourdhui = DateTime.now();
+    bool duJourLocal(Visite v) { final h = DateTime.tryParse(v.horodatage)?.toLocal(); return h != null && h.year == aujourdhui.year && h.month == aujourdhui.month && h.day == aujourdhui.day; }
+    Future<void> place(Visite v) async {
+      final ok = await showFormSheet<bool>(context, title: d.parkings.attribuerPlace, builder: (_) => PlaceVisiteurSheet(visite: v));
+      if (ok == true) { ref.invalidate(visitesProvider); ref.invalidate(visiteursAujourdhuiProvider); ref.invalidate(placesVisiteursProvider); }
+    }
     Widget carte(Visite v) {
       final peutRepondre = v.statut == 'EN_ATTENTE' && resident && mesLots.contains(v.lotId);
+      final peutPlacer = (gardien || gestion) && duJourLocal(v);
+      final placeTexte = v.emplacementId != null ? '${d.parkings.placeVisiteur} ${_codePlace(ref, v.emplacementId!)}${v.immatriculation != null ? ' · ${v.immatriculation}' : ''}' : null;
       return ListRow(
         leading: Avatar(v.visiteurNom, size: 40),
         title: peutRepondre ? fill(d.visites.demandeAcces, {'nom': v.visiteurNom, 'lot': lotNum[v.lotId] ?? '—'}) : '${v.visiteurNom} → ${lotNum[v.lotId] ?? '—'}',
-        subtitle: '${formatHeure(v.horodatage, l)} · ${md.synced}',
-        trailing: peutRepondre ? StatusBadge(d.visites.autoriser, variant: BadgeVariant.info) : StatusBadge(d.enums.statutVisite[v.statut] ?? v.statut, variant: visiteVariant[v.statut] ?? BadgeVariant.neutral, pulse: v.statut == 'EN_ATTENTE', small: true),
+        subtitle: '${formatHeure(v.horodatage, l)} · ${md.synced}${placeTexte != null ? ' · $placeTexte' : ''}',
+        trailing: peutRepondre
+            ? StatusBadge(d.visites.autoriser, variant: BadgeVariant.info)
+            : peutPlacer
+                ? IconButton(onPressed: () => place(v), icon: Icon(v.emplacementId != null ? Icons.local_parking_rounded : Icons.add_location_alt_outlined, color: v.emplacementId != null ? SuColors.ok : SuColors.soft), tooltip: d.parkings.attribuerPlace)
+                : StatusBadge(d.enums.statutVisite[v.statut] ?? v.statut, variant: visiteVariant[v.statut] ?? BadgeVariant.neutral, pulse: v.statut == 'EN_ATTENTE', small: true),
         onTap: peutRepondre ? () => context.push('/visites/${v.id}') : null,
       );
     }
@@ -309,3 +323,5 @@ class _VisiteRepondreScreenState extends ConsumerState<VisiteRepondreScreen> {
     );
   }
 }
+
+String _codePlace(WidgetRef ref, String id) => ref.watch(placesVisiteursProvider).valueOrNull?.where((p) => p.id == id).map((p) => p.code).firstOrNull ?? '';
