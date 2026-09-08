@@ -1076,6 +1076,32 @@ export const PERMISSIONS: PermissionMatrix = {
     CONSEIL_SYNDICAL: false,
     PROPRIETAIRE: false,
   },
+  // ── M22 — Tâches et suivi des décisions (Doc A §6 exécution des résolutions, §8 obligations du
+  //    syndic) — ⚠️ module absent du Master Spec 4.2, signalé dans ROADMAP M22 ──
+  // Créer, modifier, assigner, annuler : syndic seul.
+  "taches.gerer": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: false,
+    PROPRIETAIRE: false,
+    GARDIEN: false,
+  },
+  // Lire : syndic tout ; conseil ce qui est `visible_conseil` (RLS) ; assigné(e) ses propres tâches (RLS).
+  "taches.lire": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: true,
+    PROPRIETAIRE: false,
+    GARDIEN: "scoped",
+  },
+  // Statut / checklist de SES tâches (conseil, gardien — mobile hors-ligne) ; jamais l'annulation.
+  "taches.maj_propre": {
+    SUPER_ADMIN: true,
+    SYNDIC: true,
+    CONSEIL_SYNDICAL: "scoped",
+    PROPRIETAIRE: false,
+    GARDIEN: "scoped",
+  },
 };
 
 /**

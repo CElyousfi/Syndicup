@@ -64,7 +64,10 @@ export type ErrorCode =
   | "COMMENTAIRES_DESACTIVES"
   | "SONDAGE_STATUT_INVALIDE"
   | "SONDAGE_DEJA_REPONDU"
-  | "SONDAGE_CHOIX_INVALIDE";
+  | "SONDAGE_CHOIX_INVALIDE"
+  // M22 — tâches.
+  | "TACHE_STATUT_INVALIDE"
+  | "TACHE_ASSIGNEE_INVALIDE";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -112,6 +115,8 @@ const STATUS: Record<ErrorCode, number> = {
   SONDAGE_STATUT_INVALIDE: 422,
   SONDAGE_DEJA_REPONDU: 409,
   SONDAGE_CHOIX_INVALIDE: 422,
+  TACHE_STATUT_INVALIDE: 422,
+  TACHE_ASSIGNEE_INVALIDE: 422,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {

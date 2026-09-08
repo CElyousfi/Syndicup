@@ -532,6 +532,31 @@ const COMMUNICATION: Record<string, Entree> = {
 };
 Object.assign(TEMPLATES, COMMUNICATION);
 
+// ── M22 — Tâches (Doc A §6, §8) ─────────────────────────────────────────────────────────────
+const TACHES: Record<string, Entree> = {
+  TACHE_ASSIGNEE: {
+    FR: { titre: "Tâche assignée : {{titre}}", corps: "Priorité {{priorite}} — échéance {{date_echeance}}. À suivre dans l'application." },
+    AR: { titre: "مهمة مُسندة: {{titre}}", corps: "الأولوية {{priorite}} — الأجل {{date_echeance}}. للمتابعة في التطبيق." },
+  },
+  TACHE_STATUT: {
+    FR: { titre: "Tâche mise à jour : {{titre}}", corps: "Nouveau statut : {{statut}}." },
+    AR: { titre: "تحديث المهمة: {{titre}}", corps: "الحالة الجديدة: {{statut}}." },
+  },
+  TACHE_COMMENTAIRE: {
+    FR: { titre: "Commentaire sur « {{titre}} »", corps: "{{apercu}}" },
+    AR: { titre: "تعليق على « {{titre}} »", corps: "{{apercu}}" },
+  },
+  TACHE_ECHEANCE: {
+    FR: { titre: "Échéance de tâche : {{titre}}", corps: "Échéance le {{date_echeance}} ({{type}}). Mettez la tâche à jour dans l'application." },
+    AR: { titre: "أجل المهمة: {{titre}}", corps: "الأجل في {{date_echeance}} ({{type}}). حدّثوا المهمة في التطبيق." },
+  },
+  TACHES_EN_RETARD_HEBDO: {
+    FR: { titre: "{{nb}} tâche(s) en retard", corps: "Synthèse hebdomadaire : {{titres}}" },
+    AR: { titre: "{{nb}} مهمة متأخرة", corps: "ملخص أسبوعي: {{titres}}" },
+  },
+};
+Object.assign(TEMPLATES, TACHES);
+
 export function templateExiste(code: string): boolean {
   return code in TEMPLATES;
 }

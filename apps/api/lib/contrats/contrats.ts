@@ -376,6 +376,9 @@ export async function regenererEcheances(db: TenantDb, ctx: { coproprieteId: str
     await db.contratEcheance.createMany({ data: aCreer.map((e) => ({ contratId: c.id, type: e.type, dateEcheance: e.date, montant: e.montant, statut: "A_VENIR" as const })), skipDuplicates: true });
   }
   await journal(db, ctx, c.id, "ECHEANCES_GENEREES", { creees: aCreer.length, annulees: obsoletes.length, reactivees: reactiver.length, horizon_mois: horizonMois });
+  // M22 — chaque échéance non financière porte une tâche de suivi (idempotent : contrat_echeance.tache_id).
+  const { synchroniserTachesEcheances } = await import("../taches/taches");
+  await synchroniserTachesEcheances(db, ctx, c.id);
   return { creees: aCreer.length, annulees: obsoletes.length, reactivees: reactiver.length };
 }
 

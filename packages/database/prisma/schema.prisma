@@ -244,6 +244,9 @@ model Copropriete {
   // passe par A_APPROUVER (approbation syndic) et les rapports signalent « seuil non configuré »
   // (LEGAL_QUESTIONS_BRIEF §8 — jamais de montant deviné).
   seuilApprobationConseil          Decimal?                  @map("seuil_approbation_conseil") @db.Decimal(14, 2)
+  // M22 — délai d'exécution d'une résolution d'AG adoptée (jours) — PROVISOIRE (brief §13), nullable :
+  // non configuré = tâche d'exécution sans date d'échéance, jamais une valeur devinée.
+  delaiExecutionResolutionJours    Int?                      @map("delai_execution_resolution_jours")
   // Décaissement du fonds de réserve SANS résolution d'AG liée (Doc A §3.6 : « décision AG
   // requise sauf urgence définie dans le règlement ») — false tant que le règlement ne le prévoit pas.
   reserveSansResolutionAutorisee   Boolean                   @default(false) @map("reserve_sans_resolution_autorisee")
@@ -307,6 +310,8 @@ model Copropriete {
   annonces             Annonce[]
   sondages             Sondage[]
   contactsUtiles       ContactUtile[]
+  taches               Tache[]
+  tacheLogs            TacheLog[]
 
   @@map("copropriete")
 }
@@ -377,6 +382,10 @@ model Utilisateur {
   commentairesMasques      AnnonceCommentaire[]      @relation("CommentaireModerateur")
   sondagesCrees            Sondage[]                 @relation("SondageAuteur")
   sondageReponses          SondageReponse[]
+  tachesAssignees          Tache[]                   @relation("TacheAssignee")
+  tachesCreees             Tache[]                   @relation("TacheCreateur")
+  tacheCommentaires        TacheCommentaire[]
+  tacheLogsActeur          TacheLog[]                @relation("TacheLogActeur")
 
   @@map("utilisateur")
 }
@@ -587,6 +596,9 @@ model Document {
   // M21 — pièce jointe d'une annonce (type ANNONCE_PJ) — ⚠️ colonne de liaison ajoutée et signalée.
   annonceId          String?                @map("annonce_id") @db.Uuid
   annonce            Annonce?               @relation("AnnonceDocument", fields: [annonceId], references: [id])
+  // M22 — pièce jointe d'une tâche (type TACHE_PJ) — ⚠️ colonne de liaison ajoutée et signalée.
+  tacheId            String?                @map("tache_id") @db.Uuid
+  tache              Tache?                 @relation("TacheDocument", fields: [tacheId], references: [id])
 
   @@index([coproprieteId])
   @@map("document")
@@ -1239,6 +1251,7 @@ model Prestataire {
 }
 
 model Incident {
+  taches                 Tache[]
   id                     String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   coproprieteId          String             @map("copropriete_id") @db.Uuid
   copropriete            Copropriete        @relation(fields: [coproprieteId], references: [id])
@@ -1393,21 +1406,25 @@ model AssembleeGenerale {
 }
 
 model AgResolution {
-  id           String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agId         String               @map("ag_id") @db.Uuid
-  ag           AssembleeGenerale    @relation(fields: [agId], references: [id])
-  ordre        Int
-  texte        String
-  typeMajorite TypeMajoriteAg       @map("type_majorite")
-  resultat     ResultatResolutionAg @default(EN_ATTENTE)
-  creeLe       DateTime             @default(now()) @map("cree_le") @db.Timestamptz
-  modifieLe    DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agId               String               @map("ag_id") @db.Uuid
+  ag                 AssembleeGenerale    @relation(fields: [agId], references: [id])
+  ordre              Int
+  texte              String
+  typeMajorite       TypeMajoriteAg       @map("type_majorite")
+  resultat           ResultatResolutionAg @default(EN_ATTENTE)
+  // M22 — ⚠️ colonne ABSENTE du Master Spec, ajoutée et signalée : une résolution ADOPTEE marquée
+  // « nécessite exécution » crée la tâche « Exécuter la résolution … » (Doc A §6, suivi des décisions).
+  necessiteExecution Boolean              @default(false) @map("necessite_execution")
+  creeLe             DateTime             @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe          DateTime             @updatedAt @map("modifie_le") @db.Timestamptz
 
   votes                 AgVote[]
   coproprietesRegimeLcd Copropriete[]    @relation("CoproprieteRegimeLcdResolution")
   depenses              Depense[]
   rapportsGestion       RapportGestion[]
   contrats              Contrat[]
+  taches                Tache[]
 
   @@index([agId])
   @@map("ag_resolution")
@@ -1895,6 +1912,7 @@ enum StatutRapportGestion {
 }
 
 model RapportGestion {
+  taches         Tache[]
   id             String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   coproprieteId  String               @map("copropriete_id") @db.Uuid
   copropriete    Copropriete          @relation(fields: [coproprieteId], references: [id])
@@ -2083,7 +2101,8 @@ model ContratEcheance {
   depenseId    String?               @map("depense_id") @db.Uuid
   depense      Depense?              @relation(fields: [depenseId], references: [id])
   // Tâche M22 (renouvellement / contrôle) — colonne posée sans FK, ajoutée en M22.
-  tacheId      String?               @map("tache_id") @db.Uuid
+  tacheId      String?               @unique @map("tache_id") @db.Uuid
+  tache        Tache?                @relation("TacheEcheance", fields: [tacheId], references: [id])
   // Job quotidien : rappels J-30 / J-7 envoyés une seule fois.
   notifieJ30Le DateTime?             @map("notifie_j30_le") @db.Timestamptz
   notifieJ7Le  DateTime?             @map("notifie_j7_le") @db.Timestamptz
@@ -2470,4 +2489,126 @@ model ContactUtile {
 
   @@index([coproprieteId, ordre])
   @@map("contact_utile")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// M22 — TÂCHES : suivi des décisions (résolutions d'AG adoptées), échéances de contrats,
+// incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles
+// (Doc A §6 exécution des résolutions, §8 obligations du syndic). ⚠️ Module ABSENT du Master Spec
+// Partie 2 — enums, tables et colonnes ci-dessous ajoutés et signalés (ROADMAP M22).
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum OrigineTache {
+  MANUELLE
+  RESOLUTION_AG
+  CONTRAT
+  INCIDENT
+  RAPPORT
+  SYSTEME
+}
+
+enum PrioriteTache {
+  BASSE
+  NORMALE
+  HAUTE
+  CRITIQUE
+}
+
+enum StatutTache {
+  A_FAIRE
+  EN_COURS
+  BLOQUEE
+  TERMINEE
+  ANNULEE
+}
+
+enum TypeTacheLog {
+  CREEE
+  MODIFIEE
+  STATUT_CHANGE
+  ASSIGNEE
+  CHECKLIST
+  COMMENTAIRE
+  DOCUMENT_AJOUTE
+  RECURRENCE
+  RAPPEL
+}
+
+model Tache {
+  id                  String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId       String           @map("copropriete_id") @db.Uuid
+  copropriete         Copropriete      @relation(fields: [coproprieteId], references: [id])
+  titre               String
+  description         String?
+  origine             OrigineTache     @default(MANUELLE)
+  resolutionAgId      String?          @map("resolution_ag_id") @db.Uuid
+  resolutionAg        AgResolution?    @relation(fields: [resolutionAgId], references: [id])
+  /// Une échéance de contrat ↔ une tâche (RENOUVELLEMENT, visite technique, contrôle réglementaire).
+  contratEcheance     ContratEcheance? @relation("TacheEcheance")
+  incidentId          String?          @map("incident_id") @db.Uuid
+  incident            Incident?        @relation(fields: [incidentId], references: [id])
+  /// ⚠️ ajout : le rapport de gestion à soumettre à l'AG (hook M18).
+  rapportGestionId    String?          @map("rapport_gestion_id") @db.Uuid
+  rapportGestion      RapportGestion?  @relation(fields: [rapportGestionId], references: [id])
+  assigneeId          String?          @map("assignee_id") @db.Uuid
+  assignee            Utilisateur?     @relation("TacheAssignee", fields: [assigneeId], references: [id])
+  priorite            PrioriteTache    @default(NORMALE)
+  statut              StatutTache      @default(A_FAIRE)
+  dateEcheance        DateTime?        @map("date_echeance") @db.Date
+  termineeLe          DateTime?        @map("terminee_le") @db.Timestamptz
+  /// `[{ id, libelle, fait }]`
+  checklistJson       Json?            @map("checklist_json")
+  /// `{ frequence: MENSUELLE | TRIMESTRIELLE | ANNUELLE }` — la tâche suivante est recréée à la clôture.
+  recurrenceJson      Json?            @map("recurrence_json")
+  /// ⚠️ ajout : tâche dont celle-ci est l'occurrence suivante (idempotence de la récurrence).
+  recurrenceParenteId String?          @map("recurrence_parente_id") @db.Uuid
+  visibleConseil      Boolean          @default(true) @map("visible_conseil")
+  creeParId           String?          @map("cree_par_id") @db.Uuid
+  creePar             Utilisateur?     @relation("TacheCreateur", fields: [creeParId], references: [id])
+  /// Marqueurs d'idempotence des rappels du job quotidien.
+  rappelJ3Le          DateTime?        @map("rappel_j3_le") @db.Timestamptz
+  rappelJ0Le          DateTime?        @map("rappel_j0_le") @db.Timestamptz
+  rappelRetardLe      DateTime?        @map("rappel_retard_le") @db.Timestamptz
+  creeLe              DateTime         @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe           DateTime         @updatedAt @map("modifie_le") @db.Timestamptz
+
+  commentaires  TacheCommentaire[]
+  logs          TacheLog[]
+  piecesJointes Document[]         @relation("TacheDocument")
+
+  @@index([coproprieteId, statut, dateEcheance])
+  @@index([assigneeId, statut])
+  @@index([resolutionAgId])
+  @@index([incidentId])
+  @@map("tache")
+}
+
+model TacheCommentaire {
+  id       String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  tacheId  String      @map("tache_id") @db.Uuid
+  tache    Tache       @relation(fields: [tacheId], references: [id])
+  auteurId String      @map("auteur_id") @db.Uuid
+  auteur   Utilisateur @relation(fields: [auteurId], references: [id])
+  contenu  String
+  creeLe   DateTime    @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([tacheId, creeLe])
+  @@map("tache_commentaire")
+}
+
+/// Journal des tâches — APPEND-ONLY (pas de modifie_le, GRANT SELECT+INSERT uniquement).
+model TacheLog {
+  id            String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  coproprieteId String       @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete  @relation(fields: [coproprieteId], references: [id])
+  tacheId       String       @map("tache_id") @db.Uuid
+  tache         Tache        @relation(fields: [tacheId], references: [id])
+  type          TypeTacheLog
+  acteurId      String?      @map("acteur_id") @db.Uuid
+  acteur        Utilisateur? @relation("TacheLogActeur", fields: [acteurId], references: [id])
+  detailsJson   Json?        @map("details_json")
+  horodatage    DateTime     @default(now()) @db.Timestamptz
+
+  @@index([tacheId, horodatage])
+  @@map("tache_log")
 }

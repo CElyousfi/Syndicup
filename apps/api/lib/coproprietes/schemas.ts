@@ -65,6 +65,8 @@ export const coproprieteUpdateSchema = z
     ).nullish(),
     limite_procurations_mandataire: z.number().int().min(1).max(100).nullish(),
     retention_desactivation_mois: z.number().int().min(1).max(240).nullish(),
+    // M22 — délai d'exécution d'une résolution d'AG adoptée (jours, PROVISOIRE brief §13) ; null = non configuré.
+    delai_execution_resolution_jours: z.number().int().min(1).max(730).nullish(),
   })
   .refine((v) => Object.values(v).some((x) => x !== undefined), "Aucun champ à modifier.");
 export type CoproprieteUpdateInput = z.infer<typeof coproprieteUpdateSchema>;

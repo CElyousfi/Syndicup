@@ -286,7 +286,7 @@ export async function creerResolutionDb(db: TenantDb, agId: string, input: AgRes
     throw new ContrainteMetierError(`Ajout de résolution impossible depuis le statut ${ag.statut}.`);
   }
   return db.agResolution.create({
-    data: { agId, ordre: input.ordre, texte: input.texte, typeMajorite: input.type_majorite },
+    data: { agId, ordre: input.ordre, texte: input.texte, typeMajorite: input.type_majorite, necessiteExecution: input.necessite_execution ?? false },
   });
 }
 
@@ -517,6 +517,9 @@ export async function finaliserResolution(ctx: TenantContext, agId: string, reso
     // lié en APPROUVE / REJETE (Doc A §6 / §8) — même transaction, audité.
     const { finaliserRapportsLies } = await import("../rapports/gestion");
     await finaliserRapportsLies(db, ctx, resolutionId, resultat);
+    // M22 — hook : résolution ADOPTEE « nécessite exécution » → tâche « Exécuter la résolution … » (une seule fois).
+    const { tacheExecutionResolution } = await import("../taches/taches");
+    await tacheExecutionResolution(db, ctx, maj, resultat);
     return maj;
   });
 }

@@ -258,6 +258,8 @@ export async function modifierCopropriete(
       data.limiteProcurationsMandataire = input.limite_procurations_mandataire;
     if (input.retention_desactivation_mois !== undefined)
       data.retentionDesactivationMois = input.retention_desactivation_mois;
+    if (input.delai_execution_resolution_jours !== undefined)
+      data.delaiExecutionResolutionJours = input.delai_execution_resolution_jours;
 
     const maj = await db.copropriete.update({ where: { id: coproprieteId }, data });
 
@@ -274,6 +276,7 @@ export async function modifierCopropriete(
         quorum_premiere_convocation: avant.quorumPremiereConvocation?.toString() ?? null,
         limite_procurations_mandataire: avant.limiteProcurationsMandataire,
         retention_desactivation_mois: avant.retentionDesactivationMois,
+        delai_execution_resolution_jours: avant.delaiExecutionResolutionJours,
         total_tantiemes: avant.totalTantiemes?.toString() ?? null,
       },
       apres: {
@@ -283,6 +286,7 @@ export async function modifierCopropriete(
         quorum_premiere_convocation: maj.quorumPremiereConvocation?.toString() ?? null,
         limite_procurations_mandataire: maj.limiteProcurationsMandataire,
         retention_desactivation_mois: maj.retentionDesactivationMois,
+        delai_execution_resolution_jours: maj.delaiExecutionResolutionJours,
         total_tantiemes: maj.totalTantiemes?.toString() ?? null,
       },
     });

@@ -912,6 +912,59 @@ async function main() {
     { coproprieteId: copro.id, acteurId: conseilUser.id, action: "SONDAGE_CLOS", entite: "sondage", entiteId: sondageGardien.id, apresJson: { statut: "CLOS", nb_reponses: 4 }, horodatage: heure(-15, 18) },
   ] });
 
+  // ── M22 — Tâches et suivi des décisions (Doc A §6, §8) ──
+  await prisma.copropriete.update({ where: { id: copro.id }, data: { delaiExecutionResolutionJours: 60 } }); // PROVISOIRE (brief §13)
+  await prisma.agResolution.update({ where: { id: resolutionPompe.id }, data: { necessiteExecution: true } });
+  const tacheSeed = async (data: Omit<Parameters<typeof prisma.tache.create>[0]["data"], "coproprieteId">, logs: { type: "CREEE" | "STATUT_CHANGE" | "CHECKLIST" | "ASSIGNEE" | "COMMENTAIRE" | "RECURRENCE" | "RAPPEL"; il: number; details?: object; acteur?: string | null }[]) => {
+    const t = await prisma.tache.create({ data: { coproprieteId: copro.id, ...data } });
+    await prisma.tacheLog.createMany({ data: logs.map((l) => ({ coproprieteId: copro.id, tacheId: t.id, type: l.type, acteurId: l.acteur === undefined ? syndicUser.id : l.acteur, detailsJson: l.details ?? undefined, horodatage: jour(-l.il) })) });
+    return t;
+  };
+  // 1. Résolution adoptée à l'AG passée → exécutée (pompe remplacée, dépense payée).
+  const tachePompe = await tacheSeed(
+    { titre: `Exécuter la résolution n° 1 : ${resolutionPompe.texte}`, origine: "RESOLUTION_AG", resolutionAgId: resolutionPompe.id, assigneeId: syndicUser.id, priorite: "HAUTE", statut: "TERMINEE", dateEcheance: jour(-120), termineeLe: jour(-140), creeLe: jour(-180) },
+    [{ type: "CREEE", il: 180, details: { origine: "RESOLUTION_AG", systeme: true }, acteur: null }, { type: "STATUT_CHANGE", il: 160, details: { de: "A_FAIRE", vers: "EN_COURS" } }, { type: "STATUT_CHANGE", il: 140, details: { de: "EN_COURS", vers: "TERMINEE", commentaire: "Pompe remplacée, facture réglée sur le fonds de réserve." } }]
+  );
+  await prisma.tacheCommentaire.create({ data: { tacheId: tachePompe.id, auteurId: syndicUser.id, contenu: "Pompe remplacée, facture réglée sur le fonds de réserve.", creeLe: jour(-140) } });
+  // 2. Échéances de contrat (renouvellement / visite technique) → tâches liées (contrat_echeance.tache_id).
+  const echeancesNonFin = await prisma.contratEcheance.findMany({ where: { contratId: contratAscenseur.id, type: { in: ["RENOUVELLEMENT", "VISITE_TECHNIQUE"] }, statut: "A_VENIR" } });
+  for (const e of echeancesNonFin) {
+    const t = await tacheSeed(
+      { titre: `${e.type === "RENOUVELLEMENT" ? "Renouveler ou résilier le contrat" : "Visite technique"} — ${contratAscenseur.libelle}`, origine: "CONTRAT", assigneeId: syndicUser.id, priorite: e.type === "RENOUVELLEMENT" ? "HAUTE" : "NORMALE", dateEcheance: e.dateEcheance, creeLe: jour(-239) },
+      [{ type: "CREEE", il: 239, details: { origine: "CONTRAT", echeance_id: e.id, type: e.type }, acteur: null }]
+    );
+    await prisma.contratEcheance.update({ where: { id: e.id }, data: { tacheId: t.id } });
+  }
+  // 3. Incident résolu dont la dépense attend l'approbation → « Régler la dépense ».
+  await tacheSeed(
+    { titre: `Régler la dépense de l'incident : ${depReparation.libelle}`, description: "Dépense APPROUVEE liée à un incident résolu — paiement à enregistrer.", origine: "INCIDENT", incidentId: incidentAtlas.id, assigneeId: syndicUser.id, priorite: "NORMALE", statut: "EN_COURS", dateEcheance: jour(4), creeLe: jour(-3) },
+    [{ type: "CREEE", il: 3, details: { origine: "INCIDENT", systeme: true }, acteur: null }, { type: "STATUT_CHANGE", il: 1, details: { de: "A_FAIRE", vers: "EN_COURS" } }]
+  );
+  // 4. Rapport de gestion GENERE → « Soumettre à l'AG » (en retard : la prochaine AG approche).
+  await tacheSeed(
+    { titre: `Soumettre le rapport de gestion ${exercice} à l'AG`, origine: "RAPPORT", rapportGestionId: rapportCourant.id, assigneeId: syndicUser.id, priorite: "HAUTE", dateEcheance: jour(-2), creeLe: jour(-10), rappelJ3Le: jour(-5), rappelJ0Le: jour(-2), rappelRetardLe: jour(-1) },
+    [{ type: "CREEE", il: 10, details: { origine: "RAPPORT", systeme: true }, acteur: null }, { type: "RAPPEL", il: 5, details: { type: "j3" }, acteur: null }, { type: "RAPPEL", il: 2, details: { type: "j0" }, acteur: null }, { type: "RAPPEL", il: 1, details: { type: "retard" }, acteur: null }]
+  );
+  // 5. Obligation récurrente du gardien (checklist, trimestrielle) : occurrence précédente terminée, suivante en cours.
+  const cuvesPrecedente = await tacheSeed(
+    { titre: "Nettoyage et désinfection des cuves d'eau", description: "Obligation sanitaire trimestrielle (Doc A §8).", origine: "MANUELLE", assigneeId: gardienUser.id, priorite: "NORMALE", statut: "TERMINEE", dateEcheance: jour(-75), termineeLe: jour(-76), checklistJson: [{ id: "c1", libelle: "Vidange", fait: true }, { id: "c2", libelle: "Brossage et désinfection", fait: true }, { id: "c3", libelle: "Remise en eau et contrôle", fait: true }], recurrenceJson: { frequence: "TRIMESTRIELLE" }, visibleConseil: true, creeParId: syndicUser.id, creeLe: jour(-100) },
+    [{ type: "CREEE", il: 100, details: { origine: "MANUELLE" } }, { type: "CHECKLIST", il: 77, details: { faits: 3, total: 3 }, acteur: gardienUser.id }, { type: "STATUT_CHANGE", il: 76, details: { de: "A_FAIRE", vers: "TERMINEE" }, acteur: gardienUser.id }]
+  );
+  const cuvesSuivante = await tacheSeed(
+    { titre: "Nettoyage et désinfection des cuves d'eau", description: "Obligation sanitaire trimestrielle (Doc A §8).", origine: "SYSTEME", recurrenceParenteId: cuvesPrecedente.id, assigneeId: gardienUser.id, priorite: "NORMALE", statut: "EN_COURS", dateEcheance: jour(15), checklistJson: [{ id: "c1", libelle: "Vidange", fait: true }, { id: "c2", libelle: "Brossage et désinfection", fait: false }, { id: "c3", libelle: "Remise en eau et contrôle", fait: false }], recurrenceJson: { frequence: "TRIMESTRIELLE" }, visibleConseil: true, creeParId: syndicUser.id, creeLe: jour(-76) },
+    [{ type: "RECURRENCE", il: 76, details: { parente_id: cuvesPrecedente.id, frequence: "TRIMESTRIELLE" }, acteur: null }, { type: "STATUT_CHANGE", il: 2, details: { de: "A_FAIRE", vers: "EN_COURS", commentaire: "Vidange faite ce matin." }, acteur: gardienUser.id }, { type: "CHECKLIST", il: 2, details: { faits: 1, total: 3 }, acteur: gardienUser.id }]
+  );
+  await prisma.tacheCommentaire.create({ data: { tacheId: cuvesSuivante.id, auteurId: gardienUser.id, contenu: "Vidange faite ce matin, désinfection demain.", creeLe: jour(-2) } });
+  // 6. Tâches manuelles : extincteurs (conseil, bloquée), déclaration CNSS (syndic, à faire), une tâche invisible du conseil.
+  await tacheSeed(
+    { titre: "Vérification annuelle des extincteurs", description: "Faire passer le prestataire agréé et récupérer le certificat.", origine: "MANUELLE", assigneeId: conseilUser.id, priorite: "HAUTE", statut: "BLOQUEE", dateEcheance: jour(-6), visibleConseil: true, creeParId: syndicUser.id, creeLe: jour(-30), rappelJ3Le: jour(-9), rappelJ0Le: jour(-6), rappelRetardLe: jour(-5) },
+    [{ type: "CREEE", il: 30 }, { type: "STATUT_CHANGE", il: 8, details: { de: "A_FAIRE", vers: "BLOQUEE", commentaire: "Le prestataire ne répond pas." }, acteur: conseilUser.id }]
+  );
+  await tacheSeed(
+    { titre: "Déclaration CNSS du personnel", origine: "MANUELLE", assigneeId: syndicUser.id, priorite: "NORMALE", statut: "A_FAIRE", dateEcheance: jour(10), recurrenceJson: { frequence: "MENSUELLE" }, visibleConseil: false, creeParId: syndicUser.id, creeLe: jour(-20) },
+    [{ type: "CREEE", il: 20 }]
+  );
+
   console.log("Seed terminé :", {
     personnel: { gardien: personnelGardien.id, agent: personnelAgent.id, periodePaie },
     contrats: { ascenseur: contratAscenseur.id, nettoyage: contratNettoyage.id, assurance: contratAssurance.id },
@@ -925,6 +978,7 @@ async function main() {
     appelDeFonds: periode,
     ag: ag.id,
     communication: { annonces: 7, sondages: { ouvert: sondageHall.id, clos: sondageGardien.id } },
+    taches: { resolutionExecutee: tachePompe.id, recurrente: cuvesSuivante.id },
     invitationEnAttente: invitation.code,
   });
 }

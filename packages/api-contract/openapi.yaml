@@ -38,6 +38,8 @@ tags:
   - name: Contrats
   - name: Personnel RH
   - name: Communication
+  - name: Tâches
+    description: "Suivi des décisions (résolutions d'AG adoptées), échéances de contrats, incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles (M22, Doc A §6, §8)."
     description: "Tableau d'affichage, sondages consultatifs (jamais un vote d'AG, Doc A §6), contacts utiles, préférences de notification (M21)."
 
 components:
@@ -412,6 +414,7 @@ components:
         quorum_premiere_convocation: { type: string, nullable: true, pattern: '^0\.\d{1,3}$|^1(\.0{1,3})?$' }
         limite_procurations_mandataire: { type: integer, nullable: true, minimum: 1 }
         retention_desactivation_mois: { type: integer, nullable: true, minimum: 1, description: "Rétention CNDP avant anonymisation automatique (mois) — valeur légalement gatée (LEGAL_QUESTIONS_BRIEF §5)." }
+        delai_execution_resolution_jours: { type: integer, nullable: true, minimum: 1, maximum: 730, description: "M22 — délai d'exécution d'une résolution adoptée (jours), PROVISOIRE (brief §13) ; null = tâche sans échéance." }
 
     # ── Domaine : Finances (M5 — Master Spec Partie 2.2/6, Doc A §3) ────────
     BudgetAg:
@@ -657,6 +660,7 @@ components:
         texte: { type: string }
         type_majorite: { type: string, enum: [SIMPLE, DOUBLE, UNANIMITE] }
         resultat: { type: string, enum: [EN_ATTENTE, ADOPTEE, REJETEE] }
+        necessite_execution: { type: boolean, description: "M22 — une résolution adoptée « à exécuter » crée la tâche de suivi." }
 
     AgResolutionCreate:
       type: object
@@ -671,6 +675,7 @@ components:
             Choisi explicitement par le syndic par résolution — la grille "quelle résolution
             nécessite quelle majorité" (LEGAL_QUESTIONS_BRIEF.md §3) n'est PAS appliquée
             automatiquement, elle reste disputée.
+        necessite_execution: { type: boolean, default: false, description: "M22 — crée la tâche « Exécuter la résolution … » à l'adoption." }
 
     AgResultatResolution:
       type: object
@@ -2163,6 +2168,66 @@ components:
         digest_hebdo: { type: boolean, default: true }
         canal_digest: { type: string, enum: [PUSH, EMAIL, SMS, AUCUN], default: EMAIL }
         annonces_push: { type: boolean, default: true }
+    Tache:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        coproprieteId: { type: string, format: uuid }
+        titre: { type: string }
+        description: { type: string, nullable: true }
+        origine: { type: string, enum: [MANUELLE, RESOLUTION_AG, CONTRAT, INCIDENT, RAPPORT, SYSTEME] }
+        resolutionAg: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, ordre: { type: integer }, texte: { type: string }, agId: { type: string, format: uuid } } }
+        contratEcheance: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, type: { type: string }, dateEcheance: { type: string, format: date }, contratId: { type: string, format: uuid }, contratLibelle: { type: string } } }
+        incident: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, categorie: { type: string }, statut: { type: string } } }
+        rapportGestion: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, exercice: { type: string }, statut: { type: string } } }
+        assignee: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, nom: { type: string, nullable: true }, prenom: { type: string, nullable: true } } }
+        creePar: { type: object, nullable: true, properties: { id: { type: string, format: uuid }, nom: { type: string, nullable: true }, prenom: { type: string, nullable: true } } }
+        priorite: { type: string, enum: [BASSE, NORMALE, HAUTE, CRITIQUE] }
+        statut: { type: string, enum: [A_FAIRE, EN_COURS, BLOQUEE, TERMINEE, ANNULEE] }
+        dateEcheance: { type: string, format: date, nullable: true }
+        termineeLe: { type: string, format: date-time, nullable: true }
+        checklist: { type: array, nullable: true, items: { type: object, properties: { id: { type: string }, libelle: { type: string }, fait: { type: boolean } } } }
+        checklistFaits: { type: integer }
+        recurrence: { type: object, nullable: true, properties: { frequence: { type: string, enum: [MENSUELLE, TRIMESTRIELLE, SEMESTRIELLE, ANNUELLE] } } }
+        recurrenceParenteId: { type: string, format: uuid, nullable: true }
+        visibleConseil: { type: boolean }
+        enRetard: { type: boolean }
+        nbCommentaires: { type: integer }
+        nbPiecesJointes: { type: integer }
+        creeLe: { type: string, format: date-time }
+        modifieLe: { type: string, format: date-time }
+    TacheDetail:
+      allOf:
+        - $ref: "#/components/schemas/Tache"
+        - type: object
+          properties:
+            piecesJointes: { type: array, items: { type: object, properties: { document_id: { type: string, format: uuid }, nom: { type: string }, type: { type: string }, url: { type: string } } } }
+            commentaires: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, auteur: { type: object }, contenu: { type: string }, creeLe: { type: string, format: date-time }, mien: { type: boolean } } } }
+            journal: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, type: { type: string }, acteur: { type: object, nullable: true }, details: { type: object, nullable: true }, horodatage: { type: string, format: date-time } } } }
+            peutModifier: { type: boolean }
+            peutMettreAJour: { type: boolean }
+    TacheCreate:
+      type: object
+      required: [titre]
+      properties:
+        titre: { type: string, maxLength: 200 }
+        description: { type: string, nullable: true }
+        assignee_id: { type: string, format: uuid, nullable: true, description: "Syndic, membre du conseil ou personnel (rôle GARDIEN)." }
+        priorite: { type: string, enum: [BASSE, NORMALE, HAUTE, CRITIQUE], default: NORMALE }
+        date_echeance: { type: string, format: date, nullable: true }
+        checklist: { type: array, nullable: true, maxItems: 50, items: { type: object, required: [libelle], properties: { id: { type: string }, libelle: { type: string }, fait: { type: boolean } } } }
+        recurrence: { type: object, nullable: true, properties: { frequence: { type: string, enum: [MENSUELLE, TRIMESTRIELLE, SEMESTRIELLE, ANNUELLE] } } }
+        visible_conseil: { type: boolean, default: true }
+        pieces_jointes: { type: array, maxItems: 10, items: { type: object, required: [storage_path, nom], properties: { storage_path: { type: string }, nom: { type: string } } } }
+    ExecutionResolution:
+      type: object
+      properties:
+        resolution_id: { type: string, format: uuid }
+        ordre: { type: integer }
+        texte: { type: string }
+        resultat: { type: string }
+        necessite_execution: { type: boolean }
+        taches: { type: array, items: { type: object, properties: { tache_id: { type: string, format: uuid }, titre: { type: string }, statut: { type: string }, date_echeance: { type: string, format: date, nullable: true }, terminee_le: { type: string, format: date-time, nullable: true }, en_retard: { type: boolean } } } }
   responses:
     ValidationError:
       description: Payload invalide.
@@ -6696,3 +6761,118 @@ paths:
       responses:
         "200": { description: OK }
         "422": { $ref: "#/components/responses/ValidationError" }
+
+  /taches:
+    get:
+      tags: [Tâches]
+      summary: "Tâches visibles de l'appelant (syndic : toutes ; conseil : `visible_conseil` ; assigné(e) : les siennes) — `meta.par_statut`, `meta.retard` ; export csv / xlsx."
+      parameters:
+        - { name: statut, in: query, schema: { type: string, enum: [A_FAIRE, EN_COURS, BLOQUEE, TERMINEE, ANNULEE] } }
+        - { name: priorite, in: query, schema: { type: string, enum: [BASSE, NORMALE, HAUTE, CRITIQUE] } }
+        - { name: origine, in: query, schema: { type: string, enum: [MANUELLE, RESOLUTION_AG, CONTRAT, INCIDENT, RAPPORT, SYSTEME] } }
+        - { name: assignee_id, in: query, schema: { type: string, format: uuid } }
+        - { name: retard, in: query, schema: { type: string, enum: ["1", "true"] }, description: Ouvertes dont l'échéance est passée. }
+        - { name: ouvertes, in: query, schema: { type: string, enum: ["1", "true"] }, description: A_FAIRE / EN_COURS / BLOQUEE. }
+        - { name: q, in: query, schema: { type: string } }
+        - { name: sort, in: query, schema: { type: string }, description: "date_echeance | priorite | cree_le | statut | titre, suffixe `:asc` / `:desc`." }
+        - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M22 — export journalisé (export_log)." }
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Tache" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Tâches]
+      summary: Créer une tâche manuelle (syndic) — audit TACHE_CREEE, notification de l'assigné(e).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TacheCreate" } } } }
+      responses:
+        "201": { description: Créée. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /taches/mes-taches:
+    get:
+      tags: [Tâches]
+      summary: Tâches assignées à l'appelant (ouvertes d'abord) — gardien, conseil, syndic.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Tache" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /taches/retard:
+    get:
+      tags: [Tâches]
+      summary: Tâches ouvertes dont l'échéance est passée.
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Tache" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /taches/upload-url:
+    post:
+      tags: [Tâches]
+      summary: "URL signée d'upload d'une pièce jointe (photo de fin de tâche, PDF) — périmètre `<copropriete>/taches/`."
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [nom_fichier, content_type], properties: { nom_fichier: { type: string }, content_type: { type: string } } } } } }
+      responses:
+        "201": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /taches/{id}:
+    get:
+      tags: [Tâches]
+      summary: Détail (pièces jointes signées, commentaires, journal append-only).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/TacheDetail" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Tâches]
+      summary: Modifier (syndic) — une tâche TERMINEE / ANNULEE ne se modifie plus (422 TACHE_STATUT_INVALIDE).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/TacheCreate" } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /taches/{id}/statut:
+    post:
+      tags: [Tâches]
+      summary: "Transition (syndic ou assigné(e) ; ANNULEE = syndic seul) avec commentaire / pièce jointe optionnels ; TERMINEE crée l'occurrence suivante (récurrence) et réalise l'échéance de contrat liée. Rejouable à l'identique (même statut → `deja: true`)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [statut], properties: { statut: { type: string, enum: [A_FAIRE, EN_COURS, BLOQUEE, TERMINEE, ANNULEE] }, commentaire: { type: string, nullable: true }, piece_jointe: { type: object, nullable: true, properties: { storage_path: { type: string }, nom: { type: string } } } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /taches/{id}/assigner:
+    post:
+      tags: [Tâches]
+      summary: Assigner (syndic) — 422 TACHE_ASSIGNEE_INVALIDE si l'utilisateur n'est ni syndic, ni conseil, ni personnel.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [assignee_id], properties: { assignee_id: { type: string, format: uuid, nullable: true } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /taches/{id}/checklist:
+    patch:
+      tags: [Tâches]
+      summary: Checklist — remplacement complet (`checklist`) ou bascule d'un élément (`item_id`, `fait`) ; syndic ou assigné(e).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, properties: { checklist: { type: array, items: { type: object, properties: { id: { type: string }, libelle: { type: string }, fait: { type: boolean } } } }, item_id: { type: string }, fait: { type: boolean } } } } } }
+      responses:
+        "200": { description: OK }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /taches/{id}/commentaires:
+    post:
+      tags: [Tâches]
+      summary: Commenter (quiconque voit la tâche) — notification TACHE_COMMENTAIRE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [contenu], properties: { contenu: { type: string, maxLength: 4000 } } } } } }
+      responses:
+        "201": { description: Créé. }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
+  /ag/{id}/resolutions/{rid}/execution:
+    get:
+      tags: [Tâches]
+      summary: "Suivi d'exécution d'une résolution — lecture par tout membre voyant l'AG (copropriétaires) : titre, statut, dates de la tâche liée, jamais les commentaires ni l'assigné(e) (fonction SECURITY DEFINER)."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: rid, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ExecutionResolution" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }

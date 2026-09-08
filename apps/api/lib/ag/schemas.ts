@@ -23,6 +23,8 @@ export const agResolutionCreateSchema = z.object({
   ordre: z.number().int().min(1),
   texte: z.string().min(1),
   type_majorite: z.enum(TYPES_MAJORITE_AG),
+  // M22 — une résolution adoptée « à exécuter » crée la tâche de suivi (⚠️ champ ajouté, signalé).
+  necessite_execution: z.boolean().optional(),
 });
 export type AgResolutionCreateInput = z.infer<typeof agResolutionCreateSchema>;
 

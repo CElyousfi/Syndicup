@@ -135,6 +135,9 @@ export async function genererRapportGestion(ctx: TenantContext, input: RapportGe
     if (storagePath && !pdfErreur) {
       const doc = await attacherDocument(db, ctx, { module: "rapports", type: "RAPPORT_GESTION", nom: `Rapport de gestion ${input.exercice}.pdf`, storagePath, visibilite: "CONSEIL_SYNDICAL" });
       await db.rapportGestion.update({ where: { id }, data: { statut: "GENERE", documentId: doc.id } });
+      // M22 — hook : rapport prêt → tâche « Soumettre le rapport de gestion à l'AG » (une seule fois).
+      const { tacheRapportASoumettre } = await import("../taches/taches");
+      await tacheRapportASoumettre(db, ctx, { id, exercice: input.exercice });
     } else {
       await ecrireAuditLog(db, { coproprieteId: ctx.coproprieteId, acteurId: ctx.utilisateurId, action: "RAPPORT_GESTION_PDF_ECHEC", entite: "rapport_gestion", entiteId: id, apres: { erreur: pdfErreur } as never });
     }
@@ -200,6 +203,9 @@ export async function soumettreRapportAg(ctx: TenantContext, id: string, input: 
     const ordre = ag.resolutions.reduce((m, x) => Math.max(m, x.ordre), 0) + 1;
     const resolution = await creerResolutionDb(db, ag.id, { ordre, texte: `Approbation des comptes de l'exercice ${r.exercice} (rapport de gestion du syndic)`, type_majorite: typeMajorite });
     await db.rapportGestion.update({ where: { id }, data: { statut: "SOUMIS_AG", agId: ag.id, resolutionAgId: resolution.id } });
+    // M22 — la tâche « Soumettre le rapport à l'AG » est terminée par la soumission elle-même.
+    const { terminerTachesLiees } = await import("../taches/taches");
+    await terminerTachesLiees(db, ctx, { rapportGestionId: id }, "rapport_soumis");
     if (r.documentId) {
       await db.document.update({ where: { id: r.documentId }, data: { visibilite: "PUBLIC_COPROPRIETE" } });
     }

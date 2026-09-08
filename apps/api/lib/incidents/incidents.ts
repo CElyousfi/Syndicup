@@ -337,6 +337,11 @@ export async function changerStatutIncident(
     ]);
     // Matrice Master Spec 7.1 : "Changement de statut ticket incident → Push → Créateur du
     // ticket" (pas d'auto-notification si le créateur change lui-même le statut).
+    // M22 — hook : incident RESOLU dont la dépense n'est pas encore réglée → tâche « Régler la dépense » (une fois).
+    if (input.statut === "RESOLU" && statutAvant !== "RESOLU") {
+      const { tacheIncidentResolu } = await import("../taches/taches");
+      await tacheIncidentResolu(db, ctx, incidentId);
+    }
     if (statutAvant !== input.statut && incident.creePar !== ctx.utilisateurId) {
       await envoyerNotification(db, {
         coproprieteId: ctx.coproprieteId,
