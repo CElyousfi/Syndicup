@@ -2187,6 +2187,16 @@ components:
         digest_hebdo: { type: boolean, default: true }
         canal_digest: { type: string, enum: [PUSH, EMAIL, SMS, AUCUN], default: EMAIL }
         annonces_push: { type: boolean, default: true }
+        push_normal: { type: boolean, default: true, description: "Bannières avec son pour les notifications courantes (les URGENTES sont toujours livrées)." }
+        push_info: { type: boolean, default: true, description: "Bannières discrètes (documents, récapitulatifs, sondages)." }
+        push_son: { type: boolean, default: true }
+        heures_calmes:
+          type: object
+          nullable: true
+          description: "Heure de Casablanca ; pendant la plage, NORMAL et INFO sont livrés sans son (niveau passif). URGENT inchangé."
+          properties:
+            debut: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', example: "22:00" }
+            fin: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', example: "07:00" }
     Tache:
       type: object
       properties:

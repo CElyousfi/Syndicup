@@ -213,7 +213,16 @@ export async function supprimerContact(_prev: FormState, fd: FormData): Promise<
 
 export async function enregistrerPreferences(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const body: PreferencesNotification = { digest_hebdo: champ(fd, "digest_hebdo") === "on", canal_digest: (champ(fd, "canal_digest") || "EMAIL") as PreferencesNotification["canal_digest"], annonces_push: champ(fd, "annonces_push") === "on" };
+  const calmes = champ(fd, "heures_calmes") === "on";
+  const body: PreferencesNotification = {
+    digest_hebdo: champ(fd, "digest_hebdo") === "on",
+    canal_digest: (champ(fd, "canal_digest") || "EMAIL") as PreferencesNotification["canal_digest"],
+    annonces_push: champ(fd, "annonces_push") === "on",
+    push_normal: champ(fd, "push_normal") === "on",
+    push_info: champ(fd, "push_info") === "on",
+    push_son: champ(fd, "push_son") === "on",
+    heures_calmes: calmes ? { debut: champ(fd, "heures_calmes_debut") || "22:00", fin: champ(fd, "heures_calmes_fin") || "07:00" } : null,
+  };
   const res = await apiFetch<PreferencesNotification>("/users/me/preferences-notification", { method: "PUT", body });
   if (!res.ok) return fromApiError(res);
   revalider(locale);

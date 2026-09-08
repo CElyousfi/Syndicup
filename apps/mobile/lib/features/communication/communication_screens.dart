@@ -553,8 +553,23 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
   late bool _digest = widget.initial.digestHebdo;
   late String _canal = widget.initial.canalDigest;
   late bool _push = widget.initial.annoncesPush;
+  late bool _pushNormal = widget.initial.pushNormal;
+  late bool _pushInfo = widget.initial.pushInfo;
+  late bool _pushSon = widget.initial.pushSon;
+  late bool _calmes = widget.initial.heuresCalmes != null;
+  late String _calmesDebut = widget.initial.heuresCalmes?.debut ?? '22:00';
+  late String _calmesFin = widget.initial.heuresCalmes?.fin ?? '07:00';
   bool _loading = false;
   ApiFail? _fail;
+
+  Future<void> _choisirHeure(bool debut) async {
+    final actuel = debut ? _calmesDebut : _calmesFin;
+    final parts = actuel.split(':');
+    final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: int.tryParse(parts[0]) ?? 22, minute: int.tryParse(parts.length > 1 ? parts[1] : '0') ?? 0));
+    if (t == null) return;
+    final v = '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
+    setState(() => debut ? _calmesDebut = v : _calmesFin = v);
+  }
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
@@ -568,12 +583,32 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       SuSelect<String>(label: c.canalDigest, value: _canal, options: const ['EMAIL', 'PUSH', 'SMS', 'AUCUN'], labelOf: (v) => e.canalPreference[v] ?? v, onChanged: (v) => setState(() => _canal = v)),
       const SizedBox(height: 8),
       SuCheckbox(value: _push, onChanged: (v) => setState(() => _push = v), label: c.annoncesPush, help: c.annoncesPushAide),
+      const SizedBox(height: 14),
+      // Push sur le téléphone — niveaux (bannières, alertes, écran verrouillé) ; URGENT toujours livré.
+      Text(c.pushTitre, style: Theme.of(context).textTheme.titleSmall),
+      Text(c.pushAide, style: Theme.of(context).textTheme.bodySmall),
+      const SizedBox(height: 8),
+      SuCheckbox(value: _pushNormal, onChanged: (v) => setState(() => _pushNormal = v), label: c.pushNormal, help: c.pushNormalAide),
+      const SizedBox(height: 8),
+      SuCheckbox(value: _pushInfo, onChanged: (v) => setState(() => _pushInfo = v), label: c.pushInfo, help: c.pushInfoAide),
+      const SizedBox(height: 8),
+      SuCheckbox(value: _pushSon, onChanged: (v) => setState(() => _pushSon = v), label: c.pushSon, help: c.pushSonAide),
+      const SizedBox(height: 8),
+      SuCheckbox(value: _calmes, onChanged: (v) => setState(() => _calmes = v), label: c.heuresCalmes, help: c.heuresCalmesAide),
+      if (_calmes) ...[
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: OutlinedButton.icon(onPressed: () => _choisirHeure(true), icon: const Icon(Icons.bedtime_outlined, size: 18), label: Text('${c.heuresCalmesDebut} · $_calmesDebut'))),
+          const SizedBox(width: 8),
+          Expanded(child: OutlinedButton.icon(onPressed: () => _choisirHeure(false), icon: const Icon(Icons.wb_sunny_outlined, size: 18), label: Text('${c.heuresCalmesFin} · $_calmesFin'))),
+        ]),
+      ],
       const SizedBox(height: 12),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
       SubmitButton(label: d.common.save, loading: _loading, onPressed: () async {
         setState(() { _loading = true; _fail = null; });
-        final r = await ref.read(apiClientProvider).request<dynamic>('PUT', '/users/me/preferences-notification', body: PreferencesNotification(digestHebdo: _digest, canalDigest: _canal, annoncesPush: _push).toJson());
+        final r = await ref.read(apiClientProvider).request<dynamic>('PUT', '/users/me/preferences-notification', body: PreferencesNotification(digestHebdo: _digest, canalDigest: _canal, annoncesPush: _push, pushNormal: _pushNormal, pushInfo: _pushInfo, pushSon: _pushSon, heuresCalmes: _calmes ? HeuresCalmes(debut: _calmesDebut, fin: _calmesFin) : null).toJson());
         if (!mounted) return;
         if (r is ApiFail) { setState(() { _loading = false; _fail = r; }); return; }
         ref.invalidate(preferencesNotificationProvider);

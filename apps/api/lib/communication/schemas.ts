@@ -100,11 +100,18 @@ export const contactUtileUpdateSchema = contactUtileSchema.partial().refine((v) 
 export type ContactUtileUpdateInput = z.infer<typeof contactUtileUpdateSchema>;
 
 /** Préférences de notification (Utilisateur) — M21, respectées par le digest hebdomadaire. */
+const heureHHMM = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure au format HH:MM.");
 export const preferencesNotificationSchema = z.object({
   digest_hebdo: z.boolean().default(true),
   canal_digest: z.enum(CANAUX_PREFERENCE).default("EMAIL"),
   annonces_push: z.boolean().default(true),
+  // Push par niveau (push-niveaux.ts) : URGENT n'est jamais désactivable.
+  push_normal: z.boolean().default(true),
+  push_info: z.boolean().default(true),
+  push_son: z.boolean().default(true),
+  /** Heures calmes (heure de Casablanca) : NORMAL / INFO livrés sans son ni réveil de l'écran. */
+  heures_calmes: z.object({ debut: heureHHMM, fin: heureHHMM }).nullable().default(null),
 });
 export type PreferencesNotification = z.infer<typeof preferencesNotificationSchema>;
-export const PREFERENCES_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true };
+export const PREFERENCES_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null };
 export { uuid as uuidSchema };

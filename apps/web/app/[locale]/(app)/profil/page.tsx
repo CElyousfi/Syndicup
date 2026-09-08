@@ -14,7 +14,7 @@ import { nomComplet } from "../../../../lib/format";
 import { ProfilForm } from "./profil-form";
 import { apiFetch } from "../../../../lib/api/client";
 import { PreferencesForm } from "../affichage/affichage-client";
-import type { PreferencesNotification } from "../../../../lib/api/types";
+import { PREFERENCES_NOTIFICATION_DEFAUT, type PreferencesNotification } from "../../../../lib/api/types";
 
 export async function generateMetadata({
   params,
@@ -38,7 +38,7 @@ export default async function ProfilPage({
   const { dict, profil } = ctx;
   const pr = dict.profil;
   const prefsRes = await apiFetch<PreferencesNotification>("/users/me/preferences-notification");
-  const prefs: PreferencesNotification = prefsRes.ok ? prefsRes.data : { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true };
+  const prefs: PreferencesNotification = prefsRes.ok ? { ...PREFERENCES_NOTIFICATION_DEFAUT, ...prefsRes.data } : PREFERENCES_NOTIFICATION_DEFAUT;
 
   const coproParId = new Map(ctx.coproprietes.map((c) => [c.id, c.nom]));
 

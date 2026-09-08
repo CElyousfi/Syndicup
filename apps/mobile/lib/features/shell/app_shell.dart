@@ -9,6 +9,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
+import '../../core/push/niveaux.dart';
 import '../../core/push/push_service.dart';
 import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
@@ -36,9 +37,21 @@ class _AppShellState extends ConsumerState<AppShell> {
     // Flux temps réel : toast + invalidation ciblée des lectures concernées.
     _sub = ref.read(notificationsLiveProvider.notifier).events.listen(_onLive);
     // Push : jeton d'appareil enregistré côté API (no-op si Firebase absent du build).
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final ctx = ref.read(appContextProvider);
-      PushService.instance.onOpen = (p) => GoRouter.of(context).push(p);
+      final push = PushService.instance;
+      push.onOpen = (p) => GoRouter.of(context).push(p);
+      // Action « Marquer comme lu » depuis la notification système.
+      push.onMarquerLu = (id) async {
+        await ref.read(apiClientProvider).patch<dynamic>('/notifications/$id/read');
+        ref.read(notificationsLiveProvider.notifier).decrement();
+        ref.invalidate(notificationsProvider);
+      };
+      // Permission système (Android 13+, iOS) demandée une fois connecté — contexte explicite.
+      await push.demanderPermission();
+      // Notification qui a lancé l'app (app fermée) : on ouvre l'objet concerné.
+      final initial = push.prendreCheminInitial();
+      if (initial != null && mounted) GoRouter.of(context).push(initial);
       // Membre de cabinet sans rôle de copropriété (M25) : pas d'enregistrement push tenant.
       if (!ctx.isMembreCabinetSeul) PushService.instance.registerToken(ref.read(apiClientProvider), langue: ctx.profil.languePreferee);
       // Le gardien rejoue sa file de visites dès l'ouverture et met en cache les lots
@@ -99,6 +112,15 @@ class _AppShellState extends ConsumerState<AppShell> {
     }
     if (!mounted) return;
     final path = lienNotification(e.templateCode, e.contenuJson);
+    // Bannière / alerte système : toujours pour URGENT (heads-up même app ouverte), sinon quand
+    // l'app n'est pas au premier plan (arrière-plan récent, écran verrouillé). Sans Firebase,
+    // c'est ce chemin qui porte les notifications du téléphone.
+    final push = PushService.instance;
+    final niveau = niveauPour(e.niveau, e.templateCode);
+    if (e.livrer && (niveau == niveauUrgent || !push.enAvantPlan)) {
+      push.afficher(cle: e.id, titre: e.titre, corps: e.corps, niveau: niveau, fil: filPour(e.fil, e.templateCode), badge: e.unread, son: e.son, path: path, notificationId: e.id);
+    }
+    if (!push.enAvantPlan) return;
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(

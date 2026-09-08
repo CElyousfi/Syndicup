@@ -17,6 +17,7 @@ import { randomUUID } from "node:crypto";
 import { disconnectTenantDb, withTenant } from "../lib/tenant/db";
 import type { TenantContext } from "../lib/tenant/context";
 import { archiverAnnonce, commenterAnnonce, creerAnnonce, creerContact, lecturesAnnonce, listerAnnonces, marquerLue, masquerCommentaire, obtenirAnnonce, publierAnnonce, definirPreferencesNotification, CommunicationError, PermissionRefuseeError } from "../lib/communication/communication";
+import { PREFERENCES_DEFAUT } from "../lib/communication/schemas";
 import { cloreSondage, creerSondage, listerSondages, obtenirSondage, ouvrirSondage, repondreSondage, resultatsSondage } from "../lib/communication/sondages";
 import { executerDigest, executerProgrammees } from "../lib/communication/jobs";
 import { assainirMarkdown, texteBrut } from "../lib/communication/sanitize";
@@ -225,8 +226,8 @@ describe("M21 — sondages consultatifs", () => {
 
 describe("M21 — digest hebdomadaire, contacts, préférences", () => {
   it("digest : un par membre et par semaine (rejeu = 0), respecte les préférences (AUCUN), canal choisi", async () => {
-    await definirPreferencesNotification(G(), { digest_hebdo: false, canal_digest: "PUSH", annonces_push: true });
-    await definirPreferencesNotification(O(), { digest_hebdo: true, canal_digest: "PUSH", annonces_push: true });
+    await definirPreferencesNotification(G(), { ...PREFERENCES_DEFAUT, digest_hebdo: false, canal_digest: "PUSH", annonces_push: true });
+    await definirPreferencesNotification(O(), { ...PREFERENCES_DEFAUT, digest_hebdo: true, canal_digest: "PUSH", annonces_push: true });
     const now = new Date();
     const r1 = await withTenant(SYS(), (db) => executerDigest(db, copro, now));
     expect(r1.digests).toBeGreaterThanOrEqual(3); // syndic (annonces conseil non lues), conseil, omar ; pas hamid (désactivé)

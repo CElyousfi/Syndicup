@@ -10,7 +10,9 @@ import {
   etatNotifications,
   nouvellesNotificationsDepuis,
   PermissionRefuseeError,
+  lirePreferencesPush,
 } from "../../../../lib/notifications/notifications";
+import { livraisonPush, PREFERENCES_PUSH_DEFAUT } from "../../../../lib/notifications/push-niveaux";
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { fail } from "../../../../lib/http/respond";
 
@@ -32,8 +34,12 @@ export async function GET(req: Request) {
   }
 
   let etat;
+  let prefsPush = PREFERENCES_PUSH_DEFAUT;
   try {
     etat = await etatNotifications(ctx);
+    // Niveau / son / fil de chaque événement : mêmes règles que le push FCM (push-niveaux.ts),
+    // pour que l'app affiche la bonne bannière quand elle reçoit l'événement par le flux.
+    prefsPush = await lirePreferencesPush(ctx).catch(() => PREFERENCES_PUSH_DEFAUT);
   } catch (e) {
     if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
     throw e;
@@ -57,6 +63,7 @@ export async function GET(req: Request) {
         try {
           const { rows, unread } = await nouvellesNotificationsDepuis(ctx, depuis);
           for (const n of rows) {
+            const livraison = livraisonPush(n.templateCode, prefsPush);
             envoyer("notification", {
               id: n.id,
               titre: n.titre,
@@ -65,6 +72,10 @@ export async function GET(req: Request) {
               unread,
               templateCode: n.templateCode,
               contenuJson: n.contenuJson,
+              niveau: livraison.niveau,
+              fil: livraison.fil,
+              son: livraison.son,
+              livrer: livraison.livrer,
             });
             if (n.horodatageEnvoi > depuis) depuis = n.horodatageEnvoi;
           }

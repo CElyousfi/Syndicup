@@ -11,7 +11,7 @@
  * sont remontés pour suppression.
  */
 import { importPKCS8, SignJWT } from "jose";
-import type { NotificationTransport, ResultatEnvoi } from "./types";
+import type { MessageNotification, NotificationTransport, ResultatEnvoi } from "./types";
 import { logger } from "../../logging/logger";
 
 interface ServiceAccount {
@@ -33,6 +33,80 @@ export function parseServiceAccount(json: string): ServiceAccount {
 
 /** Fetch injectable (tests) — global par défaut. */
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * Corps FCM v1 pour un appareil — bannières, alertes, écran verrouillé, badge, fils, actions :
+ *  - Android : canal par niveau (créé côté app), `notification_priority`, `visibility: PUBLIC`
+ *    (contenu visible sur l'écran verrouillé), `notification_count` (badge), `tag` (remplacement),
+ *    `click_action` FLUTTER_NOTIFICATION_CLICK ; en silencieux : données seules, priorité normale.
+ *  - iOS (APNs) : `alert` + `sound` + `badge` + `interruption-level` + `thread-id` + `category`
+ *    (actions Ouvrir / Marquer comme lu) ; `apns-priority` 10 (immédiat) sauf silencieux (5,
+ *    `content-available`, push-type background).
+ * Exporté pour les tests.
+ */
+export function construireMessageFcm(token: string, message: MessageNotification): Record<string, unknown> {
+  const push = message.push;
+  const donnees: Record<string, string> = {
+    ...(message.donnees ?? {}),
+    template_code: message.templateCode ?? "",
+    titre: message.titre,
+    corps: message.corps,
+    niveau: push?.niveau ?? "NORMAL",
+    canal_android: push?.canalAndroid ?? "syndicup",
+    fil: push?.fil ?? "general",
+    badge: String(push?.badge ?? 0),
+    son: push?.son === false ? "0" : "1",
+    langue: message.langue,
+  };
+  if (push?.silencieux) {
+    return {
+      token,
+      data: donnees,
+      android: { priority: "normal" },
+      apns: {
+        headers: { "apns-priority": "5", "apns-push-type": "background" },
+        payload: { aps: { "content-available": 1, badge: push.badge } },
+      },
+    };
+  }
+  const urgent = push?.niveau === "URGENT";
+  const son = push?.son !== false;
+  const androidNotification: Record<string, unknown> = {
+    channel_id: push?.canalAndroid ?? "syndicup",
+    notification_priority: urgent ? "PRIORITY_MAX" : push?.niveau === "INFO" || push?.interruption === "passive" ? "PRIORITY_DEFAULT" : "PRIORITY_HIGH",
+    visibility: "PUBLIC",
+    default_vibrate_timings: urgent || son,
+    notification_count: push?.badge ?? undefined,
+    click_action: "FLUTTER_NOTIFICATION_CLICK",
+    ticker: message.titre,
+  };
+  if (son) androidNotification.sound = "default";
+  else androidNotification.default_sound = false;
+  if (push?.cleRegroupement) androidNotification.tag = push.cleRegroupement;
+  const aps: Record<string, unknown> = {
+    alert: { title: message.titre, body: message.corps },
+    badge: push?.badge ?? undefined,
+    "interruption-level": push?.interruption ?? "active",
+    "thread-id": push?.fil ?? "general",
+    category: "SYNDICUP_NOTIFICATION",
+    "mutable-content": 1,
+  };
+  if (son) aps.sound = "default";
+  return {
+    token,
+    notification: { title: message.titre, body: message.corps },
+    data: donnees,
+    android: {
+      priority: "high",
+      ...(push?.cleRegroupement ? { collapse_key: push.cleRegroupement } : {}),
+      notification: androidNotification,
+    },
+    apns: {
+      headers: { "apns-priority": "10", "apns-push-type": "alert", ...(push?.cleRegroupement ? { "apns-collapse-id": push.cleRegroupement } : {}) },
+      payload: { aps },
+    },
+  };
+}
 
 export function fcmTransport(
   serviceAccountJson: string = process.env.FCM_SERVICE_ACCOUNT_JSON ?? "",
@@ -75,12 +149,6 @@ export function fcmTransport(
 
       const bearer = await accessToken();
       const url = `https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`;
-      const donnees: Record<string, string> = {
-        ...(message.donnees ?? {}),
-        template_code: message.templateCode ?? "",
-        titre: message.titre,
-        corps: message.corps,
-      };
       let envoyes = 0;
       const invalides: string[] = [];
       let ref: string | undefined;
@@ -90,15 +158,7 @@ export function fcmTransport(
           const res = await fetchImpl(url, {
             method: "POST",
             headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: {
-                token,
-                notification: { title: message.titre, body: message.corps },
-                data: donnees,
-                android: { priority: "high", notification: { channel_id: "syndicup", sound: "default" } },
-                apns: { payload: { aps: { sound: "default", badge: 1 } } },
-              },
-            }),
+            body: JSON.stringify({ message: construireMessageFcm(token, message) }),
           });
           if (res.ok) {
             envoyes++;

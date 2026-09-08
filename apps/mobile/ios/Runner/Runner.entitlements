@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Push APNs (development ; Xcode bascule en production à l'archivage). -->
+	<key>aps-environment</key>
+	<string>development</string>
+	<!-- Notifications « time-sensitive » (urgences) : passent les modes Concentration. Le droit doit être
+	     coché dans le portail développeur Apple (Time Sensitive Notifications) pour l'App ID ma.syndicup.app. -->
+	<key>com.apple.developer.usernotifications.time-sensitive</key>
+	<true/>
+</dict>
+</plist>

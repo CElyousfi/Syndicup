@@ -17,7 +17,7 @@ Future<void> main() async {
   await Future.wait([initializeDateFormatting('fr'), initializeDateFormatting('ar')]);
   final prefs = await SharedPreferences.getInstance();
   final session = await SessionStorage().read();
-  await PushService.instance.init();
+  await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));
 
   runApp(
     ProviderScope(

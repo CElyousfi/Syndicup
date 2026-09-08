@@ -18,6 +18,7 @@ import { render, templateExiste } from "./templates";
 import { transportPour } from "./transports";
 import { logger } from "../logging/logger";
 import { retirerTokensInvalides, tokensPushDe } from "../users/appareils";
+import { livraisonPush, PREFERENCES_PUSH_DEFAUT, type PreferencesPush } from "./push-niveaux";
 
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
@@ -53,7 +54,7 @@ export async function envoyerNotification(
   const destinataire = await db.utilisateur
     .findUnique({
       where: { id: params.utilisateurId },
-      select: { email: true, telephone: true, languePreferee: true },
+      select: { email: true, telephone: true, languePreferee: true, preferencesNotificationJson: true },
     })
     .catch(() => null);
   const langue = (destinataire?.languePreferee ?? "FR") as "FR" | "AR";
@@ -69,7 +70,18 @@ export async function envoyerNotification(
   // PUSH (M19) : les jetons FCM des appareils du destinataire — lus sous la policy RLS m19
   // (membres de la copropriété courante). Sans appareil, le transport répond EN_ATTENTE.
   const tokensPush = canal === "PUSH" ? await tokensPushDe(db, params.utilisateurId).catch(() => []) : undefined;
-  const donnees: Record<string, string> = {};
+  // Livraison push : niveau (bannière / alerte / discret), heures calmes et préférences du
+  // destinataire ; badge = non lues existantes + celle-ci. URGENT n'est jamais filtré.
+  const id = uuidv7();
+  let push: NonNullable<Parameters<ReturnType<typeof transportPour>["envoyer"]>[0]["push"]> | undefined;
+  let pushRefusee = false;
+  if (canal === "PUSH") {
+    const livraison = livraisonPush(params.templateCode, preferencesPushDe(destinataire?.preferencesNotificationJson));
+    const nonLues = await db.notification.count({ where: { utilisateurId: params.utilisateurId, lu: false } }).catch(() => 0);
+    push = { niveau: livraison.niveau, badge: nonLues + 1, son: livraison.son, interruption: livraison.interruption, canalAndroid: livraison.canalAndroid, fil: livraison.fil };
+    pushRefusee = !livraison.livrer;
+  }
+  const donnees: Record<string, string> = { notification_id: id, copropriete_id: params.coproprieteId };
   for (const [k, v] of Object.entries((params.contenuJson ?? {}) as Record<string, unknown>)) {
     if (v === null || v === undefined) continue;
     donnees[k] = typeof v === "string" ? v : JSON.stringify(v);
@@ -88,7 +100,9 @@ export async function envoyerNotification(
           corps: JSON.stringify(params.contenuJson ?? {}),
           langue,
         };
-    const resultat = await transportPour(canal).envoyer({
+    const resultat = pushRefusee
+      ? { statut: "EN_ATTENTE" as const } // niveau désactivé par le destinataire : visible in-app seulement
+      : await transportPour(canal).envoyer({
       destinataire: {
         utilisateurId: params.utilisateurId,
         email: destinataire?.email ?? null,
@@ -100,6 +114,7 @@ export async function envoyerNotification(
       langue,
       templateCode: params.templateCode,
       donnees,
+      push,
     });
     statutEnvoi = resultat.statut;
     if (resultat.tokensInvalides?.length) {
@@ -118,7 +133,6 @@ export async function envoyerNotification(
     statutEnvoi = "ECHOUE";
   }
 
-  const id = uuidv7();
   const horodatageEnvoi = new Date();
   await db.$executeRaw`
     INSERT INTO notification
@@ -192,11 +206,59 @@ export async function marquerLue(ctx: TenantContext, notificationId: string) {
       throw new IntrouvableError("Notification introuvable.");
     }
     if (notification.lu) return notification;
-    return db.notification.update({
+    const maj = await db.notification.update({
       where: { id: notificationId },
       data: { lu: true, luLe: new Date() },
     });
+    // Badge d'icône : push silencieux (données seules) avec le nouveau nombre de non lues —
+    // best effort, jamais bloquant, noop sans FCM configuré.
+    const nonLues = await db.notification.count({ where: { utilisateurId: ctx.utilisateurId, lu: false } }).catch(() => null);
+    if (nonLues !== null) void synchroniserBadgePush(db, ctx.utilisateurId, nonLues);
+    return maj;
   });
+}
+
+/** Préférences push de l'appelant (flux temps réel). */
+export async function lirePreferencesPush(ctx: TenantContext): Promise<PreferencesPush> {
+  return withTenant(ctx, async (db) => {
+    const u = await db.utilisateur.findUnique({ where: { id: ctx.utilisateurId }, select: { preferencesNotificationJson: true } });
+    return preferencesPushDe(u?.preferencesNotificationJson);
+  });
+}
+
+/** Préférences push du destinataire (sous-ensemble de `preferences_notification_json`, défauts sûrs). */
+export function preferencesPushDe(json: unknown): PreferencesPush {
+  const j = (json ?? {}) as Record<string, unknown>;
+  const hc = j.heures_calmes as { debut?: unknown; fin?: unknown } | null | undefined;
+  const heures = hc && typeof hc.debut === "string" && typeof hc.fin === "string" ? { debut: hc.debut, fin: hc.fin } : null;
+  return {
+    push_normal: typeof j.push_normal === "boolean" ? j.push_normal : PREFERENCES_PUSH_DEFAUT.push_normal,
+    push_info: typeof j.push_info === "boolean" ? j.push_info : PREFERENCES_PUSH_DEFAUT.push_info,
+    push_son: typeof j.push_son === "boolean" ? j.push_son : PREFERENCES_PUSH_DEFAUT.push_son,
+    heures_calmes: heures,
+  };
+}
+
+/**
+ * Push silencieux de synchronisation du badge (aucune bannière) vers tous les appareils du
+ * destinataire. Ne laisse pas de trace `notification` (ce n'est pas un message probant).
+ */
+export async function synchroniserBadgePush(db: TenantDb, utilisateurId: string, nonLues: number): Promise<void> {
+  try {
+    const tokensPush = await tokensPushDe(db, utilisateurId).catch(() => []);
+    if (tokensPush.length === 0) return;
+    await transportPour("PUSH").envoyer({
+      destinataire: { utilisateurId, email: null, telephone: null, tokensPush },
+      titre: "",
+      corps: "",
+      langue: "FR",
+      templateCode: "BADGE_SYNC",
+      donnees: { badge: String(nonLues) },
+      push: { niveau: "SILENCIEUX", badge: nonLues, son: false, interruption: "passive", canalAndroid: "syndicup_silencieux", fil: "general", silencieux: true },
+    });
+  } catch (e) {
+    logger.warn("Synchronisation du badge push impossible", { erreur: e instanceof Error ? e.message : String(e) });
+  }
 }
 
 /**

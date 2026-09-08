@@ -587,6 +587,37 @@ paiement d'une fiche = paiement de la dépense liée (aucun second flux d'argent
   §11.1) ; recalcul rétroactif des fiches validées ; tâches M22 de fin de CDD ; saisie de paie et
   évaluations sur mobile (web-first, voir parité) ; purge / rétention du dossier après départ.
 
+## Push par niveau — bannières, alertes, écran verrouillé, badge (Android + iOS)
+
+*Réf. Master Spec 13.4, brief §8.2. Domaine : `18-communication.md` §18.3 bis. Livré le 09/09.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : classification `push-niveaux.ts` (URGENT / NORMAL /
+INFO / SILENCIEUX) par template ; champs de préférence `push_normal`, `push_info`, `push_son`,
+`heures_calmes` dans `preferences_notification_json` (aucune migration) ; pseudo-template
+`BADGE_SYNC` (push silencieux, pas de ligne `notification`) ; événements du flux enrichis
+(`niveau`, `fil`, `son`, `livrer`) ; canaux Android `syndicup_urgent` / `syndicup` / `syndicup_info`
+/ `syndicup_silencieux` ; catégorie iOS `SYNDICUP_NOTIFICATION` (Ouvrir / Marquer comme lu) ;
+entitlements `aps-environment` + `com.apple.developer.usernotifications.time-sensitive` ; canal
+natif `ma.syndicup.app/badge`. **Écarts** : (1) URGENT n'est jamais désactivable (sécurité / argent
+/ porte) ; (2) un niveau désactivé garde la notification in-app avec `EN_ATTENTE` (pas de statut
+« ignoré » dans l'enum) ; (3) pas d'alertes critiques Apple (droit spécial) — time-sensitive
+suffit ; (4) le badge compte les non lues de la copropriété courante (RLS), pas de toutes les
+copropriétés d'un utilisateur multi-résidences.
+
+- [x] API : corps FCM v1 complet (Android canal / `notification_priority` / `visibility PUBLIC` /
+  `notification_count` / `tag` ; APNs `alert` / `sound` / `badge` / `interruption-level` /
+  `thread-id` / `category` / `apns-priority` / collapse), heures calmes (heure de Casablanca),
+  préférences, badge = non lues + 1, push silencieux de synchronisation à la lecture, flux SSE
+  enrichi. Tests `tests/push-niveaux.test.ts` (5).
+- [x] Mobile : `PushService` réécrit (canaux, permission après connexion, bannières locales pour
+  les événements du flux hors premier plan et pour tout URGENT, dédoublonnage FCM / flux, badge,
+  actions, notification de lancement), préférences push dans la feuille « Notifications de la
+  résidence », icône de barre d'état Android, `Runner.entitlements` + `AppDelegate` (badge,
+  délégué UNUserNotificationCenter). Test `test/push_test.dart`.
+- [x] Web : préférences push (Profil).
+- [ ] À faire côté Apple / Google avant production : projet Firebase (clés `--dart-define`),
+  certificat APNs, cocher *Time Sensitive Notifications* sur l'App ID ; vérifier l'IPA sur un Mac.
+
 ## M21 — Communication : tableau d'affichage, sondages, contacts utiles
 
 *Réf. Doc A §8 (information des copropriétaires), §12 (confidentialité), §6 (seule l'AG décide).

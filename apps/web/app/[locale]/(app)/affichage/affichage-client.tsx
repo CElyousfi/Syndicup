@@ -336,6 +336,21 @@ export function PreferencesForm({ dict, locale, prefs }: { dict: Dict; locale: L
       <Switch name="digest_hebdo" label={c.digestHebdo} hint={c.digestHebdoAide} defaultChecked={prefs.digest_hebdo} />
       <Field label={c.canalDigest} htmlFor="canal_digest"><Select id="canal_digest" name="canal_digest" defaultValue={prefs.canal_digest}>{(["EMAIL", "PUSH", "SMS", "AUCUN"] as const).map((k) => <option key={k} value={k}>{e.canalPreference[k]}</option>)}</Select></Field>
       <Switch name="annonces_push" label={c.annoncesPush} hint={c.annoncesPushAide} defaultChecked={prefs.annonces_push} />
+      {/* Push sur le téléphone — niveaux (Master Spec 13.4) : bannières, alertes, écran verrouillé. */}
+      <div className="rounded-2xl border border-hairline p-4">
+        <p className="text-sm font-medium text-ink-strong">{c.pushTitre}</p>
+        <p className="mb-3 text-[12.5px] text-soft">{c.pushAide}</p>
+        <div className="space-y-3">
+          <Switch name="push_normal" label={c.pushNormal} hint={c.pushNormalAide} defaultChecked={prefs.push_normal} />
+          <Switch name="push_info" label={c.pushInfo} hint={c.pushInfoAide} defaultChecked={prefs.push_info} />
+          <Switch name="push_son" label={c.pushSon} hint={c.pushSonAide} defaultChecked={prefs.push_son} />
+          <Switch name="heures_calmes" label={c.heuresCalmes} hint={c.heuresCalmesAide} defaultChecked={prefs.heures_calmes !== null} />
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={c.heuresCalmesDebut} htmlFor="heures_calmes_debut"><Input id="heures_calmes_debut" name="heures_calmes_debut" type="time" defaultValue={prefs.heures_calmes?.debut ?? "22:00"} /></Field>
+            <Field label={c.heuresCalmesFin} htmlFor="heures_calmes_fin"><Input id="heures_calmes_fin" name="heures_calmes_fin" type="time" defaultValue={prefs.heures_calmes?.fin ?? "07:00"} /></Field>
+          </div>
+        </div>
+      </div>
       <FormAlert state={state} />
       <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] text-ok">{c.preferencesEnregistrees}</span> : null}<SubmitButton>{dict.common.save}</SubmitButton></div>
     </form>

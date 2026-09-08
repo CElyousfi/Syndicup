@@ -1457,7 +1457,18 @@ export interface Sondage {
   resultats?: SondageResultats | null;
 }
 export interface ContactUtile { id: string; coproprieteId: string; libelle: string; telephone: string; ordre: number }
-export interface PreferencesNotification { digest_hebdo: boolean; canal_digest: CanalPreference; annonces_push: boolean }
+export interface HeuresCalmes { debut: string; fin: string }
+export interface PreferencesNotification {
+  digest_hebdo: boolean;
+  canal_digest: CanalPreference;
+  annonces_push: boolean;
+  /** Push par niveau (URGENT toujours livré). */
+  push_normal: boolean;
+  push_info: boolean;
+  push_son: boolean;
+  heures_calmes: HeuresCalmes | null;
+}
+export const PREFERENCES_NOTIFICATION_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null };
 
 // ── M22 — Tâches ──────────────────────────────────────────────────────────────
 export type OrigineTache = "MANUELLE" | "RESOLUTION_AG" | "CONTRAT" | "INCIDENT" | "RAPPORT" | "SYSTEME";

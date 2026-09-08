@@ -8,6 +8,7 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import '../auth/app_state.dart';
 import '../auth/session.dart';
+import '../push/push_service.dart';
 
 /// Flux temps réel `GET /notifications/stream` (Server-Sent Events) : chaque nouvelle
 /// notification arrive à l'instant (≤ 2 s) — compteur de la cloche + toast + rafraîchissement
@@ -18,7 +19,14 @@ class LiveEvent {
   final String? corps;
   final String templateCode;
   final Map<String, dynamic>? contenuJson;
-  const LiveEvent({required this.id, this.titre, this.corps, required this.templateCode, this.contenuJson});
+  /// Niveau / fil / son calculés par le serveur (push-niveaux) ; null pour un flux ancien.
+  final String? niveau;
+  final String? fil;
+  final bool son;
+  /// Faux si le destinataire a désactivé ce niveau : pas de bannière système (toast seulement).
+  final bool livrer;
+  final int? unread;
+  const LiveEvent({required this.id, this.titre, this.corps, required this.templateCode, this.contenuJson, this.niveau, this.fil, this.son = true, this.livrer = true, this.unread});
 }
 
 class LiveState {
@@ -67,7 +75,11 @@ class NotificationsLive extends Notifier<LiveState> {
     _client = null;
   }
 
-  void setUnread(int n) => state = state.copyWith(unread: n < 0 ? 0 : n);
+  void setUnread(int n) {
+    state = state.copyWith(unread: n < 0 ? 0 : n);
+    // Badge d'icône aligné sur le compteur in-app (iOS natif ; Android efface à 0).
+    PushService.instance.setBadge(n < 0 ? 0 : n);
+  }
   void decrement() => setUnread(state.unread - 1);
 
   Future<void> _connect() async {
@@ -100,6 +112,7 @@ class NotificationsLive extends Notifier<LiveState> {
         return _scheduleReconnect();
       }
       state = state.copyWith(connected: true);
+      PushService.instance.fluxConnecte = true;
       _backoff = 2;
       String event = '';
       final data = StringBuffer();
@@ -116,10 +129,12 @@ class NotificationsLive extends Notifier<LiveState> {
           }
         },
         onDone: () {
+          PushService.instance.fluxConnecte = false;
           state = state.copyWith(connected: false);
           _scheduleReconnect(immediate: true);
         },
         onError: (_) {
+          PushService.instance.fluxConnecte = false;
           state = state.copyWith(connected: false);
           _scheduleReconnect();
         },
@@ -158,6 +173,11 @@ class NotificationsLive extends Notifier<LiveState> {
         corps: j['corps'] as String?,
         templateCode: j['templateCode']?.toString() ?? '',
         contenuJson: j['contenuJson'] is Map ? (j['contenuJson'] as Map).cast<String, dynamic>() : null,
+        niveau: j['niveau']?.toString(),
+        fil: j['fil']?.toString(),
+        son: j['son'] != false,
+        livrer: j['livrer'] != false,
+        unread: (j['unread'] as num?)?.toInt(),
       ));
     }
   }

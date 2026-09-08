@@ -19,6 +19,20 @@ export interface MessageNotification {
   /** Code du template + variables (chaînes) — deep-links côté mobile (brief §8.2). */
   templateCode?: string;
   donnees?: Record<string, string>;
+  /** Paramètres de livraison push (canal PUSH uniquement — voir push-niveaux.ts). */
+  push?: {
+    niveau: "URGENT" | "NORMAL" | "INFO" | "SILENCIEUX";
+    /** Nombre de notifications non lues après celle-ci (badge d'icône iOS / compteur Android). */
+    badge: number;
+    son: boolean;
+    interruption: "time-sensitive" | "active" | "passive";
+    canalAndroid: string;
+    fil: string;
+    /** Données seules, aucune bannière (synchronisation du badge). */
+    silencieux?: boolean;
+    /** Regroupe / remplace une notification précédente du même objet. */
+    cleRegroupement?: string;
+  };
 }
 
 export interface ResultatEnvoi {

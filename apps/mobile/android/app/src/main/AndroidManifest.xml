@@ -8,6 +8,8 @@
     <!-- Push FCM (Android 13+). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.VIBRATE"/>
+    <!-- Notifications locales : rétablir les rappels après redémarrage (flutter_local_notifications). -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <application
         android:label="SyndicUp"
@@ -44,7 +46,10 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Push FCM affiché par le système (app en arrière-plan) : canal par défaut, icône de barre d'état, couleur. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="syndicup"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_syndicup"/>
+        <meta-data android:name="com.google.firebase.messaging.default_notification_color" android:resource="@color/notification"/>
     </application>
     <queries>
         <intent>

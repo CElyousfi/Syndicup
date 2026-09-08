@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icône de barre d'état (silhouette blanche, Android la teinte) : immeuble SyndicUp simplifié. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,2 L21,7 L21,17 L12,22 L3,17 L3,7 Z M12,4.3 L5,8.2 L5,15.8 L12,19.7 L19,15.8 L19,8.2 Z M8.5,10 L10.5,10 L10.5,16 L8.5,16 Z M11,7.5 L13,7.5 L13,16 L11,16 Z M13.5,11.5 L15.5,11.5 L15.5,16 L13.5,16 Z"/>
+</vector>

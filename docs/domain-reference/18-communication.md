@@ -49,6 +49,35 @@ Résultats visibles de la gestion, de quiconque a répondu, et de tous à la cl�
 | `communication-digest-hebdo` | lundi 09:00 | par membre : annonces publiées non lues + sondages ouverts de son audience, sur le canal de sa préférence (`COMMUNICATION_DIGEST`). | une notification par utilisateur et par semaine ISO (recherche de l'envoi existant) ; préférence `AUCUN` / digest désactivé = rien. |
 | `communication-programmees-horaire` | toutes les heures (h+5) | publie les annonces programmées échues (fan-out), clôt les sondages dont `date_fin` est passée. | statut vérifié dans la transaction ; rejeu = 0 effet. |
 
+## 18.3 bis — Notifications sur le téléphone (push par niveau)
+
+> Master Spec 13.4 (FCM) + brief §8.2 (deep-links). Une seule classification pilote Android et iOS ;
+> elle est calculée côté API (`push-niveaux.ts`) et voyage avec chaque push FCM **et** chaque
+> événement du flux temps réel, pour que l'app affiche la même bannière quel que soit le chemin.
+
+| Niveau | Templates | Android | iOS | Écran verrouillé | Désactivable |
+| --- | --- | --- | --- | --- | --- |
+| **URGENT** | visiteur à la porte (`VISITE_NOUVELLE` / `VISITE_REPONSE`), `INCIDENT_URGENCE_MAXIMALE`, `ANNONCE_URGENTE`, arrivée LCD, dépassement visiteur, véhicule gênant, badge perdu, `IMPAYE_N4..N6`, `AG_OUVERTE`, assurance absente, échéance de contrat manquée, `MANDAT_PROPOSE` | canal `syndicup_urgent` importance MAX (alerte « heads-up » qui reste), son + vibration, `PRIORITY_MAX` | `interruption-level: time-sensitive` (passe Concentration / Ne pas déranger — droit *Time Sensitive Notifications* dans `Runner.entitlements`), son, badge | oui, contenu visible (`visibility PUBLIC`) | **non** — ignore aussi les heures calmes |
+| **NORMAL** | par défaut : appels de fonds, incidents, réservations, tâches, AG, dépenses, contrats, paie… | canal `syndicup` importance HIGH, son | `active`, son, badge | oui | `push_normal` |
+| **INFO** | documents, PV, rapports, récapitulatifs, sondages, annonces simples, confirmations (paiement reçu, badge remis, mandat confirmé…) | canal `syndicup_info` importance DEFAULT, sans son | `passive` (pas de réveil de l'écran), badge | oui | `push_info` |
+| **SILENCIEUX** | synchronisation du badge après « marquer comme lu » (`BADGE_SYNC`, pas de ligne `notification`) | données seules, priorité normale | `content-available`, `apns-push-type: background`, `badge` | — | — |
+
+- **Préférences** (`PUT /users/me/preferences-notification`, web Profil / mobile « Notifications de la
+  résidence ») : `push_normal`, `push_info`, `push_son`, `heures_calmes {debut, fin}` (heure de
+  Casablanca ; pendant la plage NORMAL / INFO sont livrés sans son au niveau passif). Un niveau
+  désactivé laisse la notification visible in-app (statut `EN_ATTENTE`, jamais un `ENVOYE` simulé).
+- **Badge d'icône** = nombre de non lues du destinataire (`aps.badge`, `notification_count`) ; l'app
+  l'aligne sur le compteur du flux et l'efface à zéro (iOS via canal natif `ma.syndicup.app/badge`).
+- **Fils** (`thread-id` / `groupKey`) par domaine : `ag`, `finances`, `incidents`, `acces`,
+  `reservations`, `communication`, `taches`, `contrats`, `personnel`, `cabinet`.
+- **Actions** : « Ouvrir » (deep-link `notifications_link`) et « Marquer comme lu » (catégorie iOS
+  `SYNDICUP_NOTIFICATION`, boutons Android) → `PATCH /notifications/{id}/read`.
+- **Sans Firebase** (build local) : le flux temps réel porte les bannières — un événement reçu alors
+  que l'app n'est pas au premier plan devient une notification système ; URGENT s'affiche même
+  l'app ouverte. Avec Firebase, le push au premier plan n'est pas doublé quand le flux est connecté.
+- **Permission** demandée après la connexion (Android 13+ `POST_NOTIFICATIONS`, iOS alerte + badge +
+  son), jamais au lancement. Les alertes *critiques* Apple (droit spécial) ne sont pas utilisées.
+
 ## 18.4 — Liens avec les autres modules
 
 - **M18 Rapports** : export `ANNONCES` (csv / xlsx, gestion) journalisé dans `export_log`.

@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <color name="ic_launcher_background">#285BFF</color>
+    <!-- Couleur d'accent des notifications (sauge SyndicUp). -->
+    <color name="notification">#4C6C5A</color>
 </resources>

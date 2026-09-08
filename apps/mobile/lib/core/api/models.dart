@@ -1335,12 +1335,30 @@ class ContactUtile {
   factory ContactUtile.fromJson(Map<String, dynamic> j) => ContactUtile(id: _s(j, 'id'), libelle: _s(j, 'libelle'), telephone: _s(j, 'telephone'), ordre: _in(j, 'ordre') ?? 0);
 }
 
+class HeuresCalmes {
+  final String debut, fin;
+  const HeuresCalmes({required this.debut, required this.fin});
+  Map<String, Object?> toJson() => {'debut': debut, 'fin': fin};
+}
+
 class PreferencesNotification {
-  final bool digestHebdo, annoncesPush;
+  final bool digestHebdo, annoncesPush, pushNormal, pushInfo, pushSon;
   final String canalDigest;
-  const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true});
-  factory PreferencesNotification.fromJson(Map<String, dynamic> j) => PreferencesNotification(digestHebdo: j['digest_hebdo'] is bool ? j['digest_hebdo'] as bool : true, canalDigest: _sn(j, 'canal_digest') ?? 'EMAIL', annoncesPush: j['annonces_push'] is bool ? j['annonces_push'] as bool : true);
-  Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush};
+  final HeuresCalmes? heuresCalmes;
+  const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true, this.pushNormal = true, this.pushInfo = true, this.pushSon = true, this.heuresCalmes});
+  factory PreferencesNotification.fromJson(Map<String, dynamic> j) {
+    final hc = j['heures_calmes'];
+    return PreferencesNotification(
+      digestHebdo: j['digest_hebdo'] is bool ? j['digest_hebdo'] as bool : true,
+      canalDigest: _sn(j, 'canal_digest') ?? 'EMAIL',
+      annoncesPush: j['annonces_push'] is bool ? j['annonces_push'] as bool : true,
+      pushNormal: j['push_normal'] is bool ? j['push_normal'] as bool : true,
+      pushInfo: j['push_info'] is bool ? j['push_info'] as bool : true,
+      pushSon: j['push_son'] is bool ? j['push_son'] as bool : true,
+      heuresCalmes: hc is Map && hc['debut'] is String && hc['fin'] is String ? HeuresCalmes(debut: hc['debut'] as String, fin: hc['fin'] as String) : null,
+    );
+  }
+  Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush, 'push_normal': pushNormal, 'push_info': pushInfo, 'push_son': pushSon, 'heures_calmes': heuresCalmes?.toJson()};
 }
 
 // ── M22 — Tâches ─────────────────────────────────────────────────────────────
