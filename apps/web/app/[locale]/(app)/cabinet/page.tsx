@@ -63,7 +63,10 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
   const gestionnaires = membres.filter((m) => m.actif && (m.role === "CABINET_ADMIN" || m.role === "CABINET_GESTIONNAIRE")).map((m) => ({ id: m.utilisateurId, nom: `${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId.slice(0, 8) }));
   const nomMembre = (id: string | null) => { const m = membres.find((x) => x.utilisateurId === id); return m ? `${m.prenom ?? ""} ${m.nom ?? ""}`.trim() : "—"; };
   const tauxTone = (x: number | null) => (x === null ? "neutral" : x >= 80 ? "ok" : x >= 60 ? "warn" : "danger");
-  const Ouvrir = ({ coproId, next, label }: { coproId: string; next?: string; label?: string }) => (
+  // Ouvrir une résidence suppose d'y avoir un rôle (RLS) : membre sans rôle → bouton absent.
+  const coprosAccessibles = new Set((ctx.profil.roles ?? []).filter((r) => r.actif).map((r) => r.copropriete_id));
+  const estSuperAdmin = ctx.roles.includes("SUPER_ADMIN");
+  const Ouvrir = ({ coproId, next, label }: { coproId: string; next?: string; label?: string }) => (!estSuperAdmin && !coprosAccessibles.has(coproId)) ? null : (
     <form action={ouvrirCopropriete}><input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproId} /><input type="hidden" name="next" value={next ?? "/tableau-de-bord"} /><Button type="submit" variant="ghost" size="sm">{label ?? t.ouvrir}</Button></form>
   );
 

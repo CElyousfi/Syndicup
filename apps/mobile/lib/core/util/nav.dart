@@ -113,6 +113,9 @@ List<NavSection> buildNav(AppContext ctx, Dict dict) {
         NavSection(s.quotidien, [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents]),
         NavSection(s.administration, [cabinet, membres, invitations, parametres]),
       ];
+    case 'MEMBRE_CABINET':
+      // M25 — membre d'un cabinet sans rôle de copropriété : uniquement l'espace cabinet.
+      return [NavSection(null, [cabinet])];
     case 'SYNDIC_COMPTABLE':
       // M25 — comptable d'un cabinet : lecture seule des finances.
       return [
@@ -172,6 +175,7 @@ const Map<String, List<String>> _tabsParRole = {
   'GARDIEN': ['grid', 'door', 'suitcase', 'wrench'],
   'GESTIONNAIRE_LCD': ['grid', 'suitcase', 'wrench', 'file'],
   'SYNDIC_COMPTABLE': ['grid', 'coins', 'pie', 'briefcase'],
+  'MEMBRE_CABINET': ['briefcase'],
   'PRESTATAIRE': ['grid', 'wrench'],
 };
 

@@ -143,6 +143,7 @@
   "roles_PERSONNE_MORALE_REPRESENTANT": "ممثل شخص معنوي",
   "roles_GESTIONNAIRE_LCD": "مسيّر الكراء",
   "roles_SYNDIC_COMPTABLE": "محاسب (مكتب)",
+  "roles_MEMBRE_CABINET": "عضو المكتب",
   "enums_typeLot_APPARTEMENT": "شقة",
   "enums_typeLot_PARKING": "موقف سيارة",
   "enums_typeLot_CAVE": "قبو",

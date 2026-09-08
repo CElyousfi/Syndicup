@@ -4,7 +4,7 @@
  * L'anonymisation vit dans ./anonymisation.ts (partagée avec le job Inngest mensuel).
  */
 import { can } from "../auth/permissions";
-import { withTenant } from "../tenant/db";
+import { withActeur, withTenant } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import type { RoleClaim } from "../tenant/jwt";
 import { ecrireAuditLog } from "../audit/audit";
@@ -52,6 +52,20 @@ export async function obtenirMonProfil(ctx: TenantContext) {
         actif: r.actif,
       })),
     };
+  });
+}
+
+/**
+ * GET /users/me pour un compte authentifié SANS rôle de copropriété (JWT `roles: []`) — M25 : un
+ * membre de cabinet sans mandat doit lire son profil pour atteindre l'espace cabinet. Contexte
+ * « acteur » (aucune copropriété) : la policy `utilisateur_visibilite` n'expose que sa propre ligne.
+ */
+export async function obtenirMonProfilSansRole(utilisateurId: string) {
+  return withActeur(utilisateurId, "CABINET", async (db) => {
+    const u = await db.utilisateur.findUnique({ where: { id: utilisateurId } });
+    if (!u) throw new UtilisateurIntrouvableError("Utilisateur introuvable.");
+    const roles = await db.roleUtilisateur.findMany({ where: { utilisateurId }, select: { coproprieteId: true, role: true, actif: true } });
+    return { ...profilPublic(u), roles: roles.map((r) => ({ copropriete_id: r.coproprieteId, role: r.role, actif: r.actif })) };
   });
 }
 

@@ -13,6 +13,7 @@ import type { TenantContext } from "../lib/tenant/context";
 import { creerCabinet, ajouterMembre, modifierMembre, proposerMandat, confirmerMandat, modifierMandat, terminerMandat, portefeuille, agenda, alertes, listerCabinets, listerMembres, creerPrestataireModele, copierPrestataire, mandatDeLaCopropriete, obtenirCabinet, CabinetError, PermissionRefuseeError, IntrouvableError } from "../lib/cabinet/cabinet";
 import { rafraichirPortefeuilleKpi } from "../lib/cabinet/jobs";
 import { obtenirSoldeLot, listerAppelsDeFonds } from "../lib/finances/finances";
+import { obtenirMonProfilSansRole } from "../lib/users/users";
 
 const admin = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
 let coproA: string, coproB: string, coproC: string, superAdmin: string, cabAdmin: string, gestionnaire: string, comptable: string, syndicA: string, syndicB: string, etranger: string, lotA: string;
@@ -193,6 +194,17 @@ describe("M25 — cabinet, membres, accès", () => {
     expect(await admin.auditLog.count({ where: { coproprieteId: coproA, action: "MANDAT_TERMINE" } })).toBe(1);
     await expect(terminerMandat(acteur(cabAdmin), cabinetId, mandatA, {})).rejects.toMatchObject({ code: "MANDAT_STATUT_INVALIDE" });
     expect(await admin.cabinetLog.count({ where: { cabinetId, type: "ACCES_APPLIQUE" } })).toBeGreaterThanOrEqual(4);
+  });
+  it("membre de cabinet sans aucun rôle de copropriété : son profil reste lisible (mode « cabinet seul ») et ne révèle rien d'autre", async () => {
+    const etrangerSansRole = await admin.utilisateur.create({ data: { email: "sansrole-cabinet@test.local", nom: "SANSROLE", prenom: "C", statutCompte: "ACTIF" } });
+    const profil = await obtenirMonProfilSansRole(etrangerSansRole.id);
+    expect(profil.nom).toBe("SANSROLE");
+    expect(profil.roles).toEqual([]);
+    // La lecture d'un autre utilisateur sous ce contexte reste invisible (RLS utilisateur_visibilite).
+    await expect(obtenirMonProfilSansRole(etrangerSansRole.id).then(async () => {
+      const { withActeur } = await import("../lib/tenant/db");
+      return withActeur(etrangerSansRole.id, "CABINET", (db) => db.utilisateur.findUnique({ where: { id: syndicA } }));
+    })).resolves.toBeNull();
   });
   it("annuaire du cabinet : modèle copié dans une copropriété visible (copie, idempotent) ; refusé hors portefeuille", async () => {
     const modele = await creerPrestataireModele(acteur(cabAdmin), cabinetId, { nom: "Otis Maroc", specialite: "Ascenseur", telephone: "+212522000000" });

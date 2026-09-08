@@ -160,6 +160,7 @@ export const fr = {
     PERSONNE_MORALE_REPRESENTANT: "Représentant de personne morale",
     GESTIONNAIRE_LCD: "Gestionnaire de location",
     SYNDIC_COMPTABLE: "Comptable (cabinet)",
+    MEMBRE_CABINET: "Membre du cabinet",
   },
 
   enums: {

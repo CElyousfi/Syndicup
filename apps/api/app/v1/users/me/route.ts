@@ -6,15 +6,25 @@ import { withApiHandler } from "../../../../lib/http/handler";
 import { profilUpdateSchema } from "../../../../lib/users/schemas";
 import {
   obtenirMonProfil,
+  obtenirMonProfilSansRole,
   modifierMonProfil,
   UtilisateurIntrouvableError,
 } from "../../../../lib/users/users";
-import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
+import { tenantFromRequest, identiteFromRequest, mapAuthError, ForbiddenTenantError } from "../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../lib/http/respond";
 
 async function handleGET(req: Request) {
   try {
-    const ctx = await tenantFromRequest(req);
+    let ctx;
+    try {
+      ctx = await tenantFromRequest(req);
+    } catch (e) {
+      // JWT valide mais sans aucun rôle (compte en attente, membre de cabinet sans mandat — M25) :
+      // le profil reste lisible pour que le client décide de l'écran (sans accès / cabinet seul).
+      if (!(e instanceof ForbiddenTenantError) || !/sans rôle/.test(e.message)) throw e;
+      const identite = await identiteFromRequest(req);
+      return ok(await obtenirMonProfilSansRole(identite.utilisateurId));
+    }
     return ok(await obtenirMonProfil(ctx));
   } catch (e) {
     const mapped = mapAuthError(e);

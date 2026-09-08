@@ -3,7 +3,7 @@ import { apiFetch } from "../../../lib/api/client";
 import { buildNav, buildMobileTabs } from "../../../components/shell/nav";
 import { AppFrame } from "../../../components/shell/app-frame";
 import { nomComplet } from "../../../lib/format";
-import type { Cabinet, Notification } from "../../../lib/api/types";
+import type { Notification } from "../../../lib/api/types";
 
 export default async function AppLayout({
   children,
@@ -26,8 +26,7 @@ export default async function AppLayout({
 
   const nav = buildNav(ctx.role, dict, ctx.locale);
   // M25 — espace cabinet : proposé quand l'utilisateur est membre d'au moins un cabinet.
-  const cabinetsRes = await apiFetch<Cabinet[]>("/cabinets");
-  const cabinets = cabinetsRes.ok ? cabinetsRes.data : [];
+  const cabinets = ctx.cabinets;
   const cabinetNom = cabinets.length === 1 ? cabinets[0]!.nom : cabinets.length > 1 ? `${dict.nav.cabinet} (${cabinets.length})` : null;
 
   return (

@@ -82,6 +82,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         case AppChooseCopro():
           return path == '/choisir-copropriete' ? null : '/choisir-copropriete';
         case AppReady(:final ctx):
+          if (ctx.isMembreCabinetSeul) {
+            // M25 — sans rôle de copropriété : cabinet et profil seulement.
+            const ok = ['/cabinet', '/profil'];
+            return ok.any((p) => path == p || path.startsWith('$p/')) ? null : '/cabinet';
+          }
           if (_isPublic(path) || path == '/splash') return ctx.isSuperAdmin ? '/admin' : '/tableau-de-bord';
           if (path == '/choisir-copropriete' && !ctx.multiCopro) return '/tableau-de-bord';
           return null;

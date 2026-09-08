@@ -29,6 +29,9 @@ export default async function DashboardPage({
     case "SUPER_ADMIN":
       // L'opérateur plateforme n'a pas de tableau de bord « résidence » : sa console.
       return redirect(`/${ctx.locale}/admin`);
+    case "MEMBRE_CABINET":
+      // M25 — membre d'un cabinet sans rôle de copropriété : son espace est le cabinet.
+      return redirect(`/${ctx.locale}/cabinet`);
     case "SYNDIC":
       return <DashboardSyndic ctx={ctx} lectureSeule={false} />;
     case "CONSEIL_SYNDICAL":

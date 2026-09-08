@@ -143,6 +143,7 @@
   "roles_PERSONNE_MORALE_REPRESENTANT": "Représentant de personne morale",
   "roles_GESTIONNAIRE_LCD": "Gestionnaire de location",
   "roles_SYNDIC_COMPTABLE": "Comptable (cabinet)",
+  "roles_MEMBRE_CABINET": "Membre du cabinet",
   "enums_typeLot_APPARTEMENT": "Appartement",
   "enums_typeLot_PARKING": "Parking",
   "enums_typeLot_CAVE": "Cave",

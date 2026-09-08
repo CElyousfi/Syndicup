@@ -26,6 +26,8 @@ class AppContext {
 
   bool has(String r) => roles.contains(r);
   bool get isSuperAdmin => has('SUPER_ADMIN');
+  /// M25 — membre d'un cabinet sans aucun rôle de copropriété : espace cabinet seul.
+  bool get isMembreCabinetSeul => role == 'MEMBRE_CABINET';
   bool get isSyndic => has('SYNDIC');
   /// Gestion : syndic ou opérateur plateforme.
   bool get isGestion => isSyndic || isSuperAdmin;
@@ -120,6 +122,12 @@ class AppStateController extends AsyncNotifier<AppState> {
     final estSuperAdmin = rolesActifs.any((r) => r.role == 'SUPER_ADMIN');
 
     if (rolesActifs.isEmpty) {
+      // M25 — membre d'un cabinet sans rôle de copropriété : l'espace cabinet est son application.
+      final cabinets = await _api.get<List<dynamic>>('/cabinets', parse: (j) => (j as List?) ?? const []);
+      if ((cabinets.dataOrNull ?? const []).isNotEmpty) {
+        await ref.read(localeProvider.notifier).syncFromProfile(profil.languePreferee);
+        return AppReady(AppContext(profil: profil, role: 'MEMBRE_CABINET', roles: const [], copropriete: null, coproprietes: const [], coproprieteId: ''));
+      }
       return profil.statutCompte == 'EN_VALIDATION' ? const AppEnValidation() : const AppSansAcces();
     }
 

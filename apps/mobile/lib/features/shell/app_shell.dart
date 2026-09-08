@@ -39,7 +39,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctx = ref.read(appContextProvider);
       PushService.instance.onOpen = (p) => GoRouter.of(context).push(p);
-      PushService.instance.registerToken(ref.read(apiClientProvider), langue: ctx.profil.languePreferee);
+      // Membre de cabinet sans rôle de copropriété (M25) : pas d'enregistrement push tenant.
+      if (!ctx.isMembreCabinetSeul) PushService.instance.registerToken(ref.read(apiClientProvider), langue: ctx.profil.languePreferee);
       // Le gardien rejoue sa file de visites dès l'ouverture et met en cache les lots
       // (formulaire visiteur utilisable hors-ligne).
       if (ctx.isGardien || ctx.isSyndic) {
@@ -244,7 +245,7 @@ class _MenuSheet extends ConsumerWidget {
                 children: [
                   const IconCircle(Icons.apartment_rounded, tone: Tone.sage, size: 36, iconSize: 20),
                   const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete!.nom, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete!.ville, style: t.labelSmall)])),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? ctx.role), style: t.labelSmall)])),
                   if (ctx.multiCopro) TextButton(onPressed: () {
                     Navigator.pop(context);
                     context.push('/choisir-copropriete');
@@ -253,15 +254,17 @@ class _MenuSheet extends ConsumerWidget {
               ),
             ),
           const SizedBox(height: 8),
-          _MenuTile(
-            icon: Icons.notifications_rounded,
-            label: dict.nav.notifications,
-            badge: live.unread,
-            onTap: () {
-              Navigator.pop(context);
-              context.push('/notifications');
-            },
-          ),
+          // Les notifications sont par copropriété : absentes en mode « cabinet seul » (M25).
+          if (!ctx.isMembreCabinetSeul)
+            _MenuTile(
+              icon: Icons.notifications_rounded,
+              label: dict.nav.notifications,
+              badge: live.unread,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/notifications');
+              },
+            ),
           for (final s in nav) ...[
             if (s.label != null) Padding(padding: const EdgeInsets.fromLTRB(4, 16, 4, 6), child: Text(s.label!.toUpperCase(), style: t.labelSmall)),
             for (final it in s.items)

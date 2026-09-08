@@ -158,4 +158,11 @@ void main() {
     }
     expect(buildTabs(buildNav(ctxFor('SYNDIC_COMPTABLE'), dictFr), ctxFor('SYNDIC_COMPTABLE'), dictFr).map((t) => t.path), contains('/cabinet'));
   });
+  test('M25 : membre de cabinet sans rôle de copropriété = espace cabinet seul', () {
+    final ctx = ctxFor('MEMBRE_CABINET');
+    expect(ctx.isMembreCabinetSeul, isTrue);
+    final paths = buildNav(ctx, dictFr).expand((s) => s.items).map((i) => i.path).toList();
+    expect(paths, equals(['/cabinet']));
+    expect(buildTabs(buildNav(ctx, dictFr), ctx, dictFr).map((t) => t.path), equals(['/cabinet']));
+  });
 }

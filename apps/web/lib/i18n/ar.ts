@@ -164,6 +164,7 @@ export const ar: DeepDict<typeof fr> = {
     PERSONNE_MORALE_REPRESENTANT: "ممثل شخص معنوي",
     GESTIONNAIRE_LCD: "مسيّر الكراء",
     SYNDIC_COMPTABLE: "محاسب (مكتب)",
+    MEMBRE_CABINET: "عضو المكتب",
   },
 
   enums: {

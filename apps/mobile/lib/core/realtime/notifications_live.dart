@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../auth/app_state.dart';
 import '../auth/session.dart';
 
 /// Flux temps réel `GET /notifications/stream` (Server-Sent Events) : chaque nouvelle
@@ -40,7 +41,10 @@ class NotificationsLive extends Notifier<LiveState> {
   LiveState build() {
     final session = ref.watch(sessionProvider);
     ref.onDispose(stop);
-    if (session != null) {
+    // M25 — membre de cabinet sans rôle de copropriété : aucun flux tenant (403 sinon).
+    final st = ref.watch(appStateProvider).valueOrNull;
+    final cabinetSeul = st is AppReady && st.ctx.isMembreCabinetSeul;
+    if (session != null && !cabinetSeul) {
       // Démarre hors du build (les providers ne doivent pas muter d'état pendant build).
       Future.microtask(start);
     } else {
@@ -83,6 +87,12 @@ class NotificationsLive extends Notifier<LiveState> {
         final ok = await api.refreshSession();
         client.close();
         if (ok) return _scheduleReconnect(immediate: true);
+        return;
+      }
+      if (res.statusCode == 403) {
+        // Aucun rôle de copropriété : inutile de réessayer tant que la session ne change pas.
+        client.close();
+        _running = false;
         return;
       }
       if (res.statusCode != 200) {

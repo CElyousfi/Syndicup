@@ -32,9 +32,10 @@ export async function resolveRoleClaims(
   const payload = await verifyJwt(token);
   const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
   const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];
-  if (!utilisateurId || roles.length === 0) {
-    throw new UnauthenticatedError("JWT sans sub ou sans rôle.");
-  }
+  if (!utilisateurId) throw new UnauthenticatedError("JWT sans sub.");
+  // Authentifié mais sans aucun rôle de copropriété : 403 (pas 401 — un client ne doit pas
+  // rafraîchir sa session en boucle ; compte en attente ou membre de cabinet seul, M25).
+  if (roles.length === 0) throw new ForbiddenTenantError("JWT sans rôle de copropriété.");
   return { utilisateurId, roles };
 }
 
@@ -106,9 +107,8 @@ export async function resolveTenantContext(
   const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
   const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];
 
-  if (!utilisateurId || roles.length === 0) {
-    throw new UnauthenticatedError("JWT sans sub ou sans rôle.");
-  }
+  if (!utilisateurId) throw new UnauthenticatedError("JWT sans sub.");
+  if (roles.length === 0) throw new ForbiddenTenantError("JWT sans rôle de copropriété.");
 
   const superAdmin = roles.find((r) => r.role === "SUPER_ADMIN");
   if (superAdmin) {

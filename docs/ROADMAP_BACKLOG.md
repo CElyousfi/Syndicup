@@ -872,9 +872,10 @@ fonctions SQL `cabinet_role_courant`, `cabinet_appliquer_acces`, `cabinet_mandat
 `MANDAT_EXISTANT`, `MANDAT_STATUT_INVALIDE`, `CONFLIT_SYNDIC`. **Écarts par rapport au prompt** :
 (1) l'annuaire partagé est une table `cabinet_prestataire` copiée dans `prestataire`
 (`Prestataire.cabinetId` aurait créé une ligne sans copropriété, impossible sous RLS) ; (2) un
-membre de cabinet sans aucun rôle de copropriété n'accède pas encore aux écrans (JWT sans rôle →
-`/compte/sans-acces`) — les routes `/cabinets/*` acceptent déjà le JWT seul, la claim « cabinet »
-et l'écran d'accueil cabinet-seul sont à faire ; (3) la fin de mandat laisse la copropriété sans
+membre de cabinet sans aucun rôle de copropriété entre dans un **mode « cabinet seul »** (rôle
+applicatif `MEMBRE_CABINET`, côté clients uniquement — pas de valeur d'enum en base ni de claim JWT) :
+espace cabinet + profil, aucune copropriété active, boutons « ouvrir la résidence » masqués tant
+qu'un mandat ne lui a pas donné de rôle ; (3) la fin de mandat laisse la copropriété sans
 syndic (l'opérateur ou l'AG désigne le suivant) — pas de réactivation automatique de l'ancien ;
 (4) les KPI agrégés (agenda, alertes) sont calculés copropriété par copropriété sous un contexte
 système interne après vérification de l'appartenance (les policies ne regardent jamais le
@@ -912,8 +913,10 @@ pas encore sur les convocations d'AG ni en logo.
 - [x] **Livré (08/09)** — Mobile `features/cabinet/cabinet_screens.dart` : portefeuille (cartes
   KPI), alertes, agenda (lecture), sélecteur de cabinet, navigation (syndic : administration ;
   comptable : finances en lecture) ; test routeur M25.
-- [ ] **Non livré / à confirmer** : claim JWT « cabinet » et accueil pour un membre sans rôle de
-  copropriété ; convocations d'AG avec marque et logo du cabinet ; sparklines historiques (la vue
+- [x] **Livré (08/09)** — mode « cabinet seul » web + mobile pour un membre sans rôle de
+  copropriété (`getAppContext` / `AppStateController` interrogent `/cabinets` avant de conclure
+  « sans accès ») ; test routeur mobile.
+- [ ] **Non livré / à confirmer** : convocations d'AG avec marque et logo du cabinet ; sparklines historiques (la vue
   ne garde que l'instantané) ; facturation des honoraires par le cabinet (avoir / relance) ;
   gestion (membres, mandats) depuis le mobile (web-first, voir parité) ; désignation du syndic
   suivant à la fin d'un mandat.

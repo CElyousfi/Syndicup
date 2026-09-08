@@ -7,19 +7,27 @@ import { redirect } from "next/navigation";
 import { apiFetch } from "./api/client";
 import { readSession } from "./session";
 import { getDict, isLocale, type Dict, type Locale } from "./i18n";
-import type { Copropriete, Profil, RoleType } from "./api/types";
+import type { Cabinet, Copropriete, Profil, RoleType } from "./api/types";
+
+/**
+ * Rôle applicatif : un rôle de copropriété, ou `MEMBRE_CABINET` (M25) pour un membre d'un cabinet
+ * sans aucun rôle de copropriété — il n'accède qu'à l'espace cabinet et à son profil.
+ */
+export type RoleApp = RoleType | "MEMBRE_CABINET";
 
 export interface AppContext {
   locale: Locale;
   dict: Dict;
   profil: Profil;
-  /** Rôle principal dans la copropriété active (priorité descendante). */
-  role: RoleType;
+  /** Rôle principal dans la copropriété active (priorité descendante), ou `MEMBRE_CABINET`. */
+  role: RoleApp;
   /** Tous les rôles actifs dans la copropriété active. */
   roles: RoleType[];
   copropriete: Copropriete | null;
   coproprietes: Copropriete[];
   coproprieteId: string | null;
+  /** M25 — cabinets dont l'utilisateur est membre (vide pour la plupart des comptes). */
+  cabinets: Cabinet[];
 }
 
 const PRIORITE: RoleType[] = [
@@ -40,11 +48,13 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
   const locale: Locale = isLocale(localeRaw) ? localeRaw : "fr";
   const dict = getDict(locale);
 
-  const [me, coprosRes, session] = await Promise.all([
+  const [me, coprosRes, session, cabinetsRes] = await Promise.all([
     apiFetch<Profil>("/users/me"),
     apiFetch<Copropriete[]>("/coproprietes"),
     readSession(),
+    apiFetch<Cabinet[]>("/cabinets"),
   ]);
+  const cabinets = cabinetsRes.ok ? cabinetsRes.data : [];
 
   if (!me.ok) {
     if (me.status === 404) redirect(`/${locale}/compte/sans-acces`);
@@ -55,6 +65,10 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
   const rolesActifs = (me.data.roles ?? []).filter((r) => r.actif);
   const estSuperAdmin = rolesActifs.some((r) => r.role === "SUPER_ADMIN");
   if (rolesActifs.length === 0) {
+    // M25 — membre d'un cabinet sans rôle de copropriété : espace cabinet seul.
+    if (cabinets.length > 0) {
+      return { locale, dict, profil: me.data, role: "MEMBRE_CABINET", roles: [], copropriete: null, coproprietes: [], coproprieteId: null, cabinets };
+    }
     redirect(
       me.data.statut_compte === "EN_VALIDATION"
         ? `/${locale}/compte/validation`
@@ -86,6 +100,7 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
     copropriete: coproprietes.find((c) => c.id === coproprieteId) ?? null,
     coproprietes,
     coproprieteId,
+    cabinets,
   };
 });
 

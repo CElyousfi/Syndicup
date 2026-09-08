@@ -2,7 +2,7 @@
  * Navigation PAR RÔLE (brief §5) — construite côté serveur, jamais une navigation unique avec
  * des entrées grisées. Les icônes voyagent par clé (composants non sérialisables).
  */
-import type { RoleType } from "../../lib/api/types";
+import type { RoleApp } from "../../lib/app-context";
 import type { Dict, Locale } from "../../lib/i18n";
 
 export type IconKey =
@@ -46,7 +46,7 @@ export interface NavSection {
   items: NavItem[];
 }
 
-export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection[] {
+export function buildNav(role: RoleApp, dict: Dict, locale: Locale): NavSection[] {
   const p = (path: string) => `/${locale}${path}`;
   const d = dict.nav;
 
@@ -153,6 +153,9 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         },
         { label: s.administration, items: [importer, membres, invitations, parametres] },
       ];
+    case "MEMBRE_CABINET":
+      // M25 — membre d'un cabinet sans rôle de copropriété : uniquement l'espace cabinet.
+      return [{ label: null, items: [cabinet] }];
     case "SYNDIC_COMPTABLE":
       // M25 — comptable d'un cabinet : lecture seule des finances (rôle posé par le cabinet).
       return [
@@ -217,7 +220,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
  * « Plus » ouvre la navigation complète. Sélection par clé d'icône dans la navigation déjà
  * construite — mêmes libellés, mêmes liens, aucune duplication de règles.
  */
-const TABS_PAR_ROLE: Record<RoleType, IconKey[]> = {
+const TABS_PAR_ROLE: Record<RoleApp, IconKey[]> = {
   SUPER_ADMIN: ["shield", "building"],
   SYNDIC: ["grid", "coins", "wrench", "building"],
   CONSEIL_SYNDICAL: ["grid", "coins", "wrench", "building"],
@@ -226,12 +229,13 @@ const TABS_PAR_ROLE: Record<RoleType, IconKey[]> = {
   PERSONNE_MORALE_REPRESENTANT: ["grid", "chart", "wrench", "home"],
   GESTIONNAIRE_LCD: ["grid", "suitcase", "wrench", "file"],
   SYNDIC_COMPTABLE: ["grid", "coins", "pie", "briefcase"],
+  MEMBRE_CABINET: ["briefcase"],
   LOCATAIRE: ["grid", "wrench", "calendar", "file"],
   GARDIEN: ["grid", "door", "wrench", "building"],
   PRESTATAIRE: ["grid", "wrench"],
 };
 
-export function buildMobileTabs(nav: NavSection[], role: RoleType, dict: Dict): NavItem[] {
+export function buildMobileTabs(nav: NavSection[], role: RoleApp, dict: Dict): NavItem[] {
   const items = nav.flatMap((s) => s.items);
   const tabs: NavItem[] = [];
   const court = dict.nav.court as Partial<Record<IconKey, string>>;
