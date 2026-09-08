@@ -159,3 +159,6 @@ export const emplacementVariant = map({ DISPONIBLE: "ok", ATTRIBUE: "info", HORS
 export const badgeAccesVariant = map({ ACTIF: "ok", PERDU: "danger", DESACTIVE: "neutral", RESTITUE: "outline" });
 // M24 — imports.
 export const importVariant = map({ TELEVERSE: "neutral", ANALYSE: "warn", PRET: "info", EN_COURS: "info", TERMINE: "ok", ECHOUE: "danger", ANNULE: "neutral" });
+// M25 — cabinet.
+export const mandatVariant = map({ EN_ATTENTE: "warn", ACTIF: "ok", TERMINE: "neutral" });
+export const alerteVariant = map({ danger: "danger", warn: "warn", info: "info" });

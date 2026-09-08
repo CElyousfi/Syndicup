@@ -31,7 +31,7 @@ export default async function ContratsPage({ params, searchParams }: { params: P
   const { locale } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
-  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
+  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
   const c = dict.contrats;
   const e = dict.enumsContrats;

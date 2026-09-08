@@ -27,7 +27,7 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
   const { locale } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
-  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
+  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
   const r = dict.rapports;
   const tranche = (TRANCHES as readonly string[]).includes(sp.tranche ?? "") && sp.tranche !== "TOUTES" ? sp.tranche : undefined;

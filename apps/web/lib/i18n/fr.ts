@@ -103,6 +103,7 @@ export const fr = {
     mesTaches: "Mes tâches",
     parkings: "Parkings & badges",
     importer: "Importer & démarrer",
+    cabinet: "Cabinet",
     justificatifs: "Justificatifs",
     especes: "Espèces reçues",
     coproprietes: "Copropriétés",
@@ -135,6 +136,7 @@ export const fr = {
       tasks: "Tâches",
       car: "Parkings",
       download: "Importer",
+      briefcase: "Cabinet",
     },
     sections: {
       pilotage: "Pilotage",
@@ -157,6 +159,7 @@ export const fr = {
     PRESTATAIRE: "Prestataire",
     PERSONNE_MORALE_REPRESENTANT: "Représentant de personne morale",
     GESTIONNAIRE_LCD: "Gestionnaire de location",
+    SYNDIC_COMPTABLE: "Comptable (cabinet)",
   },
 
   enums: {
@@ -1927,6 +1930,25 @@ export const fr = {
     commentaire: "Commentaire",
     evalue: "Merci, votre évaluation est enregistrée.",
     dejaEvalue: "Prestataire évalué : {note}/5",
+    chargementImpossible: "Certaines données n'ont pas pu être chargées — réessayez.",
+  },
+  // ── M25 — Cabinet / portefeuille (Doc A §8) ──
+  cabinet: {
+    titre: "Cabinet",
+    subtitle: "Votre portefeuille de copropriétés en un coup d'œil : recouvrement, impayés, incidents, tâches en retard, assemblées, contrats, assurance — puis une résidence en un clic.",
+    onglets: { portefeuille: "Portefeuille", alertes: "Alertes", agenda: "Agenda", membres: "Équipe", prestataires: "Prestataires", parametres: "Paramètres" },
+    aucunCabinet: "Aucun cabinet", aucunCabinetAide: "Vous n'êtes membre d'aucun cabinet de syndic. L'opérateur plateforme crée le cabinet et désigne son administrateur.",
+    changerCabinet: "Changer de cabinet", cabinetActif: "Cabinet",
+    coproprietes: "Copropriétés", lots: "Lots", appele: "Appelé", encaisse: "Encaissé", recouvrement: "Recouvrement", impayes: "Impayés", impayesLots: "{n} lot(s)", justificatifs: "Justificatifs en attente", incidents: "Incidents ouverts", incidentsUrgents: "dont {n} urgent(s)", taches: "Tâches en retard", prochaineAg: "Prochaine AG", contrats30: "Contrats à échéance (30 j)", assurance: "Assurance", assuranceOk: "Active", assuranceAbsente: "Absente", sejours: "Séjours LCD aujourd'hui", honoraires: "Honoraires mensuels", derniereActivite: "Dernière activité", gestionnaire: "Gestionnaire", ouvrir: "Ouvrir la résidence", calculeLe: "KPI calculés le {date} (rafraîchis toutes les 15 minutes).",
+    aucuneCopropriete: "Aucune copropriété dans le portefeuille.", aucuneCoproprieteAide: "Proposez un mandat sur une copropriété existante (son syndic confirme) ou créez une résidence gérée directement.",
+    seulementAlertes: "Seulement les copropriétés en alerte", toutes: "Toutes",
+    alertes: "Alertes", aucuneAlerte: "Aucune alerte — tout le portefeuille est dans les clous.", codesAlerte: { ASSURANCE_ABSENTE: "Assurance de l'immeuble absente", RECOUVREMENT_FAIBLE: "Recouvrement sous le seuil ({v} %)", TACHES_EN_RETARD: "{v} tâche(s) en retard", JUSTIFICATIFS_EN_ATTENTE: "{v} justificatif(s) en attente depuis trop longtemps", INCIDENTS_URGENTS: "{v} incident(s) urgent(s)" },
+    agenda: "Agenda", agendaAide: "AG, échéances de contrats, tâches, paie et fins de mandat de toutes vos copropriétés, dans l'ordre.", jours: "Prochains {n} jours", aucunEvenement: "Rien de prévu sur la période.", typesEvenement: { AG: "Assemblée", ECHEANCE_CONTRAT: "Échéance de contrat", TACHE: "Tâche", PAIE: "Paie", FIN_MANDAT: "Fin de mandat" }, enRetard: "en retard",
+    membres: "Équipe du cabinet", ajouterMembre: "Ajouter un membre", ajouterMembreAide: "Le compte doit déjà exister sur SyndicUp (téléphone ou e-mail). Un gestionnaire devient syndic des copropriétés qu'il gère ; un comptable lit les finances de toutes.", telephoneOuEmail: "Téléphone ou e-mail", role: "Rôle", roles: { CABINET_ADMIN: "Administrateur", CABINET_GESTIONNAIRE: "Gestionnaire", CABINET_COMPTABLE: "Comptable" }, membreAjoute: "Membre ajouté — ses accès aux copropriétés sont appliqués.", membreModifie: "Membre modifié.", retirer: "Retirer", retirerCorps: "Ses rôles de syndic / comptable posés par le cabinet sont révoqués immédiatement sur toutes les copropriétés.", membreRetire: "Membre retiré.", nbCoproprietes: "{n} copropriété(s) gérée(s)", actif: "Actif", inactif: "Retiré",
+    mandats: "Mandats", proposerMandat: "Ajouter une copropriété", proposerMandatAide: "Copropriété existante : son syndic en place recevra la proposition et confirmera la passation. Nouvelle résidence : créée et gérée par le cabinet immédiatement.", coproprieteExistante: "Copropriété existante (identifiant)", nouvelleCopropriete: "Nouvelle résidence", nom: "Nom", adresse: "Adresse", ville: "Ville", nbLots: "Nombre de lots", gestionnairePrincipal: "Gestionnaire principal", gestionnairePrincipalAide: "Devient le syndic de la copropriété (un seul syndic actif par copropriété).", dateDebut: "Début du mandat", dateFin: "Fin du mandat", honorairesAide: "Crée un contrat SYNDIC_PROFESSIONNEL mensuel dont les échéances alimentent les dépenses HONORAIRES_SYNDIC.", resolutionAg: "Résolution d'AG (mandat voté)", mandatPropose: "Mandat proposé — le syndic en place doit confirmer.", mandatCree: "Résidence créée et mandat actif.", modifierMandat: "Modifier le mandat", mandatModifie: "Mandat modifié.", terminerMandat: "Terminer le mandat", terminerCorps: "Le cabinet perd la copropriété : les accès de ses membres sont révoqués immédiatement ; la copropriété reste sans syndic jusqu'à une nouvelle désignation.", motif: "Motif", mandatTermine: "Mandat terminé.", statuts: { EN_ATTENTE: "En attente de confirmation", ACTIF: "Actif", TERMINE: "Terminé" }, confirmePar: "Confirmé par", aucunMandat: "Aucun mandat.",
+    prestataires: "Annuaire de prestataires", prestatairesAide: "Modèles partagés par le cabinet : copiez-les dans une copropriété (chaque résidence garde sa propre fiche).", ajouterPrestataire: "Ajouter un modèle", specialite: "Spécialité", copierDans: "Copier dans une copropriété", copie: "Prestataire copié.", dejaCopie: "Déjà présent dans cette copropriété.", aucunPrestataire: "Aucun modèle de prestataire.",
+    parametres: "Paramètres du cabinet", identite: "Identité", seuilRecouvrement: "Seuil d'alerte de recouvrement (%)", seuilRecouvrementAide: "Une copropriété sous ce taux remonte en alerte.", delaiJustificatifs: "Délai d'alerte des justificatifs (jours)", delaiJustificatifsAide: "Un justificatif en attente plus longtemps remonte en alerte.", parametresEnregistres: "Paramètres enregistrés.", raisonSociale: "Raison sociale", telephone: "Téléphone", email: "E-mail",
+    mandatCopro: "Cabinet de syndic", mandatCoproAide: "Cabinet professionnel mandaté sur cette copropriété.", aucunMandatCopro: "Aucun cabinet de syndic n'est mandaté sur cette copropriété.", confirmer: "Confirmer la passation", confirmerCorps: "Vous cédez votre fonction de syndic au gestionnaire désigné par le cabinet. Vos accès de syndic prennent fin immédiatement ; l'action est tracée.", confirme: "Passation confirmée — le cabinet gère désormais la copropriété.", gestionnaireDesigne: "Gestionnaire désigné",
     chargementImpossible: "Certaines données n'ont pas pu être chargées — réessayez.",
   },
   // ── M24 — Import Excel & onboarding (Doc A §11) ──

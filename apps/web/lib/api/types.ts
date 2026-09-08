@@ -47,7 +47,9 @@ export type RoleType =
   | "GARDIEN"
   | "PRESTATAIRE"
   | "PERSONNE_MORALE_REPRESENTANT"
-  | "GESTIONNAIRE_LCD";
+  | "GESTIONNAIRE_LCD"
+  /** M25 — comptable d'un cabinet (lecture seule des finances), posé par le cabinet. */
+  | "SYNDIC_COMPTABLE";
 
 export type StatutCompte =
   | "INVITE"
@@ -1632,3 +1634,76 @@ export interface OnboardingChecklist {
   imports_termines: number;
 }
 export interface DemoCopropriete { id: string; nom: string; est_demo: boolean; demo_expire_le: string | null; invitation_syndic: { id: string; code: string; expire_le: string }; lots: number }
+
+// ── M25 — Cabinet / portefeuille (Doc A §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M25) ──
+export type RoleCabinet = "CABINET_ADMIN" | "CABINET_GESTIONNAIRE" | "CABINET_COMPTABLE";
+export type StatutMandat = "EN_ATTENTE" | "ACTIF" | "TERMINE";
+export interface Cabinet {
+  id: string;
+  nom: string;
+  raisonSociale: string | null;
+  ice: string | null;
+  rc: string | null;
+  adresse: string | null;
+  telephone: string | null;
+  email: string | null;
+  logoStoragePath: string | null;
+  statut: "ACTIF" | "SUSPENDU";
+  parametres: { seuil_recouvrement?: number; delai_justificatifs_jours?: number };
+  nbMembres: number;
+  nbMandats: number;
+  monRole: RoleCabinet | "SUPER_ADMIN" | null;
+  creeLe: string;
+  modifieLe: string;
+}
+export interface CabinetMembre { id: string; utilisateurId: string; nom: string | null; prenom: string | null; role: RoleCabinet; actif: boolean; nbCoproprietes: number; creeLe: string }
+export interface CabinetMandat {
+  id: string;
+  cabinetId: string;
+  copropriete: { id: string; nom: string; ville: string; nbLots: number; estDemo: boolean };
+  gestionnairePrincipalId: string | null;
+  dateDebutMandat: string;
+  dateFinMandat: string | null;
+  resolutionAgId: string | null;
+  honorairesMensuels: string | null;
+  contratId: string | null;
+  statut: StatutMandat;
+  confirmeParId: string | null;
+  confirmeLe: string | null;
+  actif: boolean;
+  creeLe: string;
+}
+export type AlerteCode = "ASSURANCE_ABSENTE" | "RECOUVREMENT_FAIBLE" | "TACHES_EN_RETARD" | "JUSTIFICATIFS_EN_ATTENTE" | "INCIDENTS_URGENTS";
+export interface LignePortefeuille {
+  mandat_id: string;
+  copropriete_id: string;
+  nom: string;
+  ville: string;
+  est_demo: boolean;
+  gestionnaire_principal_id: string | null;
+  date_debut_mandat: string;
+  honoraires_mensuels: string | null;
+  nb_lots: number;
+  appele: string;
+  encaisse: string;
+  taux_recouvrement: number | null;
+  impayes_montant: string;
+  impayes_nb_lots: number;
+  justificatifs_en_attente: number;
+  justificatif_plus_ancien: string | null;
+  incidents_ouverts: number;
+  incidents_urgents: number;
+  taches_retard: number;
+  prochaine_ag: string | null;
+  contrats_expirant_30j: number;
+  assurance_active: boolean;
+  sejours_lcd_aujourdhui: number;
+  derniere_activite: string | null;
+  calcule_le: string;
+  alertes: AlerteCode[];
+}
+export interface TotauxPortefeuille { coproprietes: number; lots: number; appele: string; encaisse: string; taux_recouvrement: number | null; impayes: string; alertes: number; honoraires_mensuels: string }
+export interface EvenementAgendaCabinet { type: "AG" | "ECHEANCE_CONTRAT" | "TACHE" | "PAIE" | "FIN_MANDAT"; date: string; copropriete_id: string; copropriete: string; titre: string; lien: string; id: string; retard?: boolean }
+export interface AlerteCabinet { code: AlerteCode; niveau: "danger" | "warn" | "info"; copropriete_id: string; copropriete: string; valeur: string | number | null; lien: string }
+export interface CabinetPrestataire { id: string; cabinetId: string; nom: string; specialite: string; telephone: string | null; email: string | null; ice: string | null; rc: string | null; adresse: string | null; notes: string | null; creeLe: string }
+export interface MandatCopropriete { id: string; statut: StatutMandat; dateDebutMandat: string; dateFinMandat: string | null; honorairesMensuels: string | null; contratId: string | null; cabinet: { id: string; nom: string; raison_sociale: string | null; telephone: string | null; email: string | null }; gestionnairePrincipal: IdentiteCourte | null; peutConfirmer: boolean }

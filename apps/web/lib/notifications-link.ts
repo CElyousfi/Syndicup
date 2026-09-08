@@ -39,6 +39,9 @@ export function lienNotification(
   if (templateCode === "TACHES_EN_RETARD_HEBDO") return p("/taches?retard=1");
   if (templateCode.startsWith("TACHE_")) return id("tache_id") ? p(`/taches/${id("tache_id")}`) : p("/taches");
   // M24 — import terminé → fiche de l'import.
+  // M25 — mandat de cabinet : proposition à confirmer dans Paramètres (syndic en place) ; confirmé / terminé → espace cabinet.
+  if (templateCode === "MANDAT_PROPOSE") return p("/parametres");
+  if (templateCode === "MANDAT_CONFIRME" || templateCode === "MANDAT_TERMINE") return p("/cabinet");
   if (templateCode === "IMPORT_TERMINE") return id("import_job_id") ? p(`/import/${id("import_job_id")}`) : p("/import");
   // M23 — parkings : attribution / expiration → fiche emplacement ; badges → registre ; véhicule gênant → incident ; visiteur → visites.
   if (templateCode.startsWith("ATTRIBUTION_")) return id("emplacement_id") ? p(`/parkings/${id("emplacement_id")}`) : p("/parkings");

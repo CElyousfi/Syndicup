@@ -32,6 +32,7 @@ export default async function DashboardPage({
     case "SYNDIC":
       return <DashboardSyndic ctx={ctx} lectureSeule={false} />;
     case "CONSEIL_SYNDICAL":
+    case "SYNDIC_COMPTABLE":
       return <DashboardSyndic ctx={ctx} lectureSeule />;
     case "PROPRIETAIRE":
     case "INDIVISAIRE":

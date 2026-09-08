@@ -36,7 +36,7 @@ export default async function DepensesPage({
   const { locale } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
-  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
+  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
   const d = dict.depenses;
   const e = dict.enumsDepenses;

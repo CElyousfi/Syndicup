@@ -31,7 +31,7 @@ export default async function RapportsPage({ params, searchParams }: { params: P
   const { locale } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
-  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
+  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
   const r = dict.rapports;
   const exercice = /^\d{4}$/.test(sp.exercice ?? "") ? sp.exercice! : String(new Date().getFullYear());

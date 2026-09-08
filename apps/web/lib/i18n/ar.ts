@@ -106,6 +106,7 @@ export const ar: DeepDict<typeof fr> = {
     mesTaches: "مهامي",
     parkings: "المواقف والشارات",
     importer: "الاستيراد والانطلاق",
+    cabinet: "المكتب",
     payer: "الدفع",
     justificatifs: "إثباتات الدفع",
     especes: "النقود المستلمة",
@@ -139,6 +140,7 @@ export const ar: DeepDict<typeof fr> = {
       tasks: "المهام",
       car: "المواقف",
       download: "الاستيراد",
+      briefcase: "المكتب",
     },
     sections: {
       pilotage: "القيادة",
@@ -161,6 +163,7 @@ export const ar: DeepDict<typeof fr> = {
     PRESTATAIRE: "مقدم خدمات",
     PERSONNE_MORALE_REPRESENTANT: "ممثل شخص معنوي",
     GESTIONNAIRE_LCD: "مسيّر الكراء",
+    SYNDIC_COMPTABLE: "محاسب (مكتب)",
   },
 
   enums: {
@@ -1915,6 +1918,25 @@ export const ar: DeepDict<typeof fr> = {
     commentaire: "تعليق",
     evalue: "شكرًا، تم تسجيل تقييمكم.",
     dejaEvalue: "تم تقييم مقدم الخدمة: {note}/5",
+    chargementImpossible: "تعذر تحميل بعض البيانات — أعيدوا المحاولة.",
+  },
+  // ── M25 — المكتب / المحفظة ──
+  cabinet: {
+    titre: "المكتب",
+    subtitle: "محفظة إقاماتكم بنظرة واحدة: التحصيل، المتأخرات، الأعطاب، المهام المتأخرة، الجمعيات، العقود، التأمين — ثم إقامة بنقرة.",
+    onglets: { portefeuille: "المحفظة", alertes: "التنبيهات", agenda: "الأجندة", membres: "الفريق", prestataires: "مقدمو الخدمات", parametres: "الإعدادات" },
+    aucunCabinet: "لا مكتب", aucunCabinetAide: "لستم عضوًا في أي مكتب سنديك. مشغّل المنصة ينشئ المكتب ويعيّن مديره.",
+    changerCabinet: "تغيير المكتب", cabinetActif: "المكتب",
+    coproprietes: "الإقامات", lots: "الحصص", appele: "المستدعى", encaisse: "المحصَّل", recouvrement: "التحصيل", impayes: "المتأخرات", impayesLots: "{n} حصة/حصص", justificatifs: "إثباتات في الانتظار", incidents: "أعطاب مفتوحة", incidentsUrgents: "منها {n} عاجلة", taches: "مهام متأخرة", prochaineAg: "الجمعية القادمة", contrats30: "عقود تنتهي (30 يومًا)", assurance: "التأمين", assuranceOk: "نشط", assuranceAbsente: "غائب", sejours: "إقامات قصيرة اليوم", honoraires: "الأتعاب الشهرية", derniereActivite: "آخر نشاط", gestionnaire: "المسيّر", ouvrir: "فتح الإقامة", calculeLe: "المؤشرات محسوبة في {date} (تُحدَّث كل 15 دقيقة).",
+    aucuneCopropriete: "لا إقامة في المحفظة.", aucuneCoproprieteAide: "اقترحوا وكالة على إقامة قائمة (يؤكدها سنديكها) أو أنشئوا إقامة مسيّرة مباشرة.",
+    seulementAlertes: "الإقامات في حالة تنبيه فقط", toutes: "الكل",
+    alertes: "التنبيهات", aucuneAlerte: "لا تنبيهات — المحفظة كلها في وضع سليم.", codesAlerte: { ASSURANCE_ABSENTE: "تأمين العمارة غائب", RECOUVREMENT_FAIBLE: "التحصيل دون العتبة ({v}%)", TACHES_EN_RETARD: "{v} مهمة/مهام متأخرة", JUSTIFICATIFS_EN_ATTENTE: "{v} إثبات/إثباتات في الانتظار منذ مدة طويلة", INCIDENTS_URGENTS: "{v} عطب/أعطاب عاجلة" },
+    agenda: "الأجندة", agendaAide: "الجمعيات، آجال العقود، المهام، الأجور ونهايات الوكالات لكل إقاماتكم، بالترتيب.", jours: "الأيام {n} القادمة", aucunEvenement: "لا شيء مبرمج في الفترة.", typesEvenement: { AG: "جمعية", ECHEANCE_CONTRAT: "أجل عقد", TACHE: "مهمة", PAIE: "أجور", FIN_MANDAT: "نهاية وكالة" }, enRetard: "متأخر",
+    membres: "فريق المكتب", ajouterMembre: "إضافة عضو", ajouterMembreAide: "يجب أن يكون الحساب موجودًا على SyndicUp (هاتف أو بريد). يصبح المسيّر سنديك الإقامات التي يديرها؛ يقرأ المحاسب مالية الجميع.", telephoneOuEmail: "هاتف أو بريد", role: "الدور", roles: { CABINET_ADMIN: "مدير", CABINET_GESTIONNAIRE: "مسيّر", CABINET_COMPTABLE: "محاسب" }, membreAjoute: "أُضيف العضو — طُبّقت صلاحياته على الإقامات.", membreModifie: "تم تعديل العضو.", retirer: "سحب", retirerCorps: "تُلغى فورًا أدوار السنديك / المحاسب التي وضعها المكتب على كل الإقامات.", membreRetire: "تم سحب العضو.", nbCoproprietes: "{n} إقامة/إقامات مسيّرة", actif: "نشط", inactif: "مسحوب",
+    mandats: "الوكالات", proposerMandat: "إضافة إقامة", proposerMandatAide: "إقامة قائمة: يتلقى سنديكها الاقتراح ويؤكد التسليم. إقامة جديدة: تُنشأ وتُسيَّر من المكتب فورًا.", coproprieteExistante: "إقامة قائمة (المعرّف)", nouvelleCopropriete: "إقامة جديدة", nom: "الاسم", adresse: "العنوان", ville: "المدينة", nbLots: "عدد الحصص", gestionnairePrincipal: "المسيّر الرئيسي", gestionnairePrincipalAide: "يصبح سنديك الإقامة (سنديك نشط واحد لكل إقامة).", dateDebut: "بداية الوكالة", dateFin: "نهاية الوكالة", honorairesAide: "ينشئ عقد SYNDIC_PROFESSIONNEL شهريًا تغذّي آجاله نفقات HONORAIRES_SYNDIC.", resolutionAg: "قرار الجمعية (وكالة مصوَّت عليها)", mandatPropose: "اقتُرحت الوكالة — على السنديك الحالي التأكيد.", mandatCree: "أُنشئت الإقامة والوكالة نشطة.", modifierMandat: "تعديل الوكالة", mandatModifie: "تم تعديل الوكالة.", terminerMandat: "إنهاء الوكالة", terminerCorps: "يخسر المكتب الإقامة: تُلغى صلاحيات أعضائه فورًا؛ تبقى الإقامة بدون سنديك حتى تعيين جديد.", motif: "السبب", mandatTermine: "انتهت الوكالة.", statuts: { EN_ATTENTE: "في انتظار التأكيد", ACTIF: "نشطة", TERMINE: "منتهية" }, confirmePar: "أكّدها", aucunMandat: "لا وكالة.",
+    prestataires: "دليل مقدمي الخدمات", prestatairesAide: "نماذج مشتركة من المكتب: انسخوها في إقامة (تحتفظ كل إقامة ببطاقتها).", ajouterPrestataire: "إضافة نموذج", specialite: "التخصص", copierDans: "نسخ في إقامة", copie: "تم نسخ مقدم الخدمة.", dejaCopie: "موجود سلفًا في هذه الإقامة.", aucunPrestataire: "لا نموذج لمقدم خدمة.",
+    parametres: "إعدادات المكتب", identite: "الهوية", seuilRecouvrement: "عتبة تنبيه التحصيل (%)", seuilRecouvrementAide: "تُرفع الإقامة دون هذه النسبة إلى التنبيهات.", delaiJustificatifs: "مهلة تنبيه الإثباتات (أيام)", delaiJustificatifsAide: "إثبات في الانتظار أكثر من ذلك يُرفع إلى التنبيهات.", parametresEnregistres: "تم حفظ الإعدادات.", raisonSociale: "الاسم التجاري", telephone: "الهاتف", email: "البريد الإلكتروني",
+    mandatCopro: "مكتب السنديك", mandatCoproAide: "مكتب مهني موكَّل على هذه الإقامة.", aucunMandatCopro: "لا مكتب سنديك موكَّل على هذه الإقامة.", confirmer: "تأكيد التسليم", confirmerCorps: "تتنازلون عن وظيفة السنديك للمسيّر المعيَّن من المكتب. تنتهي صلاحياتكم كسنديك فورًا؛ الإجراء مسجَّل.", confirme: "تم تأكيد التسليم — يسيّر المكتب الإقامة الآن.", gestionnaireDesigne: "المسيّر المعيَّن",
     chargementImpossible: "تعذر تحميل بعض البيانات — أعيدوا المحاولة.",
   },
   // ── M24 — الاستيراد والانطلاق ──

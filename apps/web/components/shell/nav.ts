@@ -30,7 +30,8 @@ export type IconKey =
   | "megaphone"
   | "tasks"
   | "car"
-  | "download";
+  | "download"
+  | "briefcase";
 
 export interface NavItem {
   href: string;
@@ -111,6 +112,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const parametres: NavItem = { href: p("/parametres"), label: d.parametres, icon: "settings" };
   // M24 — import Excel / démarrage (syndic ; conseil en lecture).
   const importer: NavItem = { href: p("/import"), label: d.importer, icon: "download" };
+  // M25 — espace cabinet (portefeuille, alertes, agenda) : membres d'un cabinet (affiché par le layout quand l'utilisateur en a un).
+  const cabinet: NavItem = { href: p("/cabinet"), label: d.cabinet, icon: "briefcase" };
   // M15 — location courte durée : régime, déclarations de lots, séjours (Doc A §10.2).
   const lcd: NavItem = {
     href: p("/location-courte-duree"),
@@ -149,6 +152,14 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
           items: [lots(), parkings, espaces, personnel, visites, lcd, prestataires, contrats, documents],
         },
         { label: s.administration, items: [importer, membres, invitations, parametres] },
+      ];
+    case "SYNDIC_COMPTABLE":
+      // M25 — comptable d'un cabinet : lecture seule des finances (rôle posé par le cabinet).
+      return [
+        { label: null, items: [dashboard] },
+        { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
+        { label: s.quotidien, items: [lots(), contrats, documents, importer] },
+        { label: s.administration, items: [cabinet] },
       ];
     case "CONSEIL_SYNDICAL":
       return [
@@ -214,6 +225,7 @@ const TABS_PAR_ROLE: Record<RoleType, IconKey[]> = {
   INDIVISAIRE: ["grid", "chart", "wrench", "home"],
   PERSONNE_MORALE_REPRESENTANT: ["grid", "chart", "wrench", "home"],
   GESTIONNAIRE_LCD: ["grid", "suitcase", "wrench", "file"],
+  SYNDIC_COMPTABLE: ["grid", "coins", "pie", "briefcase"],
   LOCATAIRE: ["grid", "wrench", "calendar", "file"],
   GARDIEN: ["grid", "door", "wrench", "building"],
   PRESTATAIRE: ["grid", "wrench"],

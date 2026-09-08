@@ -25,6 +25,8 @@ const RESSOURCES: Record<string, { path: string; filtres: string[] }> = {
   taches: { path: "/taches", filtres: ["statut", "priorite", "origine", "assignee_id", "retard", "ouvertes", "q"] },
   // M23 — emplacements de parking / caves communes.
   emplacements: { path: "/emplacements", filtres: ["type", "niveau", "statut", "q"] },
+  // M25 — portefeuille d'un cabinet (chemin paramétré par `cabinet_id`).
+  portefeuille: { path: "/cabinets/{cabinet_id}/portefeuille", filtres: ["cabinet_id", "alerte", "sort", "q"] },
 };
 
 export async function GET(req: NextRequest) {

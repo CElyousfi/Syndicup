@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../lib/app-context";
+import { CabinetMandatCard } from "./cabinet-mandat-card";
 import { getDict, isLocale } from "../../../../lib/i18n";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
@@ -45,6 +46,8 @@ export default async function ParametresPage({
   return (
     <div className="animate-fade">
       <PageHeader title={pa.titre} subtitle={copropriete.nom} />
+      {/* M25 — cabinet de syndic mandaté / passation */}
+      <div className="mb-5"><CabinetMandatCard dict={dict} locale={ctx.locale} coproprieteId={copropriete.id} /></div>
 
       <div className="mx-auto max-w-3xl space-y-4">
         <Card>

@@ -28,7 +28,7 @@ export default async function JustificatifsPage({ params, searchParams }: { para
   const { locale } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
-  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
+  exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
   const j = dict.justificatifs;
   const e = dict.enumsJustificatifs;

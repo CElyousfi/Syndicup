@@ -63,6 +63,7 @@ const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>>
   tasks: IconTasks,
   car: IconCar,
   download: IconDownload,
+  briefcase: IconSuitcase,
 };
 
 export interface FrameLabels {
@@ -94,6 +95,7 @@ export function AppFrame({
   coproVille,
   coproLogo,
   multiCopro,
+  cabinetNom,
   userNom,
   userRole,
   unreadCount,
@@ -110,6 +112,8 @@ export function AppFrame({
   /** Cache-buster du logo (chemin storage) — null : pas de logo, icône générique. */
   coproLogo: string | null;
   multiCopro: boolean;
+  /** M25 — cabinet de syndic dont l'utilisateur est membre (lien vers l'espace cabinet, au-dessus de la copropriété). */
+  cabinetNom?: string | null;
   userNom: string;
   userRole: string;
   unreadCount: number;
@@ -136,6 +140,14 @@ export function AppFrame({
         </Link>
       </div>
 
+      {/* M25 — Cabinet (portefeuille) au-dessus de la copropriété active */}
+      {cabinetNom ? (
+        <Link href={`/${locale}/cabinet`} className="mx-4 mb-2 flex items-center gap-2 rounded-2xl border border-hairline px-3 py-2 text-[12.5px] font-medium text-ink-strong transition-colors hover:bg-hover">
+          <IconSuitcase width={16} height={16} className="shrink-0 text-faint" />
+          <span className="truncate">{cabinetNom}</span>
+          <IconChevronDown width={14} height={14} className="ms-auto shrink-0 -rotate-90 rtl:rotate-90 text-faint" />
+        </Link>
+      ) : null}
       {/* Copropriété active */}
       {coproNom ? (
         multiCopro ? (
