@@ -181,10 +181,12 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
             <SectionHeader title={t.mandats} subtitle={t.proposerMandatAide} />
             {mandats.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunMandat}</p> : (
               <ul className="mt-3 divide-y divide-hairline">{mandats.map((m) => (
-                <li key={m.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                  <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink-strong">{m.copropriete.nom}</p><p className="text-[12px] text-soft tnum">{formatDate(m.dateDebutMandat, ctx.locale)}{m.dateFinMandat ? ` → ${formatDate(m.dateFinMandat, ctx.locale)}` : ""} · {nomMembre(m.gestionnairePrincipalId)}{m.honorairesMensuels ? ` · ${formatMontant(m.honorairesMensuels)} MAD` : ""}</p></div>
-                  <Badge variant={mandatVariant[m.statut]}>{t.statuts[m.statut]}</Badge>
-                  {admin && m.actif ? <span className="inline-flex gap-1"><MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} mandat={m} /><TerminerMandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} mandat={m} /></span> : null}
+                <li key={m.id} className="py-2.5">
+                  <div className="flex items-center gap-3"><p className="min-w-0 flex-1 truncate text-sm font-medium text-ink-strong">{m.copropriete.nom}</p><Badge variant={mandatVariant[m.statut]}>{t.statuts[m.statut]}</Badge></div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <p className="text-[12px] text-soft tnum">{formatDate(m.dateDebutMandat, ctx.locale)}{m.dateFinMandat ? ` → ${formatDate(m.dateFinMandat, ctx.locale)}` : ""} · {nomMembre(m.gestionnairePrincipalId)}{m.honorairesMensuels ? ` · ${formatMontant(m.honorairesMensuels)} MAD` : ""}</p>
+                    {admin && m.actif ? <span className="ms-auto inline-flex gap-1"><MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} mandat={m} /><TerminerMandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} mandat={m} /></span> : null}
+                  </div>
                 </li>
               ))}</ul>
             )}
