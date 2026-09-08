@@ -7,6 +7,7 @@ import { getDict, isLocale } from "../../../../lib/i18n";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
+import { DemoModal } from "../import/import-client";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { Input } from "../../../../components/ui/field";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
@@ -54,10 +55,13 @@ export default async function AdminPage({
         title={ad.titre}
         subtitle={ad.subtitle}
         actions={
-          <ButtonLink href={`/${locale}/admin/coproprietes/nouvelle`} data-tour="admin-new">
-            <IconPlus width={16} height={16} />
-            {ad.creer}
-          </ButtonLink>
+          <div className="flex flex-wrap gap-2">
+            {ctx.coproprieteId ? <DemoModal dict={dict} locale={ctx.locale} coproprieteId={ctx.coproprieteId} /> : null}
+            <ButtonLink href={`/${locale}/admin/coproprietes/nouvelle`} data-tour="admin-new">
+              <IconPlus width={16} height={16} />
+              {ad.creer}
+            </ButtonLink>
+          </div>
         }
       />
 

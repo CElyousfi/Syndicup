@@ -38,6 +38,7 @@ import { Banner } from "../../../../components/ui/banner";
 import { Bars, Donut } from "../../../../components/ui/charts";
 import { IconCircle, CBuilding, CCalendar, CCoins, CMoneyBag, CVote, CWrench } from "../../../../components/ui/color-icons";
 import { agVariant, urgenceVariant } from "../../../../lib/status";
+import { OnboardingCard, chargerOnboarding } from "../import/onboarding-card";
 import { IconArrowEnd, IconCoins, IconKey } from "../../../../components/ui/icons";
 
 export async function DashboardSyndic({
@@ -63,6 +64,8 @@ export async function DashboardSyndic({
   const documents = documentsRes.ok ? documentsRes.data : [];
   // M22 — tâches ouvertes / en retard (syndic + conseil).
   const tachesRes = await apiFetch<unknown[]>("/taches", { searchParams: { ouvertes: "1", limit: 1 } });
+  // M24 — checklist de démarrage : affichée tant que tout n'est pas en place (syndic + conseil).
+  const onboarding = ctx.coproprieteId ? await chargerOnboarding(ctx.coproprieteId) : null;
   const tachesMeta = tachesRes.ok ? (tachesRes.meta as { total?: number; retard?: number }) : {};
   const tachesRetard = tachesMeta.retard ?? 0;
 
@@ -143,6 +146,7 @@ export async function DashboardSyndic({
           )
         }
       />
+      {onboarding && !onboarding.complet ? <div className="mb-5"><OnboardingCard dict={dict} locale={locale} checklist={onboarding} compact /></div> : null}
 
       <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
 

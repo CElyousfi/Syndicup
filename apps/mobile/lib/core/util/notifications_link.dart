@@ -24,6 +24,8 @@ String lienNotification(String templateCode, Map<String, dynamic>? contenu) {
     return id('justificatif_id') != null ? '/justificatifs/${id('justificatif_id')}' : '/justificatifs';
   }
   // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
+  // M24 — import terminé : le tableau de bord (l'import se pilote sur le web).
+  if (templateCode == 'IMPORT_TERMINE') return '/tableau-de-bord';
   // M23 — parkings : attribution / expiration → fiche emplacement ; badges → registre ; véhicule gênant → incident ; visiteur → places du jour.
   if (templateCode.startsWith('ATTRIBUTION_')) return id('emplacement_id') != null ? '/parkings/${id('emplacement_id')}' : '/parkings';
   if (templateCode.startsWith('BADGE_')) return '/parkings?onglet=badges';

@@ -145,4 +145,7 @@ void main() {
     expect(lienNotification('VEHICULE_MAL_STATIONNE', {'incident_id': 'i1'}), '/incidents/i1');
     expect(lienNotification('VISITEUR_DEPASSEMENT', {'visite_id': 'v1'}), '/parkings?onglet=visiteurs');
   });
+  test('M24 : deep-link import terminé → tableau de bord (import web-first)', () {
+    expect(lienNotification('IMPORT_TERMINE', {'import_job_id': 'i1'}), '/tableau-de-bord');
+  });
 }

@@ -126,7 +126,7 @@ export function normaliserTelephone(v: string | null | undefined): string | null
 /** Décimal : « 1 250,50 », « 1.250,50 », « 25/1000 » (→ 25), « 2,5 % » (→ 2.5). */
 export function normaliserDecimal(v: string | null | undefined): string | null {
   if (v === null || v === undefined) return null;
-  let s = String(v).trim().replace(/ /g, " ");
+  let s = String(v).trim().replace(/[\u00A0\u202F]/g, " ");
   if (!s || s === "-" || s === "—") return null;
   const frac = s.match(/^\s*(-?[\d\s.,]+)\s*\/\s*([\d\s.,]+)\s*$/);
   if (frac) s = frac[1]!;

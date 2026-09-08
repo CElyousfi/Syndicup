@@ -123,6 +123,8 @@ class _DashSyndic extends ConsumerWidget {
         children: [
           _Greeting(ctx: ctx, subtitle: lectureSeule ? d.dash.controleTitle : ctx.copropriete?.nom),
           if (synthese.hasError) ErrorState(error: synthese.error!, onRetry: refresh),
+          // M24 — checklist de démarrage (lecture) : visible tant que tout n'est pas en place.
+          const OnboardingCard(),
           HeroCard(
             imageWidget: const CoproPhoto('accueil'),
             label: ctx.copropriete?.nom ?? d.nav.lots,
@@ -616,6 +618,56 @@ class _DashPrestataire extends ConsumerWidget {
           SuBanner(tone: BannerTone.info, body: md.cloisonnement),
         ],
       ),
+    );
+  }
+}
+
+/// M24 — checklist de démarrage de la résidence (lecture seule sur mobile : l'import se fait sur le web).
+class OnboardingCard extends ConsumerWidget {
+  const OnboardingCard({super.key});
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final d = context.dict;
+    final t = d.importation;
+    final tt = Theme.of(context).textTheme;
+    final c = ref.watch(onboardingProvider).valueOrNull;
+    if (c == null || c.complet) return const SizedBox.shrink();
+    String libelle(String cle) => switch (cle) {
+          'residence_creee' => t.etapesOnboarding.residence_creee,
+          'lots_importes' => t.etapesOnboarding.lots_importes,
+          'tantiemes_coherents' => t.etapesOnboarding.tantiemes_coherents,
+          'proprietaires_invites' => t.etapesOnboarding.proprietaires_invites,
+          'acceptes' => t.etapesOnboarding.acceptes,
+          'budget_actif' => t.etapesOnboarding.budget_actif,
+          'premier_appel' => t.etapesOnboarding.premier_appel,
+          'rib_saisi' => t.etapesOnboarding.rib_saisi,
+          'assurance_saisie' => t.etapesOnboarding.assurance_saisie,
+          'gardien_cree' => t.etapesOnboarding.gardien_cree,
+          _ => cle,
+        };
+    return SuCard(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(child: Text(t.onboarding, style: tt.titleSmall)),
+          StatusBadge(fill(t.progressionOnboarding, {'faites': c.faites, 'total': c.total}), variant: BadgeVariant.info, small: true),
+        ]),
+        const SizedBox(height: 4),
+        Text(c.estDemo ? t.demo : t.onboardingAide, style: tt.bodySmall),
+        const SizedBox(height: 10),
+        Gauge(c.progression / 100, color: SuColors.action),
+        const SizedBox(height: 10),
+        for (final e in c.etapes)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(children: [
+              Icon(e.fait ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 18, color: e.fait ? SuColors.ok : SuColors.faint),
+              const SizedBox(width: 8),
+              Expanded(child: Text(libelle(e.cle), style: tt.bodyMedium?.copyWith(color: e.fait ? SuColors.soft : SuColors.ink, decoration: e.fait ? TextDecoration.lineThrough : null))),
+              if (e.detail != null) Text(e.detail!, style: tt.labelSmall),
+            ]),
+          ),
+      ]),
     );
   }
 }

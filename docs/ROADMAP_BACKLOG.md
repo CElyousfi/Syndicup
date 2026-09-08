@@ -783,6 +783,70 @@ tirets (« 12345a6 » → « 12345-A-6 ») et le plan est une grille par niveau,
   automatique de plaque (caméra) ; écriture comptable de la caution (brief §14.4) ; création /
   attribution / remise de badge depuis le mobile (web-first, voir parité).
 
+## M24 — Import Excel et onboarding d'une résidence en une heure
+
+*Réf. Doc A §11 (onboarding), §3.4 (FIFO), Master Spec Partie 5.3 (invitation ↔ compte ↔ lot).
+Domaine : `21-import-onboarding.md`. Juridique : brief §15. Branche `feature/m24-import`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `TypeImport`, `StatutImport`,
+`TypeImportJobLog` ; valeur `TypeAppelDeFonds.SOLDE_OUVERTURE` ; tables `import_job`,
+`import_job_log` (append-only), `solde_ouverture` ; colonnes `invitation.pre_rempli_json`,
+`invitation.envoyee_le`, `invitation.accepte_par_id`, `invitation.import_job_id`,
+`copropriete.est_demo`, `copropriete.demo_expire_le` ; fonction `invitation_accepter` étendue
+(identité et rattachements pré-remplis, normalisation des quote-parts d'indivision — migrations
+`m24_import_onboarding` et `m24_invitation_accepter_normalisation`) ; type de document
+`IMPORT_SOURCE` (déjà réservé en M16) ; permissions `import.gerer`, `import.lire`,
+`onboarding.lire`, `demo.gerer` ; codes `IMPORT_FICHIER_ILLISIBLE`, `IMPORT_STATUT_INVALIDE`,
+`DEMO_INTERDIT` ; audit `IMPORT_CREE/LANCE/TERMINE/ECHOUE/ANNULE`, `INVITATIONS_ENVOI_MASSE`,
+`COPROPRIETE_DEMO_CREEE` ; `GET /finances/lots/{id}/solde` étendu (`avoir_ouverture`,
+`solde_ouverture`). **Écarts par rapport au prompt** : (1) **aucun compte fantôme** : les
+propriétaires / employés inconnus deviennent des invitations pré-remplies matérialisées à
+l'acceptation (`utilisateur.telephone` est unique et `invitation_accepter` refuse un numéro déjà
+pris — créer des `utilisateur` sans compte aurait bloqué l'inscription ou exigé une fusion de
+comptes) ; les membres déjà connus sont rattachés directement ; (2) le **solde d'ouverture dû est
+matérialisé comme ligne d'appel `SOLDE_OUVERTURE`** plutôt que traité comme une entité financière
+parallèle : le FIFO M17, l'escalade M5, les quittances et le relevé le voient sans code spécial ;
+l'avoir (négatif) reste dans `solde_ouverture` et est déduit du solde affiché (l'avance n'est pas
+supportée par le moteur, écart M5) ; (3) la progression se lit par `GET /import/{id}` (polling
+2 s côté web) — le flux SSE existant ne transporte que les notifications ; `IMPORT_TERMINE` y
+arrive ; (4) l'envoi SMS / e-mail en masse passe par les transports de notification sans ligne
+`notification` (pas d'utilisateur) : statistiques dans la réponse, `envoyee_le` + audit ;
+(5) `POST /coproprietes/{id}/demo` crée la démo depuis une fixture code (sous-ensemble d'Al Amal),
+pas depuis le script de seed (qui crée des comptes à téléphones fixes) ; (6) la démo est purgée
+par suppression ordonnée des tables qu'elle alimente — une démo enrichie hors périmètre reste
+signalée dans les erreurs du job, jamais supprimée à moitié.
+
+- [x] **Livré (08/09)** — Migrations `..._m24_import_onboarding` (tables, CHECKs, RLS syndic /
+  conseil, journal append-only, `invitation_accepter` étendue) et
+  `..._m24_invitation_accepter_normalisation`. Seed Al Amal : import LOTS_PROPRIETAIRES terminé
+  (fichier source SYNDIC_ONLY, journal ligne à ligne, audit), invitation LOCATAIRE pré-remplie jamais
+  envoyée, solde d'ouverture de A3 (600 MAD, ligne `SOLDE_OUVERTURE` escaladée N2) et avoir de A1.
+- [x] **Livré (08/09)** — API tag `Import` (13 opérations) : upload-url, création + analyse
+  (synonymes FR/AR/EN, tableurs sales, aperçu, avertissements), historique, fiche / progression,
+  aperçu, mapping, exécution (job Inngest `import-executer`, chunks idempotents, savepoint par
+  ligne, `?sync=1`), annulation, rapport csv, modèles xlsx FR/AR, invitations en masse (SMS /
+  e-mail / csv WhatsApp), checklist d'onboarding, démo SUPER_ADMIN ; job `demo-purge-quotidien`.
+  Exécuteurs : lots + propriétaires, soldes d'ouverture, prestataires, contrats, véhicules / badges,
+  personnel. Notifications FR/AR `IMPORT_TERMINE`, `INVITATION_ENVOI`. Tests `tests/import.test.ts`
+  (12) : normalisation, détection FR / AR / EN et csv sale, analyse (mapping, doublons, tantièmes,
+  même personne), exécution (membre connu rattaché, une invitation par personne avec ses lots,
+  indivision, rejeu = rien deux fois, rapport), mapping corrigé, conseil en lecture, annulation,
+  acceptation pré-remplie (identité, lot, 100 → 50/50, `accepte_par_id`), envoi en masse jamais
+  automatique (csv, audit), soldes d'ouverture (ligne la plus ancienne, avoir, FIFO, escalade),
+  autres types, RLS (id forgé → refus, rien créé dans B), checklist, démo + purge.
+- [x] **Livré (08/09)** — Web : `import/` (Démarrer : checklist + modèles ; Imports : historique ;
+  Invitations en masse), `import/nouveau` (type, fichier, options), `import/[id]` (étapes, colonnes
+  corrigeables, aperçu avec erreurs, exécution + progression, résultat, rapport csv, invitations),
+  carte « Démarrage » sur le tableau de bord syndic, bouton « Envoyer les invitations » sur la page
+  Invitations, « Créer une démo » dans la console SUPER_ADMIN, relais `/api/import-fichier`,
+  navigation « Importer & démarrer », FR/AR RTL, deep-link.
+- [x] **Livré (08/09)** — Mobile : carte « Démarrage » sur le tableau de bord syndic (lecture,
+  rafraîchie par push), deep-link `IMPORT_TERMINE` ; test routeur M24.
+- [ ] **Non livré / à confirmer** : reprise des paiements passés (historique des quittances) ;
+  import des occupants / locataires en masse (hors PERSONNEL) ; envoi WhatsApp par agrégateur ;
+  avance / trop-perçu comme avoir automatique (moteur M5) ; fusion d'un compte existant avec une
+  invitation d'un autre numéro ; import depuis le mobile (web-first, voir parité).
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

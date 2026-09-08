@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../auth/app_state.dart';
 import '../auth/session.dart';
 import '../format/centimes.dart';
 import 'api_client.dart';
@@ -207,6 +208,14 @@ final tacheProvider = FutureProvider.autoDispose.family<Tache, String>((ref, id)
 });
 final executionResolutionProvider = FutureProvider.autoDispose.family<ExecutionResolution, ({String agId, String resolutionId})>((ref, k) async {
   return unwrap(await ref.watch(apiClientProvider).get('/ag/${k.agId}/resolutions/${k.resolutionId}/execution', parse: (j) => ExecutionResolution.fromJson(asMap(j))));
+});
+
+// ── M24 — Onboarding (syndic / conseil) ──────────────────────────────────────
+final onboardingProvider = FutureProvider.autoDispose<OnboardingChecklist?>((ref) async {
+  final id = ref.watch(appContextProvider).coproprieteId;
+  if (id.isEmpty) return null;
+  final r = await ref.watch(apiClientProvider).get<OnboardingChecklist>('/coproprietes/$id/onboarding', parse: (j) => OnboardingChecklist.fromJson(asMap(j)));
+  return r.dataOrNull;
 });
 
 // ── M23 — Parkings ───────────────────────────────────────────────────────────

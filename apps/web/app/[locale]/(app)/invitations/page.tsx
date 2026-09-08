@@ -17,6 +17,7 @@ import { IconKey } from "../../../../components/ui/icons";
 import { CreerInvitationModal, RegenererModal } from "./invitation-modals";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { annulerInvitation } from "./actions";
+import { InvitationsMasseModal } from "../import/import-client";
 
 export async function generateMetadata({
   params,
@@ -49,6 +50,8 @@ export default async function InvitationsPage({
   const invitations = invitationsRes.ok ? invitationsRes.data : [];
   const lots = lotsRes.ok ? lotsRes.data : [];
   const lotParId = new Map(lots.map((l) => [l.id, l.numero]));
+  // M24 — invitations pré-remplies par un import, jamais envoyées seules.
+  const nonEnvoyees = invitations.filter((i) => i.statut === "EN_ATTENTE" && i.preRempliJson && !i.envoyeeLe).length;
 
   return (
     <div className="animate-fade">
@@ -56,12 +59,15 @@ export default async function InvitationsPage({
         title={inv.titre}
         subtitle={inv.subtitle}
         actions={
+          <>
+          {nonEnvoyees > 0 ? <InvitationsMasseModal dict={dict} locale={ctx.locale} nb={nonEnvoyees} /> : null}
           <CreerInvitationModal
             dict={dict}
             locale={ctx.locale}
             lots={lots.map((l) => ({ id: l.id, numero: l.numero }))}
             ouvertInitialement={sp.nouvelle === "1"}
           />
+          </>
         }
       />
 

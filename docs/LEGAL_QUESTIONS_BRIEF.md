@@ -502,6 +502,44 @@ procédure fourrière reste hors plateforme.
 restituable (comptabilisé hors budget) et quelle preuve de restitution exiger ? Le module trace la
 restitution et le sort de la caution dans l'audit sans écriture comptable dédiée.
 
+## 15. Reprise des soldes, invitations pré-remplies, données importées, démonstration (module M24)
+
+| Paramètre | Valeur provisoire | Statut |
+|---|---|---|
+| Solde d'ouverture | ligne d'appel `SOLDE_OUVERTURE` datée de la `date_reference` du tableur (dû), avoir déduit du solde affiché ; réglé en premier (FIFO) et escaladé comme un impayé ordinaire | PROVISOIRE |
+| Invitation pré-remplie | expiration selon le canal (SMS / WhatsApp 48 h, e-mail 7 j, QR 30 j — M2) ; aucun compte créé avant l'acceptation ; identité (nom, téléphone) conservée dans `invitation.pre_rempli_json` | PROVISOIRE |
+| Démonstration | copropriété `est_demo` purgée après 30 jours (1 à 90) ; données fictives | PROVISOIRE |
+
+### 15.1 — Valeur juridique d'un solde repris
+
+**À confirmer :** un arriéré repris d'un tableur de l'ancien syndic (sans appel de fonds émis par la
+plateforme, sans quittance) est-il exigible et escaladable (rappel, mise en demeure, injonction —
+Art. 39 Loi 18-00) au même titre qu'un appel émis ? Faut-il un procès-verbal de passation de
+comptes (état des impayés certifié par l'ancien syndic / approuvé en AG) avant toute relance ? Le
+module date la ligne de la `date_reference` et laisse l'escalade s'appliquer ; un commentaire libre
+porte l'origine.
+
+### 15.2 — Données personnelles importées avant consentement (CNDP)
+
+**À confirmer :** conserver nom, téléphone et e-mail de personnes non encore inscrites (dans
+`invitation.pre_rempli_json` et dans le fichier source `IMPORT_SOURCE`) relève-t-il d'une
+information préalable / déclaration CNDP (Loi 09-08) ? Durée de conservation d'une invitation
+jamais acceptée et du fichier source (anonymisation §5). Le module limite le fichier au syndic
+(SYNDIC_ONLY) et n'envoie rien sans action du syndic.
+
+### 15.3 — Envoi d'invitations par SMS / WhatsApp
+
+**À confirmer :** le message d'invitation (lien d'activation) envoyé par SMS ou WhatsApp à un
+numéro fourni par l'ancien syndic est-il un démarchage soumis à consentement, et la copropriété
+(syndicat) est-elle l'émetteur légal ? Le module trace l'envoi (`envoyee_le`, audit) et propose
+l'export csv pour un envoi manuel.
+
+### 15.4 — Indivision partiellement inscrite
+
+**À confirmer :** tant qu'un seul co-indivisaire a accepté son invitation, le module lui attribue
+temporairement 100 % des droits de vote / quote-part du lot (contrainte « somme = 100 % »), puis
+rééquilibre. Est-ce acceptable pour une AG tenue entre-temps (représentant de l'indivision) ?
+
 ## Comment utiliser ce document
 
 1. Envoyer ce fichier tel quel à l'avocat, section par section.

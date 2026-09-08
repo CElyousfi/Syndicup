@@ -1485,3 +1485,20 @@ class VisiteursAujourdhui {
         placesLibres: ((j['places_libres'] as List?) ?? const []).map((e) => (e as Map).cast<String, dynamic>()).toList(),
       );
 }
+
+// ── M24 — Onboarding (checklist de démarrage, Doc A §11) ─────────────────────
+class EtapeOnboarding {
+  final String cle, lien;
+  final bool fait;
+  final String? valeur, detail;
+  const EtapeOnboarding({required this.cle, required this.lien, required this.fait, this.valeur, this.detail});
+  factory EtapeOnboarding.fromJson(Map<String, dynamic> j) => EtapeOnboarding(cle: _s(j, 'cle'), lien: _s(j, 'lien'), fait: _b(j, 'fait'), valeur: _sn(j, 'valeur'), detail: _sn(j, 'detail'));
+}
+
+class OnboardingChecklist {
+  final List<EtapeOnboarding> etapes;
+  final int faites, total, progression;
+  final bool complet, estDemo;
+  const OnboardingChecklist({required this.etapes, required this.faites, required this.total, required this.progression, required this.complet, required this.estDemo});
+  factory OnboardingChecklist.fromJson(Map<String, dynamic> j) => OnboardingChecklist(etapes: _list(j['etapes'], EtapeOnboarding.fromJson), faites: _in(j, 'faites') ?? 0, total: _in(j, 'total') ?? 0, progression: _in(j, 'progression') ?? 0, complet: _b(j, 'complet'), estDemo: _b(j, 'est_demo'));
+}
