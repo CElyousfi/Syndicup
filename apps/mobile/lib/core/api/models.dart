@@ -254,14 +254,14 @@ class LotOccupant {
 
 class Lot {
   final String id, coproprieteId, typeLot, numero, tantiemes, statut, creeLe;
-  final String? typeUsage, superficie, lotParentId;
+  final String? typeUsage, superficie, lotParentId, batiment;
   final int? etage;
   final List<LotProprietaire> proprietaires;
   final List<LotOccupant> occupants;
-  const Lot({required this.id, required this.coproprieteId, required this.typeLot, this.typeUsage, required this.numero, this.etage, required this.tantiemes, this.superficie, required this.statut, this.lotParentId, required this.creeLe, this.proprietaires = const [], this.occupants = const []});
+  const Lot({required this.id, required this.coproprieteId, required this.typeLot, this.typeUsage, required this.numero, this.etage, this.batiment, required this.tantiemes, this.superficie, required this.statut, this.lotParentId, required this.creeLe, this.proprietaires = const [], this.occupants = const []});
   factory Lot.fromJson(Map<String, dynamic> j) => Lot(
         id: _s(j, 'id'), coproprieteId: _s(j, 'coproprieteId'), typeLot: _s(j, 'typeLot'), typeUsage: _sn(j, 'typeUsage'),
-        numero: _s(j, 'numero'), etage: _in(j, 'etage'), tantiemes: _s(j, 'tantiemes'), superficie: _sn(j, 'superficie'),
+        numero: _s(j, 'numero'), etage: _in(j, 'etage'), batiment: _sn(j, 'batiment'), tantiemes: _s(j, 'tantiemes'), superficie: _sn(j, 'superficie'),
         statut: _s(j, 'statut'), lotParentId: _sn(j, 'lotParentId'), creeLe: _s(j, 'creeLe'),
         proprietaires: _list(j['proprietaires'], LotProprietaire.fromJson),
         occupants: _list(j['occupants'], LotOccupant.fromJson),

@@ -153,6 +153,7 @@ components:
           description: Doc A §1.1 (ex. appartement transformé en bureau) — non renseigné par défaut.
         numero: { type: string }
         etage: { type: integer, nullable: true }
+        batiment: { type: string, nullable: true, maxLength: 40, description: "M21 — bâtiment / bloc, cible de l'audience BATIMENT." }
         tantiemes: { $ref: "#/components/schemas/Money" }
         superficie: { type: string, nullable: true }
         statut:
@@ -173,6 +174,7 @@ components:
           enum: [HABITATION, BUREAU, MIXTE, COMMERCIAL]
         numero: { type: string }
         etage: { type: integer, nullable: true }
+        batiment: { type: string, nullable: true, maxLength: 40, description: "M21 — bâtiment / bloc, cible de l'audience BATIMENT." }
         tantiemes: { $ref: "#/components/schemas/Money" }
         superficie: { type: string, nullable: true }
         lot_parent_id:
@@ -193,6 +195,7 @@ components:
           enum: [HABITATION, BUREAU, MIXTE, COMMERCIAL]
         numero: { type: string }
         etage: { type: integer, nullable: true }
+        batiment: { type: string, nullable: true, maxLength: 40, description: "M21 — bâtiment / bloc, cible de l'audience BATIMENT." }
         tantiemes: { $ref: "#/components/schemas/Money" }
         superficie: { type: string, nullable: true }
         statut:

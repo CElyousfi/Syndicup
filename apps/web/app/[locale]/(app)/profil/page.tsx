@@ -12,6 +12,9 @@ import { Avatar } from "../../../../components/ui/avatar";
 import { CShield, IconCircle } from "../../../../components/ui/color-icons";
 import { nomComplet } from "../../../../lib/format";
 import { ProfilForm } from "./profil-form";
+import { apiFetch } from "../../../../lib/api/client";
+import { PreferencesForm } from "../affichage/affichage-client";
+import type { PreferencesNotification } from "../../../../lib/api/types";
 
 export async function generateMetadata({
   params,
@@ -34,6 +37,8 @@ export default async function ProfilPage({
   const ctx = await getAppContext(locale);
   const { dict, profil } = ctx;
   const pr = dict.profil;
+  const prefsRes = await apiFetch<PreferencesNotification>("/users/me/preferences-notification");
+  const prefs: PreferencesNotification = prefsRes.ok ? prefsRes.data : { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true };
 
   const coproParId = new Map(ctx.coproprietes.map((c) => [c.id, c.nom]));
 
@@ -66,6 +71,10 @@ export default async function ProfilPage({
         </Card>
 
         <div className="space-y-4">
+          <Card>
+            <SectionHeader title={dict.communication.preferences} subtitle={dict.communication.preferencesAide} />
+            <div className="mt-4"><PreferencesForm dict={dict} locale={ctx.locale} prefs={prefs} /></div>
+          </Card>
           <Card>
             <SectionHeader title={pr.identifiants} subtitle={pr.identifiantsAide} />
             <dl className="mt-4 space-y-3 text-sm">

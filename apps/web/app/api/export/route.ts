@@ -19,6 +19,8 @@ const RESSOURCES: Record<string, { path: string; filtres: string[] }> = {
   // M20 — registre du personnel (syndic, sans n° CNSS) et congés.
   personnel: { path: "/personnel", filtres: [] },
   conges: { path: "/personnel/conges", filtres: ["statut", "annee"] },
+  // M21 — tableau d'affichage (gestion).
+  annonces: { path: "/annonces", filtres: ["categorie", "statut", "audience", "q"] },
 };
 
 export async function GET(req: NextRequest) {

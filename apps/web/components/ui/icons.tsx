@@ -319,3 +319,11 @@ export const IconHandshake = (p: SVGProps<SVGSVGElement>) => (
     <path d="M11 10l3 3" />
   </svg>
 );
+export const IconMegaphone = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z" />
+    <path d="M15 9.5a3.5 3.5 0 0 1 0 5" />
+    <path d="M17.5 7a7 7 0 0 1 0 10" />
+    <path d="M6 14l1 5h2l-.5-5" />
+  </svg>
+);

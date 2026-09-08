@@ -2,6 +2,7 @@ import Link from "next/link";
 import { apiFetch } from "../../../../lib/api/client";
 import type { AppContext } from "../../../../lib/app-context";
 import type {
+  Annonce,
   AssembleeGenerale,
   DocumentCopro,
   Incident,
@@ -56,6 +57,10 @@ export async function DashboardResident({
       apiFetch<Notification[]>("/notifications"),
       apiFetch<DocumentCopro[]>("/documents"),
     ]);
+  // M21 — tableau d'affichage : les dernières annonces (épinglées d'abord) et le nombre de non lues.
+  const annoncesRes = await apiFetch<Annonce[]>("/annonces", { searchParams: { limit: 4 } });
+  const annonces = annoncesRes.ok ? annoncesRes.data : [];
+  const annoncesNonLues = annoncesRes.ok ? Number((annoncesRes.meta as { non_lues?: number }).non_lues ?? 0) : 0;
   const documents = documentsRes.ok ? documentsRes.data : [];
 
   const lots = lotsRes.ok ? lotsRes.data : [];
@@ -285,6 +290,33 @@ export async function DashboardResident({
             </Card>
           </>
         ) : null}
+
+        {/* M21 — Tableau d'affichage */}
+        <Card className="lg:col-span-3" padded={false}>
+          <div className="p-6 pb-3">
+            <SectionHeader
+              title={dict.communication.titre}
+              subtitle={annoncesNonLues > 0 ? fill(dict.communication.nonLues, { n: annoncesNonLues }) : undefined}
+              action={<Link href={p("/affichage")} className="text-[13px] font-medium text-action hover:underline">{dict.common.seeAll}</Link>}
+            />
+          </div>
+          {annonces.length === 0 ? <p className="px-6 pb-6 text-sm text-soft">{dict.communication.aucune}</p> : (
+            <ul className="divide-y divide-hairline">
+              {annonces.map((a) => (
+                <li key={a.id}>
+                  <Link href={p(`/affichage/${a.id}`)} className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-hover">
+                    <IconCircle tone={a.categorie === "URGENCE" || a.categorie === "SECURITE" ? "sand" : "sage"} size={40}><CBell width={20} height={20} /></IconCircle>
+                    <div className="min-w-0 flex-1">
+                      <p className={`truncate text-sm ${a.lu ? "font-medium" : "font-semibold"} text-ink`}>{a.titre}</p>
+                      <p className="mt-0.5 truncate text-[12px] text-soft">{dict.enumsCommunication.categorieAnnonce[a.categorie]}{a.publieLe ? ` · ${formatDateHeure(a.publieLe, locale)}` : ""}</p>
+                    </div>
+                    {!a.lu ? <Badge variant="warn">{dict.communication.nonLue}</Badge> : a.epingle ? <Badge variant="ink">{dict.communication.epinglee}</Badge> : null}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
 
         {/* Notifications récentes */}
         <Card className="lg:col-span-3" padded={false}>

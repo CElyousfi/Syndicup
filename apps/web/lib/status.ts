@@ -147,3 +147,7 @@ export const echeanceVariant = map({ A_VENIR: "info", DEPENSE_GENEREE: "ok", REA
 export const fichePaieVariant = map({ BROUILLON: "outline", VALIDEE: "info", PAYEE: "ok" });
 export const congeVariant = map({ DEMANDE: "warn", APPROUVE: "ok", REFUSE: "danger", ANNULE: "neutral" });
 export const presenceVariant = map({ PRESENT: "ok", ABSENT: "danger", CONGE: "info", MALADIE: "warn" });
+// M21 — communication.
+export const annonceVariant = map({ BROUILLON: "outline", PUBLIEE: "ok", ARCHIVEE: "neutral" });
+export const categorieAnnonceVariant = map({ INFORMATION: "info", TRAVAUX: "warn", COUPURE: "warn", SECURITE: "danger", URGENCE: "danger", AG: "ink", CONVIVIALITE: "ok", REGLEMENT: "neutral" });
+export const sondageVariant = map({ BROUILLON: "outline", OUVERT: "ok", CLOS: "neutral" });

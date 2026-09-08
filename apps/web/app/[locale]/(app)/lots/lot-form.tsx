@@ -45,6 +45,9 @@ export function LotForm({
         >
           <Input id="numero" name="numero" defaultValue={lot?.numero ?? ""} required maxLength={20} />
         </Field>
+        <Field label={dict.lots.batiment} htmlFor="batiment" hint={dict.lots.batimentAide} optionalLabel={dict.common.optional}>
+          <Input id="batiment" name="batiment" defaultValue={lot?.batiment ?? ""} maxLength={40} />
+        </Field>
         <Field label={dict.lots.etage} htmlFor="etage" optionalLabel={dict.common.optional}>
           <Input
             id="etage"

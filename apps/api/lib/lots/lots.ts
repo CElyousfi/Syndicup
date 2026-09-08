@@ -60,6 +60,7 @@ export async function creerLot(ctx: TenantContext, input: LotCreateInput) {
           typeUsage: input.type_usage ?? null,
           numero: input.numero,
           etage: input.etage ?? null,
+          batiment: input.batiment ?? null,
           tantiemes: money(input.tantiemes).toString(),
           superficie: input.superficie ? money(input.superficie).toString() : null,
           lotParentId: input.lot_parent_id ?? null,
@@ -168,6 +169,7 @@ export async function modifierLot(ctx: TenantContext, lotId: string, input: LotU
           typeUsage: input.type_usage === undefined ? undefined : input.type_usage,
           numero: input.numero,
           etage: input.etage === undefined ? undefined : input.etage,
+          batiment: input.batiment === undefined ? undefined : input.batiment,
           tantiemes: input.tantiemes ? money(input.tantiemes).toString() : undefined,
           superficie:
             input.superficie === undefined

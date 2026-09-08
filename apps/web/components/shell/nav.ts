@@ -26,7 +26,8 @@ export type IconKey =
   | "suitcase"
   | "receipt"
   | "pie"
-  | "handshake";
+  | "handshake"
+  | "megaphone";
 
 export interface NavItem {
   href: string;
@@ -83,6 +84,8 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const prestataires: NavItem = { href: p("/prestataires"), label: d.prestataires, icon: "send" };
   // M19 — contrats, assurances, échéances (syndic gère, conseil lit).
   const contrats: NavItem = { href: p("/contrats"), label: d.contrats, icon: "handshake" };
+  // M21 — tableau d'affichage (annonces, sondages, contacts utiles) : tout membre sauf le prestataire.
+  const affichage: NavItem = { href: p("/affichage"), label: d.affichage, icon: "megaphone" };
   const espaces: NavItem = { href: p("/espaces-communs"), label: d.espaces, icon: "home" };
   const reservations: NavItem = {
     href: p("/reservations"),
@@ -130,7 +133,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       return [
         { label: null, items: [dashboard] },
         { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
-        { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
+        { label: s.vieCollective, items: [affichage, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
           items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
@@ -141,7 +144,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       return [
         { label: null, items: [dashboard] },
         { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
-        { label: s.vieCollective, items: [ag, incidents(), reservations, litiges] },
+        { label: s.vieCollective, items: [affichage, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
           items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
@@ -153,7 +156,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       return [
         { label: null, items: [dashboard] },
         { label: s.finances, items: [payer, transparence, lots(dict.lots.mesLots), comptabilite(d.monReleve), budgets] },
-        { label: s.vieCollective, items: [ag, incidents(dict.incidents.mesSignalements), litiges] },
+        { label: s.vieCollective, items: [affichage, ag, incidents(dict.incidents.mesSignalements), litiges] },
         { label: s.quotidien, items: [espaces, reservations, visites, lcd, documents] },
       ];
     case "GESTIONNAIRE_LCD":
@@ -161,7 +164,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       // séjour) et les documents — jamais les finances, l'AG ni les lots.
       return [
         { label: null, items: [dashboard] },
-        { label: s.quotidien, items: [lcd, incidents(dict.incidents.mesSignalements), documents] },
+        { label: s.quotidien, items: [affichage, lcd, incidents(dict.incidents.mesSignalements), documents] },
       ];
     case "LOCATAIRE":
       return [
@@ -169,7 +172,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: s.finances, items: [payer, transparence] },
         {
           label: s.vieCollective,
-          items: [incidents(dict.incidents.mesSignalements), litiges],
+          items: [affichage, incidents(dict.incidents.mesSignalements), litiges],
         },
         { label: s.quotidien, items: [lots(dict.lots.mesLots), espaces, reservations, visites, documents] },
       ];
@@ -178,7 +181,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
+          items: [affichage, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":

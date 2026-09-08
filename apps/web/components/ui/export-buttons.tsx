@@ -12,7 +12,7 @@ export function ExportButtons({
   size = "md",
   className = "",
 }: {
-  ressource: "lots" | "paiements" | "incidents" | "depenses" | "grand-livre" | "impayes" | "proprietaires" | "contrats" | "personnel" | "conges";
+  ressource: "lots" | "paiements" | "incidents" | "depenses" | "grand-livre" | "impayes" | "proprietaires" | "contrats" | "personnel" | "conges" | "annonces";
   filtres?: Record<string, string | undefined>;
   labels: { csv: string; xlsx: string; title?: string };
   size?: "sm" | "md";

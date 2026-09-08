@@ -42,6 +42,8 @@ export const lotCreateSchema = z.object({
   type_usage: z.enum(TYPES_USAGE_LOT).nullish(),
   numero: z.string().min(1),
   etage: z.number().int().nullish(),
+  // M21 — bâtiment / bloc (audience BATIMENT des annonces).
+  batiment: z.string().min(1).max(40).nullish(),
   tantiemes: decimalStringSchema({ maxDigitsAvantVirgule: 12 }),
   superficie: decimalStringSchema({ maxDigitsAvantVirgule: 8 }).nullish(),
   lot_parent_id: z.string().uuid().nullish(),
@@ -53,6 +55,7 @@ export const lotUpdateSchema = z.object({
   type_usage: z.enum(TYPES_USAGE_LOT).nullish(),
   numero: z.string().min(1).optional(),
   etage: z.number().int().nullish(),
+  batiment: z.string().min(1).max(40).nullish(),
   tantiemes: decimalStringSchema({ maxDigitsAvantVirgule: 12 }).optional(),
   superficie: decimalStringSchema({ maxDigitsAvantVirgule: 8 }).nullish(),
   statut: z.enum(STATUTS_LOT).optional(),

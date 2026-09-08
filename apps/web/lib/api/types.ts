@@ -263,6 +263,8 @@ export interface Lot {
   typeUsage: "HABITATION" | "BUREAU" | "MIXTE" | "COMMERCIAL" | null;
   numero: string;
   etage: number | null;
+  /** M21 — bâtiment / bloc (audience BATIMENT des annonces). */
+  batiment?: string | null;
   tantiemes: string;
   superficie: string | null;
   statut: StatutLot;
@@ -1371,3 +1373,72 @@ export interface ParametresPaie {
   retenue_absence_injustifiee: boolean;
   source?: string | null;
 }
+
+// ── M21 — Communication ───────────────────────────────────────────────────────
+export type CategorieAnnonce = "INFORMATION" | "TRAVAUX" | "COUPURE" | "SECURITE" | "URGENCE" | "AG" | "CONVIVIALITE" | "REGLEMENT";
+export type AudienceCommunication = "TOUS" | "PROPRIETAIRES" | "OCCUPANTS" | "CONSEIL" | "BATIMENT";
+export type StatutAnnonce = "BROUILLON" | "PUBLIEE" | "ARCHIVEE";
+export type StatutSondage = "BROUILLON" | "OUVERT" | "CLOS";
+export type CanalPreference = "PUSH" | "EMAIL" | "SMS" | "AUCUN";
+export interface IdentiteCourte { id: string; nom: string | null; prenom: string | null }
+export interface Annonce {
+  id: string;
+  coproprieteId: string;
+  auteur: IdentiteCourte;
+  titre: string;
+  contenu: string;
+  apercu: string;
+  categorie: CategorieAnnonce;
+  audience: AudienceCommunication;
+  batiment: string | null;
+  epingle: boolean;
+  publieLe: string | null;
+  expireLe: string | null;
+  statut: StatutAnnonce;
+  commentairesActives: boolean;
+  creeLe: string;
+  modifieLe: string;
+  lu: boolean;
+  nbCommentaires: number;
+  nbLectures: number | null;
+}
+export interface AnnonceCommentaire { id: string; auteur: IdentiteCourte; contenu: string; masque: boolean; creeLe: string; mien: boolean }
+export interface AnnonceDetail extends Annonce {
+  piecesJointes: { document_id: string; nom: string; type: string; url: string }[];
+  commentaires: AnnonceCommentaire[];
+  nbDestinataires: number | null;
+  diffusion?: { programmee: boolean; publie_le?: string; destinataires?: number; envoyes?: number };
+}
+export interface LecturesAnnonce { annonce_id: string; nb_lu: number; nb_destinataires: number; lecteurs: { utilisateur_id: string; nom: string | null; prenom: string | null; lu_le: string }[] }
+export interface SondageOption { id: string; libelle: string }
+export interface SondageResultats {
+  nb_reponses: number;
+  nb_destinataires: number;
+  tantiemes_exprimes: string;
+  ponderation_tantiemes: boolean;
+  options: { id: string; libelle: string; nb: number; pourcentage: number; tantiemes: string; pourcentage_tantiemes: number }[];
+  mention: string;
+}
+export interface Sondage {
+  id: string;
+  coproprieteId: string;
+  auteur: IdentiteCourte;
+  question: string;
+  description: string | null;
+  options: SondageOption[];
+  choixMultiple: boolean;
+  anonyme: boolean;
+  audience: AudienceCommunication;
+  batiment: string | null;
+  ponderationTantiemes: boolean;
+  dateFin: string;
+  statut: StatutSondage;
+  ouvertLe: string | null;
+  closLe: string | null;
+  creeLe: string;
+  maReponse: string[] | null;
+  mention: string;
+  resultats?: SondageResultats | null;
+}
+export interface ContactUtile { id: string; coproprieteId: string; libelle: string; telephone: string; ordre: number }
+export interface PreferencesNotification { digest_hebdo: boolean; canal_digest: CanalPreference; annonces_push: boolean }
