@@ -39,6 +39,7 @@ export async function ajouterResolution(_prev: FormState, fd: FormData): Promise
       ordre: Number(champ(fd, "ordre")),
       texte: champ(fd, "texte"),
       type_majorite: champ(fd, "type_majorite"),
+      necessite_execution: champ(fd, "necessite_execution") === "on",
     },
   });
   if (!res.ok) return fromApiError(res);

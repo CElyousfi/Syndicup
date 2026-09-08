@@ -34,6 +34,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
+import { Banner } from "../../../../components/ui/banner";
 import { Bars, Donut } from "../../../../components/ui/charts";
 import { IconCircle, CBuilding, CCalendar, CCoins, CMoneyBag, CVote, CWrench } from "../../../../components/ui/color-icons";
 import { agVariant, urgenceVariant } from "../../../../lib/status";
@@ -60,6 +61,10 @@ export async function DashboardSyndic({
       apiFetch<DocumentCopro[]>("/documents"),
     ]);
   const documents = documentsRes.ok ? documentsRes.data : [];
+  // M22 — tâches ouvertes / en retard (syndic + conseil).
+  const tachesRes = await apiFetch<unknown[]>("/taches", { searchParams: { ouvertes: "1", limit: 1 } });
+  const tachesMeta = tachesRes.ok ? (tachesRes.meta as { total?: number; retard?: number }) : {};
+  const tachesRetard = tachesMeta.retard ?? 0;
 
   const appels = synthese.appels;
   const totaux = totauxParAppel(synthese);
@@ -141,6 +146,7 @@ export async function DashboardSyndic({
 
       <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
 
+      {tachesRetard > 0 ? <Banner variant="warn" className="mb-4" action={<Link href={p("/taches?retard=1")} className="font-medium underline">{dict.taches.titre}</Link>}>{fill(dict.taches.retardN, { n: tachesRetard })}</Banner> : null}
       {/* Indicateurs clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
         <StatCard

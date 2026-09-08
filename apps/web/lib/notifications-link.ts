@@ -35,6 +35,9 @@ export function lienNotification(
   if (templateCode.startsWith("VISITE_")) return p("/visites");
   if (templateCode.startsWith("RESERVATION_")) return p("/reservations");
   if (templateCode.startsWith("LITIGE_")) return p("/litiges");
+  // M22 — tâches : assignation, statut, commentaire, échéance ; synthèse hebdomadaire des retards.
+  if (templateCode === "TACHES_EN_RETARD_HEBDO") return p("/taches?retard=1");
+  if (templateCode.startsWith("TACHE_")) return id("tache_id") ? p(`/taches/${id("tache_id")}`) : p("/taches");
   // M21 — tableau d'affichage : annonce, commentaire, sondage, récapitulatif.
   if (templateCode.startsWith("ANNONCE_")) return id("annonce_id") ? p(`/affichage/${id("annonce_id")}`) : p("/affichage");
   if (templateCode.startsWith("SONDAGE_")) return id("sondage_id") ? p(`/affichage/sondages/${id("sondage_id")}`) : p("/affichage");

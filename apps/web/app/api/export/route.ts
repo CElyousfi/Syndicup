@@ -21,6 +21,8 @@ const RESSOURCES: Record<string, { path: string; filtres: string[] }> = {
   conges: { path: "/personnel/conges", filtres: ["statut", "annee"] },
   // M21 — tableau d'affichage (gestion).
   annonces: { path: "/annonces", filtres: ["categorie", "statut", "audience", "q"] },
+  // M22 — tâches.
+  taches: { path: "/taches", filtres: ["statut", "priorite", "origine", "assignee_id", "retard", "ouvertes", "q"] },
 };
 
 export async function GET(req: NextRequest) {

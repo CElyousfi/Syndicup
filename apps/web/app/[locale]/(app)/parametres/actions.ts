@@ -75,7 +75,9 @@ export async function modifierLegaux(_prev: FormState, fd: FormData): Promise<Fo
   const quorum = champ(fd, "quorum_premiere_convocation");
   const limite = champ(fd, "limite_procurations_mandataire");
   const retention = champ(fd, "retention_desactivation_mois");
+  const delaiExec = champ(fd, "delai_execution_resolution_jours");
   return patchCopro(champ(fd, "locale"), {
+    delai_execution_resolution_jours: delaiExec === "" ? null : Number(delaiExec),
     delai_convocation_jours: delai === "" ? null : Number(delai),
     quorum_premiere_convocation: quorum === "" ? null : quorum,
     limite_procurations_mandataire: limite === "" ? null : Number(limite),

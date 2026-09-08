@@ -7,6 +7,7 @@ import type {
   AgProcuration,
   AgResultatLigne,
   AssembleeGenerale,
+  ExecutionResolution,
   ValeurVote,
 } from "../../../../../lib/api/types";
 import { fill, type Dict } from "../../../../../lib/i18n";
@@ -20,7 +21,7 @@ import { ProgressBar } from "../../../../../components/ui/progress";
 import { Avatar } from "../../../../../components/ui/avatar";
 import { Donut } from "../../../../../components/ui/charts";
 import { CVote, IconCircle } from "../../../../../components/ui/color-icons";
-import { agVariant, resolutionVariant } from "../../../../../lib/status";
+import { agVariant, resolutionVariant, tacheVariant } from "../../../../../lib/status";
 import {
   AnnulerModal,
   ConvoquerForm,
@@ -65,6 +66,14 @@ export default async function AgDetailPage({
   );
 
   // Résultats agrégés pour une AG clôturée.
+  // M22 — suivi d'exécution des résolutions adoptées (lisible par tout membre voyant l'AG).
+  const executionParResolution = new Map<string, ExecutionResolution>();
+  await Promise.all(
+    resolutions.filter((r) => r.resultat === "ADOPTEE").map(async (r) => {
+      const ex = await apiFetch<ExecutionResolution>(`/ag/${id}/resolutions/${r.id}/execution`);
+      if (ex.ok) executionParResolution.set(r.id, ex.data);
+    })
+  );
   const resultatsParResolution = new Map<string, AgResultatLigne[]>();
   if (ag.statut === "CLOTUREE") {
     await Promise.all(
@@ -186,6 +195,25 @@ export default async function AgDetailPage({
                   {resultats && resultats.length > 0 ? (
                     <ResultatsAgreges dict={dict} resultats={resultats} />
                   ) : null}
+                  {(() => {
+                    const ex = executionParResolution.get(r.id);
+                    if (!ex || (!ex.necessite_execution && ex.taches.length === 0)) return null;
+                    return (
+                      <div className="mt-3 rounded-field border border-hairline bg-ground px-3 py-2.5">
+                        <p className="text-[12px] font-medium uppercase tracking-wide text-soft">{dict.taches.execution}</p>
+                        {ex.taches.length === 0 ? <p className="mt-1 text-[13px] text-soft">{dict.taches.aucuneTacheExecution}</p> : (
+                          <ul className="mt-1 space-y-1">
+                            {ex.taches.map((tk) => (
+                              <li key={tk.tache_id} className="flex flex-wrap items-center justify-between gap-2 text-[13px]">
+                                <span className="text-ink-strong">{gestion ? <a href={p(`/taches/${tk.tache_id}`)} className="hover:text-action">{tk.titre}</a> : tk.titre}</span>
+                                <span className="flex items-center gap-1.5"><Badge variant={tacheVariant[tk.statut]}>{dict.enumsTaches.statut[tk.statut]}</Badge>{tk.en_retard ? <Badge variant="danger">{dict.taches.enRetard}</Badge> : null}{tk.date_echeance ? <span className="tnum text-[12px] text-soft">{formatDate(tk.date_echeance, ctx.locale)}</span> : null}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })()}
                   {ag.statut === "CLOTUREE" && gestion ? (
                     <p className="mt-3 text-end">
                       <a

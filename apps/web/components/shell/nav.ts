@@ -27,7 +27,8 @@ export type IconKey =
   | "receipt"
   | "pie"
   | "handshake"
-  | "megaphone";
+  | "megaphone"
+  | "tasks";
 
 export interface NavItem {
   href: string;
@@ -86,6 +87,9 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
   const contrats: NavItem = { href: p("/contrats"), label: d.contrats, icon: "handshake" };
   // M21 — tableau d'affichage (annonces, sondages, contacts utiles) : tout membre sauf le prestataire.
   const affichage: NavItem = { href: p("/affichage"), label: d.affichage, icon: "megaphone" };
+  // M22 — tâches : syndic + conseil (registre), gardien (les siennes).
+  const taches: NavItem = { href: p("/taches"), label: d.taches, icon: "tasks" };
+  const mesTaches: NavItem = { href: p("/taches"), label: d.mesTaches, icon: "tasks" };
   const espaces: NavItem = { href: p("/espaces-communs"), label: d.espaces, icon: "home" };
   const reservations: NavItem = {
     href: p("/reservations"),
@@ -133,7 +137,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       return [
         { label: null, items: [dashboard] },
         { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
-        { label: s.vieCollective, items: [affichage, ag, incidents(), reservations, litiges] },
+        { label: s.vieCollective, items: [affichage, taches, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
           items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
@@ -144,7 +148,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
       return [
         { label: null, items: [dashboard] },
         { label: s.finances, items: [rapports, budgets, appels, justificatifs, depenses, comptabilite(), contestations] },
-        { label: s.vieCollective, items: [affichage, ag, incidents(), reservations, litiges] },
+        { label: s.vieCollective, items: [affichage, taches, ag, incidents(), reservations, litiges] },
         {
           label: s.quotidien,
           items: [lots(), espaces, personnel, visites, lcd, prestataires, contrats, documents],
@@ -181,7 +185,7 @@ export function buildNav(role: RoleType, dict: Dict, locale: Locale): NavSection
         { label: null, items: [dashboard] },
         {
           label: s.quotidien,
-          items: [affichage, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
+          items: [affichage, mesTaches, visites, especes, lcd, incidents(), lots(), espaces, monDossier, prestataires, documents],
         },
       ];
     case "PRESTATAIRE":

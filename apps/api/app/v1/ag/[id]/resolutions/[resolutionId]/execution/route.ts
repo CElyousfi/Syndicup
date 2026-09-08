@@ -3,13 +3,13 @@ import { withApiHandler } from "../../../../../../../lib/http/handler";
 import { tenantFromRequest } from "../../../../../../../lib/http/request-context";
 import { ok } from "../../../../../../../lib/http/respond";
 import { mapErreurTaches } from "../../../../../../../lib/taches/http";
-type P = { params: Promise<{ id: string; rid: string }> };
+type P = { params: Promise<{ id: string; resolutionId: string }> };
 import { executionResolution } from "../../../../../../../lib/taches/taches";
 async function handleGET(req: Request, { params }: P) {
   try {
     const ctx = await tenantFromRequest(req);
-    const { id, rid } = await params;
-    return ok(await executionResolution(ctx, id, rid));
+    const { id, resolutionId } = await params;
+    return ok(await executionResolution(ctx, id, resolutionId));
   } catch (e) { const m = mapErreurTaches(e); if (m) return m; throw e; }
 }
 export const GET = withApiHandler(handleGET);

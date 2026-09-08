@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../../components/ui/modal";
-import { Field, Input, Select, Textarea } from "../../../../../components/ui/field";
+import { Field, Input, Select, Textarea, Checkbox } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { IDLE } from "../../../../../lib/forms";
@@ -183,6 +183,7 @@ export function ResolutionModal({
             <Field label={dict.ag.texteResolution} htmlFor="texte" required>
               <Textarea id="texte" name="texte" required minLength={3} rows={4} />
             </Field>
+            <Checkbox name="necessite_execution" label={dict.taches.necessiteExecution} />
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>

@@ -151,3 +151,6 @@ export const presenceVariant = map({ PRESENT: "ok", ABSENT: "danger", CONGE: "in
 export const annonceVariant = map({ BROUILLON: "outline", PUBLIEE: "ok", ARCHIVEE: "neutral" });
 export const categorieAnnonceVariant = map({ INFORMATION: "info", TRAVAUX: "warn", COUPURE: "warn", SECURITE: "danger", URGENCE: "danger", AG: "ink", CONVIVIALITE: "ok", REGLEMENT: "neutral" });
 export const sondageVariant = map({ BROUILLON: "outline", OUVERT: "ok", CLOS: "neutral" });
+// M22 — tâches.
+export const tacheVariant = map({ A_FAIRE: "outline", EN_COURS: "info", BLOQUEE: "danger", TERMINEE: "ok", ANNULEE: "neutral" });
+export const prioriteVariant = map({ BASSE: "neutral", NORMALE: "outline", HAUTE: "warn", CRITIQUE: "danger" });

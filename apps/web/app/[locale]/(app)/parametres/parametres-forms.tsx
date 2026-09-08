@@ -236,6 +236,18 @@ export function LegauxForm({
             className="tnum text-start"
           />
         </Field>
+        <Field label={pa.delaiExecution} htmlFor="l_delai_exec" hint={pa.delaiExecutionAide}>
+          <Input
+            id="l_delai_exec"
+            name="delai_execution_resolution_jours"
+            type="number"
+            min={1}
+            max={730}
+            defaultValue={copro.delaiExecutionResolutionJours ?? ""}
+            placeholder={pa.nonConfigure}
+            className="tnum"
+          />
+        </Field>
         <Field label={pa.limiteProcurations} htmlFor="l_limite" hint={pa.limiteProcurationsAide}>
           <Input
             id="l_limite"

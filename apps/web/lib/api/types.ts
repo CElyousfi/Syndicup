@@ -214,6 +214,8 @@ export interface Copropriete {
   /** Photos personnalisées de la résidence (M20) : `{ cle: chemin storage }`, servies via /api/copro-photo. */
   photosJson?: Record<string, string> | null;
   delaiConvocationJours: number | null;
+  /** M22 — délai d'exécution des résolutions adoptées (jours), nullable. */
+  delaiExecutionResolutionJours?: number | null;
   totalTantiemes: string | null;
   politiqueRecouvrementJson: Record<string, unknown> | null;
   quorumPremiereConvocation: string | null;
@@ -404,6 +406,7 @@ export interface AgResolution {
   texte: string;
   typeMajorite: TypeMajorite;
   resultat: ResultatResolution;
+  necessiteExecution?: boolean;
   creeLe: string;
   modifieLe: string;
 }
@@ -1442,3 +1445,54 @@ export interface Sondage {
 }
 export interface ContactUtile { id: string; coproprieteId: string; libelle: string; telephone: string; ordre: number }
 export interface PreferencesNotification { digest_hebdo: boolean; canal_digest: CanalPreference; annonces_push: boolean }
+
+// ── M22 — Tâches ──────────────────────────────────────────────────────────────
+export type OrigineTache = "MANUELLE" | "RESOLUTION_AG" | "CONTRAT" | "INCIDENT" | "RAPPORT" | "SYSTEME";
+export type PrioriteTache = "BASSE" | "NORMALE" | "HAUTE" | "CRITIQUE";
+export type StatutTache = "A_FAIRE" | "EN_COURS" | "BLOQUEE" | "TERMINEE" | "ANNULEE";
+export type FrequenceRecurrence = "MENSUELLE" | "TRIMESTRIELLE" | "SEMESTRIELLE" | "ANNUELLE";
+export interface ChecklistItem { id: string; libelle: string; fait: boolean }
+export interface Tache {
+  id: string;
+  coproprieteId: string;
+  titre: string;
+  description: string | null;
+  origine: OrigineTache;
+  resolutionAg: { id: string; ordre: number; texte: string; agId: string } | null;
+  contratEcheance: { id: string; type: string; dateEcheance: string; contratId: string; contratLibelle: string } | null;
+  incident: { id: string; categorie: string; statut: string } | null;
+  rapportGestion: { id: string; exercice: string; statut: string } | null;
+  assignee: IdentiteCourte | null;
+  creePar: IdentiteCourte | null;
+  priorite: PrioriteTache;
+  statut: StatutTache;
+  dateEcheance: string | null;
+  termineeLe: string | null;
+  checklist: ChecklistItem[] | null;
+  checklistFaits: number;
+  recurrence: { frequence: FrequenceRecurrence } | null;
+  recurrenceParenteId: string | null;
+  visibleConseil: boolean;
+  enRetard: boolean;
+  nbCommentaires: number;
+  nbPiecesJointes: number;
+  creeLe: string;
+  modifieLe: string;
+}
+export interface TacheDetail extends Tache {
+  piecesJointes: { document_id: string; nom: string; type: string; url: string }[];
+  commentaires: { id: string; auteur: IdentiteCourte; contenu: string; creeLe: string; mien: boolean }[];
+  journal: { id: string; type: string; acteur: IdentiteCourte | null; details: Record<string, unknown> | null; horodatage: string }[];
+  peutModifier: boolean;
+  peutMettreAJour: boolean;
+  deja?: boolean;
+  suivante_id?: string | null;
+}
+export interface ExecutionResolution {
+  resolution_id: string;
+  ordre: number;
+  texte: string;
+  resultat: string;
+  necessite_execution: boolean;
+  taches: { tache_id: string; titre: string; statut: StatutTache; date_echeance: string | null; terminee_le: string | null; en_retard: boolean }[];
+}

@@ -6868,11 +6868,11 @@ paths:
         "201": { description: Créé. }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
-  /ag/{id}/resolutions/{rid}/execution:
+  /ag/{id}/resolutions/{resolutionId}/execution:
     get:
       tags: [Tâches]
       summary: "Suivi d'exécution d'une résolution — lecture par tout membre voyant l'AG (copropriétaires) : titre, statut, dates de la tâche liée, jamais les commentaires ni l'assigné(e) (fonction SECURITY DEFINER)."
-      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: rid, in: path, required: true, schema: { type: string, format: uuid } }]
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: resolutionId, in: path, required: true, schema: { type: string, format: uuid } }]
       responses:
         "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ExecutionResolution" } } } } } }
         "404": { $ref: "#/components/responses/NotFound" }

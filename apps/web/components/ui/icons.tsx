@@ -327,3 +327,12 @@ export const IconMegaphone = (p: SVGProps<SVGSVGElement>) => (
     <path d="M6 14l1 5h2l-.5-5" />
   </svg>
 );
+export const IconTasks = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base(p)}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <path d="M7 9.5l2 2 3.5-4" />
+    <path d="M7 15.5l2 2 3.5-4" />
+    <path d="M14 10h4" />
+    <path d="M14 16h4" />
+  </svg>
+);
