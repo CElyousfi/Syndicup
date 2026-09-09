@@ -42,7 +42,9 @@ export async function executerRappelsTaches(db: TenantDb, coproprieteId: string,
       const lundi = aujourdhui;
       const membres = await db.roleUtilisateur.findMany({ where: { coproprieteId, actif: true, role: { in: ["SYNDIC", "CONSEIL_SYNDICAL"] } }, select: { utilisateurId: true }, distinct: ["utilisateurId"] });
       for (const { utilisateurId } of membres) {
-        const deja = await db.notification.findFirst({ where: { coproprieteId, utilisateurId, templateCode: "TACHES_EN_RETARD_HEBDO", horodatageEnvoi: { gte: lundi } }, select: { id: true } });
+        // Idempotence par semaine ISO portée par l'horloge injectée (`semaine` dans contenu_json),
+        // jamais par l'horodatage réel d'envoi : rejouable et testable à date fixe.
+        const deja = await db.notification.findFirst({ where: { coproprieteId, utilisateurId, templateCode: "TACHES_EN_RETARD_HEBDO", contenuJson: { path: ["semaine"], equals: isoDate(lundi) } }, select: { id: true } });
         if (deja) continue;
         await envoyerNotification(db, { coproprieteId, utilisateurId, templateCode: "TACHES_EN_RETARD_HEBDO", canal: "PUSH", contenuJson: { nb: String(retards.length), titres: retards.slice(0, 5).map((t) => t.titre).join(" · "), semaine: isoDate(lundi) } });
         res.hebdo += 1;
