@@ -29,6 +29,10 @@ const SYS = (): TenantContext => ({ utilisateurId: "00000000-0000-0000-0000-0000
 const PAGE = { page: 1, limit: 50, skip: 0, take: 50 };
 const TRI = { champ: "date_echeance" as const, sens: "asc" as const };
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+/** Horloge de référence du fichier (un lundi) — injectée dans les jobs, jamais l'horloge réelle. */
+const NOW = new Date("2026-09-07T08:00:00Z");
+const dans = (jours: number) => new Date(NOW.getTime() + jours * 86_400_000);
+let coproRappels: string | null = null;
 
 beforeAll(async () => {
   const c = await admin.copropriete.create({ data: { nom: "Résidence Tâches", adresse: "4 rue Tâches", ville: "Marrakech", typeResidence: "IMMEUBLE_COLLECTIF", nbLots: 2, delaiExecutionResolutionJours: 30 } });
@@ -59,6 +63,14 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (coproRappels) {
+    await admin.notification.deleteMany({ where: { coproprieteId: coproRappels } });
+    await admin.tacheLog.deleteMany({ where: { coproprieteId: coproRappels } });
+    await admin.tache.deleteMany({ where: { coproprieteId: coproRappels } });
+    await admin.auditLog.deleteMany({ where: { coproprieteId: coproRappels } });
+    await admin.roleUtilisateur.deleteMany({ where: { coproprieteId: coproRappels } });
+    await admin.copropriete.deleteMany({ where: { id: coproRappels } });
+  }
   await admin.exportLog.deleteMany({ where: { coproprieteId: copro } });
   await admin.notification.deleteMany({ where: { coproprieteId: copro } });
   await admin.tacheLog.deleteMany({ where: { coproprieteId: copro } });
@@ -127,7 +139,7 @@ describe("M22 — hooks (une tâche par objet source, idempotents)", () => {
 describe("M22 — cycle de vie, checklist, récurrence, RLS", () => {
   let idGardien: string, idConseilCachee: string;
   it("création manuelle assignée au gardien ; assignation refusée pour un propriétaire ; RLS : le gardien ne voit que ses tâches, le conseil pas celles cachées", async () => {
-    const t = await creerTache(S(), { titre: "Nettoyer les cuves", description: "Trimestriel", assignee_id: rachid, priorite: "NORMALE", date_echeance: iso(new Date(Date.now() + 5 * 86_400_000)), checklist: [{ libelle: "Vider", fait: false }, { libelle: "Désinfecter", fait: false }], recurrence: { frequence: "TRIMESTRIELLE" }, visible_conseil: true, pieces_jointes: [] });
+    const t = await creerTache(S(), { titre: "Nettoyer les cuves", description: "Trimestriel", assignee_id: rachid, priorite: "NORMALE", date_echeance: iso(dans(30)), checklist: [{ libelle: "Vider", fait: false }, { libelle: "Désinfecter", fait: false }], recurrence: { frequence: "TRIMESTRIELLE" }, visible_conseil: true, pieces_jointes: [] });
     idGardien = t.id;
     expect(t.checklist?.length).toBe(2);
     await expect(creerTache(S(), { titre: "x", assignee_id: amina, priorite: "BASSE", visible_conseil: true, pieces_jointes: [] })).rejects.toMatchObject({ code: "TACHE_ASSIGNEE_INVALIDE" });
@@ -181,21 +193,55 @@ describe("M22 — cycle de vie, checklist, récurrence, RLS", () => {
     await assignerTache(S(), idConseilCachee, { assignee_id: null });
     await expect(commenterTache(C(), idConseilCachee, { contenu: "encore" })).rejects.toThrow();
   });
-  it("suivi d'exécution d'une résolution lisible par un copropriétaire (jamais l'assigné) ; retard + job de rappels J-3 / J-0 / retard rejouable", async () => {
+  it("suivi d'exécution d'une résolution lisible par un copropriétaire (jamais l'assigné) ; retard visible à date injectée", async () => {
     const ex = await executionResolution(A(), agId, resolutionId);
     expect(ex.taches.length).toBe(1);
     expect(ex.taches[0]).toMatchObject({ statut: "A_FAIRE", date_echeance: "2026-07-15", en_retard: true });
     expect(JSON.stringify(ex)).not.toContain(syndic);
-    const retard = await tachesEnRetard(S());
+    const retard = await tachesEnRetard(S(), NOW);
     expect(retard.map((t) => t.id)).toContain(ex.taches[0]!.tache_id);
-    const now = new Date("2026-09-07T08:00:00Z"); // lundi
-    await creerTache(S(), { titre: "Échéance J-3", assignee_id: rachid, priorite: "NORMALE", date_echeance: "2026-09-10", visible_conseil: true, pieces_jointes: [] });
-    await creerTache(S(), { titre: "Échéance J-0", assignee_id: rachid, priorite: "NORMALE", date_echeance: "2026-09-07", visible_conseil: true, pieces_jointes: [] });
-    const r1 = await withTenant(SYS(), (db) => executerRappelsTaches(db, copro, now));
-    expect(r1.j3).toBe(1); expect(r1.j0).toBe(1); expect(r1.retard).toBeGreaterThanOrEqual(1); expect(r1.hebdo).toBe(2);
-    const r2 = await withTenant(SYS(), (db) => executerRappelsTaches(db, copro, now));
+  });
+  it("job de rappels J-3 / J-0 / retard + synthèse hebdo du lundi : déterministe à horloge injectée, rejeu = 0, copropriété dédiée", async () => {
+    // Copropriété propre au test (aucune tâche créée par les autres tests, aucune dépendance d'ordre).
+    const c = await admin.copropriete.create({ data: { nom: "Résidence Rappels Tâches", adresse: "5 rue Rappels", ville: "Fès", typeResidence: "IMMEUBLE_COLLECTIF", nbLots: 1 } });
+    coproRappels = c.id;
+    await admin.roleUtilisateur.createMany({ data: [
+      { utilisateurId: syndic, coproprieteId: c.id, role: "SYNDIC" }, { utilisateurId: conseil, coproprieteId: c.id, role: "CONSEIL_SYNDICAL" }, { utilisateurId: rachid, coproprieteId: c.id, role: "GARDIEN" },
+    ] });
+    const SR = (): TenantContext => ({ utilisateurId: syndic, coproprieteId: c.id, role: "SYNDIC" });
+    const SYSR = (): TenantContext => ({ utilisateurId: "00000000-0000-0000-0000-000000000000", coproprieteId: c.id, role: "SUPER_ADMIN" });
+    const j3 = await creerTache(SR(), { titre: "Échéance J-3", assignee_id: rachid, priorite: "NORMALE", date_echeance: iso(dans(3)), visible_conseil: true, pieces_jointes: [] });
+    const j0 = await creerTache(SR(), { titre: "Échéance J-0", assignee_id: rachid, priorite: "NORMALE", date_echeance: iso(NOW), visible_conseil: true, pieces_jointes: [] });
+    const retard = await creerTache(SR(), { titre: "En retard", priorite: "HAUTE", date_echeance: iso(dans(-7)), visible_conseil: true, pieces_jointes: [] });
+    const horsFenetre = await creerTache(SR(), { titre: "Hors fenêtre (J+5)", assignee_id: rachid, priorite: "BASSE", date_echeance: iso(dans(5)), visible_conseil: true, pieces_jointes: [] });
+    await creerTache(SR(), { titre: "Sans échéance", priorite: "BASSE", visible_conseil: true, pieces_jointes: [] });
+
+    const r1 = await withTenant(SYSR(), (db) => executerRappelsTaches(db, c.id, NOW));
+    expect(r1).toEqual({ j3: 1, j0: 1, retard: 1, hebdo: 2 });
+    // Rejeu à la même date : rien (marqueurs rappel_*_le posés avec l'horloge injectée, hebdo clé sur la semaine ISO).
+    const r2 = await withTenant(SYSR(), (db) => executerRappelsTaches(db, c.id, NOW));
     expect(r2).toEqual({ j3: 0, j0: 0, retard: 0, hebdo: 0 });
-    expect(await admin.notification.count({ where: { coproprieteId: copro, templateCode: "TACHE_ECHEANCE", utilisateurId: rachid } })).toBe(2);
-    expect(await admin.notification.count({ where: { coproprieteId: copro, templateCode: "TACHES_EN_RETARD_HEBDO" } })).toBe(2);
+    // Le lendemain (mardi 08/09) : la J-3 reste marquée, la J-0 passe en retard une seule fois, J+5 (12/09)
+    // toujours hors fenêtre (09/09 → 11/09), pas de synthèse hebdo un mardi.
+    const r3 = await withTenant(SYSR(), (db) => executerRappelsTaches(db, c.id, dans(1)));
+    expect(r3).toEqual({ j3: 0, j0: 0, retard: 1, hebdo: 0 });
+    // Lundi suivant (14/09) : J-3 (10/09) et J+5 (12/09) sont désormais en retard (une fois chacune), la J-0
+    // déjà rappelée ne l'est pas deux fois ; nouvelle synthèse hebdo (nouvelle semaine ISO).
+    const r4 = await withTenant(SYSR(), (db) => executerRappelsTaches(db, c.id, dans(7)));
+    expect(r4).toEqual({ j3: 0, j0: 0, retard: 2, hebdo: 2 });
+
+    const marques = await admin.tache.findMany({ where: { id: { in: [j3.id, j0.id, retard.id, horsFenetre.id] } }, select: { id: true, rappelJ3Le: true, rappelJ0Le: true, rappelRetardLe: true } });
+    expect(marques.find((t) => t.id === j3.id)!.rappelJ3Le?.toISOString()).toBe(NOW.toISOString());
+    expect(marques.find((t) => t.id === j0.id)!.rappelJ0Le?.toISOString()).toBe(NOW.toISOString());
+    expect(marques.find((t) => t.id === j0.id)!.rappelRetardLe?.toISOString()).toBe(dans(1).toISOString());
+    expect(marques.find((t) => t.id === retard.id)!.rappelRetardLe?.toISOString()).toBe(NOW.toISOString());
+    expect(marques.find((t) => t.id === j3.id)!.rappelRetardLe?.toISOString()).toBe(dans(7).toISOString());
+    expect(marques.find((t) => t.id === horsFenetre.id)!.rappelRetardLe?.toISOString()).toBe(dans(7).toISOString());
+    // Destinataires : l'assigné (rachid) — J-3, J-0, retard J-0 (mardi), retards J-3 et J+5 (lundi suivant) = 5 ;
+    // les syndics pour la tâche non assignée en retard (1).
+    expect(await admin.notification.count({ where: { coproprieteId: c.id, templateCode: "TACHE_ECHEANCE", utilisateurId: rachid } })).toBe(5);
+    expect(await admin.notification.count({ where: { coproprieteId: c.id, templateCode: "TACHE_ECHEANCE", utilisateurId: syndic } })).toBe(1);
+    expect(await admin.notification.count({ where: { coproprieteId: c.id, templateCode: "TACHES_EN_RETARD_HEBDO" } })).toBe(4);
+    expect(await admin.notification.count({ where: { coproprieteId: c.id, templateCode: "TACHES_EN_RETARD_HEBDO", contenuJson: { path: ["semaine"], equals: iso(NOW) } } })).toBe(2);
   });
 });

@@ -88,7 +88,8 @@ export function niveauCible(
  * pas une par palier intermédiaire — décision explicite : rejouer N1+N2+N3 d'un coup serait
  * du spam sans valeur légale ajoutée (la mise en demeure N3 englobe les relances précédentes).
  */
-export async function executerEscaladeImpayes(coproprieteId: string): Promise<ResultatEscalade> {
+/** `now` injectable (tests déterministes) — jamais lu ailleurs qu'ici dans le job. */
+export async function executerEscaladeImpayes(coproprieteId: string, now: Date = new Date()): Promise<ResultatEscalade> {
   const ctxSysteme: TenantContext = {
     utilisateurId: "00000000-0000-0000-0000-000000000000",
     coproprieteId,
@@ -111,7 +112,7 @@ export async function executerEscaladeImpayes(coproprieteId: string): Promise<Re
       where: {
         statut: { in: ["IMPAYE", "PARTIEL"] },
         conteste: false,
-        appelDeFonds: { coproprieteId, dateEcheance: { lt: new Date() } },
+        appelDeFonds: { coproprieteId, dateEcheance: { lt: now } },
       },
       select: {
         id: true,
@@ -133,7 +134,7 @@ export async function executerEscaladeImpayes(coproprieteId: string): Promise<Re
     });
     const couvertureParLot = new Map(enAttente.map((j) => [j.lotId, j._sum.montant]));
 
-    const maintenant = Date.now();
+    const maintenant = now.getTime();
     const escalades: ResultatEscalade["escalades"] = [];
 
     for (const ligne of lignes) {
@@ -147,7 +148,7 @@ export async function executerEscaladeImpayes(coproprieteId: string): Promise<Re
 
       await db.appelDeFondsLot.update({
         where: { id: ligne.id },
-        data: { niveauEscalade: cible, derniereEscaladeLe: new Date() },
+        data: { niveauEscalade: cible, derniereEscaladeLe: now },
       });
 
       await notifierEscalade(db, coproprieteId, ligne, cible);
@@ -174,7 +175,7 @@ export async function executerEscaladeImpayes(coproprieteId: string): Promise<Re
  * les copropriétés. Chaque copropriété est traitée dans sa propre transaction tenant — l'échec
  * de l'une n'empêche pas les autres.
  */
-export async function executerEscaladeImpayesToutesCoproprietes(): Promise<
+export async function executerEscaladeImpayesToutesCoproprietes(now: Date = new Date()): Promise<
   { coproprieteId: string; resultat: ResultatEscalade | null; erreur?: string }[]
 > {
   const { PrismaClient } = await import("@prisma/client");
@@ -184,7 +185,7 @@ export async function executerEscaladeImpayesToutesCoproprietes(): Promise<
     const resultats: { coproprieteId: string; resultat: ResultatEscalade | null; erreur?: string }[] = [];
     for (const { id } of coproprietes) {
       try {
-        resultats.push({ coproprieteId: id, resultat: await executerEscaladeImpayes(id) });
+        resultats.push({ coproprieteId: id, resultat: await executerEscaladeImpayes(id, now) });
       } catch (e) {
         resultats.push({ coproprieteId: id, resultat: null, erreur: e instanceof Error ? e.message : String(e) });
       }

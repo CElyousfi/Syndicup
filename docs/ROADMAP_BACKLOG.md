@@ -38,8 +38,16 @@ Vercel initialement prévus. Procédure complète : `docs/DEPLOYMENT.md`.*
   vérifiés (docs/DEPLOYMENT.md §3) ; migrations déployées
 - [ ] Compte Render : Blueprint importé, secrets saisis pour les 4 services, domaines
   (`api.` / `app.`) rattachés
-- [ ] Repo GitHub : branche `staging` créée, CI (`.github/workflows/ci.yml`) verte ; les étapes
-  déploiement / smoke tests restent portées par Render (auto-deploy + health check)
+- [x] Branche `staging` créée à partir de `main` et poussée (10/09/2026) — `render.yaml` (services
+  staging) et `.github/workflows/ci.yml` (`branches: [staging, main]`) cohérents ; branches de
+  fonctionnalité fusionnées supprimées du dépôt distant
+- [x] Tests déterministes sous exécution parallèle (10/09/2026) : le job de rappels de tâches
+  (M22) clé sa synthèse hebdomadaire sur la semaine ISO de l'horloge injectée (plus sur
+  l'horodatage réel d'envoi), son test utilise une copropriété dédiée et une date fixe ; horloge
+  injectable ajoutée aux jobs d'escalade des impayés et de rappels d'AG (les autres jobs — LCD,
+  contrats, justificatifs, personnel, parkings, communication, dépenses — l'avaient déjà)
+- [ ] CI (`.github/workflows/ci.yml`) verte sur GitHub ; les étapes déploiement / smoke tests
+  restent portées par Render (auto-deploy + health check)
 - [ ] Sentry (DSN api + web), Inngest (event + signing keys, app synchronisée sur
   `https://<api-host>/api/inngest`), Upstash Redis Frankfurt (obligatoire en production)
 - [ ] Domaine réservé + Resend configuré (SPF/DKIM/DMARC vérifiés) — `RESEND_FROM`
