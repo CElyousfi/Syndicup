@@ -18,7 +18,8 @@ function joursAvantRappel(): number {
   return Number.isFinite(v) && v > 0 ? v : 3;
 }
 
-export async function executerRappelsAg(): Promise<
+/** `now` injectable (tests déterministes). */
+export async function executerRappelsAg(now: Date = new Date()): Promise<
   { coproprieteId: string; agId: string; notifies: number }[]
 > {
   const { PrismaClient } = await import("@prisma/client");
@@ -26,9 +27,9 @@ export async function executerRappelsAg(): Promise<
   // les écritures passent par withTenant + RLS.
   const raw = new PrismaClient({ datasources: { db: { url: process.env.DIRECT_URL } } });
   try {
-    const horizon = new Date(Date.now() + joursAvantRappel() * JOUR_MS);
+    const horizon = new Date(now.getTime() + joursAvantRappel() * JOUR_MS);
     const ags = await raw.assembleeGenerale.findMany({
-      where: { statut: "CONVOQUEE", dateAg: { gte: new Date(), lte: horizon } },
+      where: { statut: "CONVOQUEE", dateAg: { gte: now, lte: horizon } },
       select: { id: true, coproprieteId: true, dateAg: true },
     });
 
