@@ -2,7 +2,8 @@
 /**
  * Vérification de conformité contrat ↔ implémentation (CLAUDE.md contract-first) :
  * chaque (path, méthode) d'openapi.yaml doit avoir un handler dans apps/api/app/v1/**,
- * et réciproquement. `/api/inngest` (infrastructure) est hors contrat.
+ * et réciproquement. Seul apps/api/app/v1 est scanné : `/api/inngest` (Inngest) et `/api/health`
+ * (sonde Render, M0) sont de l'infrastructure hors contrat.
  * Sortie 1 avec tableau lisible en cas d'écart — branché en CI.
  */
 import { readFileSync, readdirSync, statSync } from "node:fs";

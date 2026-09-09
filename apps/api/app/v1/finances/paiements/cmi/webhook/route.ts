@@ -17,8 +17,11 @@ import {
 import { enforceRateLimit } from "../../../../../../lib/rate-limit/apply";
 import { RATE_LIMITS } from "../../../../../../lib/rate-limit";
 import { ok, fail, failZod } from "../../../../../../lib/http/respond";
+import { cmiEstConfigure } from "../../../../../../lib/config/env";
 
 async function handlePOST(req: Request) {
+  // CMI n'est pas utilisé au lancement : sans compte marchand (CMI_* absents), 501 explicite.
+  if (!cmiEstConfigure()) return fail("NOT_IMPLEMENTED", "Paiement CMI non configuré sur ce déploiement (variables CMI_* absentes — voir docs/DEPLOYMENT.md).");
   try {
     const limite = await enforceRateLimit(req, "cmi-webhook", RATE_LIMITS.webhookCmi());
     if (limite) return limite;

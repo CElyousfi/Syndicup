@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const LOCALES = ["fr", "ar"] as const;
 const DEFAULT_LOCALE = "fr";
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3001/v1";
+import { API_BASE_URL as API_BASE } from "./lib/config/env";
 
 const COOKIE_ACCESS = "su_access";
 const COOKIE_REFRESH = "su_refresh";
@@ -52,7 +52,7 @@ export async function middleware(req: NextRequest) {
 
   // Routes techniques hors localisation : proxys /api/* (cookies lus côté handler) et
   // connexion de développement (404 en production).
-  if (pathname.startsWith("/api/") || pathname.startsWith("/dev-login")) {
+  if (pathname.startsWith("/api/") || pathname.startsWith("/dev-login") || pathname === "/health") {
     return NextResponse.next();
   }
 

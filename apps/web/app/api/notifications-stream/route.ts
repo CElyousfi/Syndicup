@@ -10,7 +10,7 @@ import { readSession } from "../../../lib/session";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3001/v1";
+import { API_BASE_URL as API_BASE } from "../../../lib/config/env";
 
 export async function GET(req: NextRequest) {
   const session = await readSession();

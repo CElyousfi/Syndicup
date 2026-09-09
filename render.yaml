@@ -1,0 +1,188 @@
+# Render Blueprint — SyndicUp (Master Spec Partie 15 ; docs/DEPLOYMENT.md).
+# Quatre services Node : API + web en staging (branche `staging`) et en production (branche `main`),
+# région Frankfurt, plan starter. Aucune valeur secrète ici : chaque secret est déclaré
+# `sync: false` et saisi dans le tableau de bord Render (ou son groupe d'environnement).
+# Ordre de mise en production : migrations d'abord (`prisma migrate deploy` avec DIRECT_URL),
+# puis déploiement (docs/DEPLOYMENT.md §« Migrer puis déployer »).
+services:
+  # ── Staging (branche staging) ──────────────────────────────────────────────
+  - type: web
+    name: syndicup-api-staging
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: staging
+    rootDir: .
+    buildCommand: npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/api
+    startCommand: npm run start --workspace=@copropriete-maroc/api
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: SMS_API_KEY
+        sync: false
+      - key: SMS_API_SECRET
+        sync: false
+      - key: SMS_SENDER_ID
+        sync: false
+      - key: SMS_API_URL
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: CMI_MERCHANT_ID
+        sync: false
+      - key: CMI_STORE_KEY
+        sync: false
+      - key: CMI_API_URL
+        sync: false
+      - key: CMI_WEBHOOK_HMAC_SECRET
+        sync: false
+
+  - type: web
+    name: syndicup-web-staging
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: staging
+    rootDir: .
+    buildCommand: npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/web
+    startCommand: npm run start --workspace=@copropriete-maroc/web
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: staging
+      - key: API_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+
+  # ── Production (branche main) ──────────────────────────────────────────────
+  - type: web
+    name: syndicup-api
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: main
+    rootDir: .
+    buildCommand: npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/api
+    startCommand: npm run start --workspace=@copropriete-maroc/api
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: DIRECT_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_FROM
+        sync: false
+      - key: SMS_PROVIDER
+        sync: false
+      - key: SMS_API_KEY
+        sync: false
+      - key: SMS_API_SECRET
+        sync: false
+      - key: SMS_SENDER_ID
+        sync: false
+      - key: SMS_API_URL
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT_JSON
+        sync: false
+      - key: CMI_MERCHANT_ID
+        sync: false
+      - key: CMI_STORE_KEY
+        sync: false
+      - key: CMI_API_URL
+        sync: false
+      - key: CMI_WEBHOOK_HMAC_SECRET
+        sync: false
+
+  - type: web
+    name: syndicup-web
+    runtime: node
+    region: frankfurt
+    plan: starter
+    branch: main
+    rootDir: .
+    buildCommand: npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/web
+    startCommand: npm run start --workspace=@copropriete-maroc/web
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: NODE_ENV
+        value: production
+      - key: APP_ENV
+        value: production
+      - key: API_BASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_APP_URL
+        sync: false

@@ -11,7 +11,7 @@ import { randomUUID } from "node:crypto";
 import { readSession } from "../session";
 import type { ApiMeta, ApiError, ApiResult } from "./types";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3001/v1";
+import { API_BASE_URL as API_BASE } from "../config/env";
 
 interface FetchOptions {
   method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";

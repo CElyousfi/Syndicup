@@ -6,7 +6,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { readSession } from "../../../lib/session";
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:3001/v1";
+import { API_BASE_URL as API_BASE } from "../../../lib/config/env";
 const RESSOURCES: Record<string, { path: string; filtres: string[] }> = {
   lots: { path: "/lots", filtres: [] },
   paiements: { path: "/finances/paiements", filtres: ["exercice"] },

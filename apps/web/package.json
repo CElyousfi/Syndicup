@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start --port 3000",
+    "start": "next start -p ${PORT:-3000}",
     "lint": "eslint app components lib",
     "typecheck": "tsc --noEmit"
   },
@@ -18,7 +18,8 @@
     "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@copropriete-maroc/config": "*",

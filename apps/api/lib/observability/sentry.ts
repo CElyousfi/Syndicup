@@ -4,6 +4,7 @@
  * appelable partout sans garde : sans DSN elle ne fait rien.
  */
 import { getRequestContext } from "../http/request-context-storage";
+import { appEnvDe } from "../config/env";
 
 type SentryModule = typeof import("@sentry/node");
 
@@ -13,7 +14,8 @@ export async function initSentry(): Promise<void> {
   const dsn = process.env.SENTRY_DSN;
   if (!dsn) return;
   const mod = await import("@sentry/node");
-  mod.init({ dsn, environment: process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? "development" });
+  // APP_ENV (development | staging | production), repli NODE_ENV — plus de dépendance à VERCEL_ENV.
+  mod.init({ dsn, environment: appEnvDe() });
   sentry = mod;
 }
 

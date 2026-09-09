@@ -8,6 +8,7 @@ import { resendTransport } from "./resend";
 import { smtpTransport } from "./smtp";
 import { fcmTransport } from "./fcm";
 import { devSmsTransport, genericSmsTransport, twilioSmsTransport } from "./sms";
+import { resendFromDe } from "../../config/env";
 
 const cache = new Map<CanalNotification, NotificationTransport>();
 
@@ -21,7 +22,7 @@ export function transportPour(canal: CanalNotification): NotificationTransport {
       // Priorité : API Resend (clé posée) > SMTP (Inbucket en local, SMTP transactionnel en
       // prod) > noop honnête. Même code local et production — seule l'URL change.
       const resendKey = process.env.RESEND_API_KEY;
-      const resendFrom = process.env.RESEND_FROM;
+      const resendFrom = resendFromDe(); // RESEND_FROM (repli déprécié RESEND_FROM_EMAIL)
       const smtpUrl = process.env.SMTP_URL;
       const emailFrom = process.env.EMAIL_FROM ?? resendFrom;
       if (resendKey && resendFrom) transport = resendTransport(resendKey, resendFrom);

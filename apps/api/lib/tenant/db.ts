@@ -91,6 +91,11 @@ export async function withActeur<T>(utilisateurId: string, role: "CABINET" | "SU
   });
 }
 
+/** Sonde de santé : `SELECT 1` hors contexte tenant (aucune donnée lue) — utilisée par GET /api/health. */
+export async function pingDatabase(): Promise<void> {
+  await basePrisma.$queryRaw`SELECT 1`;
+}
+
 export async function disconnectTenantDb(): Promise<void> {
   await basePrisma.$disconnect();
 }

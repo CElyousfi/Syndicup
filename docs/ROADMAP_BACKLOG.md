@@ -12,19 +12,43 @@ Definition of Done (`CLAUDE.md` §4) est entièrement cochée pour tous ses endp
 
 ## M0 — Fondations infra (bloquant tout le reste)
 
-- [ ] Projets Supabase créés : dev (ou Docker local), staging, production
-- [ ] Projets Vercel créés : `api`, `web`
-- [ ] Repo GitHub initialisé à partir de ce scaffold, secrets CI configurés (voir `.env.example`)
-- [ ] Pipeline CI (`.github/workflows/ci.yml`) vert sur un commit vide
-- [ ] Sentry, Axiom/Better Stack, Inngest, FCM : projets créés et clés dans les env vars (staging au minimum ; production peut suivre)
-- [ ] Domaine réservé + Resend configuré (SPF/DKIM/DMARC vérifiés)
-- [ ] Upstash Redis (rate limiting global multi-instances — le limiteur mémoire par instance suffit avant lancement)
-- [ ] Compte marchand CMI (bac à sable puis production) — le payload webhook implémenté est une hypothèse à valider contre le contrat commerçant réel
-- [ ] Agrégateur SMS marocain contractualisé (adaptateur `lib/notifications/transports/sms.ts` à finaliser sur son format)
+*Hébergement retenu (10/09/2026) : **Render** (deux services Node par environnement — API et
+web — région Frankfurt, staging sur `staging`, production sur `main`), à la place des projets
+Vercel initialement prévus. Procédure complète : `docs/DEPLOYMENT.md`.*
 
-*Tous les seams de code sont prêts (27/08) : chaque service ci-dessus s'active par variable
-d'environnement (`.env.example`) sans changement de code, sauf CMI (payload à ajuster), FCM
-(tokens d'appareils + OAuth2 avec le client mobile) et SMS (format agrégateur).*
+**Livré par le code (10/09/2026 — PR « prêt pour Render »)** :
+- [x] `render.yaml` (4 services, plan starter, Node 20, `healthCheckPath`, secrets `sync: false`)
+  + `.node-version`
+- [x] `GET /api/health` (API : version, commit `RENDER_GIT_COMMIT`, `SELECT 1` Prisma → 200 / 503,
+  sans auth, hors rate limiting, hors contrat) et `GET /health` (web : joignabilité de l'API)
+- [x] Scripts `start` sur `$PORT`
+- [x] Validation de la configuration au démarrage : `apps/api/lib/config/env.ts` (schéma Zod de
+  toutes les variables, obligatoires en production nommées une à une) et
+  `apps/web/lib/config/env.ts` (`API_BASE_URL` sans repli localhost hors développement)
+- [x] `APP_ENV` (development | staging | production) lu par Sentry et les garde-fous — plus de
+  `VERCEL_ENV` ; `RESEND_FROM` aligné (repli `RESEND_FROM_EMAIL` déprécié une version) ;
+  Upstash documenté, limiteur mémoire hors production, **refus de démarrer en production sans
+  Upstash** ; CMI entièrement optionnel (routes en 501 tant qu'absent)
+- [x] `docs/DEPLOYMENT.md` : tableau des variables, rôle `app_prod` (IN ROLE application_role,
+  jamais `postgres`, vérification « SELECT renvoie zéro ligne »), sync Inngest, ordre migrer →
+  déployer
+
+**Reste à faire (comptes et secrets — hors code)** :
+- [ ] Projets Supabase staging et production créés ; rôle `app_staging` / `app_prod` créés et
+  vérifiés (docs/DEPLOYMENT.md §3) ; migrations déployées
+- [ ] Compte Render : Blueprint importé, secrets saisis pour les 4 services, domaines
+  (`api.` / `app.`) rattachés
+- [ ] Repo GitHub : branche `staging` créée, CI (`.github/workflows/ci.yml`) verte ; les étapes
+  déploiement / smoke tests restent portées par Render (auto-deploy + health check)
+- [ ] Sentry (DSN api + web), Inngest (event + signing keys, app synchronisée sur
+  `https://<api-host>/api/inngest`), Upstash Redis Frankfurt (obligatoire en production)
+- [ ] Domaine réservé + Resend configuré (SPF/DKIM/DMARC vérifiés) — `RESEND_FROM`
+- [ ] FCM : projet Firebase (clés `--dart-define` du mobile + `FCM_SERVICE_ACCOUNT_JSON`) ;
+  certificat APNs et droit *Time Sensitive Notifications* côté Apple
+- [ ] Agrégateur SMS marocain contractualisé (adaptateur `lib/notifications/transports/sms.ts`
+  à finaliser sur son format)
+- [ ] Compte marchand CMI (non requis au lancement — les routes répondent 501 ; payload webhook
+  à valider contre le contrat commerçant réel)
 
 ## M1 — Schéma de base & RLS de base (aucune feature encore)
 

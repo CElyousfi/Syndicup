@@ -23,6 +23,9 @@ export type ErrorCode =
   | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
   | "INTERNAL_ERROR"
+  /** Fonctionnalité non configurée sur ce déploiement (ex. CMI sans compte marchand). */
+  | "NOT_IMPLEMENTED"
+  | "SERVICE_UNAVAILABLE"
   // M15 — location courte durée : codes métier explicites (Doc A §10.2), 422 sauf chevauchement.
   | "LCD_REGIME_NON_DEFINI"
   | "LCD_INTERDITE"
@@ -98,6 +101,8 @@ const STATUS: Record<ErrorCode, number> = {
   UNPROCESSABLE_ENTITY: 422,
   RATE_LIMITED: 429,
   INTERNAL_ERROR: 500,
+  NOT_IMPLEMENTED: 501,
+  SERVICE_UNAVAILABLE: 503,
   LCD_REGIME_NON_DEFINI: 422,
   LCD_INTERDITE: 422,
   LCD_PARAMETRE_NON_CONFIGURE: 422,

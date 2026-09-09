@@ -5,6 +5,7 @@
 import type { RateLimiter } from "./types";
 import { memoryRateLimiter } from "./memory";
 import { upstashRateLimiter } from "./upstash";
+import { estProduction } from "../config/env";
 
 let limiter: RateLimiter | null = null;
 
@@ -12,6 +13,11 @@ export function getRateLimiter(): RateLimiter {
   if (!limiter) {
     const url = process.env.UPSTASH_REDIS_REST_URL;
     const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+    if (!(url && token) && estProduction()) {
+      // Plusieurs instances en production : un limiteur mémoire par instance ne protège pas.
+      throw new Error("UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN manquants : le rate limiter mémoire est refusé en production (voir docs/DEPLOYMENT.md).");
+    }
+    // Hors production : dégradation sûre en mémoire (par instance).
     limiter = url && token ? upstashRateLimiter(url, token) : memoryRateLimiter;
   }
   return limiter;

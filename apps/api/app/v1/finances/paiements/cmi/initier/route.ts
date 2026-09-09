@@ -15,8 +15,11 @@ import {
 } from "../../../../../../lib/finances/finances";
 import { tenantFromRequest, mapAuthError } from "../../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../../lib/http/respond";
+import { cmiEstConfigure } from "../../../../../../lib/config/env";
 
 async function handlePOST(req: Request) {
+  // CMI n'est pas utilisé au lancement : sans compte marchand (CMI_* absents), 501 explicite.
+  if (!cmiEstConfigure()) return fail("NOT_IMPLEMENTED", "Paiement CMI non configuré sur ce déploiement (variables CMI_* absentes — voir docs/DEPLOYMENT.md).");
   try {
     const ctx = await tenantFromRequest(req);
     const limite = await enforceRateLimit(req, "ecriture-financiere", RATE_LIMITS.ecritureFinanciere(), ctx.utilisateurId);
