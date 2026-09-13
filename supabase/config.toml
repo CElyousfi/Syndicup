@@ -302,6 +302,19 @@ max_frequency = "5s"
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
 
+# Hook « Send SMS » (test réel, 12/09 — agrégateur SMS marocain non contractualisé, M0 notes de
+# dépendance externe ; Infobip câblé ici pour valider le flux OTP en conditions réelles). GoTrue
+# route TOUS les OTP téléphone vers ce webhook au lieu du provider natif ci-dessous ; les numéros
+# `[auth.sms.test_otp]` restent court-circuités AVANT le hook (vérifié : aucun SMS réel envoyé
+# pour les comptes de test/seed). `uri` cible l'API sur l'hôte depuis le conteneur GoTrue
+# (host.docker.internal → 172.17.0.1, résolu automatiquement par Docker sur cette machine).
+# Secret résolu depuis supabase/.env (gitignoré, jamais commité) — doit être identique à
+# SUPABASE_AUTH_HOOK_SEND_SMS_SECRET dans apps/api/.env.local. Voir apps/api/lib/auth/send-sms-hook.ts.
+[auth.hook.send_sms]
+enabled = true
+uri = "http://host.docker.internal:3001/api/auth-send-sms-hook"
+secrets = "env(SEND_SMS_HOOK_SECRET)"
+
 # Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
 # GoTrue exige un provider "enabled" même pour les numéros couverts par test_otp ci-dessus
 # (l'envoi réel est court-circuité pour ces numéros, seule la validation de config est faite).

@@ -45,4 +45,6 @@ export const RATE_LIMITS = {
   commentaire: () => ({ max: envInt("RATE_LIMIT_COMMENTAIRE_MAX", 10), windowMs: 10 * 60_000 }),
   /** Webhook CMI : par IP — la vraie authentification est la signature HMAC. */
   webhookCmi: () => ({ max: envInt("RATE_LIMIT_CMI_WEBHOOK_MAX", 120), windowMs: 60_000 }),
+  /** Hook « Send SMS » GoTrue : par IP — protège le solde Infobip, la vraie authentification est la signature Standard Webhooks. */
+  authHookSms: () => ({ max: envInt("RATE_LIMIT_AUTH_HOOK_SMS_MAX", 30), windowMs: 60_000 }),
 } as const;

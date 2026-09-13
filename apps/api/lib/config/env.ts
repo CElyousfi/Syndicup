@@ -93,6 +93,16 @@ export const envSchema = z.object({
   CMI_API_URL: optUrl(),
   CMI_WEBHOOK_HMAC_SECRET: optStr(),
 
+  RATE_LIMIT_AUTH_HOOK_SMS_MAX: optEntier(),
+
+  // ── Hook GoTrue « Send SMS » + agrégateur Infobip (test réel — M0, agrégateur SMS marocain non
+  // encore contractualisé, voir ROADMAP_BACKLOG.md M0) — optionnel : sans ces variables, GoTrue
+  // appelle le hook mais l'API répond 500 explicite (jamais un envoi simulé).
+  SUPABASE_AUTH_HOOK_SEND_SMS_SECRET: z.preprocess(vide, z.string().regex(/^v1,whsec_[A-Za-z0-9+/=]{32,88}$/, "doit être au format v1,whsec_<base64>").optional()),
+  INFOBIP_API_KEY: optStr(),
+  INFOBIP_BASE_URL: optStr(200),
+  INFOBIP_SENDER: optStr(24),
+
   // ── Paramètres techniques ──
   AG_RAPPEL_JOURS_AVANT: optEntier(),
 });
@@ -164,6 +174,9 @@ export function parseEnv(env: Record<string, string | undefined> = process.env):
   }
   if (env.SMS_PROVIDER === "generic" && !(env.SMS_API_URL && env.SMS_API_KEY)) {
     problemes.push("SMS_API_URL / SMS_API_KEY : requis avec SMS_PROVIDER=generic");
+  }
+  if (env.SUPABASE_AUTH_HOOK_SEND_SMS_SECRET && !(env.INFOBIP_API_KEY && env.INFOBIP_BASE_URL)) {
+    problemes.push("INFOBIP_API_KEY / INFOBIP_BASE_URL : requis avec SUPABASE_AUTH_HOOK_SEND_SMS_SECRET (hook GoTrue configuré sans fournisseur SMS)");
   }
   if (problemes.length > 0) throw new EnvironnementInvalideError(problemes);
   return valeurs;
