@@ -1,7 +1,9 @@
 # Render Blueprint — SyndicUp (Master Spec Partie 15 ; docs/DEPLOYMENT.md).
 # Quatre services Node : API + web en staging (branche `staging`) et en production (branche `main`),
-# région Frankfurt, plan starter. Aucune valeur secrète ici : chaque secret est déclaré
-# `sync: false` et saisi dans le tableau de bord Render (ou son groupe d'environnement).
+# région Frankfurt. Aucune valeur secrète ici : chaque secret est déclaré `sync: false` et saisi
+# dans le tableau de bord Render (ou son groupe d'environnement). Les paramètres techniques non
+# secrets (plafonds de rate limiting, délais de confort) portent leur défaut applicatif en clair
+# (`value:`) — ils restent modifiables depuis le tableau de bord sans toucher au code.
 # Ordre de mise en production : migrations d'abord (`prisma migrate deploy` avec DIRECT_URL),
 # puis déploiement (docs/DEPLOYMENT.md §« Migrer puis déployer »).
 services:
@@ -52,6 +54,10 @@ services:
         sync: false
       - key: RESEND_FROM
         sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: SMS_PROVIDER
         sync: false
       - key: SMS_API_KEY
@@ -72,6 +78,32 @@ services:
         sync: false
       - key: CMI_WEBHOOK_HMAC_SECRET
         sync: false
+      # Hook GoTrue « Send SMS » — code de connexion réel via Infobip (M0, apps/api/lib/auth/send-sms-hook.ts).
+      - key: SUPABASE_AUTH_HOOK_SEND_SMS_SECRET
+        sync: false
+      - key: INFOBIP_API_KEY
+        sync: false
+      - key: INFOBIP_BASE_URL
+        sync: false
+      - key: INFOBIP_SENDER
+        sync: false
+      - key: RATE_LIMIT_AUTH_HOOK_SMS_MAX
+        value: "30"
+      # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
+      # depuis le tableau de bord sans redéploiement.
+      - key: RATE_LIMIT_OTP_REQUEST_MAX
+        value: "5"
+      - key: RATE_LIMIT_AUTH_MAX
+        value: "10"
+      - key: RATE_LIMIT_FINANCE_MAX
+        value: "30"
+      - key: RATE_LIMIT_COMMENTAIRE_MAX
+        value: "10"
+      - key: RATE_LIMIT_CMI_WEBHOOK_MAX
+        value: "120"
+      # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
+      - key: AG_RAPPEL_JOURS_AVANT
+        value: "3"
 
   - type: web
     name: syndicup-web-staging
@@ -101,7 +133,7 @@ services:
     name: syndicup-api
     runtime: node
     region: frankfurt
-    plan: starter
+    plan: standard
     branch: main
     rootDir: .
     buildCommand: npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/api
@@ -143,6 +175,10 @@ services:
         sync: false
       - key: RESEND_FROM
         sync: false
+      - key: SMTP_URL
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
       - key: SMS_PROVIDER
         sync: false
       - key: SMS_API_KEY
@@ -163,6 +199,32 @@ services:
         sync: false
       - key: CMI_WEBHOOK_HMAC_SECRET
         sync: false
+      # Hook GoTrue « Send SMS » — code de connexion réel via Infobip (M0, apps/api/lib/auth/send-sms-hook.ts).
+      - key: SUPABASE_AUTH_HOOK_SEND_SMS_SECRET
+        sync: false
+      - key: INFOBIP_API_KEY
+        sync: false
+      - key: INFOBIP_BASE_URL
+        sync: false
+      - key: INFOBIP_SENDER
+        sync: false
+      - key: RATE_LIMIT_AUTH_HOOK_SMS_MAX
+        value: "30"
+      # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
+      # depuis le tableau de bord sans redéploiement.
+      - key: RATE_LIMIT_OTP_REQUEST_MAX
+        value: "5"
+      - key: RATE_LIMIT_AUTH_MAX
+        value: "10"
+      - key: RATE_LIMIT_FINANCE_MAX
+        value: "30"
+      - key: RATE_LIMIT_COMMENTAIRE_MAX
+        value: "10"
+      - key: RATE_LIMIT_CMI_WEBHOOK_MAX
+        value: "120"
+      # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
+      - key: AG_RAPPEL_JOURS_AVANT
+        value: "3"
 
   - type: web
     name: syndicup-web

@@ -2,17 +2,18 @@
 
 > Master Spec Partie 15 (CI/CD) et 1.5 (environnements). Deux services Node par environnement
 > (`render.yaml`) : **staging** suit la branche `staging`, **production** suit `main`. Région
-> Frankfurt, plan starter, Node 20 (`.node-version`). Le mobile (Flutter) se distribue par les
+> Frankfurt, Node 20 (`.node-version`), plan starter partout sauf l'API de production (`standard`
+> — seul service qui sert le trafic réel des résidents). Le mobile (Flutter) se distribue par les
 > stores et pointe l'API par `--dart-define=API_BASE_URL`.
 
 ## 1. Services Render
 
-| Service | Branche | Health check | Build | Start |
-| --- | --- | --- | --- | --- |
-| `syndicup-api-staging` | `staging` | `GET /api/health` | `npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/api` | `npm run start --workspace=@copropriete-maroc/api` |
-| `syndicup-web-staging` | `staging` | `GET /health` | idem `…--workspace=@copropriete-maroc/web` | idem |
-| `syndicup-api` | `main` | `GET /api/health` | idem api | idem |
-| `syndicup-web` | `main` | `GET /health` | idem web | idem |
+| Service | Branche | Plan | Health check | Build | Start |
+| --- | --- | --- | --- | --- | --- |
+| `syndicup-api-staging` | `staging` | starter | `GET /api/health` | `npm ci && npm run db:generate && npm run build --workspace=@copropriete-maroc/api` | `npm run start --workspace=@copropriete-maroc/api` |
+| `syndicup-web-staging` | `staging` | starter | `GET /health` | idem `…--workspace=@copropriete-maroc/web` | idem |
+| `syndicup-api` | `main` | **standard** | `GET /api/health` | idem api | idem |
+| `syndicup-web` | `main` | starter | `GET /health` | idem web | idem |
 
 - Les scripts `start` honorent `$PORT` (fourni par Render). `RENDER_GIT_COMMIT` est exposé par
   le health check : `{ status, version, commit, db }` (API) / `{ status, version, commit, api }`
@@ -55,7 +56,12 @@ qui est marqué ★ doit aussi être renseigné pour que le service soit utile.
 | `SMS_PROVIDER` + `SMS_API_KEY` / `SMS_API_SECRET` / `SMS_SENDER_ID` / `SMS_API_URL` | non | agrégateur SMS contractualisé (`twilio` ou `generic`) |
 | `FCM_SERVICE_ACCOUNT_JSON` | non | console.firebase.google.com → *Paramètres → Comptes de service → Générer une clé* (JSON entier) |
 | `CMI_MERCHANT_ID` / `CMI_STORE_KEY` / `CMI_API_URL` / `CMI_WEBHOOK_HMAC_SECRET` | non (non utilisé au lancement) | contrat commerçant CMI. Sans `CMI_WEBHOOK_HMAC_SECRET`, les routes CMI répondent **501** |
-| `RATE_LIMIT_*_MAX`, `AG_RAPPEL_JOURS_AVANT` | non | plafonds techniques (défauts dans le code) |
+| `SUPABASE_AUTH_HOOK_SEND_SMS_SECRET` | non (test M0) | généré localement (`v1,whsec_<base64>`) — DOIT être identique à `[auth.hook.send_sms].secrets` du `config.toml` de l'environnement Supabase géré (staging/production) ; voir `apps/api/lib/auth/send-sms-hook.ts` |
+| `INFOBIP_API_KEY` | non (test M0) | infobip.com → tableau de bord → *API Key* |
+| `INFOBIP_BASE_URL` | non (test M0) | infobip.com → tableau de bord → *Base URL* (ex. `https://xxxxxx.api.infobip.com`) |
+| `INFOBIP_SENDER` | non (test M0) — obligatoire tant que le compte Infobip est en essai | infobip.com → tableau de bord *Send your first message* → expéditeur assigné au compte ; un compte d'essai n'envoie qu'au numéro vérifié à l'inscription |
+| `RATE_LIMIT_AUTH_HOOK_SMS_MAX` | non (`value:` déjà posée à 30/min dans render.yaml) | protège le solde Infobip contre un webhook rejoué/forgé |
+| `RATE_LIMIT_OTP_REQUEST_MAX` / `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_FINANCE_MAX` / `RATE_LIMIT_COMMENTAIRE_MAX` / `RATE_LIMIT_CMI_WEBHOOK_MAX`, `AG_RAPPEL_JOURS_AVANT` | non (`value:` déjà posées dans render.yaml — 5/10/30/10/120/3) | plafonds techniques / délai de confort, ajustables depuis le tableau de bord Render sans redéploiement |
 | `INNGEST_DEV` | **interdit** en production | local uniquement |
 
 ### Web (`syndicup-web*`)
