@@ -9,20 +9,25 @@ function base(className: string) {
   return /(^|\s)w-(?!full)/.test(className) ? CONTROL.replace("w-full ", "") : CONTROL;
 }
 
+// `suppressHydrationWarning` : les gestionnaires de mots de passe / extensions de remplissage
+// (Dashlane, 1Password, Bitwarden…) injectent des attributs (ex. `__gcruniqueid`) sur les champs
+// `tel`/`email`/`password` avant l'hydratation React — un mismatch client/serveur inoffensif que
+// React signale mais ne « corrige » jamais (https://react.dev/link/hydration-mismatch). Centralisé
+// ici : tous les champs de l'app passent par ces trois composants.
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
-  return <input className={`${base(className)} h-11 ${className}`} {...props} />;
+  return <input className={`${base(className)} h-11 ${className}`} suppressHydrationWarning {...props} />;
 }
 
 export function Select({ className = "", children, ...props }: ComponentProps<"select">) {
   return (
-    <select className={`${base(className)} h-11 appearance-none ${className}`} {...props}>
+    <select className={`${base(className)} h-11 appearance-none ${className}`} suppressHydrationWarning {...props}>
       {children}
     </select>
   );
 }
 
 export function Textarea({ className = "", ...props }: ComponentProps<"textarea">) {
-  return <textarea className={`${CONTROL} min-h-24 py-2.5 ${className}`} rows={4} {...props} />;
+  return <textarea className={`${CONTROL} min-h-24 py-2.5 ${className}`} rows={4} suppressHydrationWarning {...props} />;
 }
 
 /** Champ complet : libellé, contrôle, aide, erreur serveur (VALIDATION_ERROR.fields). */

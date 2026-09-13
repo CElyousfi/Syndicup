@@ -58,7 +58,13 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
 
   if (!me.ok) {
     if (me.status === 404) redirect(`/${locale}/compte/sans-acces`);
-    redirect(`/${locale}/connexion`);
+    // Seul un vrai rejet d'authentification (401 — jeton absent/invalide) justifie de renvoyer
+    // vers la connexion : sinon un incident transitoire de l'API (500, 429, panne réseau…) FAIT
+    // PERDRE LA SESSION à quelqu'un qui est pourtant bien connecté — jamais une conséquence de
+    // notre panne. Toute autre erreur remonte à app/[locale]/error.tsx (page « Réessayer »
+    // générique), qui ne touche ni aux cookies ni à la session.
+    if (me.error.code === "UNAUTHENTICATED") redirect(`/${locale}/connexion`);
+    throw new Error(`Profil indisponible (${me.error.code} ${me.status}) : ${me.error.message}`);
   }
   if (me.data.statut_compte === "SUSPENDU") redirect(`/${locale}/compte/suspendu`);
 

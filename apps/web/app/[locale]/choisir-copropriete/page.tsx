@@ -23,7 +23,13 @@ export default async function ChoisirCoproPage({
     apiFetch<Profil>("/users/me"),
     apiFetch<Copropriete[]>("/coproprietes"),
   ]);
-  if (!me.ok || !copros.ok) redirect(`/${locale}/connexion`);
+  // Seul un vrai rejet d'authentification (401) justifie de renvoyer vers la connexion — une
+  // panne transitoire de l'API (500, réseau…) ne doit jamais faire perdre la session à
+  // quelqu'un qui est pourtant bien connecté (elle remonte à app/[locale]/error.tsx à la place).
+  if (!me.ok && me.error.code === "UNAUTHENTICATED") redirect(`/${locale}/connexion`);
+  if (!copros.ok && copros.error.code === "UNAUTHENTICATED") redirect(`/${locale}/connexion`);
+  if (!me.ok) throw new Error(`Profil indisponible (${me.error.code} ${me.status}) : ${me.error.message}`);
+  if (!copros.ok) throw new Error(`Copropriétés indisponibles (${copros.error.code} ${copros.status}) : ${copros.error.message}`);
 
   const rolesParCopro = new Map<string, string[]>();
   for (const r of (me.data.roles ?? []).filter((r) => r.actif)) {

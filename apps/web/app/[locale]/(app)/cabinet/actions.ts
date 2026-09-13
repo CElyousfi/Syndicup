@@ -92,7 +92,10 @@ export async function ouvrirCopropriete(fd: FormData): Promise<void> {
   const coproId = champ(fd, "copropriete_id");
   const next = champ(fd, "next") || "/tableau-de-bord";
   const me = await apiFetch<Profil>("/users/me");
-  if (!me.ok) redirect(`/${locale}/connexion`);
+  // Seul un vrai rejet d'authentification (401) justifie de renvoyer vers la connexion — une
+  // panne transitoire de l'API ne doit jamais faire perdre la session à quelqu'un de connecté.
+  if (!me.ok && me.error.code === "UNAUTHENTICATED") redirect(`/${locale}/connexion`);
+  if (!me.ok) throw new Error(`Profil indisponible (${me.error.code} ${me.status}) : ${me.error.message}`);
   const autorise = (me.data.roles ?? []).some((r) => r.actif && r.copropriete_id === coproId) || (me.data.roles ?? []).some((r) => r.actif && r.role === "SUPER_ADMIN");
   if (!autorise) redirect(`/${locale}/cabinet?refus=1`);
   await writeCoproprieteId(coproId);

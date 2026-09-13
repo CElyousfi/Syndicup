@@ -46,7 +46,7 @@ export function LoginForm({
         />
 
       {mode === "phone" ? (
-        <form action={otpAction} className="mt-5 space-y-4">
+        <form action={otpAction} className="mt-5 space-y-4" suppressHydrationWarning>
           <input type="hidden" name="locale" value={locale} />
           {next ? <input type="hidden" name="next" value={next} /> : null}
           <Field
@@ -78,7 +78,7 @@ export function LoginForm({
           </SubmitButton>
         </form>
       ) : (
-        <form action={emailAction} className="mt-5 space-y-4">
+        <form action={emailAction} className="mt-5 space-y-4" suppressHydrationWarning>
           <input type="hidden" name="locale" value={locale} />
           {next ? <input type="hidden" name="next" value={next} /> : null}
           <Field label={dict.auth.emailLabel} htmlFor="email" required>

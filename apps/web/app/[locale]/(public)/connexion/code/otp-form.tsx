@@ -86,7 +86,7 @@ export function OtpForm({
         {fill(dict.auth.otpSubtitle, { telephone: formatTelephone(telephone) })}
       </p>
 
-      <form ref={formRef} action={action} className="card mt-6 space-y-5 p-5 sm:p-6">
+      <form ref={formRef} action={action} className="card mt-6 space-y-5 p-5 sm:p-6" suppressHydrationWarning>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="telephone" value={telephone} />
         <input type="hidden" name="code" value={code} />
