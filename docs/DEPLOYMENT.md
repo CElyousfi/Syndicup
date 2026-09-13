@@ -141,3 +141,14 @@ Partie 2.4 — l'ancienne version du code reste compatible pendant la bascule) :
 
 Réponses : `200 { "status": "ok", "version": "0.1.0", "commit": "<sha>", "db": "ok" }` ;
 `503 { "status": "degraded", …, "db": "error" }` si `SELECT 1` échoue.
+
+## 7. Problèmes connus
+
+**Build Render en échec sur le type-check Next.js (`typescript`/`@types/react` introuvables).**
+`NODE_ENV=production` est posé comme variable d'environnement du service (nécessaire à `next
+start`, voir §1). Or `npm ci` regarde `NODE_ENV` et saute les `devDependencies` par défaut quand
+elle vaut `production` — `next build` en a pourtant besoin pour le type-check (`typescript`,
+`@types/react`…), qui tourne au build, jamais au runtime. Résultat : le build échoue en cherchant
+ces modules absents. Fix (déjà appliqué dans `render.yaml`) : `buildCommand` utilise
+`npm ci --include=dev` sur les quatre services, pour installer les devDependencies au build
+malgré `NODE_ENV=production`.
