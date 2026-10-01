@@ -31,11 +31,11 @@ export default async function PlanningPage({ params, searchParams }: { params: P
   const p = (path: string) => `/${ctx.locale}${path}`;
   const semaine = /^\d{4}-\d{2}-\d{2}$/.test(sp.semaine ?? "") ? sp.semaine : undefined;
   const res = await apiFetch<PlanningSemaine>("/personnel/planning", { searchParams: semaine ? { semaine } : {} });
-  if (!res.ok) return <div className="space-y-4"><BackLink href={p("/personnel")} label={dict.nav.personnel} /><Banner variant="danger">{pe.chargementImpossible}</Banner></div>;
+  if (!res.ok) return <div className="page-root space-y-4"><BackLink href={p("/personnel")} label={dict.nav.personnel} /><Banner variant="danger">{pe.chargementImpossible}</Banner></div>;
   const x = res.data;
   const JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"] as const;
   return (
-    <div className="space-y-5">
+    <div className="page-root space-y-5">
       <BackLink href={p("/personnel")} label={dict.nav.personnel} />
       <PageHeader
         title={pe.planning}

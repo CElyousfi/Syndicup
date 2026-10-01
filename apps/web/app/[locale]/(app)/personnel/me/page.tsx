@@ -11,5 +11,9 @@ export default async function MonDossierPage({ params }: { params: Promise<{ loc
   const res = await apiFetch<PersonnelRh[]>("/personnel");
   const mienne = res.ok ? res.data.find((f) => f.utilisateurId === ctx.profil.id) : undefined;
   if (mienne) redirect(`/${ctx.locale}/personnel/${mienne.id}`);
-  return <Banner variant="info">{ctx.dict.personnel.aucuneFiche}</Banner>;
+  return (
+    <div className="page-root">
+      <Banner variant="info">{ctx.dict.personnel.aucuneFiche}</Banner>
+    </div>
+  );
 }

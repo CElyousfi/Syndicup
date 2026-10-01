@@ -38,12 +38,12 @@ export default async function PaieMoisPage({ params, searchParams }: { params: P
     apiFetch<PaieMois>("/personnel/fiches-paie", { searchParams: { periode } }),
     ctx.coproprieteId ? apiFetch<{ parametres_paie: ParametresPaie | null }>(`/coproprietes/${ctx.coproprieteId}/parametres-paie`) : null,
   ]);
-  if (!res.ok) return <div className="space-y-4"><BackLink href={p("/personnel")} label={dict.nav.personnel} /><Banner variant="danger">{pe.chargementImpossible}</Banner></div>;
+  if (!res.ok) return <div className="page-root space-y-4"><BackLink href={p("/personnel")} label={dict.nav.personnel} /><Banner variant="danger">{pe.chargementImpossible}</Banner></div>;
   const x = res.data;
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   const nonConfigure = paramsRes?.ok ? paramsRes.data.parametres_paie === null : false;
   return (
-    <div className="space-y-5">
+    <div className="page-root space-y-5">
       <BackLink href={p("/personnel")} label={dict.nav.personnel} />
       <PageHeader title={`${pe.paieMois} · ${periode}`} subtitle={pe.paieMoisSubtitle} actions={<div className="flex gap-1.5"><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, -1)}`)} variant="secondary" size="sm">{pe.moisPrecedent}</ButtonLink><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, 1)}`)} variant="secondary" size="sm">{pe.moisSuivant}</ButtonLink></div>} />
       {nonConfigure ? <Banner variant="warn"><span className="font-medium">{pe.paieNonConfiguree}.</span> {pe.paieNonConfigureeCorps} <a href={p("/parametres#paie")} className="underline">{dict.nav.parametres}</a></Banner> : null}

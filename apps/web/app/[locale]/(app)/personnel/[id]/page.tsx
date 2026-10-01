@@ -49,7 +49,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
   const res = await apiFetch<PersonnelDetail>(`/personnel/${id}`);
   if (!res.ok) {
     if (res.status === 404) notFound();
-    return <div className="space-y-4"><BackLink href={`/${locale}/personnel`} label={dict.common.back} /><Banner variant="danger">{pe.interdit}</Banner></div>;
+    return <div className="page-root space-y-4"><BackLink href={`/${locale}/personnel`} label={dict.common.back} /><Banner variant="danger">{pe.interdit}</Banner></div>;
   }
   const x = res.data;
   const soi = x.utilisateurId === ctx.profil.id;
@@ -78,7 +78,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
   const tabHref = (o: Onglet) => p(`/personnel/${id}?onglet=${o}`);
 
   return (
-    <div className="space-y-5">
+    <div className="page-root space-y-5">
       <BackLink href={p("/personnel")} label={dict.nav.personnel} />
       <PageHeader
         title={soi && !gestion ? pe.monDossier : nom}
