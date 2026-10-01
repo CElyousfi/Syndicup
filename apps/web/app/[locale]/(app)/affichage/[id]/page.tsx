@@ -41,7 +41,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   const peutModifier = gestion && a.statut !== "ARCHIVEE" && (syndic || a.categorie !== "URGENCE");
   return (
-    <div className="animate-fade mx-auto max-w-4xl space-y-4">
+    <div className="page-root mx-auto max-w-4xl space-y-4">
       {a.statut === "PUBLIEE" ? <MarquerLu locale={ctx.locale} id={a.id} deja={a.lu} /> : null}
       <BackLink href={p("/affichage")} label={c.titre} />
       <PageHeader

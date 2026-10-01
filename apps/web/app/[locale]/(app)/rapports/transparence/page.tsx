@@ -40,7 +40,7 @@ export default async function TransparencePage({ params, searchParams }: { param
   const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.transparenceTitre} subtitle={r.transparenceSubtitle} actions={<ExerciceLinks base="/rapports/transparence" exercice={exercice} locale={ctx.locale} />} />
       {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : (() => {
         const t = res.data;

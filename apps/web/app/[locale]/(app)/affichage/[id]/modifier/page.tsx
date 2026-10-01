@@ -22,7 +22,7 @@ export default async function ModifierAnnoncePage({ params }: { params: Promise<
   if (!res.ok) notFound();
   const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/affichage/${id}`} label={res.data.titre} />} title={dict.communication.modifier} />
       <AnnonceForm dict={dict} locale={ctx.locale} syndic={syndic} batiments={batiments} annonce={res.data} />
     </div>

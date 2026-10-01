@@ -13,7 +13,7 @@ export default async function NouvelleAgPage({
   exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN"]);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={
           <span className="flex items-center gap-3">

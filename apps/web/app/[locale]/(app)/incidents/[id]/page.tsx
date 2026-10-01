@@ -103,7 +103,7 @@ export default async function IncidentDetailPage({
     new Date(incident.slaDeadline).getTime() < Date.now();
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       {sp.signale === "1" ? (
         <Banner variant="ok" className="mb-5">
           {incident.urgence === "URGENCE_MAXIMALE" ? i.signaleUrgent : i.signale}

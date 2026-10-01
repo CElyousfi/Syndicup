@@ -83,7 +83,7 @@ export default async function LotDetailPage({
   const soldeDu = soldeRes.ok ? soldeRes.data.solde_du : null;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/lots")} label={dict.nav.lots} />}
         title={`${dict.enums.typeLot[lot.typeLot]} ${lot.numero}`}

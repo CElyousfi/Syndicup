@@ -57,7 +57,7 @@ export default async function ContestationsPage({
   const ouvertes = contestations.filter((c) => c.statut === "OUVERTE").length;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={f.contestations}
         subtitle={gestion ? f.contestationsSubtitle : undefined}

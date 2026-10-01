@@ -48,7 +48,7 @@ export default async function CalendrierPage({ params, searchParams }: { params:
   const jours = [1, 2, 3, 4, 5, 6, 7].map((d) => new Date(Date.UTC(2024, 0, d)).toLocaleDateString(ctx.locale === "ar" ? "ar-MA" : "fr-FR", { weekday: "short", timeZone: "UTC" }));
   const aujourdhui = iso(now);
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader back={<BackLink href={p("/contrats")} label={c.titre} />} title={c.calendrier} subtitle={c.calendrierSubtitle} actions={<div className="flex items-center gap-2"><ButtonLink href={p(`/contrats/calendrier?mois=${decal(-1)}`)} variant="secondary" size="sm">{c.moisPrecedent}</ButtonLink><span className="tnum px-2 text-sm font-semibold text-ink">{formatPeriode(mois, ctx.locale)}</span><ButtonLink href={p(`/contrats/calendrier?mois=${decal(1)}`)} variant="secondary" size="sm">{c.moisSuivant}</ButtonLink></div>} />
       {!res.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}
       <Card padded={false}>

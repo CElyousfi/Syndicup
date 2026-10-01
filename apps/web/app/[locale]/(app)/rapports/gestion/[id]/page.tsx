@@ -36,7 +36,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
   const p = (path: string) => `/${locale}${path}`;
   const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/rapports/gestion")} label={r.gestionTitre} />}
         title={`${r.gestionTitre.split(" ")[0]} ${r.exercice.toLowerCase()} ${x.exercice}`}

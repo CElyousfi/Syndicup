@@ -17,7 +17,7 @@ export default async function NouveauContratPage({ params }: { params: Promise<{
   const { dict } = ctx;
   const refs = await referencesContrat(dict, ctx.locale, ctx.coproprieteId);
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/contrats`} label={dict.contrats.titre} />} title={dict.contrats.nouveau} subtitle={dict.contrats.creeAide} />
       <ContratForm dict={dict} locale={ctx.locale} postes={refs.postes} prestataires={refs.prestataires} resolutions={refs.resolutions} seuilAg={refs.seuilAg} />
     </div>

@@ -39,7 +39,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
     { titre: dict.contrats.titre, aide: dict.contrats.subtitle, ressource: "contrats" },
   ];
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.exportsTitre} subtitle={r.exportsSubtitle} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="exports" />
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

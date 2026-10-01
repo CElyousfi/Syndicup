@@ -33,7 +33,7 @@ export default async function JustificatifDetailPage({ params }: { params: Promi
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   const affectations = x.detailsJson?.affectations ?? [];
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}${retour}`} label={dict.nav.justificatifs} />}
         title={`${x.lot?.numero ?? ""} · ${formatMAD(x.montant, ctx.locale)}`}

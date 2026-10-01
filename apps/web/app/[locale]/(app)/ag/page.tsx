@@ -45,7 +45,7 @@ export default async function AgListPage({
   const p = (path: string) => `/${locale}${path}`;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={dict.ag.titre}
         actions={
@@ -74,14 +74,14 @@ export default async function AgListPage({
         />
       ) : (
         <>
-          <div className="space-y-3">
+          <div className="stagger-grid space-y-3">
             {ags.map((ag) => {
               const aVenir = ["PLANIFIEE", "CONVOQUEE"].includes(ag.statut);
               return (
                 <Link
                   key={ag.id}
                   href={p(`/ag/${ag.id}`)}
-                  className="card group flex flex-wrap items-center gap-4 p-4 transition-all hover:border-action/40 hover:shadow-lift sm:p-5"
+                  className="card group flex flex-wrap items-center gap-4 p-4 hover:border-action/40 sm:p-5"
                 >
                   <IconCircle tone={aVenir ? "tosca" : "lilac"} size={44}>
                     {aVenir ? <CCalendar /> : <CVote />}

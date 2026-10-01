@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { IDLE } from "../../../../../lib/forms";
@@ -41,6 +42,19 @@ export function OtpForm({
   }, [resendState]);
 
   const code = digits.join("");
+
+  // Code refusé : la grille tremble, les cases se vident et le curseur revient au début.
+  const [echecs, setEchecs] = useState(0);
+  useEffect(() => {
+    if (state.status === "error" && state.code === "UNAUTHENTICATED") {
+      setEchecs((n) => n + 1);
+      setDigits(Array(LONGUEUR).fill(""));
+    }
+  }, [state]);
+  // Après le remontage de la grille (clé = nombre d'échecs) : focus sur la première case.
+  useEffect(() => {
+    if (echecs > 0) refs.current[0]?.focus();
+  }, [echecs]);
 
   const setDigit = (i: number, val: string) => {
     const clean = val.replace(/\D/g, "");
@@ -92,7 +106,7 @@ export function OtpForm({
         <input type="hidden" name="code" value={code} />
         {next ? <input type="hidden" name="next" value={next} /> : null}
 
-        <div className="grid grid-cols-6 gap-1.5 sm:gap-2" dir="ltr">
+        <OtpGrid echecs={echecs}>
           {digits.map((d, i) => (
             <input
               key={i}
@@ -106,15 +120,16 @@ export function OtpForm({
               inputMode="numeric"
               autoComplete={i === 0 ? "one-time-code" : "off"}
               aria-label={fill(dict.a11y.otpDigit, { n: i + 1 })}
-              className="tnum h-14 w-full min-w-0 rounded-field border border-hairline-strong bg-surface text-center text-xl font-semibold text-ink transition-[border-color,box-shadow] focus:border-action focus:outline-none focus:ring-4 focus:ring-action/15"
+              data-filled={d ? "" : undefined}
+              className="otp-box tnum h-14 w-full min-w-0 rounded-field border border-hairline-strong bg-surface text-center text-xl font-semibold text-ink transition-[border-color,box-shadow] focus:border-action focus:outline-none focus:ring-4 focus:ring-action/15"
               maxLength={LONGUEUR}
             />
           ))}
-        </div>
+        </OtpGrid>
 
         {state.status === "error" ? (
           state.code === "UNAUTHENTICATED" ? (
-            <p className="text-[13px] text-danger">{dict.auth.otpInvalid}</p>
+            <p key={echecs} className="animate-in-up text-[13px] text-danger" role="alert">{dict.auth.otpInvalid}</p>
           ) : (
             <FormAlert state={state} />
           )
@@ -147,6 +162,24 @@ export function OtpForm({
           {dict.auth.otpChangeNumber}
         </Link>
       </p>
+    </div>
+  );
+}
+
+/**
+ * Grille des 6 cases (toujours LTR : un code se lit de gauche à droite). Pendant la
+ * vérification, une vague parcourt les cases ; à chaque échec, la grille tremble.
+ */
+function OtpGrid({ echecs, children }: { echecs: number; children: React.ReactNode }) {
+  const { pending } = useFormStatus();
+  return (
+    <div
+      key={echecs}
+      className={`otp-wave grid grid-cols-6 gap-1.5 sm:gap-2 ${echecs > 0 ? "animate-shake" : ""}`}
+      data-pending={pending ? "" : undefined}
+      dir="ltr"
+    >
+      {children}
     </div>
   );
 }

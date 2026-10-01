@@ -24,7 +24,7 @@ export default async function TransfertPage({
   const soldeDu = soldeRes.ok ? soldeRes.data.solde_du : "0.00";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/lots/${id}`} label={ctx.dict.common.back} />}
         title={fill(ctx.dict.lots.transfertTitre, { numero: lotRes.data.numero })}

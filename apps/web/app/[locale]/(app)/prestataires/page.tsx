@@ -38,7 +38,7 @@ export default async function PrestatairesPage({
   const prestataires = res.ok ? res.data : [];
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={i.prestataires}
         subtitle={i.prestatairesSubtitle}

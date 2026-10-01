@@ -22,7 +22,7 @@ export default async function ModifierLotPage({
   if (!lotRes.ok) notFound();
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={fill(ctx.dict.lots.modifierTitre, { numero: lotRes.data.numero })}
         back={<BackLink href={`/${locale}/lots/${id}`} label={ctx.dict.common.back} />}

@@ -16,7 +16,7 @@ export default async function NouvelleTachePage({ params }: { params: Promise<{ 
   exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN"]);
   const { dict } = ctx;
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/taches`} label={dict.taches.titre} />} title={dict.taches.nouvelle} subtitle={dict.taches.nouvelleAide} />
       <TacheForm dict={dict} locale={ctx.locale} assignees={await assigneesPossibles()} />
     </div>

@@ -40,7 +40,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
   const vivant = x.statut === "ACTIF" || x.statut === "BROUILLON" || x.statut === "SUSPENDU";
   const det = x.detailsAssuranceJson;
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/contrats")} label={c.titre} />}
         title={x.libelle}

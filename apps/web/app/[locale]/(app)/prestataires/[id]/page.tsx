@@ -62,7 +62,7 @@ export default async function PrestataireDetailPage({
   const note = x.noteMoyenne ? Number(x.noteMoyenne) : null;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/prestataires")} label={dict.nav.prestataires} />}
         title={x.nom}

@@ -49,7 +49,7 @@ export default async function NotificationsPage({
   }));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={n.titre}
         subtitle={nonLues > 0 ? fill(n.nonLues, { n: nonLues }) : n.toutesLues}

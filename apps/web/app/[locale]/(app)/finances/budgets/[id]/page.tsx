@@ -47,7 +47,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
   const actif = budget.statut === "ACTIF";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/finances/budgets")} label={f.budgets} />}
         title={`${f.exercice} ${budget.exercice}`}

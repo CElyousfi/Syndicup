@@ -61,7 +61,7 @@ export default async function LitigesPage({
   const resolusNb = litiges.filter((l) => l.statut === "RESOLU").length;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={gestion ? li.titre : li.mesLitiges}
         actions={peutDeclarer ? <DeclarerLitigeModal dict={dict} locale={ctx.locale} /> : undefined}

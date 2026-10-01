@@ -74,7 +74,7 @@ export default async function IncidentsPage({
   const titre = prestataire ? i.mesTickets : gestion ? i.titre : i.mesSignalements;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={titre}
         actions={

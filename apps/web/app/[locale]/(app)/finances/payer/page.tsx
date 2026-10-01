@@ -33,7 +33,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
   const mad = (c: bigint) => formatMAD(`${c / 100n}.${String(c % 100n).padStart(2, "0")}`, ctx.locale);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={j.payerTitre} subtitle={j.payerSubtitle} />
       <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard icon={<CMoneyBag />} tone={totalDu > 0n ? "sand" : "sage"} label={dict.finances.soldeDu} value={mad(totalDu)} />

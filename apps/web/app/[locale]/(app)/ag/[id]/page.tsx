@@ -89,7 +89,7 @@ export default async function AgDetailPage({
   const peutEditer = gestion && (ag.statut === "PLANIFIEE" || ag.statut === "CONVOQUEE");
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/ag")} label={dict.nav.ag} />}
         title={

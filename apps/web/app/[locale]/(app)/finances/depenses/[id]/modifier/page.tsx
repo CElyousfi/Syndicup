@@ -25,7 +25,7 @@ export default async function ModifierDepensePage({ params }: { params: Promise<
   if (depense.statut !== "BROUILLON" && depense.statut !== "REJETEE") redirect(`/${locale}/finances/depenses/${id}`);
   const refs = await referencesDepense(dict, ctx.locale, ctx.coproprieteId, depense.dateDepense.slice(0, 4));
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/finances/depenses/${id}`} label={depense.libelle} />} title={d.modifier} />
       <DepenseForm dict={dict} locale={ctx.locale} postes={refs.postes} prestataires={refs.prestataires} resolutions={refs.resolutions} tvaDefaut={refs.tvaDefaut} depense={depense} />
     </div>

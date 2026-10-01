@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { AnimatePresence, LazyMotion, MotionConfig, m, useDragControls } from "motion/react";
 import { Brand, BrandMark } from "../brand";
 import { LocaleSwitch } from "../locale-switch";
 import { Avatar } from "../ui/avatar";
@@ -11,6 +12,7 @@ import { GuidedTour, type TourLabels } from "../onboarding/guided-tour";
 import { Toaster } from "./toaster";
 import { useLive } from "./live";
 import { seDeconnecter } from "../../lib/actions/session-actions";
+import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
 import type { NavSection, NavItem, IconKey } from "./nav";
 import {
   IconBell,
@@ -36,6 +38,8 @@ import {
   IconSuitcase,
   IconWrench,
   IconX, IconReceipt, IconPie, IconHandshake, IconMegaphone, IconTasks, IconCar, IconDownload } from "../ui/icons";
+
+const loadMotionFeatures = () => import("../../lib/motion-features").then((mod) => mod.default);
 
 const ICONS: Record<IconKey, React.ComponentType<React.SVGProps<SVGSVGElement>>> = {
   grid: IconGrid,
@@ -184,14 +188,27 @@ export function AppFrame({
                       href={item.href}
                       data-tour={`nav-${item.icon}`}
                       aria-current={active ? "page" : undefined}
-                      className={`flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-all ${
-                        active
-                          ? "bg-ink text-white shadow-[0_10px_20px_-10px_rgb(18_18_18/0.5)]"
-                          : "text-body hover:bg-ground hover:text-ink"
+                      className={`group/nav relative flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors duration-200 ${
+                        active ? "text-white" : "text-body hover:bg-ground hover:text-ink"
                       }`}
                     >
-                      <Icon width={18} height={18} className={active ? "text-sage" : "text-soft"} />
-                      <span className="truncate">{item.label}</span>
+                      {/* Pastille active partagée : elle glisse d'une entrée à l'autre à chaque navigation. */}
+                      {active ? (
+                        <m.span
+                          layoutId="nav-pill"
+                          transition={SPRING_LAYOUT}
+                          className="absolute inset-0 rounded-2xl bg-ink shadow-[0_10px_20px_-10px_rgb(18_18_18/0.5)]"
+                          aria-hidden
+                        />
+                      ) : null}
+                      <Icon
+                        width={18}
+                        height={18}
+                        className={`relative shrink-0 transition-[color,scale] duration-300 ${
+                          active ? "text-sage" : "text-soft group-hover/nav:scale-110"
+                        }`}
+                      />
+                      <span className="relative truncate">{item.label}</span>
                     </Link>
                   </li>
                 );
@@ -234,6 +251,8 @@ export function AppFrame({
   );
 
   return (
+    <LazyMotion features={loadMotionFeatures} strict>
+    <MotionConfig reducedMotion="user">
     <div className="min-h-screen bg-ground">
       {/* Barre latérale desktop — panneau flottant arrondi */}
       <aside className="fixed inset-y-3 start-3 z-30 hidden w-[268px] overflow-hidden rounded-[26px] bg-surface shadow-float lg:block">
@@ -241,8 +260,10 @@ export function AppFrame({
       </aside>
 
       {/* Menu complet mobile — feuille qui monte du bas */}
+      <AnimatePresence>
       {sheetOpen ? (
         <MobileSheet
+          key="sheet"
           locale={locale}
           nav={nav}
           logo={logoSrc}
@@ -256,6 +277,7 @@ export function AppFrame({
           onClose={() => setSheetOpen(false)}
         />
       ) : null}
+      </AnimatePresence>
 
       {/* Zone contenu */}
       <div className="lg:ps-[288px]">
@@ -310,8 +332,9 @@ export function AppFrame({
                   aria-current={active ? "page" : undefined}
                   className={`tab flex flex-col items-center gap-1 pb-1 pt-2 text-[10.5px] font-semibold ${active ? "is-active text-ink" : "text-soft"}`}
                 >
-                  <span className="tab-pill flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors">
-                    <Icon width={21} height={21} />
+                  <span className="tab-pill relative flex h-[30px] w-[52px] items-center justify-center rounded-full">
+                    {active ? <TabPill /> : null}
+                    <Icon width={21} height={21} className="relative" />
                   </span>
                   <span className="max-w-full truncate px-1">{item.label}</span>
                 </Link>
@@ -326,8 +349,9 @@ export function AppFrame({
               aria-label={labels.openMenu}
               className={`tab flex w-full flex-col items-center gap-1 pb-1 pt-2 text-[10.5px] font-semibold ${sheetOpen ? "is-active text-ink" : "text-soft"}`}
             >
-              <span className="tab-pill flex h-[30px] w-[52px] items-center justify-center rounded-full transition-colors">
-                <IconDots />
+              <span className="tab-pill relative flex h-[30px] w-[52px] items-center justify-center rounded-full">
+                {sheetOpen ? <TabPill /> : null}
+                <IconDots className="relative" />
               </span>
               <span className="max-w-full truncate px-1">{labels.plus}</span>
             </button>
@@ -340,6 +364,8 @@ export function AppFrame({
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
       <Toaster />
     </div>
+    </MotionConfig>
+    </LazyMotion>
   );
 }
 
@@ -369,6 +395,7 @@ function MobileSheet({
   isActive: (item: NavItem) => boolean;
   onClose: () => void;
 }) {
+  const drag = useDragControls();
   // Verrouille le défilement de la page derrière la feuille.
   useEffect(() => {
     const prev = document.body.style.overflow;
@@ -380,8 +407,32 @@ function MobileSheet({
 
   return (
     <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true" aria-label={labels.menu}>
-      <div className="absolute inset-0 bg-ink/45 backdrop-blur-[3px] animate-fade" onClick={onClose} />
-      <div className="app-sheet absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-[28px] bg-surface shadow-pop animate-sheet-up">
+      <m.div
+        className="absolute inset-0 bg-ink/45 backdrop-blur-[3px]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { duration: DUR.slow, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: { duration: DUR.base, ease: EASE_IN } }}
+        onClick={onClose}
+      />
+      {/* La feuille se tire vers le bas par sa poignée/son en-tête pour se fermer. */}
+      <m.div
+        className="app-sheet absolute inset-x-0 bottom-0 flex max-h-[92dvh] flex-col rounded-t-[28px] bg-surface shadow-pop"
+        initial={{ y: "100%" }}
+        animate={{ y: 0, transition: { type: "spring", stiffness: 420, damping: 40, mass: 0.9 } }}
+        exit={{ y: "100%", transition: { duration: 0.26, ease: EASE_IN } }}
+        drag="y"
+        dragListener={false}
+        dragControls={drag}
+        dragConstraints={{ top: 0, bottom: 0 }}
+        dragElastic={{ top: 0.02, bottom: 0.7 }}
+        onDragEnd={(_, info) => {
+          if (info.offset.y > 110 || info.velocity.y > 600) onClose();
+        }}
+      >
+        <div
+          className="cursor-grab touch-none active:cursor-grabbing"
+          onPointerDown={(e) => drag.start(e)}
+        >
         <div className="sheet-handle" aria-hidden />
         <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-1">
           <p className="text-[17px] font-semibold text-ink">{labels.menu}</p>
@@ -389,10 +440,12 @@ function MobileSheet({
             type="button"
             onClick={onClose}
             aria-label={labels.closeMenu}
-            className="flex size-9 items-center justify-center rounded-full bg-ground text-body"
+            onPointerDown={(e) => e.stopPropagation()}
+            className="su-btn flex size-9 items-center justify-center rounded-full bg-ground text-body"
           >
             <IconX width={18} height={18} />
           </button>
+        </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-4">
@@ -419,7 +472,7 @@ function MobileSheet({
                   {section.label}
                 </p>
               ) : null}
-              <ul className="grid grid-cols-3 gap-2">
+              <ul className="stagger-grid grid grid-cols-3 gap-2">
                 {section.items.map((item) => {
                   const active = isActive(item);
                   const Icon = ICONS[item.icon];
@@ -473,22 +526,32 @@ function MobileSheet({
             </div>
           </div>
         </div>
-      </div>
+      </m.div>
     </div>
   );
 }
 
 function BellLink({ href, label, count }: { href: string; label: string; count: number }) {
+  // La cloche sonne quand le compteur MONTE (nouvelle notification), pas au premier rendu.
+  const prev = useRef(count);
+  const [ring, setRing] = useState(0);
+  useEffect(() => {
+    if (count > prev.current) setRing((r) => r + 1);
+    prev.current = count;
+  }, [count]);
   return (
     <Link
       href={href}
       data-tour="bell"
       aria-label={label}
-      className="relative flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-body shadow-[0_1px_3px_rgb(32_31_35/0.08)] transition-colors hover:text-ink"
+      className="su-btn relative flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-body shadow-[0_1px_3px_rgb(32_31_35/0.08)] hover:text-ink hover:shadow-[0_4px_12px_-4px_rgb(32_31_35/0.18)]"
     >
-      <IconBell width={18} height={18} />
+      <IconBell key={ring} width={18} height={18} className={ring > 0 ? "animate-ring" : undefined} />
       {count > 0 ? (
-        <span className="absolute -top-0.5 -end-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white ring-2 ring-ground">
+        <span
+          key={count}
+          className="animate-pop absolute -top-0.5 -end-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white ring-2 ring-ground"
+        >
           {count > 9 ? "9+" : count}
         </span>
       ) : null}
@@ -551,25 +614,39 @@ function QuickSearch({ nav, placeholder }: { nav: NavSection[]; placeholder: str
           <IconSearch width={15} height={15} />
         </span>
       </div>
-      {open && matches.length > 0 ? (
-        <ul className="absolute inset-x-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl bg-surface py-1.5 shadow-pop">
-          {matches.map((m) => {
-            const Icon = ICONS[m.icon];
-            return (
-              <li key={m.href}>
-                <button
-                  type="button"
-                  onClick={() => go(m.href)}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm font-medium text-body transition-colors hover:bg-ground hover:text-ink"
+      <AnimatePresence>
+        {open && matches.length > 0 ? (
+          <m.ul
+            key="results"
+            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+            animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: DUR.base, ease: EASE_OUT } }}
+            exit={{ opacity: 0, y: -4, scale: 0.98, transition: { duration: DUR.fast, ease: EASE_IN } }}
+            style={{ transformOrigin: "top center" }}
+            className="absolute inset-x-0 top-[calc(100%+8px)] z-30 overflow-hidden rounded-2xl bg-surface py-1.5 shadow-pop"
+          >
+            {matches.map((it, i) => {
+              const Icon = ICONS[it.icon];
+              return (
+                <m.li
+                  key={it.href}
+                  layout="position"
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.03, duration: DUR.base, ease: EASE_OUT } }}
                 >
-                  <Icon width={16} height={16} className="text-soft" />
-                  {m.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+                  <button
+                    type="button"
+                    onClick={() => go(it.href)}
+                    className="group/qs flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm font-medium text-body transition-colors hover:bg-ground hover:text-ink"
+                  >
+                    <Icon width={16} height={16} className="text-soft transition-[color,scale] duration-200 group-hover/qs:scale-110 group-hover/qs:text-action" />
+                    {it.label}
+                  </button>
+                </m.li>
+              );
+            })}
+          </m.ul>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }
@@ -592,9 +669,21 @@ function CoproChip({ nom, ville, logo }: { nom: string; ville: string | null; lo
   );
 }
 
-function IconDots() {
+/** Fond encre de l'onglet actif — partagé (layoutId) : il glisse vers l'onglet touché. */
+function TabPill() {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+    <m.span
+      layoutId="tab-pill"
+      transition={SPRING_LAYOUT}
+      className="absolute inset-0 rounded-full bg-ink"
+      aria-hidden
+    />
+  );
+}
+
+function IconDots({ className }: { className?: string }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" aria-hidden className={className}>
       <circle cx="5" cy="12" r="2" />
       <circle cx="12" cy="12" r="2" />
       <circle cx="19" cy="12" r="2" />

@@ -27,10 +27,21 @@ export function CopyButton({
           // presse-papiers indisponible (permissions) — pas d'action destructive à défaut
         }
       }}
-      className={`inline-flex h-9 items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3.5 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover ${className}`}
+      data-copied={copied ? "" : undefined}
+      aria-live="polite"
+      className={`su-btn inline-flex h-9 items-center gap-2 rounded-btn border px-3.5 text-[13px] font-medium text-ink-strong ${
+        copied ? "border-ok/30 bg-ok-tint" : "border-hairline-strong bg-surface hover:bg-hover"
+      } ${className}`}
     >
-      {copied ? <IconCheck width={16} height={16} className="text-ok" /> : <IconCopy width={16} height={16} />}
-      {copied ? copiedLabel : label}
+      {/* Icônes et libellés superposés : la copie se transforme en coche sans que le bouton bouge. */}
+      <span className="copy-icons" aria-hidden>
+        <IconCopy width={16} height={16} className="copy-idle" />
+        <IconCheck width={16} height={16} className="copy-done text-ok" />
+      </span>
+      <span className="copy-labels">
+        <span className="copy-idle" aria-hidden={copied}>{label}</span>
+        <span className="copy-done" aria-hidden={!copied}>{copiedLabel}</span>
+      </span>
     </button>
   );
 }

@@ -54,7 +54,7 @@ export default async function InvitationsPage({
   const nonEnvoyees = invitations.filter((i) => i.statut === "EN_ATTENTE" && i.preRempliJson && !i.envoyeeLe).length;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={inv.titre}
         subtitle={inv.subtitle}

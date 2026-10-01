@@ -88,9 +88,10 @@ export async function DashboardResident({
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={fill(dict.dash.greeting, { prenom })}
+        reveal
         subtitle={ctx.copropriete?.nom ?? undefined}
         actions={
           <ButtonLink href={p("/incidents/nouveau")} variant="secondary">

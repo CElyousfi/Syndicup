@@ -36,7 +36,7 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
   const p = (path: string) => `/${locale}${path}`;
   const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.impayesTitre} subtitle={r.impayesSubtitle} actions={<ExportButtons ressource="impayes" filtres={{ tranche }} labels={{ csv: r.exporterCsv, xlsx: r.exporterXlsx, title: r.exportImpayesAide }} />} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="impayes" />
       {synthese ? (

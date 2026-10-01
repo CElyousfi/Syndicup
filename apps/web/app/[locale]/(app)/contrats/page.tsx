@@ -55,7 +55,7 @@ export default async function ContratsPage({ params, searchParams }: { params: P
   const qs = (statut: string) => `${p("/contrats")}?${new URLSearchParams({ ...(statut !== "TOUS" ? { statut } : {}), ...(type ? { type } : {}) }).toString()}`.replace(/\?$/, "");
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={c.titre} subtitle={c.subtitle} actions={<><ButtonLink href={p("/contrats/calendrier")} variant="secondary"><CCalendar className="h-4 w-4" />{c.calendrier}</ButtonLink>{gestion ? <ButtonLink href={p("/contrats/nouveau")}><IconPlus width={16} height={16} />{c.nouveau}</ButtonLink> : null}</>} />
       {assurance && !assurance.immeuble_active ? <Banner variant="danger" className="mb-4" title={c.assuranceAbsente} action={gestion ? <Link href={p("/contrats/nouveau?type=ASSURANCE_IMMEUBLE")} className="font-medium underline">{c.nouveau}</Link> : undefined}>{c.assuranceAbsenteCorps}</Banner> : null}
       {!listeRes.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}

@@ -12,7 +12,7 @@ export default async function NouvelleCoproPage({
   exigerRole(ctx, ["SUPER_ADMIN"]);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={ctx.dict.admin.creer}
         back={<BackLink href={`/${locale}/admin`} label={ctx.dict.admin.titre} />}

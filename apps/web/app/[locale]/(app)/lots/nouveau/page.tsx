@@ -15,7 +15,7 @@ export default async function NouveauLotPage({
   const lotsRes = await apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } });
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={ctx.dict.lots.creerTitre}
         back={<BackLink href={`/${locale}/lots`} label={ctx.dict.common.back} />}

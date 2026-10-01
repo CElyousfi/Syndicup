@@ -36,7 +36,7 @@ export default async function EmplacementPage({ params }: { params: Promise<{ lo
   const etat = (a: EmplacementDetail["attributions"][number]) => (a.active ? { v: "ok" as const, l: t.active } : a.dateDebut > aujourdhui ? { v: "outline" as const, l: t.aVenir } : { v: "neutral" as const, l: t.terminee });
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/parkings?onglet=emplacements`} label={t.titre} />}
         title={<span className="font-mono" dir="ltr">{x.code}</span>}

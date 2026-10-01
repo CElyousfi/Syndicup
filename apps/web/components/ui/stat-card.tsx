@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { IconCircle, type IconTone } from "./color-icons";
+import { Odometer } from "./odometer";
 
 /**
  * Carte statistique (cf. référence design) : pastille d'icône teintée + libellé,
@@ -48,7 +49,9 @@ export function StatCard({
       </div>
       <p className="stat-label min-w-0 truncate text-sm font-medium text-body">{label}</p>
       <div className="stat-value-row flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <p className="stat-value tnum text-[28px] font-semibold leading-none tracking-tight text-ink">{value}</p>
+        <p className="stat-value tnum text-[28px] font-semibold leading-none tracking-tight text-ink">
+          {typeof value === "string" ? <Odometer value={value} /> : value}
+        </p>
         {trend ? (
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${trendCls}`}>
             {trend}
@@ -59,7 +62,7 @@ export function StatCard({
     </>
   );
 
-  const cls = `card stat ${href ? "transition-shadow hover:shadow-float" : ""} ${className}`;
+  const cls = `card stat ${href ? "card-interactive" : ""} ${className}`;
   return href ? (
     <Link href={href} className={cls}>
       {body}

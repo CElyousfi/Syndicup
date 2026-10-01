@@ -44,7 +44,7 @@ export default async function ParametresPage({
   const espaces = (espacesRes.ok ? espacesRes.data : []).map((e) => ({ id: e.id, nom: e.nom, cleDefaut: espaceImageCle(e.nom, e.type) }));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={pa.titre} subtitle={copropriete.nom} />
       {/* M25 — cabinet de syndic mandaté / passation */}
       <div className="mb-5"><CabinetMandatCard dict={dict} locale={ctx.locale} coproprieteId={copropriete.id} /></div>

@@ -16,7 +16,7 @@ export default async function NouveauSondagePage({ params }: { params: Promise<{
   exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"]);
   const { dict } = ctx;
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/affichage`} label={dict.communication.titre} />} title={dict.communication.nouveauSondage} subtitle={dict.communication.nouveauSondageAide} />
       <SondageForm dict={dict} locale={ctx.locale} batiments={await batimentsConnus()} />
     </div>

@@ -44,7 +44,7 @@ export default async function QuittancePage({
   }
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <div className="print:hidden">
         <PageHeader
           back={<BackLink href={`/${ctx.locale}/finances/appels-de-fonds`} label={f.appels} />}

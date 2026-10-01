@@ -42,7 +42,7 @@ export default async function VotesNominatifsPage({
   const variantVote = { POUR: "ok", CONTRE: "danger", ABSTENTION: "ink" } as const;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={a.detailVotes}

@@ -120,9 +120,10 @@ export async function DashboardSyndic({
     .reverse();
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={fill(dict.dash.greeting, { prenom })}
+        reveal
         subtitle={
           lectureSeule
             ? dict.dash.controleTitle

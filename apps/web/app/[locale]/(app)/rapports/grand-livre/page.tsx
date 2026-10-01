@@ -32,7 +32,7 @@ export default async function GrandLivrePage({ params, searchParams }: { params:
   const res = await apiFetch<GrandLivre>("/rapports/grand-livre", { searchParams: { exercice } });
   const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.grandLivreTitre} subtitle={r.grandLivreSubtitle} actions={<><ExerciceLinks base="/rapports/grand-livre" exercice={exercice} locale={ctx.locale} /><ExportButtons ressource="grand-livre" filtres={{ exercice }} labels={{ csv: r.exporterCsv, xlsx: r.exporterXlsx, title: r.exportGrandLivreAide }} /></>} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="grandLivre" exercice={exercice} />
       {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : (

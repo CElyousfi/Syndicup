@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { RevealText } from "./ui/reveal-text";
 
 /**
  * En-tête standard de page : titre net, sous-titre discret, UNE action primaire à l'extrémité.
@@ -10,12 +11,15 @@ export function PageHeader({
   actions,
   back,
   badge,
+  reveal = false,
 }: {
   title: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
   back?: ReactNode;
   badge?: ReactNode;
+  /** Titre révélé mot par mot (accueil du tableau de bord) — chaînes uniquement. */
+  reveal?: boolean;
 }) {
   return (
     <div className="mb-5 sm:mb-7">
@@ -23,7 +27,8 @@ export function PageHeader({
       <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
         <div className="min-w-0" data-tour="page-title">
           <div className="flex items-center gap-3">
-            <h1 className="text-[22px] font-semibold tracking-tight text-ink sm:text-[24px]">{title}</h1>
+            <h1 className="text-[22px] font-semibold tracking-tight text-ink sm:text-[24px]">{reveal && typeof title === "string" ? <RevealText text={title} /> : title}
+            </h1>
             {badge}
           </div>
           {subtitle ? <p className="mt-1 text-[13px] text-soft sm:text-sm">{subtitle}</p> : null}

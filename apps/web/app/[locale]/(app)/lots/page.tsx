@@ -85,7 +85,7 @@ export default async function LotsPage({
   for (const s of soldes.values()) if (s > 0n) impayeTotal += s;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={estResident ? dict.lots.mesLots : dict.lots.title}
         subtitle={

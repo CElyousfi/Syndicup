@@ -42,7 +42,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
   const onglet: Onglet = ONGLETS.includes(sp.onglet as Onglet) ? (sp.onglet as Onglet) : "portefeuille";
   const href = (o: Onglet, q: Record<string, string | undefined> = {}) => { const u = new URLSearchParams({ onglet: o, ...(cabinet ? { cabinet: cabinet.id } : {}) }); for (const [k, v] of Object.entries(q)) if (v) u.set(k, v); return `${p("/cabinet")}?${u.toString()}`; };
   if (!cabinet) {
-    return <div className="animate-fade"><PageHeader title={t.titre} subtitle={t.subtitle} /><EmptyState title={t.aucunCabinet} hint={t.aucunCabinetAide} /></div>;
+    return <div className="page-root"><PageHeader title={t.titre} subtitle={t.subtitle} /><EmptyState title={t.aucunCabinet} hint={t.aucunCabinetAide} /></div>;
   }
   const admin = cabinet.monRole === "CABINET_ADMIN" || cabinet.monRole === "SUPER_ADMIN";
   const gestion = admin || cabinet.monRole === "CABINET_GESTIONNAIRE";
@@ -71,7 +71,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={cabinet.nom}
         subtitle={t.subtitle}

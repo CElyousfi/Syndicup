@@ -24,7 +24,7 @@ export function ProgressBar({
       className={`h-2 w-full overflow-hidden rounded-full bg-ground ${className}`}
     >
       <div
-        className={`h-full rounded-full transition-[width] duration-500 ${tones[tone]}`}
+        className={`pb-fill h-full rounded-full ${tones[tone]}`}
         style={{ width: `${pct}%` }}
       />
     </div>
@@ -61,7 +61,8 @@ export function RingGauge({
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - clamped)}
-          className="transition-[stroke-dashoffset] duration-700"
+          className="ring-arc"
+          style={{ "--c": c } as React.CSSProperties}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">

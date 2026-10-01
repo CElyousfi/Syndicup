@@ -50,7 +50,7 @@ export default async function MembrePage({
   ]);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/lots`} label={dict.nav.lots} />}
         title={nomComplet(profil) ?? m.titre}

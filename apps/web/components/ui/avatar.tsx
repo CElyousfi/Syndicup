@@ -35,7 +35,7 @@ export function Avatar({
   const cls = solid ? "bg-ink text-white" : `${tone.bg} ${tone.fg}`;
   return (
     <span
-      className={`inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold ${cls} ${className}`}
+      className={`avatar-in inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold ${cls} ${className}`}
       style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.34)) }}
       aria-hidden
     >

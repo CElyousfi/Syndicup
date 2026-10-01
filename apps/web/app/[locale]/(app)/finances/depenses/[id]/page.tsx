@@ -49,7 +49,7 @@ export default async function DepenseDetailPage({
   const nom = (u?: { nom: string | null; prenom: string | null } | null) => (u ? nomComplet(u) : null) ?? dict.common.none;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       {sp.creee === "1" ? <Banner variant="ok" className="mb-5" title={d.creee}>{d.creeeAide}</Banner> : null}
 
       <PageHeader

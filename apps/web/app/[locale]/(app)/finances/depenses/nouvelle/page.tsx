@@ -19,7 +19,7 @@ export default async function NouvelleDepensePage({ params }: { params: Promise<
   const d = dict.depenses;
   const refs = await referencesDepense(dict, ctx.locale, ctx.coproprieteId, String(new Date().getFullYear()));
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/finances/depenses`} label={d.titre} />} title={d.nouvelle} subtitle={d.creeeAide} />
       {!refs.budgetActif ? <Banner variant="warn" className="mb-4">{d.aucunBudgetActif}</Banner> : null}
       <DepenseForm dict={dict} locale={ctx.locale} postes={refs.postes} prestataires={refs.prestataires} resolutions={refs.resolutions} tvaDefaut={refs.tvaDefaut} />

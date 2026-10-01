@@ -1,7 +1,9 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { TabIndicator } from "./motion/tab-indicator";
 
-/** Onglets de navigation (fiche lot, détail AG…) — rendus serveur, état dans l'URL. */
+/** Onglets de navigation (fiche lot, détail AG…) — rendus serveur, état dans l'URL.
+ *  Le soulignement actif glisse d'un onglet à l'autre (îlot client <TabIndicator>). */
 export function LinkTabs({
   tabs,
   className = "",
@@ -10,7 +12,7 @@ export function LinkTabs({
   className?: string;
 }) {
   return (
-    <nav className={`flex gap-1 overflow-x-auto border-b border-hairline scroll-thin ${className}`}>
+    <nav className={`relative flex gap-1 overflow-x-auto border-b border-hairline scroll-thin ${className}`}>
       {tabs.map((tab, i) => (
         <Link
           key={i}
@@ -27,10 +29,11 @@ export function LinkTabs({
             </span>
           ) : null}
           {tab.active ? (
-            <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-action" />
+            <span className="tab-static absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-action" />
           ) : null}
         </Link>
       ))}
+      {tabs.some((t) => t.active) ? <TabIndicator index={tabs.findIndex((t) => t.active)} /> : null}
     </nav>
   );
 }

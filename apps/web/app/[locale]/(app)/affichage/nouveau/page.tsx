@@ -17,7 +17,7 @@ export default async function NouvelleAnnoncePage({ params }: { params: Promise<
   const { dict } = ctx;
   const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/affichage`} label={dict.communication.titre} />} title={dict.communication.nouvelle} subtitle={dict.communication.nouvelleAide} />
       <AnnonceForm dict={dict} locale={ctx.locale} syndic={syndic} batiments={await batimentsConnus()} />
     </div>

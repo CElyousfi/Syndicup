@@ -108,7 +108,7 @@ export default async function VisitesPage({
   };
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={resident ? v.mesVisites : v.titre}
         actions={

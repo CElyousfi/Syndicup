@@ -31,7 +31,7 @@ export default async function NouvelIncidentPage({
   }));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={ctx.dict.incidents.signaler}
         back={<BackLink href={`/${locale}/incidents`} label={ctx.dict.nav.incidents} />}

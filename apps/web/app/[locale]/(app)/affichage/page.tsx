@@ -47,7 +47,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
   const qs = (o: { categorie?: string; statut?: string }) => { const u = new URLSearchParams(); if (o.categorie) u.set("categorie", o.categorie); if (o.statut) u.set("statut", o.statut); const q = u.toString(); return `${p("/affichage")}${q ? `?${q}` : ""}`; };
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={c.titre}
         subtitle={c.subtitle}

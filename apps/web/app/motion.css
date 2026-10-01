@@ -1,0 +1,456 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   Mouvement SyndicUp — jetons, utilitaires et chorégraphies.
+   Règles : seules transform / opacity / filter / stroke-* s'animent (jamais de
+   reflow), tout décalage horizontal passe par --dir (−1 en arabe), et la
+   préférence « réduire les animations » pose chaque élément sur son état final.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --dur-fast: 120ms;
+  --dur-base: 220ms;
+  --dur-slow: 350ms;
+  --dur-page: 320ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  /* Ressort léger (dépassement ~6 %) — relâchements, apparitions de pastilles. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --stagger: 45ms;
+  --dir: 1;
+}
+:root[dir="rtl"] {
+  --dir: -1;
+}
+
+/* ── Entrée de page : chaque bloc de premier niveau arrive à son tour ─────── */
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(2) { --i: 1; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(3) { --i: 2; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(4) { --i: 3; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(5) { --i: 4; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(6) { --i: 5; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(7) { --i: 6; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(8) { --i: 7; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(9) { --i: 8; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(10) { --i: 9; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(11) { --i: 10; }
+:is(.page-root, .stagger-grid, .grid:has(> .stat), .stagger-rows > tbody) > :nth-child(n + 12) { --i: 11; }
+
+.page-root > * {
+  animation: rise 0.48s var(--ease-out) backwards;
+  animation-delay: calc(min(var(--i, 0), 6) * 55ms);
+}
+.stagger-grid > *,
+.grid:has(> .stat) > * {
+  animation: rise 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 60ms + 80ms);
+}
+.stagger-rows > tbody > tr {
+  animation: rise-sm 0.42s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms + 120ms);
+}
+
+/* Remplissage « backwards » seulement : une fois arrivé, l'élément retrouve ses propres
+   transform/opacity (survol des cartes, modales…) au lieu d'être figé par l'animation. */
+.page-root > :is(dialog, script, style, template) { animation: none; }
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes rise-sm {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Boutons : pression ressort, relâchement qui rebondit à peine ─────────── */
+.su-btn {
+  transition:
+    color 0.18s var(--ease-out),
+    background-color 0.18s var(--ease-out),
+    border-color 0.18s var(--ease-out),
+    box-shadow 0.22s var(--ease-out),
+    filter 0.18s var(--ease-out),
+    transform 0.36s var(--ease-spring),
+    rotate 0.4s var(--ease-spring);
+}
+.su-btn:active:not(:disabled) {
+  transform: scale(0.965);
+  transition-duration: 0.18s, 0.18s, 0.18s, 0.22s, 0.18s, var(--dur-fast), 0.4s;
+  transition-timing-function: var(--ease-out);
+}
+
+/* Bouton d'envoi : libellé et spinner superposés — la largeur ne bouge jamais. */
+.su-submit-stack {
+  gap: inherit;
+  display: inline-grid;
+  place-items: center;
+}
+.su-submit-stack > * {
+  grid-area: 1 / 1;
+  transition: opacity var(--dur-base) var(--ease-out), transform var(--dur-slow) var(--ease-out);
+}
+.su-submit-stack > .su-submit-spinner { opacity: 0; transform: scale(0.5); }
+.su-submit-stack > .su-submit-label { display: inline-flex; align-items: center; gap: inherit; }
+[data-pending] > .su-submit-stack > .su-submit-spinner { opacity: 1; transform: none; }
+[data-pending] > .su-submit-stack > .su-submit-label {
+  opacity: 0;
+  transform: translateX(calc(var(--dir) * 8px)) scale(0.96);
+}
+
+/* ── Cartes cliquables : élévation douce au survol, pression au toucher ──── */
+:is(.card-interactive, a.card) {
+  transition:
+    transform 0.32s var(--ease-out),
+    box-shadow 0.32s var(--ease-out),
+    border-color 0.22s var(--ease-out),
+    background-color 0.22s var(--ease-out);
+}
+@media (hover: hover) {
+  :is(.card-interactive, a.card):hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-float);
+  }
+}
+:is(.card-interactive, a.card):active {
+  transform: translateY(0) scale(0.992);
+  transition-duration: var(--dur-fast);
+}
+
+/* ── Squelettes : reflet qui balaie (sens de lecture respecté) ─────────────── */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--color-hairline);
+}
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgb(255 255 255 / 0.55) 45%,
+    rgb(255 255 255 / 0.55) 55%,
+    transparent 100%
+  );
+  transform: translateX(calc(var(--dir) * -100%));
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+@keyframes shimmer {
+  to { transform: translateX(calc(var(--dir) * 100%)); }
+}
+
+/* ── Modales (<dialog> natif) : entrée ET sortie animées ───────────────────
+   `allow-discrete` garde la boîte peinte pendant la sortie (Chrome 117+,
+   Safari 17.4+, Firefox 129+) ; ailleurs elle se ferme simplement d'un coup. */
+dialog.su-modal {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition:
+    opacity var(--dur-base) var(--ease-in),
+    transform var(--dur-base) var(--ease-in),
+    overlay var(--dur-base) allow-discrete,
+    display var(--dur-base) allow-discrete;
+}
+dialog.su-modal[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: 0.34s;
+  transition-timing-function: var(--ease-out);
+}
+@starting-style {
+  dialog.su-modal[open] {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+}
+dialog.su-modal::backdrop {
+  background-color: rgb(18 18 18 / 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  transition:
+    background-color var(--dur-slow) var(--ease-out),
+    backdrop-filter var(--dur-slow) var(--ease-out),
+    overlay var(--dur-slow) allow-discrete,
+    display var(--dur-slow) allow-discrete;
+}
+dialog.su-modal[open]::backdrop {
+  background-color: rgb(18 18 18 / 0.45);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+@starting-style {
+  dialog.su-modal[open]::backdrop {
+    background-color: rgb(18 18 18 / 0);
+    backdrop-filter: blur(0);
+  }
+}
+@media (max-width: 767px) {
+  dialog.su-modal { transform: translateY(40px); opacity: 0.6; }
+  dialog.su-modal[open] { transform: none; opacity: 1; transition-duration: 0.42s; }
+  @starting-style {
+    dialog.su-modal[open] { transform: translateY(100%); opacity: 1; }
+  }
+}
+
+/* ── Pastille « en cours » : halo qui s'élargit ───────────────────────────── */
+.pulse-halo {
+  position: relative;
+}
+.pulse-halo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: currentColor;
+  animation: ping-soft 1.8s var(--ease-out) infinite;
+}
+@keyframes ping-soft {
+  0% { transform: scale(1); opacity: 0.55; }
+  80%, 100% { transform: scale(2.6); opacity: 0; }
+}
+
+/* ── Interrupteur : le curseur s'étire sous le doigt puis rebondit ─────────── */
+.su-switch-thumb {
+  transition: transform 0.38s var(--ease-spring), width 0.2s var(--ease-out);
+  transform-origin: center;
+}
+.peer:active ~ .su-switch-thumb { transform: scaleX(1.18); }
+.peer:checked ~ .su-switch-thumb { transform: translateX(calc(var(--dir) * 1rem)); }
+.peer:checked:active ~ .su-switch-thumb { transform: translateX(calc(var(--dir) * 1rem)) scaleX(1.18); }
+.su-check {
+  transition: transform 0.3s var(--ease-spring);
+}
+.su-check:active { transform: scale(0.86); }
+
+/* ── État vide : la résidence respire (soleil, fenêtres, arbres) ──────────── */
+.motif * { transform-box: fill-box; }
+.motif-sun { animation: motif-float 6s ease-in-out infinite; }
+.motif-win { animation: motif-flicker 9s ease-in-out infinite; }
+.motif-win:nth-of-type(2n) { animation-delay: -3s; }
+.motif-win:nth-of-type(3n) { animation-delay: -6s; animation-duration: 11s; }
+.motif-tree { transform-origin: 50% 100%; animation: motif-sway 5s ease-in-out infinite; }
+.motif-tree-2 { animation-delay: -2.5s; }
+@keyframes motif-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes motif-flicker {
+  0%, 70%, 100% { fill-opacity: 1; }
+  78% { fill-opacity: 0.3; }
+  86% { fill-opacity: 1; }
+}
+@keyframes motif-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+/* ── Jauges : se remplissent au montage ──────────────────────────────────── */
+.pb-fill {
+  transition: width 0.9s var(--ease-out);
+}
+@starting-style {
+  .pb-fill { width: 0 !important; }
+}
+.ring-arc {
+  transition: stroke-dashoffset 1.1s var(--ease-out);
+}
+@starting-style {
+  .ring-arc { stroke-dashoffset: var(--c); }
+}
+
+/* ── Images & avatars : fondu net à l'arrivée ─────────────────────────────── */
+.fade-img {
+  opacity: 0;
+  transform: scale(1.04);
+  transition: opacity 0.6s var(--ease-out), transform 1.1s var(--ease-out), scale 0.6s var(--ease-out);
+}
+.fade-img[data-loaded] {
+  opacity: 1;
+  transform: none;
+}
+.avatar-in {
+  transition: transform 0.4s var(--ease-spring), opacity 0.3s var(--ease-out);
+}
+@starting-style {
+  .avatar-in { transform: scale(0.6); opacity: 0; }
+}
+
+/* ── Bouton copier : icône qui se transforme en coche ─────────────────────── */
+.copy-icons { display: inline-grid; }
+.copy-icons > * {
+  grid-area: 1 / 1;
+  transition: transform 0.38s var(--ease-spring), opacity var(--dur-base) var(--ease-out);
+}
+.copy-icons > .copy-done { transform: scale(0.3) rotate(-30deg); opacity: 0; }
+[data-copied] .copy-icons > .copy-idle { transform: scale(0.3) rotate(30deg); opacity: 0; }
+[data-copied] .copy-icons > .copy-done { transform: none; opacity: 1; }
+.copy-labels { display: inline-grid; }
+.copy-labels > * { grid-area: 1 / 1; transition: opacity var(--dur-base) var(--ease-out); }
+.copy-labels > .copy-done { opacity: 0; }
+[data-copied] .copy-labels > .copy-idle { opacity: 0; }
+[data-copied] .copy-labels > .copy-done { opacity: 1; }
+
+/* ── Accents ponctuels ───────────────────────────────────────────────────── */
+.animate-pop { animation: pop 0.42s var(--ease-spring) both; }
+@keyframes pop {
+  0% { transform: scale(0.4); opacity: 0; }
+  60% { transform: scale(1.14); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.animate-ring { animation: ring 0.9s var(--ease-out) both; transform-origin: 50% 8%; }
+@keyframes ring {
+  0%, 100% { transform: rotate(0); }
+  15% { transform: rotate(14deg); }
+  30% { transform: rotate(-12deg); }
+  45% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  75% { transform: rotate(2deg); }
+}
+.animate-shake { animation: shake 0.46s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+@keyframes shake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(3px); }
+  30%, 50%, 70% { transform: translateX(-6px); }
+  40%, 60% { transform: translateX(6px); }
+}
+.otp-box[data-filled] { animation: pop-sm 0.32s var(--ease-spring); }
+@keyframes pop-sm {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+.otp-wave > * {
+  transition: border-color 0.2s var(--ease-out), background-color 0.2s var(--ease-out), transform 0.3s var(--ease-spring);
+}
+.otp-wave[data-pending] > * {
+  border-color: var(--color-action);
+  background-color: var(--color-action-wash);
+  transform: translateY(-2px);
+}
+.otp-wave[data-pending] > :nth-child(2) { transition-delay: 40ms; }
+.otp-wave[data-pending] > :nth-child(3) { transition-delay: 80ms; }
+.otp-wave[data-pending] > :nth-child(4) { transition-delay: 120ms; }
+.otp-wave[data-pending] > :nth-child(5) { transition-delay: 160ms; }
+.otp-wave[data-pending] > :nth-child(6) { transition-delay: 200ms; }
+
+/* Révélation de titre mot par mot (jamais lettre par lettre : l'arabe reste lié). */
+.reveal-word {
+  display: inline-block;
+  animation: reveal-word 0.7s var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 55ms + var(--reveal-delay, 60ms));
+}
+@keyframes reveal-word {
+  from { opacity: 0; filter: blur(8px); transform: translateY(0.35em); }
+  to { opacity: 1; filter: blur(0); transform: none; }
+}
+
+/* Visuel d'accueil (connexion) : léger travelling arrière à l'ouverture. */
+.hero-zoom { animation: hero-zoom 1.6s var(--ease-out) both; }
+@keyframes hero-zoom {
+  from { transform: scale(1.08); opacity: 0.6; }
+  to { transform: none; opacity: 1; }
+}
+
+/* Info-bulle / centre de graphique : apparition avec léger zoom. */
+.animate-zoom-in { animation: zoom-in 0.26s var(--ease-out) both; }
+@keyframes zoom-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* ── Accessibilité : « réduire les animations » → chaque élément est posé sur
+   son état final, sans exception (les spinners fonctionnels continuent). ──── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin {
+    animation-duration: 1s !important;
+    animation-iteration-count: infinite !important;
+  }
+  .skeleton::after,
+  .pulse-halo::before {
+    display: none;
+  }
+}
+
+/* ── Odomètre (components/ui/odometer.tsx) ───────────────────────────────── */
+.odo-token {
+  unicode-bidi: isolate;
+  white-space: nowrap;
+}
+.odo-digit {
+  position: relative;
+  display: inline-block;
+  /* clip-path (et non overflow) : la ligne de base reste celle du chiffre fantôme. */
+  clip-path: inset(-0.04em -0.2em);
+}
+.odo-ghost {
+  visibility: hidden;
+}
+.odo-strip {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 10 lignes de même hauteur : −10 % de la bande = un chiffre. */
+  transform: translateY(calc(var(--d) * -10%));
+  transition: transform 1.25s var(--ease-out);
+  transition-delay: calc(140ms + var(--p, 0) * 45ms);
+}
+@starting-style {
+  .odo-strip { transform: translateY(0); }
+}
+
+/* Filet de temps restant des toasts. */
+.toast-timer {
+  transform-origin: var(--origin-start, left);
+  animation: toast-timer linear both;
+}
+:root[dir="rtl"] .toast-timer { --origin-start: right; }
+@keyframes toast-timer {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+/* Contrôle segmenté : pastille unique qui glisse sous l'option active. */
+.seg-pill {
+  width: calc((100% - 0.5rem) / var(--n));
+  transform: translateX(calc(var(--dir) * var(--idx) * 100%));
+  transition: transform 0.45s var(--ease-spring);
+}
+
+/* Onglets de navigation : soulignement unique qui glisse (tab-indicator.tsx). */
+.tab-ind {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--color-action);
+  opacity: 0;
+  transition:
+    transform 0.5s var(--ease-out),
+    width 0.5s var(--ease-out),
+    opacity 0.2s var(--ease-out);
+}
+.tab-ind[data-ready] { opacity: 1; }
+.tab-ind[data-instant] { transition: opacity 0.2s var(--ease-out); }
+nav:has(> .tab-ind[data-ready]) .tab-static { visibility: hidden; }
+
+/* Connexion : la photo respire lentement ; textes secondaires qui montent. */
+.hero-drift { animation: hero-drift 24s ease-in-out infinite alternate; }
+@keyframes hero-drift {
+  from { transform: scale(1); }
+  to { transform: scale(1.06) translate(-1%, -1%); }
+}
+.hero-rise { animation: rise 0.7s var(--ease-out) backwards; }

@@ -43,7 +43,7 @@ export default async function ProfilPage({
   const coproParId = new Map(ctx.coproprietes.map((c) => [c.id, c.nom]));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={
           <span className="inline-flex items-center gap-3.5">

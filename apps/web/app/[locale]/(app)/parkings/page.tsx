@@ -86,7 +86,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
   };
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={t.titre}
         subtitle={resident ? t.subtitleResident : gardien ? t.subtitleGardien : t.subtitle}

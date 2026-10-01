@@ -1,8 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
-/** Contrôle segmenté (onglets de formulaire : téléphone/email, ciblé/FIFO…). */
+/**
+ * Contrôle segmenté (onglets de formulaire : téléphone/email, ciblé/FIFO…).
+ * Une seule pastille blanche glisse sous l'option active (ressort, sens RTL respecté). Les
+ * options ayant toutes la même largeur, le déplacement est un pur `translateX` en CSS : pas de
+ * mesure, pas de bibliothèque (le formulaire de connexion reste léger).
+ */
 export function Segmented<T extends string>({
   value,
   onChange,
@@ -14,11 +19,15 @@ export function Segmented<T extends string>({
   options: Array<{ value: T; label: ReactNode }>;
   className?: string;
 }) {
+  const n = Math.max(1, options.length);
+  const idx = Math.max(0, options.findIndex((o) => o.value === value));
   return (
     <div
       role="tablist"
-      className={`inline-flex w-full rounded-btn border border-hairline bg-ground p-1 ${className}`}
+      className={`relative inline-flex w-full rounded-btn border border-hairline bg-ground p-1 ${className}`}
+      style={{ "--n": n, "--idx": idx } as CSSProperties}
     >
+      <span aria-hidden className="seg-pill absolute inset-y-1 start-1 rounded-[10px] bg-surface shadow-sm" />
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -28,8 +37,8 @@ export function Segmented<T extends string>({
             type="button"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`h-9 flex-1 rounded-[10px] px-3 text-sm font-medium transition-all ${
-              active ? "bg-surface text-ink shadow-sm" : "text-soft hover:text-ink-strong"
+            className={`relative h-9 flex-1 rounded-[10px] px-3 text-sm font-medium transition-colors duration-200 ${
+              active ? "text-ink" : "text-soft hover:text-ink-strong"
             }`}
           >
             {opt.label}

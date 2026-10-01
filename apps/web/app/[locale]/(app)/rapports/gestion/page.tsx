@@ -32,7 +32,7 @@ export default async function RapportsGestionPage({ params }: { params: Promise<
   const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   const rows = res.ok ? res.data : [];
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.gestionTitre} subtitle={r.gestionSubtitle} actions={gestion ? <GenererModal dict={dict} locale={ctx.locale} budgets={budgetsRes?.ok ? budgetsRes.data : []} exerciceDefaut={String(new Date().getFullYear() - 1)} /> : undefined} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="gestion" />
       {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} /> : (

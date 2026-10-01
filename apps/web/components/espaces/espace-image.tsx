@@ -5,6 +5,7 @@
  * reste portée par le texte de la carte. Repli : l'entrée de la résidence.
  */
 import type { ClePhoto } from "../../lib/photos";
+import { FadeImg } from "../ui/motion/fade-img";
 
 const CLES: Array<{ motifs: RegExp; cle: ClePhoto }> = [
   { motifs: /piscine|pool|natation|مسبح/i, cle: "piscine" },
@@ -21,8 +22,8 @@ export function espaceImageCle(nom: string, type: string): ClePhoto {
 
 export function EspaceImage({ src, className = "" }: { src: string; className?: string }) {
   return (
-    <div className={`relative overflow-hidden ${className}`}>
-      <img src={src} alt="" className="absolute inset-0 size-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+    <div className={`relative overflow-hidden bg-hairline ${className}`}>
+      <FadeImg src={src} alt="" className="absolute inset-0 size-full object-cover group-hover:scale-[1.04]" />
     </div>
   );
 }

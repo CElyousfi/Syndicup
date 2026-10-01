@@ -61,7 +61,7 @@ export default async function BudgetsPage({
   }));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={f.budgets}
         subtitle={f.budgetsSubtitle}

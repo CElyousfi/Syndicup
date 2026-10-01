@@ -47,7 +47,7 @@ export default async function NouveauSejourPage({
     .sort((a, b) => a.numero.localeCompare(b.numero));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={l.declarerSejour}
         subtitle={l.aucunSejourAide}

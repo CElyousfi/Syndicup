@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./motion.css";
 
 /* ══════════════════════════════════════════════════════════════════════════
    Système SyndicUp — thème « Résidence » : fond greige chaud, surfaces
@@ -224,16 +225,7 @@
   }
 }
 
-/* Accessibilité : préférence pour la réduction des animations. */
-@media (prefers-reduced-motion: reduce) {
-  .animate-in-up,
-  .animate-fade,
-  .animate-bar-grow,
-  .animate-pulse-dot,
-  .animate-tour-pulse {
-    animation: none;
-  }
-}
+/* Réduction des animations : règle globale unique dans motion.css. */
 
 /* ══════════════════════════════════════════════════════════════════════════
    COQUE MOBILE — l'application, pas un site qui se replie.
@@ -317,12 +309,12 @@
     -webkit-user-select: none;
   }
   .app-tabbar .tab { min-height: 58px; }
+  /* Le fond encre de l'onglet actif est une pastille partagée qui glisse (app-frame.tsx). */
   .app-tabbar .tab.is-active .tab-pill {
-    background: var(--color-ink);
     color: var(--color-sage);
   }
-  .app-tabbar .tab:active .tab-pill { transform: scale(0.94); }
-  .app-tabbar .tab-pill { transition: transform 0.12s ease, background-color 0.18s ease; }
+  .app-tabbar .tab:active .tab-pill { transform: scale(0.9); transition-duration: 0.1s; }
+  .app-tabbar .tab-pill { transition: transform 0.4s var(--ease-spring), color 0.2s ease; }
 
   /* Feuilles (menu « Plus », modales). */
   .sheet-handle {
@@ -361,7 +353,6 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
   dialog.su-modal:not([open]) { display: none; }
-  dialog.su-modal[open] { animation: sheet-up 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
   dialog.su-modal .su-modal-body {
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -438,9 +429,6 @@
   to { opacity: 1; transform: none; }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .animate-sheet-up, dialog.su-modal[open] { animation: none; }
-}
 
 /* Toasts (notifications éphémères) — montent depuis le bas de l'écran, sortent en glissant. */
 .animate-toast-in { animation: toast-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -456,15 +444,8 @@
 
 /* Mouvement homogène : toute transition non explicitée suit la même courbe et la même durée,
    sur des propriétés composables (jamais de layout thrash). */
-:root {
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-}
 a, button, [role="button"], [role="link"], .card, input, select, textarea {
   transition-timing-function: var(--ease-out);
 }
 .card { transition-property: box-shadow, border-color, transform, background-color; transition-duration: 0.22s; }
 button, a, [role="button"], [role="link"] { transition-duration: 0.18s; }
-@media (prefers-reduced-motion: reduce) {
-  .animate-toast-in, .animate-toast-out { animation: none; }
-}

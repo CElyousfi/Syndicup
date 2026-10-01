@@ -85,7 +85,7 @@ export default async function ComptabilitePage({
 
   if (!annee) {
     return (
-      <div className="animate-fade space-y-6">
+      <div className="page-root space-y-6">
         <PageHeader title={gestion ? c.titre : c.monReleve} subtitle={gestion ? c.subtitle : c.monReleveSubtitle} />
         {gestion ? <ParcoursCompta dict={dict} etapes={etapes} /> : <AideReleveResident dict={dict} />}
         <EmptyState title={c.aucunExercice} />
@@ -106,7 +106,7 @@ export default async function ComptabilitePage({
   const csvHref = (type: string) => `/api/finances-csv?type=${type}&exercice=${annee}&locale=${ctx.locale}`;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={gestion ? c.titre : c.monReleve}
         subtitle={gestion ? c.subtitle : c.monReleveSubtitle}

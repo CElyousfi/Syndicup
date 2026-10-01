@@ -46,7 +46,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
   const lotsParId = new Map<string, string>();
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={t.titre} subtitle={t.subtitle} actions={gestion ? <ButtonLink href={p("/import/nouveau")}><IconPlus width={16} height={16} />{t.nouvelImport}</ButtonLink> : undefined} />
       {checklist?.est_demo ? <Banner variant="warn" className="mb-4">{t.demo}</Banner> : null}
       {!importsRes.ok ? <Banner variant="danger" className="mb-4">{t.chargementImpossible}</Banner> : null}

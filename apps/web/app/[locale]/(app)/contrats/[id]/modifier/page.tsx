@@ -21,7 +21,7 @@ export default async function ModifierContratPage({ params }: { params: Promise<
   const [res, refs] = await Promise.all([apiFetch<ContratDetail>(`/contrats/${id}`), referencesContrat(dict, ctx.locale, ctx.coproprieteId)]);
   if (!res.ok) notFound();
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/contrats/${id}`} label={res.data.libelle} />} title={dict.contrats.modifier} />
       <ContratForm dict={dict} locale={ctx.locale} postes={refs.postes} prestataires={refs.prestataires} resolutions={refs.resolutions} seuilAg={refs.seuilAg} contrat={res.data} />
     </div>

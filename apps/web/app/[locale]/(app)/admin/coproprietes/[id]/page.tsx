@@ -64,7 +64,7 @@ export default async function FicheClientPage({
   const taux = ratio(paye, du);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/admin`} label={ad.titre} />}
         title={copro.nom}

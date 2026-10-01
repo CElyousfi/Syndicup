@@ -83,7 +83,7 @@ export default async function MembresPage({
   const actifs = tous.filter((u) => u.statut_compte === "ACTIF").length;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={m.annuaire}
         subtitle={m.annuaireSubtitle}

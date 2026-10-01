@@ -45,7 +45,7 @@ export default async function TachePage({ params, searchParams }: { params: Prom
     : x.rapportGestion ? { href: p(`/rapports/gestion/${x.rapportGestion.id}`), label: t.voirRapport, texte: `${dict.rapports.gestionTitre} ${x.rapportGestion.exercice}` }
     : null;
   return (
-    <div className="animate-fade space-y-4">
+    <div className="page-root space-y-4">
       <BackLink href={p("/taches")} label={t.titre} />
       <PageHeader
         title={x.titre}

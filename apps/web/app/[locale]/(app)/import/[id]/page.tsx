@@ -38,7 +38,7 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
   const etapes = [t.etapes.fichier, t.etapes.mapping, t.etapes.apercu, t.etapes.execution];
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/import?onglet=imports`} label={t.titre} />}
         title={j.nomFichier}

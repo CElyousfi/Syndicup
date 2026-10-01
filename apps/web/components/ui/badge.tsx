@@ -32,7 +32,7 @@ export function Badge({
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STYLES[variant]} ${className}`}
     >
-      {pulse ? <span className="size-1.5 rounded-full bg-current animate-pulse-dot" /> : null}
+      {pulse ? <span className="pulse-halo size-1.5 rounded-full bg-current" aria-hidden /> : null}
       {children}
     </span>
   );

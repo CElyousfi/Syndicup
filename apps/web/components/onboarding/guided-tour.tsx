@@ -354,7 +354,7 @@ export function GuidedTour({
       {/* Carte d'étape */}
       {centree ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
-          <div className="pointer-events-auto w-full max-w-md rounded-card bg-surface p-6 shadow-pop animate-in-up sm:p-8">
+          <div key={idx} className="pointer-events-auto w-full max-w-md rounded-card bg-surface p-6 shadow-pop animate-in-up sm:p-8">
             <div className="flex flex-col items-center text-center">
               <span className="flex size-[72px] items-center justify-center rounded-full bg-ground">
                 <BrandMark size={52} />
@@ -375,6 +375,7 @@ export function GuidedTour({
         </div>
       ) : !prete ? null : (
         <div
+          key={idx}
           className="pointer-events-auto absolute inset-x-3 bottom-3 rounded-card bg-surface p-5 shadow-pop animate-in-up sm:inset-auto sm:p-5"
           style={carteStyle}
         >
@@ -431,7 +432,7 @@ function PiedDeCarte({
           {Array.from({ length: total }, (_, i) => (
             <span
               key={i}
-              className={`h-1 rounded-full transition-all ${
+              className={`h-1 rounded-full transition-all duration-500 ease-[cubic-bezier(.34,1.56,.64,1)] ${
                 i === idx ? "w-4 bg-action" : "w-1 bg-hairline-strong"
               }`}
             />

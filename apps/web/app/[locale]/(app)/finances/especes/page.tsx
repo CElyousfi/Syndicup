@@ -25,7 +25,7 @@ export default async function EspecesPage({ params }: { params: Promise<{ locale
   const e = dict.enumsJustificatifs;
   const [{ lots, lignes }, mes] = await Promise.all([lotsEtLignesOuvertes(), justificatifs()]);
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={j.especesTitre} subtitle={j.especesSubtitle} />
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2"><DeclarerForm dict={dict} locale={ctx.locale} lots={lots} lignes={lignes} comptes={[]} mode="especes" auNom /></div>

@@ -62,7 +62,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={gardien ? t.mesTaches : t.titre}
         subtitle={gardien ? t.mesTachesSubtitle : t.subtitle}

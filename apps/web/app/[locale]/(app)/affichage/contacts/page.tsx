@@ -20,7 +20,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ local
   const { dict } = ctx;
   const res = await apiFetch<ContactUtile[]>("/contacts-utiles");
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/affichage`} label={dict.communication.titre} />} title={dict.communication.contacts} subtitle={dict.communication.contactsAide} />
       <Card><ContactsGestion dict={dict} locale={ctx.locale} contacts={res.ok ? res.data : []} /></Card>
     </div>

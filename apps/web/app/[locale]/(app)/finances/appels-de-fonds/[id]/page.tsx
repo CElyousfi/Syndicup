@@ -40,7 +40,7 @@ export default async function AppelDetailPage({
   const lignesImpayees = lignes.filter((l) => l.statut !== "PAYE");
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${ctx.locale}/finances/appels-de-fonds`} label={f.appels} />}
         title={formatPeriode(appel.periode, ctx.locale)}

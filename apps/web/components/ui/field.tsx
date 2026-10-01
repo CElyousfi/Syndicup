@@ -77,8 +77,8 @@ export function Switch({
     <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
       <span className="relative mt-0.5 inline-flex shrink-0">
         <input type="checkbox" className="peer sr-only" {...props} />
-        <span className="h-6 w-10 rounded-full bg-hairline-strong transition-colors peer-checked:bg-action peer-focus-visible:ring-2 peer-focus-visible:ring-action/40" />
-        <span className="absolute top-0.5 start-0.5 size-5 rounded-full bg-white shadow-sm transition-transform peer-checked:translate-x-4 rtl:peer-checked:-translate-x-4" />
+        <span className="h-6 w-10 rounded-full bg-hairline-strong transition-colors duration-300 peer-checked:bg-action peer-focus-visible:ring-2 peer-focus-visible:ring-action/40" />
+        <span className="su-switch-thumb absolute top-0.5 start-0.5 size-5 rounded-full bg-white shadow-sm" />
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-medium text-ink-strong">{label}</span>
@@ -99,7 +99,7 @@ export function Checkbox({
     <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
       <input
         type="checkbox"
-        className="mt-0.5 size-[18px] shrink-0 rounded-[5px] border-hairline-strong text-action accent-[#4c6c5a] focus-visible:ring-2 focus-visible:ring-action/40"
+        className="su-check mt-0.5 size-[18px] shrink-0 rounded-[5px] border-hairline-strong text-action accent-[#4c6c5a] focus-visible:ring-2 focus-visible:ring-action/40"
         {...props}
       />
       <span className="min-w-0">

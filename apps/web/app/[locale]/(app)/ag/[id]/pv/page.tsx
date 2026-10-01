@@ -26,7 +26,7 @@ export default async function PvPage({
 
   if (!pvRes.ok) {
     return (
-      <div className="animate-fade">
+      <div className="page-root">
         <PageHeader
           back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
           title={a.pvTitre}
@@ -40,7 +40,7 @@ export default async function PvPage({
   const contenu = pv.contenuJson;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={a.pvTitre}

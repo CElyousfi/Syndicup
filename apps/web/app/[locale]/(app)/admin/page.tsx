@@ -50,7 +50,7 @@ export default async function AdminPage({
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={ad.titre}
         subtitle={ad.subtitle}

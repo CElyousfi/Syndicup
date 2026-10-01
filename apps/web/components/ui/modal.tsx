@@ -47,7 +47,7 @@ export function Modal({
       ref={ref}
       onClose={onClose}
       onMouseDown={onBackdrop}
-      className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-card bg-surface p-0 text-ink-strong shadow-pop backdrop:bg-ink/45 backdrop:backdrop-blur-[3px] open:animate-in-up`}
+      className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-card bg-surface p-0 text-ink-strong shadow-pop`}
     >
       <div className="sheet-handle md:hidden" aria-hidden />
       <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4 md:px-6">
@@ -59,7 +59,7 @@ export function Modal({
           type="button"
           onClick={onClose}
           aria-label={closeLabel}
-          className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ground text-soft transition-colors hover:text-ink md:size-8 md:bg-transparent md:hover:bg-ground"
+          className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-ground text-soft hover:rotate-90 hover:text-ink md:size-8 md:bg-transparent md:hover:bg-ground"
         >
           <IconX width={18} height={18} />
         </button>

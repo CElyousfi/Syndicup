@@ -4,6 +4,9 @@ const nextConfig = {
   // via les Server Components / Server Actions — le JWT vit dans un cookie httpOnly, jamais
   // exposé au JavaScript client (CLAUDE.md §1.4).
   experimental: {
+    // Imports ciblés (pas de baril) : seules les briques d'animation réellement utilisées sont
+    // embarquées ; les fonctions lourdes (layout, glisser) arrivent après l'hydratation.
+    optimizePackageImports: ["motion", "framer-motion"],
     serverActions: {
       // Téléversement de documents (bucket 50 MiB) : le fichier transite par la Server Action
       // avant l'upload signé vers Supabase Storage.

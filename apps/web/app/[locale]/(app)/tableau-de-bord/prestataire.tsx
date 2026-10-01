@@ -23,9 +23,10 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={fill(dict.dash.greeting, { prenom })}
+        reveal
         subtitle={dict.dash.mesTickets}
       />
 

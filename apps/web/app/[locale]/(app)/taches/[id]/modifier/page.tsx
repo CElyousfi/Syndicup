@@ -21,7 +21,7 @@ export default async function ModifierTachePage({ params }: { params: Promise<{ 
   const [res, assignees] = await Promise.all([apiFetch<TacheDetail>(`/taches/${id}`), assigneesPossibles()]);
   if (!res.ok) notFound();
   return (
-    <div className="animate-fade mx-auto max-w-3xl">
+    <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/taches/${id}`} label={res.data.titre} />} title={dict.taches.modifier} />
       <TacheForm dict={dict} locale={ctx.locale} assignees={assignees} tache={res.data} />
     </div>

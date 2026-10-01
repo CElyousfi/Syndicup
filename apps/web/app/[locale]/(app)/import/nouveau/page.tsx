@@ -19,7 +19,7 @@ export default async function NouvelImportPage({ params, searchParams }: { param
   const t = dict.importation;
   const types: TypeImport[] = ["LOTS_PROPRIETAIRES", "SOLDES_OUVERTURE", "PRESTATAIRES", "CONTRATS", "VEHICULES_BADGES", "PERSONNEL"];
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader back={<BackLink href={`/${locale}/import`} label={t.titre} />} title={t.nouvelImport} subtitle={`${t.etapes.fichier} → ${t.etapes.mapping} → ${t.etapes.apercu} → ${t.etapes.execution}`} />
       <div className="max-w-3xl"><ImportForm dict={dict} locale={ctx.locale} typeInitial={types.includes(sp.type as TypeImport) ? (sp.type as TypeImport) : undefined} /></div>
     </div>

@@ -36,7 +36,7 @@ export default async function ModifierSejourPage({
   if (sejourRes.data.statut !== "PREVU") redirect(`/${locale}/location-courte-duree/sejours/${id}`);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={dict.lcd.modifierSejour}
         subtitle={sejourRes.data.voyageurPrincipalNom}

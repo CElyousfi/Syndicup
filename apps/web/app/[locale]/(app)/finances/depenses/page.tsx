@@ -66,7 +66,7 @@ export default async function DepensesPage({
   };
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={d.titre}
         subtitle={d.subtitle}

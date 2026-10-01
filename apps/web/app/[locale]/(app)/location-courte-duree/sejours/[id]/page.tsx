@@ -97,7 +97,7 @@ export default async function SejourDetailPage({
   const evenements = [...(s.evenements ?? [])].sort((a, b) => a.horodatage.localeCompare(b.horodatage));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       {sp.declare === "1" ? (
         <Banner variant="ok" className="mb-5">
           {l.sejourDeclare}

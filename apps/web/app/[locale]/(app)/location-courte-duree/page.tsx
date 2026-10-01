@@ -152,7 +152,7 @@ export default async function LocationCourteDureePage({
   const titre = vue === "resident" || vue === "gestionnaire" ? l.mesLocations : l.titre;
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={titre}
         subtitle={l.subtitle}

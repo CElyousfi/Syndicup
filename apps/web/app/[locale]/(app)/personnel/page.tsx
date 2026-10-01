@@ -44,7 +44,7 @@ export default async function PersonnelPage({ params }: { params: Promise<{ loca
   const finProche = (f: PersonnelRh) => (f.dateFinContrat ? Math.ceil((new Date(f.dateFinContrat).getTime() - Date.now()) / 86_400_000) : null);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={pe.titre}
         subtitle={pe.subtitle}

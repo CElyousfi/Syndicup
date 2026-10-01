@@ -56,7 +56,7 @@ export default async function SeancePage({
     }));
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={

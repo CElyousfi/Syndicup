@@ -42,7 +42,7 @@ export default async function RapportsPage({ params, searchParams }: { params: P
   const rtl = ctx.locale === "ar";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={r.titre} subtitle={r.subtitle} actions={<ExerciceLinks base="/rapports" exercice={exercice} locale={ctx.locale} />} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="tableau" exercice={exercice} />
       {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : (() => {

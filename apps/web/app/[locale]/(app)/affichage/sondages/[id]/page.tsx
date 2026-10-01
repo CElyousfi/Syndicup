@@ -33,7 +33,7 @@ export default async function SondagePage({ params, searchParams }: { params: Pr
   const p = (path: string) => `/${locale}${path}`;
   const ouvertEncore = s.statut === "OUVERT" && new Date(s.dateFin).getTime() > Date.now();
   return (
-    <div className="animate-fade mx-auto max-w-3xl space-y-4">
+    <div className="page-root mx-auto max-w-3xl space-y-4">
       <BackLink href={p("/affichage")} label={c.titre} />
       <PageHeader
         title={s.question}

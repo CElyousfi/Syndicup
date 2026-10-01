@@ -111,7 +111,7 @@ export function Donut({
         </svg>
         <div
           key={hover ?? -1}
-          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center animate-fade"
+          className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center px-6 text-center animate-zoom-in"
         >
           {survole ? (
             <>
@@ -262,7 +262,7 @@ export function Bars({
                 >
                   {/* Infobulle : encaissé / appelé */}
                   {estFocus && (it.displayPaid || it.displayTotal) ? (
-                    <div className="tnum absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-xl bg-ink px-3 py-1.5 text-center shadow-pop animate-fade">
+                    <div className="tnum absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-xl bg-ink px-3 py-1.5 text-center shadow-pop animate-zoom-in">
                       <span className="block text-[12px] font-semibold text-white">
                         {it.displayPaid}
                       </span>

@@ -87,7 +87,7 @@ export default async function ReservationsPage({
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={gestion ? e.reservations : e.mesReservations} />
 
       {gestion && reservations.length > 0 ? (

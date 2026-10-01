@@ -22,10 +22,24 @@ export function SubmitButton({
   disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
+  // Libellé et spinner superposés dans une même cellule : pendant l'envoi le libellé glisse
+  // et s'efface, le spinner éclot à sa place — la largeur du bouton ne bouge jamais.
   return (
-    <Button type="submit" variant={variant} size={size} className={className} disabled={pending || disabled}>
-      {pending ? <Spinner /> : null}
-      {children}
+    <Button
+      type="submit"
+      variant={variant}
+      size={size}
+      className={className}
+      disabled={pending || disabled}
+      data-pending={pending ? "" : undefined}
+      aria-busy={pending || undefined}
+    >
+      <span className="su-submit-stack">
+        <span className="su-submit-label">{children}</span>
+        <span className="su-submit-spinner" aria-hidden>
+          <Spinner />
+        </span>
+      </span>
     </Button>
   );
 }

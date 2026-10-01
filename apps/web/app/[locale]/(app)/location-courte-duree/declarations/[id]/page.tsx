@@ -79,7 +79,7 @@ export default async function DeclarationLcdPage({
   const numero = d.lot?.numero ?? lot?.numero ?? "—";
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         back={<BackLink href={p("/location-courte-duree")} label={dict.nav.locationCourteDuree} />}
         title={`${l.lot} ${numero}`}

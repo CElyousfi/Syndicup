@@ -53,7 +53,7 @@ export default async function AppelsPage({
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={f.appels}
         subtitle={f.appelsSubtitle}

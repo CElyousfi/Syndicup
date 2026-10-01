@@ -52,7 +52,7 @@ export default async function ReglementLcdPage({
   );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={l.reglementTitre}
         subtitle={l.reglementSubtitle}

@@ -51,7 +51,7 @@ export default async function EspacesPage({
       );
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader
         title={e.titre}
         subtitle={e.subtitle}

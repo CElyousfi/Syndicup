@@ -42,7 +42,7 @@ export function Table({ children, className = "" }: { children: ReactNode; class
   }, []);
 
   return (
-    <table ref={ref} className={`su-table w-full text-sm ${className}`}>
+    <table ref={ref} className={`su-table stagger-rows w-full text-sm ${className}`}>
       {children}
     </table>
   );

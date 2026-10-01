@@ -41,8 +41,8 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
   return (
-    <div className="animate-fade">
-      <PageHeader title={fill(dict.dash.greeting, { prenom })} subtitle={ctx.copropriete?.nom ?? undefined} />
+    <div className="page-root">
+      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={ctx.copropriete?.nom ?? undefined} />
 
       <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6" />
 

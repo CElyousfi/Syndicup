@@ -1,3 +1,5 @@
+import { FadeImg } from "./motion/fade-img";
+
 /**
  * Bandeau photo de page — la résidence en tête d'écran (rayon carte, ombre lift), voile encre
  * progressif pour garder le titre lisible. Image décorative (alt vide). Photo personnalisée par
@@ -15,8 +17,8 @@ export function PhotoBanner({
   className?: string;
 }) {
   return (
-    <div className={`relative h-36 overflow-hidden rounded-card shadow-lift sm:h-44 ${className}`}>
-      <img src={src} alt="" className="absolute inset-0 size-full object-cover" />
+    <div className={`relative h-36 overflow-hidden rounded-card bg-hairline shadow-lift sm:h-44 ${className}`}>
+      <FadeImg src={src} alt="" className="absolute inset-0 size-full object-cover" />
       {title ? (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-ink/70 via-ink/10 to-transparent" />

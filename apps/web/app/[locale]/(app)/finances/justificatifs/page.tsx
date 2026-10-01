@@ -39,7 +39,7 @@ export default async function JustificatifsPage({ params, searchParams }: { para
   const [{ rows, parStatut }, comptes, refs] = await Promise.all([justificatifs(statut), comptesBancaires(ctx.coproprieteId), gestion ? lotsEtLignesOuvertes() : Promise.resolve(null)]);
 
   return (
-    <div className="animate-fade">
+    <div className="page-root">
       <PageHeader title={j.titre} subtitle={j.subtitle} actions={gestion && coproId ? <ComptesModal dict={dict} locale={ctx.locale} coproprieteId={coproId} comptes={comptes} /> : undefined} />
       <div className="stat mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard icon={<CAlert />} tone={(parStatut.EN_ATTENTE?.nb ?? 0) > 0 ? "warn" : "sage"} label={e.statutJustificatif.EN_ATTENTE} value={String(parStatut.EN_ATTENTE?.nb ?? 0)} hint={parStatut.EN_ATTENTE ? formatMAD(parStatut.EN_ATTENTE.montant, ctx.locale) : undefined} />
