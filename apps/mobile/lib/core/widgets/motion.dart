@@ -265,3 +265,29 @@ class SuRevealText extends StatelessWidget {
     );
   }
 }
+
+/// Mémoire de défilement des écrans racines d'onglet : changer d'onglet puis revenir ramène
+/// exactement où l'on était (la coque garde le seau ; chaque écran le pose sur sa liste).
+class TabScrollMemory extends InheritedWidget {
+  const TabScrollMemory({super.key, required this.bucket, required super.child});
+  final PageStorageBucket bucket;
+
+  /// Écrans racines (barre d'onglets / menu « Plus »).
+  static const Set<String> roots = {
+    '/tableau-de-bord', '/finances/appels-de-fonds', '/incidents', '/lots', '/affichage', '/finances/comptabilite',
+    '/reservations', '/visites', '/location-courte-duree', '/documents', '/admin', '/cabinet', '/rapports', '/taches',
+  };
+
+  static PageStorageBucket? _of(BuildContext context) => context.getInheritedWidgetOfExactType<TabScrollMemory>()?.bucket;
+
+  @override
+  bool updateShouldNotify(TabScrollMemory oldWidget) => bucket != oldWidget.bucket;
+}
+
+/// Liste défilante qui retrouve sa position quand on revient sur l'onglet [path].
+/// Hors écran racine (ou hors coque), rend la liste telle quelle.
+Widget rememberTabScroll(BuildContext context, String? path, Widget Function(Key? key) list) {
+  final bucket = TabScrollMemory._of(context);
+  if (bucket == null || path == null || !TabScrollMemory.roots.contains(path)) return list(null);
+  return PageStorage(bucket: bucket, child: list(PageStorageKey<String>('tab-scroll:$path')));
+}

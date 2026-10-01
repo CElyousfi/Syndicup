@@ -22,8 +22,15 @@ class SuPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    String? path;
+    try {
+      path = GoRouterState.of(context).uri.path;
+    } catch (_) {
+      path = null; // hors du routeur (tests, feuilles) : pas de mémoire de défilement
+    }
     Widget content = body ??
-        ListView(
+        rememberTabScroll(context, path, (key) => ListView(
+          key: key,
           padding: padding,
           children: [
             if (largeTitle) ...[
@@ -34,7 +41,7 @@ class SuPage extends StatelessWidget {
             ],
             ...?children,
           ],
-        );
+        ));
     if (onRefresh != null) content = RefreshIndicator(onRefresh: onRefresh!, color: SuColors.action, child: content);
     return Scaffold(
       appBar: AppBar(

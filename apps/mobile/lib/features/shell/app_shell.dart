@@ -33,6 +33,8 @@ class AppShell extends ConsumerStatefulWidget {
 
 class _AppShellState extends ConsumerState<AppShell> {
   StreamSubscription<LiveEvent>? _sub;
+  /// Positions de défilement des écrans d'onglet (vit aussi longtemps que la session).
+  final PageStorageBucket _tabScroll = PageStorageBucket();
 
   @override
   void initState() {
@@ -152,7 +154,7 @@ class _AppShellState extends ConsumerState<AppShell> {
     int current = tabs.indexWhere((t) => t.exact ? location == t.path : location == t.path || location.startsWith('${t.path}/'));
     final onPlus = location == '/plus';
     return Scaffold(
-      body: widget.child,
+      body: TabScrollMemory(bucket: _tabScroll, child: widget.child),
       bottomNavigationBar: _TabBar(
         tabs: tabs,
         current: onPlus ? tabs.length : current,
@@ -255,7 +257,8 @@ class _TabBar extends StatelessWidget {
                                 const SizedBox(height: 4),
                                 AnimatedDefaultTextStyle(
                                   duration: SuMotion.of(context, SuMotion.base),
-                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: i == current ? SuColors.ink : SuColors.soft, fontFamily: DefaultTextStyle.of(context).style.fontFamily),
+                                  // Fusion avec le style hérité (police arabe, hauteurs) — comme l'ancien Text.
+                                  style: DefaultTextStyle.of(context).style.merge(TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: i == current ? SuColors.ink : SuColors.soft)),
                                   child: Text(items[i].$1, maxLines: 1, overflow: TextOverflow.ellipsis),
                                 ),
                               ],
@@ -482,7 +485,8 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
         ),
         Padding(
           padding: const EdgeInsetsDirectional.only(end: 12),
-          child: GestureDetector(onTap: () => context.push('/profil'), child: Avatar(nomCompletProfil(ctx) ?? ctx.profil.email ?? '?', size: 44)),
+          // L'avatar « vole » jusqu'à la fiche profil (élément partagé).
+          child: GestureDetector(onTap: () => context.push('/profil'), child: Hero(tag: 'su-me-avatar', child: Avatar(nomCompletProfil(ctx) ?? ctx.profil.email ?? '?', size: 44))),
         ),
       ],
     );

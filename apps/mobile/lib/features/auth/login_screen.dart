@@ -166,6 +166,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   bool _resent = false;
   /// Nombre d'échecs : clé de l'animation de tremblement (rejouée à chaque mauvais code).
   int _echecs = 0;
+  /// Code accepté : les cases passent au vert un instant avant l'entrée dans l'app.
+  bool _succes = false;
 
   @override
   void initState() {
@@ -207,6 +209,10 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
     switch (res) {
       case ApiOk<SessionTokens>(:final data):
+        HapticFeedback.lightImpact();
+        setState(() => _succes = true);
+        if (!SuMotion.reduced(context)) await Future<void>.delayed(const Duration(milliseconds: 420));
+        if (!mounted) return;
         await ref.read(sessionProvider.notifier).signIn(data);
         if (!mounted) return;
         if (widget.next != null) context.go(widget.next!);
@@ -279,9 +285,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                                   height: 56,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: _loading ? SuColors.actionWash : SuColors.surface,
+                                    color: _succes ? SuColors.okTint : _loading ? SuColors.actionWash : SuColors.surface,
                                     borderRadius: BorderRadius.circular(SuRadius.field),
-                                    border: Border.all(color: _loading || i == digits.length ? SuColors.action : SuColors.hairlineStrong, width: i == digits.length && !_loading ? 1.5 : 1),
+                                    border: Border.all(color: _succes ? SuColors.ok : _loading || i == digits.length ? SuColors.action : SuColors.hairlineStrong, width: i == digits.length && !_loading ? 1.5 : 1),
                                   ),
                                   child: i < digits.length
                                       ? Text(digits[i], key: ValueKey('d$i${digits[i]}'), style: t.headlineMedium?.copyWith(fontSize: 20, fontFeatures: const [FontFeature.tabularFigures()]))

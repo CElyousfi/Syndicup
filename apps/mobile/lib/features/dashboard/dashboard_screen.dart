@@ -114,7 +114,8 @@ class _DashSyndic extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: refresh,
-      child: ListView(
+      child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
+        key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: lectureSeule ? d.dash.controleTitle : ctx.copropriete?.nom),
@@ -217,7 +218,7 @@ class _DashSyndic extends ConsumerWidget {
                   ]),
           DocumentsCard(documents: documents.valueOrNull ?? const []),
         ],
-      ),
+      )),
     );
   }
 }
@@ -376,7 +377,8 @@ class _DashResident extends ConsumerWidget {
 
     return RefreshIndicator(
       onRefresh: refresh,
-      child: ListView(
+      child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
+        key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)}${mesLots.isNotEmpty ? ' · ${mesLots.map((x) => x.numero).join(', ')}' : ''}'),
@@ -456,7 +458,7 @@ class _DashResident extends ConsumerWidget {
                 ]),
           DocumentsCard(documents: documents.valueOrNull ?? const []),
         ],
-      ),
+      )),
     );
   }
 }
@@ -516,7 +518,8 @@ class _DashGardien extends ConsumerWidget {
         ref.invalidate(incidentsProvider);
         await ref.read(visitesSyncProvider.notifier).flush();
       },
-      child: ListView(
+      child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
+        key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
@@ -580,7 +583,7 @@ class _DashGardien extends ConsumerWidget {
           SectionHeader(d.dash.incidentsOuverts, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
           ouverts.isEmpty ? SuCard(child: Text(d.incidents.aucunIncident, style: t.bodySmall)) : CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
         ],
-      ),
+      )),
     );
   }
 }
@@ -599,7 +602,8 @@ class _DashPrestataire extends ConsumerWidget {
     final ouverts = tickets.where((i) => i.ouvert).toList();
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(incidentsProvider),
-      child: ListView(
+      child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
+        key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: d.dash.mesTickets),
@@ -613,7 +617,7 @@ class _DashPrestataire extends ConsumerWidget {
           const SizedBox(height: 16),
           SuBanner(tone: BannerTone.info, body: md.cloisonnement),
         ],
-      ),
+      )),
     );
   }
 }

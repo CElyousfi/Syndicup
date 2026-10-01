@@ -76,15 +76,17 @@ class AppTheme {
       fontFamilyFallback: fallback,
       textTheme: text,
       splashFactory: InkSparkle.splashFactory,
-      // Navigation : glissé-fondu « vers l'avant » (Android, desktop), glissé natif avec retour
-      // par geste (iOS). Le sens suit la langue (RTL en arabe).
+      // Navigation : zoom-fondu Android (desktop idem), glissé natif avec retour par geste (iOS).
+      // Pas de FadeForwardsPageTransitionsBuilder : sous Flutter 3.29 il laisse parfois l'écran
+      // d'accueil invisible après un rechargement de session (changement de langue) — reproduit
+      // sur émulateur, absent avec le zoom.
       pageTransitionsTheme: const PageTransitionsTheme(
         builders: {
-          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
+          TargetPlatform.android: ZoomPageTransitionsBuilder(),
           TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
           TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
-          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
-          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
+          TargetPlatform.linux: ZoomPageTransitionsBuilder(),
+          TargetPlatform.windows: ZoomPageTransitionsBuilder(),
         },
       ),
       dividerTheme: const DividerThemeData(color: SuColors.hairline, thickness: 1, space: 1),

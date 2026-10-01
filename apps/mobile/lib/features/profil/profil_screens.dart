@@ -78,7 +78,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       children: [
         Row(
           children: [
-            Avatar(nomCompletProfil(ctx) ?? p.email ?? '?', size: 64),
+            Hero(tag: 'su-me-avatar', child: Avatar(nomCompletProfil(ctx) ?? p.email ?? '?', size: 64)),
             const SizedBox(width: 14),
             Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nomCompletProfil(ctx) ?? '—', style: t.titleLarge), Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodySmall), const SizedBox(height: 4), StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral, small: true)])),
           ],

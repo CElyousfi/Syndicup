@@ -43,22 +43,51 @@ import '../auth/app_state.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
 
-/// Écrans racines d'onglet : fondu enchaîné avec léger zoom (« fade through ») au lieu d'un
-/// glissé — changer d'onglet n'est pas avancer dans une pile.
-Page<void> tabPage(GoRouterState state, Widget child) => CustomTransitionPage<void>(
-      key: state.pageKey,
-      child: child,
-      transitionDuration: const Duration(milliseconds: 360),
-      reverseTransitionDuration: const Duration(milliseconds: 220),
-      transitionsBuilder: (context, animation, secondary, child) {
-        if (SuMotion.reduced(context)) return child;
-        final inCurve = CurvedAnimation(parent: animation, curve: const Interval(0.25, 1, curve: SuMotion.easeOut));
-        return FadeTransition(
-          opacity: inCurve,
-          child: ScaleTransition(scale: Tween(begin: 0.985, end: 1.0).animate(inCurve), child: child),
-        );
-      },
+/// Écrans racines d'onglet : fondu enchaîné avec léger zoom (« fade through ») à l'arrivée —
+/// changer d'onglet n'est pas avancer dans une pile. Route Material à part entière : quand un
+/// écran est poussé PAR-DESSUS, c'est la transition du thème qui s'applique (même délégation
+/// que les autres pages, aucune combinaison de transitions hétérogènes).
+Page<void> tabPage(GoRouterState state, Widget child) => _TabPage(key: state.pageKey, name: state.name, child: child);
+
+class _TabPage extends Page<void> {
+  const _TabPage({super.key, super.name, required this.child});
+  final Widget child;
+  @override
+  Route<void> createRoute(BuildContext context) => _TabRoute(this);
+}
+
+class _TabRoute extends PageRoute<void> with MaterialRouteTransitionMixin<void> {
+  _TabRoute(_TabPage page) : super(settings: page);
+
+  _TabPage get _page => settings as _TabPage;
+
+  @override
+  Widget buildContent(BuildContext context) => _page.child;
+
+  @override
+  bool get maintainState => true;
+
+  @override
+  bool get fullscreenDialog => false;
+
+  @override
+  Duration get transitionDuration => const Duration(milliseconds: 360);
+
+  @override
+  Duration get reverseTransitionDuration => const Duration(milliseconds: 220);
+
+  @override
+  Widget buildTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+    // Sortie quand un écran est poussé au-dessus : comportement du thème.
+    final themed = super.buildTransitions(context, kAlwaysCompleteAnimation, secondaryAnimation, child);
+    if (SuMotion.reduced(context)) return themed;
+    final inCurve = CurvedAnimation(parent: animation, curve: const Interval(0.25, 1, curve: SuMotion.easeOut));
+    return FadeTransition(
+      opacity: inCurve,
+      child: ScaleTransition(scale: Tween(begin: 0.985, end: 1.0).animate(inCurve), child: themed),
     );
+  }
+}
 
 const _publicPrefixes = ['/connexion', '/invitation', '/compte'];
 
@@ -113,7 +142,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
+      // Démarrage et coque : bascules INSTANTANÉES au niveau racine. Une transition animée ferait
+      // coexister deux coques pendant un rechargement de session (ex. changement de langue) : le
+      // navigateur imbriqué (GlobalKey) peut alors rester chez l'ancienne et la nouvelle s'affiche
+      // vide. Les écrans gardent leurs propres animations d'entrée.
+      GoRoute(path: '/splash', pageBuilder: (_, s) => NoTransitionPage<void>(key: s.pageKey, child: const SplashScreen())),
       GoRoute(path: '/', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/connexion', builder: (_, s) => LoginScreen(next: s.uri.queryParameters['next'])),
       GoRoute(path: '/connexion/code', builder: (_, s) => OtpScreen(telephone: s.uri.queryParameters['tel'] ?? '', next: s.uri.queryParameters['next'])),
@@ -123,7 +156,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/choisir-copropriete', builder: (_, __) => const ChooseCoproScreen()),
       GoRoute(path: '/compte/:kind', builder: (_, s) => CompteEtatScreen(kind: s.pathParameters['kind']!)),
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        pageBuilder: (context, state, child) => NoTransitionPage<void>(key: state.pageKey, child: AppShell(child: child)),
         routes: [
           GoRoute(path: '/tableau-de-bord', pageBuilder: (_, s) => tabPage(s, const DashboardScreen())),
           GoRoute(path: '/lots', pageBuilder: (_, s) => tabPage(s, const LotsScreen())),
