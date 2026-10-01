@@ -50,7 +50,7 @@ export function StatCard({
       <p className="stat-label min-w-0 truncate text-sm font-medium text-body">{label}</p>
       <div className="stat-value-row flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <p className="stat-value tnum text-[28px] font-semibold leading-none tracking-tight text-ink">
-          {typeof value === "string" ? <Odometer value={value} /> : value}
+          {typeof value === "string" || typeof value === "number" ? <Odometer value={String(value)} /> : value}
         </p>
         {trend ? (
           <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${trendCls}`}>

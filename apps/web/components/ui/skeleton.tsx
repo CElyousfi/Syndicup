@@ -97,3 +97,58 @@ export function ListSkeleton({ stats = 3 }: { stats?: number }) {
     </div>
   );
 }
+
+/** Fiche détail : retour, titre + badge, carte principale et colonne latérale. */
+export function DetailSkeleton() {
+  return (
+    <div className="space-y-6 animate-fade" role="status" aria-busy="true">
+      <Skeleton className="h-4 w-28 rounded-full" />
+      <div className="flex items-center gap-3">
+        <Skeleton className="h-7 w-64 max-w-[70%] rounded-full" />
+        <Skeleton className="h-6 w-20 rounded-full" />
+      </div>
+      <div className="flex gap-2 border-b border-hairline pb-3">
+        <Skeleton className="h-4 w-20 rounded-full" />
+        <Skeleton className="h-4 w-24 rounded-full" />
+        <Skeleton className="h-4 w-16 rounded-full" />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="card space-y-4 p-6 lg:col-span-2">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center justify-between gap-6">
+              <Skeleton className="h-3.5 w-32 rounded-full" />
+              <Skeleton className="h-3.5 w-40 rounded-full" />
+            </div>
+          ))}
+        </div>
+        <div className="card space-y-3 p-6">
+          <Skeleton className="h-4 w-24 rounded-full" />
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-10 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Formulaire (création / modification / réglages) : titre, carte de champs, actions. */
+export function FormSkeleton() {
+  return (
+    <div className="mx-auto max-w-3xl space-y-6 animate-fade" role="status" aria-busy="true">
+      <Skeleton className="h-4 w-28 rounded-full" />
+      <HeaderSkeleton />
+      <div className="card space-y-5 p-6">
+        {Array.from({ length: 4 }, (_, i) => (
+          <div key={i} className="space-y-2">
+            <Skeleton className="h-3.5 w-28 rounded-full" />
+            <Skeleton className="h-11 rounded-field" />
+          </div>
+        ))}
+        <div className="flex justify-end gap-2 pt-2">
+          <Skeleton className="h-10 w-24 rounded-full" />
+          <Skeleton className="h-10 w-32 rounded-full" />
+        </div>
+      </div>
+    </div>
+  );
+}

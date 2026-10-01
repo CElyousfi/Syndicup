@@ -272,8 +272,8 @@ export function Bars({
 
                   {/* Montant appelé (clair) */}
                   <div
-                    className={`relative w-full overflow-hidden rounded-t-[10px] bg-action-tint transition-[height,filter] duration-700 ease-out ${
-                      estFocus ? "brightness-[0.97]" : ""
+                    className={`relative w-full origin-bottom overflow-hidden rounded-t-[10px] bg-action-tint transition-[height,filter,scale] duration-700 ease-out ${
+                      estFocus ? "scale-x-[1.08] brightness-[0.97]" : ""
                     }`}
                     style={{ height: monte ? `${total * 100}%` : "0%" }}
                     aria-hidden

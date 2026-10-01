@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { IconX } from "./icons";
 
+/** Durée de la sortie animée (doit couvrir la transition de `dialog.su-modal[data-closing]`). */
+const SORTIE_MS = 240;
+
 /**
  * Modale accessible sur <dialog> natif : Échap, clic sur le fond, focus piégé par le navigateur.
  * Contrôlée par le parent (open/onClose) pour se marier avec useActionState.
@@ -28,11 +31,27 @@ export function Modal({
 }) {
   const ref = useRef<HTMLDialogElement>(null);
 
+  // Fermeture animée partout : la boîte joue sa sortie (`data-closing`, motion.css) PUIS se
+  // ferme. Sans ce relais, Firefox et Safari la retirent de la couche supérieure d'un coup.
   useEffect(() => {
     const dialog = ref.current;
     if (!dialog) return;
-    if (open && !dialog.open) dialog.showModal();
-    if (!open && dialog.open) dialog.close();
+    if (open) {
+      dialog.removeAttribute("data-closing");
+      if (!dialog.open) dialog.showModal();
+      return;
+    }
+    if (!dialog.open) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      dialog.close();
+      return;
+    }
+    dialog.setAttribute("data-closing", "");
+    const t = window.setTimeout(() => {
+      dialog.removeAttribute("data-closing");
+      dialog.close();
+    }, SORTIE_MS);
+    return () => window.clearTimeout(t);
   }, [open]);
 
   const onBackdrop = useCallback(
@@ -46,6 +65,11 @@ export function Modal({
     <dialog
       ref={ref}
       onClose={onClose}
+      // Échap : on passe par l'état du parent pour que la sortie soit animée.
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
       onMouseDown={onBackdrop}
       className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-card bg-surface p-0 text-ink-strong shadow-pop`}
     >

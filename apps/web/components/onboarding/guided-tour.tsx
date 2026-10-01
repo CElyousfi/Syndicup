@@ -428,15 +428,15 @@ function PiedDeCarte({
         <p className="text-[11px] font-medium text-faint">
           {fill(labels.stepOf, { n: idx + 1, total })}
         </p>
-        <div className="flex gap-1" aria-hidden>
+        {/* Pastilles d'étapes : un repère vert unique glisse (transform) d'une étape à l'autre. */}
+        <div className="relative flex gap-1.5" aria-hidden>
           {Array.from({ length: total }, (_, i) => (
-            <span
-              key={i}
-              className={`h-1 rounded-full transition-all duration-500 ease-[cubic-bezier(.34,1.56,.64,1)] ${
-                i === idx ? "w-4 bg-action" : "w-1 bg-hairline-strong"
-              }`}
-            />
+            <span key={i} className="size-1.5 rounded-full bg-hairline-strong" />
           ))}
+          <span
+            className="tour-dot absolute start-0 top-0 size-1.5 rounded-full bg-action"
+            style={{ "--idx": idx } as React.CSSProperties}
+          />
         </div>
       </div>
       <div className="mt-3 flex items-center gap-1.5">

@@ -454,3 +454,31 @@ nav:has(> .tab-ind[data-ready]) .tab-static { visibility: hidden; }
   to { transform: scale(1.06) translate(-1%, -1%); }
 }
 .hero-rise { animation: rise 0.7s var(--ease-out) backwards; }
+
+/* Visite guidée : repère d'étape qui glisse (0.375rem de pastille + 0.375rem d'écart). */
+.tour-dot {
+  transform: translateX(calc(var(--dir) * var(--idx) * 0.75rem)) scale(1.35);
+  transition: transform 0.5s var(--ease-spring);
+}
+
+/* Sortie animée pilotée par modal.tsx (tous navigateurs) : la boîte reste ouverte le temps
+   de cette transition, puis se ferme. */
+dialog.su-modal[open][data-closing] {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transition-duration: 0.22s;
+  transition-timing-function: var(--ease-in);
+  pointer-events: none;
+}
+dialog.su-modal[open][data-closing]::backdrop {
+  background-color: rgb(18 18 18 / 0);
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+}
+@media (max-width: 767px) {
+  dialog.su-modal[open][data-closing] {
+    opacity: 1;
+    transform: translateY(100%);
+    transition-duration: 0.24s;
+  }
+}
