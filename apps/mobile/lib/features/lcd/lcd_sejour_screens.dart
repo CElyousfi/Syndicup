@@ -23,6 +23,7 @@ import '../../core/widgets/widgets.dart';
 import '../../offline/local_db/database.dart';
 import '../../offline/sync_queue/lcd_sync.dart';
 import '../documents/document_viewer_screen.dart';
+import '../../core/theme/motion.dart';
 
 /// M15 Location courte durée (Doc A §10.2) — séjours : formulaire (déclarer / modifier),
 /// fiche (détail + chronologie des événements + actions), confirmations gardien hors-ligne.
@@ -677,6 +678,7 @@ Future<PieceLocale?> choisirPiece(BuildContext context) async {
   final d = context.dict;
   final choix = await showModalBottomSheet<String>(
     context: context,
+    sheetAnimationStyle: SuMotion.sheet,
     builder: (ctx) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,

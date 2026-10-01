@@ -20,6 +20,7 @@ import '../rapports/rapports_screens.dart' show ReleveButton;
 import '../lcd/lcd_screens.dart';
 import '../parkings/parkings_screens.dart' show VehiculeForm;
 import '../shell/app_shell.dart';
+import '../../core/theme/motion.dart';
 
 /// C1 — liste des lots (résident : ses lots ; syndic : tous, avec solde).
 class LotsScreen extends ConsumerStatefulWidget {
@@ -759,6 +760,7 @@ class _MembreField extends StatelessWidget {
               onPressed: () async {
                 final picked = await showModalBottomSheet<MembreOption>(
                   context: context,
+                  sheetAnimationStyle: SuMotion.sheet,
                   builder: (ctx) => SafeArea(
                     child: ListView(
                       shrinkWrap: true,

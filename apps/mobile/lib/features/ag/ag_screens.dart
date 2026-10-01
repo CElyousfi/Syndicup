@@ -18,6 +18,7 @@ import '../../core/widgets/widgets.dart';
 import '../taches/taches_screens.dart';
 import '../documents/document_viewer_screen.dart';
 import '../dashboard/dashboard_screen.dart';
+import '../../core/theme/motion.dart';
 
 // ── E1 Liste ──────────────────────────────────────────────────────────────────
 class AgListScreen extends ConsumerWidget {
@@ -270,6 +271,7 @@ class AgDetailScreen extends ConsumerWidget {
     final d = context.dict;
     await showModalBottomSheet<void>(
       context: context,
+      sheetAnimationStyle: SuMotion.sheet,
       builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),

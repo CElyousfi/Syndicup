@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../theme/tokens.dart';
+import 'motion.dart';
 
 /// Page standard : barre de titre compacte (retour), corps défilant avec pull-to-refresh.
 class SuPage extends StatelessWidget {
@@ -71,10 +72,11 @@ class TwoCols extends StatelessWidget {
         child: IntrinsicHeight(
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
+            // Tuiles en cascade (rangée par rangée, gauche puis droite).
             children: [
-              Expanded(child: children[i]),
+              Expanded(child: SuEnter(index: i + 2, child: children[i])),
               SizedBox(width: gap),
-              Expanded(child: i + 1 < children.length ? children[i + 1] : const SizedBox()),
+              Expanded(child: i + 1 < children.length ? SuEnter(index: i + 3, child: children[i + 1]) : const SizedBox()),
             ],
           ),
         ),
@@ -98,7 +100,10 @@ class ListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return InkWell(
+    return SuPressable(
+      enabled: onTap != null,
+      scale: 0.985,
+      child: InkWell(
       onTap: onTap,
       child: Padding(
         padding: padding,
@@ -119,6 +124,7 @@ class ListRow extends StatelessWidget {
           ],
         ),
       ),
+      ),
     );
   }
 }
@@ -137,7 +143,7 @@ class CardList extends StatelessWidget {
         children: [
           for (int i = 0; i < children.length; i++) ...[
             if (i > 0) const Divider(height: 1),
-            children[i],
+            SuEnter(index: i, offset: 0.12, child: children[i]),
           ],
         ],
       ),

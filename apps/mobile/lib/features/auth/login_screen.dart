@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
+import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
 import 'welcome_screen.dart';
@@ -162,6 +164,8 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
   ApiFail? _fail;
   int _countdown = 60;
   bool _resent = false;
+  /// Nombre d'échecs : clé de l'animation de tremblement (rejouée à chaque mauvais code).
+  int _echecs = 0;
 
   @override
   void initState() {
@@ -207,12 +211,20 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         if (!mounted) return;
         if (widget.next != null) context.go(widget.next!);
       case ApiFail<SessionTokens>():
+        if (res.status == 401) HapticFeedback.mediumImpact();
         setState(() {
           _loading = false;
           _fail = res;
           _code.clear();
+          if (res.status == 401) _echecs++;
         });
     }
+  }
+
+  /// Tremblement latéral (amorti) à chaque mauvais code — symétrique, donc identique en RTL.
+  Widget _shake(Widget child) {
+    if (_echecs == 0 || SuMotion.reduced(context)) return child;
+    return child.animate(key: ValueKey('shake$_echecs')).shakeX(hz: 5, amount: 7, duration: 480.ms, curve: Curves.easeOut);
   }
 
   Future<void> _resend() async {
@@ -253,28 +265,36 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                   children: [
                     Directionality(
                       textDirection: TextDirection.ltr,
-                      child: Row(
+                      child: _shake(Row(
                         children: [
                           for (int i = 0; i < 6; i++) ...[
                             Expanded(
                               child: Semantics(
                                 label: fill(d.a11y.otpDigit, {'n': i + 1}),
-                                child: Container(
+                                // Case active soulignée en douceur ; pendant la vérification, une
+                                // vague teinte les cases l'une après l'autre ; chaque chiffre éclot.
+                                child: AnimatedContainer(
+                                  duration: SuMotion.of(context, Duration(milliseconds: _loading ? 260 + i * 50 : 180)),
+                                  curve: SuMotion.easeOut,
                                   height: 56,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: SuColors.surface,
+                                    color: _loading ? SuColors.actionWash : SuColors.surface,
                                     borderRadius: BorderRadius.circular(SuRadius.field),
-                                    border: Border.all(color: i == digits.length ? SuColors.action : SuColors.hairlineStrong, width: i == digits.length ? 1.5 : 1),
+                                    border: Border.all(color: _loading || i == digits.length ? SuColors.action : SuColors.hairlineStrong, width: i == digits.length && !_loading ? 1.5 : 1),
                                   ),
-                                  child: Text(i < digits.length ? digits[i] : '', style: t.headlineMedium?.copyWith(fontSize: 20, fontFeatures: const [FontFeature.tabularFigures()])),
+                                  child: i < digits.length
+                                      ? Text(digits[i], key: ValueKey('d$i${digits[i]}'), style: t.headlineMedium?.copyWith(fontSize: 20, fontFeatures: const [FontFeature.tabularFigures()]))
+                                          .animate()
+                                          .scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.6, end: 1, duration: 320.ms, curve: SuMotion.spring)
+                                      : const SizedBox.shrink(),
                                 ),
                               ),
                             ),
                             if (i < 5) const SizedBox(width: 6),
                           ],
                         ],
-                      ),
+                      )),
                     ),
                     Opacity(
                       opacity: 0,
@@ -295,7 +315,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               ),
               if (_fail != null) ...[
                 const SizedBox(height: 12),
-                _fail!.status == 401 ? Text(d.auth.otpInvalid, style: t.bodySmall?.copyWith(color: SuColors.danger)) : FormError(_fail),
+                _fail!.status == 401
+                    ? SuEnter(key: ValueKey('err$_echecs'), offset: 0.3, child: Text(d.auth.otpInvalid, style: t.bodySmall?.copyWith(color: SuColors.danger)))
+                    : FormError(_fail),
               ],
               if (_resent) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.ok, body: d.auth.otpResend)],
               const SizedBox(height: 20),

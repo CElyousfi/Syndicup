@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
+import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
 
@@ -38,7 +40,8 @@ class PublicScaffold extends StatelessWidget {
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
-                children: [Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 400), child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children)))],
+                // Les blocs de chaque écran public arrivent l'un après l'autre.
+                children: [Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 400), child: SuStagger(children: children)))],
               ),
             ),
             Padding(
@@ -63,7 +66,10 @@ class HeroImageCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 24),
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(24), boxShadow: SuShadows.lift),
         clipBehavior: Clip.antiAlias,
-        child: Image.asset(asset, fit: BoxFit.cover),
+        // Travelling arrière à l'ouverture (comme le visuel du web).
+        child: SuMotion.reduced(context)
+            ? Image.asset(asset, fit: BoxFit.cover)
+            : Image.asset(asset, fit: BoxFit.cover).animate().scaleXY(begin: 1.1, end: 1, duration: 1600.ms, curve: SuMotion.easeOut),
       );
 }
 
@@ -80,7 +86,7 @@ class WelcomeScreen extends StatelessWidget {
     return PublicScaffold(
       children: [
         const HeroImageCard(height: 176),
-        Text(d.brand.tagline, style: t.displayMedium),
+        SuRevealText(d.brand.tagline, style: t.displayMedium, delay: const Duration(milliseconds: 200)),
         const SizedBox(height: 6),
         Text(d.brand.subtitle, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.6)),
         const SizedBox(height: 24),

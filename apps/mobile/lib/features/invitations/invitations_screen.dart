@@ -16,6 +16,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../../core/theme/motion.dart';
 
 /// J4 — invitations (syndic) : créer (rôle, lot, canal) → code 8 caractères + QR à transmettre.
 class InvitationsScreen extends ConsumerStatefulWidget {
@@ -73,6 +74,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
     final d = context.dict;
     await showModalBottomSheet<void>(
       context: context,
+      sheetAnimationStyle: SuMotion.sheet,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheet) => SingleChildScrollView(

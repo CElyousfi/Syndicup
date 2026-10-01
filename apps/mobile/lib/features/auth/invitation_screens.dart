@@ -275,7 +275,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
       showBack: true,
       children: [
         apercu.when(
-          loading: () => const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: CircularProgressIndicator())),
+          loading: () => const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: LoadingOrb())),
           error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(_apercuProvider(widget.code))),
           data: (a) {
             if (a.statut != 'EN_ATTENTE') {
@@ -482,9 +482,10 @@ class SplashScreen extends ConsumerWidget {
             : Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Brand(size: 44),
-                  const SizedBox(height: 24),
-                  const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: SuColors.action, strokeWidth: 2.5)),
+                  // Marque qui éclot, puis orbe « vivant » pendant la résolution de session.
+                  SuEnter(offset: 0.2, child: const Brand(size: 44)),
+                  const SizedBox(height: 28),
+                  const SuEnter(index: 4, child: LoadingOrb(size: 10)),
                 ],
               ),
       ),

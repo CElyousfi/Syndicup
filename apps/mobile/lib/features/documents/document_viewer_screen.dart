@@ -142,7 +142,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         ],
       ),
       body: switch (_etat) {
-        _Etat.chargement => const Center(child: CircularProgressIndicator(color: SuColors.blue600)),
+        _Etat.chargement => const Center(child: LoadingOrb()),
         _Etat.erreur => Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: md.viewerError, onRetry: () {
             setState(() => _etat = _Etat.chargement);
             _charger();
@@ -171,8 +171,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                   onPageChanged: (p) => setState(() => _page = p),
                   builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
                     options: const DefaultBuilderOptions(),
-                    documentLoaderBuilder: (_) => const Center(child: CircularProgressIndicator(color: SuColors.blue600)),
-                    pageLoaderBuilder: (_) => const Center(child: CircularProgressIndicator(color: SuColors.blue600)),
+                    documentLoaderBuilder: (_) => const Center(child: LoadingOrb()),
+                    pageLoaderBuilder: (_) => const Center(child: LoadingOrb()),
                     errorBuilder: (_, __) => Center(child: Text(md.viewerError, style: t.bodySmall)),
                   ),
                 ),

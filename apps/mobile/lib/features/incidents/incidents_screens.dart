@@ -20,6 +20,7 @@ import '../../core/widgets/widgets.dart';
 import '../depenses/depenses_screens.dart';
 import '../parkings/parkings_screens.dart' show notifierVehiculeGenant;
 import '../shell/app_shell.dart';
+import '../../core/theme/motion.dart';
 
 IconData iconCategorie(String c) => switch (c) {
       'PLOMBERIE' => Icons.water_drop_rounded,
@@ -476,6 +477,7 @@ class IncidentDetailScreen extends ConsumerWidget {
     }
     final picked = await showModalBottomSheet<Prestataire>(
       context: context,
+      sheetAnimationStyle: SuMotion.sheet,
       builder: (sheet) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(8, 0, 8, 12), children: [Padding(padding: const EdgeInsets.all(12), child: Text(d.incidents.assignerAide, style: Theme.of(context).textTheme.bodySmall)), for (final p in actifs) ListTile(leading: const IconCircle(Icons.engineering_rounded, tone: Tone.tosca, size: 36), title: Text(p.nom), subtitle: Text(p.specialite), onTap: () => Navigator.pop(sheet, p))])),
     );
     if (picked == null || !context.mounted) return;

@@ -76,6 +76,17 @@ class AppTheme {
       fontFamilyFallback: fallback,
       textTheme: text,
       splashFactory: InkSparkle.splashFactory,
+      // Navigation : glissé-fondu « vers l'avant » (Android, desktop), glissé natif avec retour
+      // par geste (iOS). Le sens suit la langue (RTL en arabe).
+      pageTransitionsTheme: const PageTransitionsTheme(
+        builders: {
+          TargetPlatform.android: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
+          TargetPlatform.iOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.macOS: CupertinoPageTransitionsBuilder(),
+          TargetPlatform.linux: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
+          TargetPlatform.windows: FadeForwardsPageTransitionsBuilder(backgroundColor: SuColors.ground),
+        },
+      ),
       dividerTheme: const DividerThemeData(color: SuColors.hairline, thickness: 1, space: 1),
       appBarTheme: AppBarTheme(
         backgroundColor: SuColors.ground,

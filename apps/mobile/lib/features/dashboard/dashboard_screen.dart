@@ -51,17 +51,13 @@ class _Greeting extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text.rich(
-            TextSpan(
-              style: t.displayMedium?.copyWith(fontWeight: FontWeight.w400),
-              children: [
-                TextSpan(text: fill(d.dash.greeting, {'prenom': ''}).trimRight()),
-                const TextSpan(text: ' '),
-                TextSpan(text: '${ctx.profil.prenom ?? nomCompletProfil(ctx) ?? ''}!', style: const TextStyle(fontWeight: FontWeight.w700)),
-              ],
-            ),
-          ),
-          if (subtitle != null) Padding(padding: const EdgeInsets.only(top: 3), child: Text(subtitle!, style: t.bodyMedium)),
+          // Salutation révélée mot par mot, prénom en gras (comme le tableau de bord web).
+          Builder(builder: (context) {
+            final salut = fill(d.dash.greeting, {'prenom': ''}).trim();
+            final nom = '${ctx.profil.prenom ?? nomCompletProfil(ctx) ?? ''}!';
+            return SuRevealText('$salut $nom', style: t.displayMedium?.copyWith(fontWeight: FontWeight.w400), boldFrom: salut.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length);
+          }),
+          if (subtitle != null) SuEnter(index: 3, child: Padding(padding: const EdgeInsets.only(top: 3), child: Text(subtitle!, style: t.bodyMedium))),
         ],
       ),
     );

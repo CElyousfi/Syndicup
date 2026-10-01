@@ -41,6 +41,24 @@ import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
 import '../auth/app_state.dart';
 import '../i18n/i18n.dart';
+import '../theme/motion.dart';
+
+/// Écrans racines d'onglet : fondu enchaîné avec léger zoom (« fade through ») au lieu d'un
+/// glissé — changer d'onglet n'est pas avancer dans une pile.
+Page<void> tabPage(GoRouterState state, Widget child) => CustomTransitionPage<void>(
+      key: state.pageKey,
+      child: child,
+      transitionDuration: const Duration(milliseconds: 360),
+      reverseTransitionDuration: const Duration(milliseconds: 220),
+      transitionsBuilder: (context, animation, secondary, child) {
+        if (SuMotion.reduced(context)) return child;
+        final inCurve = CurvedAnimation(parent: animation, curve: const Interval(0.25, 1, curve: SuMotion.easeOut));
+        return FadeTransition(
+          opacity: inCurve,
+          child: ScaleTransition(scale: Tween(begin: 0.985, end: 1.0).animate(inCurve), child: child),
+        );
+      },
+    );
 
 const _publicPrefixes = ['/connexion', '/invitation', '/compte'];
 
@@ -107,15 +125,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
         routes: [
-          GoRoute(path: '/tableau-de-bord', builder: (_, __) => const DashboardScreen()),
-          GoRoute(path: '/lots', builder: (_, __) => const LotsScreen()),
+          GoRoute(path: '/tableau-de-bord', pageBuilder: (_, s) => tabPage(s, const DashboardScreen())),
+          GoRoute(path: '/lots', pageBuilder: (_, s) => tabPage(s, const LotsScreen())),
           GoRoute(path: '/lots/nouveau', builder: (_, __) => const LotFormScreen()),
           GoRoute(path: '/lots/:id', builder: (_, s) => LotDetailScreen(id: s.pathParameters['id']!, onglet: s.uri.queryParameters['onglet'])),
           GoRoute(path: '/lots/:id/modifier', builder: (_, s) => LotFormScreen(id: s.pathParameters['id'])),
           GoRoute(path: '/finances/budgets', builder: (_, __) => const BudgetsScreen()),
-          GoRoute(path: '/finances/appels-de-fonds', builder: (_, s) => AppelsScreen(generer: s.uri.queryParameters['generer'] == '1')),
+          GoRoute(path: '/finances/appels-de-fonds', pageBuilder: (_, s) => tabPage(s, AppelsScreen(generer: s.uri.queryParameters['generer'] == '1'))),
           GoRoute(path: '/finances/appels-de-fonds/:id', builder: (_, s) => AppelDetailScreen(id: s.pathParameters['id']!)),
-          GoRoute(path: '/finances/comptabilite', builder: (_, __) => const ComptabiliteScreen()),
+          GoRoute(path: '/finances/comptabilite', pageBuilder: (_, s) => tabPage(s, const ComptabiliteScreen())),
           GoRoute(path: '/finances/contestations', builder: (_, __) => const ContestationsScreen()),
           GoRoute(path: '/finances/quittances/:id', builder: (_, s) => QuittanceScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/ag', builder: (_, __) => const AgListScreen()),
@@ -124,7 +142,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/ag/:id/seance', builder: (_, s) => AgSeanceScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/ag/:id/pv', builder: (_, s) => AgPvScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/ag/:id/resolutions/:rid/votes', builder: (_, s) => AgVotesScreen(agId: s.pathParameters['id']!, resolutionId: s.pathParameters['rid']!)),
-          GoRoute(path: '/incidents', builder: (_, __) => const IncidentsScreen()),
+          GoRoute(path: '/incidents', pageBuilder: (_, s) => tabPage(s, const IncidentsScreen())),
           GoRoute(path: '/incidents/nouveau', builder: (_, s) => IncidentFormScreen(sejourId: s.uri.queryParameters['sejour'])),
           GoRoute(path: '/incidents/:id', builder: (_, s) => IncidentDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/prestataires', builder: (_, __) => const PrestatairesScreen()),
@@ -134,39 +152,39 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/especes', builder: (_, __) => const EspecesScreen()),
           GoRoute(path: '/depenses', builder: (_, __) => const DepensesScreen()),
           // M18 — rapports (syndic / conseil, lecture) et transparence « où va mon argent » (tout membre).
-          GoRoute(path: '/rapports', builder: (_, __) => const RapportsScreen()),
+          GoRoute(path: '/rapports', pageBuilder: (_, s) => tabPage(s, const RapportsScreen())),
           // M19 — contrats (syndic / conseil, lecture).
           GoRoute(path: '/contrats', builder: (_, __) => const ContratsScreen()),
           GoRoute(path: '/contrats/:id', builder: (_, s) => ContratDetailScreen(id: s.pathParameters['id']!)),
           // M22 — tâches : registre / mes tâches, fiche.
-          GoRoute(path: '/taches', builder: (_, __) => const TachesScreen()),
+          GoRoute(path: '/taches', pageBuilder: (_, s) => tabPage(s, const TachesScreen())),
           GoRoute(path: '/taches/:id', builder: (_, s) => TacheDetailScreen(id: s.pathParameters['id']!)),
           // M23 — parkings & badges : plan / véhicules / badges / visiteurs, fiche emplacement.
           GoRoute(path: '/parkings', builder: (_, s) => ParkingsScreen(onglet: s.uri.queryParameters['onglet'])),
           // M25 — espace cabinet (lecture : portefeuille, alertes, agenda).
-          GoRoute(path: '/cabinet', builder: (_, s) => CabinetScreen(cabinetId: s.uri.queryParameters['cabinet'])),
+          GoRoute(path: '/cabinet', pageBuilder: (_, s) => tabPage(s, CabinetScreen(cabinetId: s.uri.queryParameters['cabinet']))),
           GoRoute(path: '/parkings/:id', builder: (_, s) => EmplacementDetailScreen(id: s.pathParameters['id']!)),
           // M21 — tableau d'affichage : fil, annonce, sondage.
-          GoRoute(path: '/affichage', builder: (_, __) => const AffichageScreen()),
+          GoRoute(path: '/affichage', pageBuilder: (_, s) => tabPage(s, const AffichageScreen())),
           GoRoute(path: '/affichage/sondages/:id', builder: (_, s) => SondageScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/affichage/:id', builder: (_, s) => AnnonceDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/rapports/transparence', builder: (_, __) => const TransparenceScreen()),
           GoRoute(path: '/depenses/:id', builder: (_, s) => DepenseDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/espaces-communs', builder: (_, __) => const EspacesScreen()),
-          GoRoute(path: '/reservations', builder: (_, __) => const ReservationsScreen()),
-          GoRoute(path: '/visites', builder: (_, s) => VisitesScreen(enregistrer: s.uri.queryParameters['enregistrer'] == '1')),
+          GoRoute(path: '/reservations', pageBuilder: (_, s) => tabPage(s, const ReservationsScreen())),
+          GoRoute(path: '/visites', pageBuilder: (_, s) => tabPage(s, VisitesScreen(enregistrer: s.uri.queryParameters['enregistrer'] == '1'))),
           GoRoute(path: '/visites/:id', builder: (_, s) => VisiteRepondreScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/personnel', builder: (_, __) => const PersonnelScreen()),
           // M20 — dossier RH : « Mon dossier » (employé), planning (syndic / conseil), détail (syndic / soi).
           GoRoute(path: '/personnel/me', builder: (_, s) => MonDossierScreen(onglet: s.uri.queryParameters['onglet'])),
           GoRoute(path: '/personnel/planning', builder: (_, s) => PlanningScreen(semaine: s.uri.queryParameters['semaine'])),
           GoRoute(path: '/personnel/:id', builder: (_, s) => PersonnelDetailScreen(id: s.pathParameters['id']!, onglet: s.uri.queryParameters['onglet'])),
-          GoRoute(path: '/location-courte-duree', builder: (_, __) => const LcdScreen()),
+          GoRoute(path: '/location-courte-duree', pageBuilder: (_, s) => tabPage(s, const LcdScreen())),
           GoRoute(path: '/location-courte-duree/reglement', builder: (_, __) => const LcdReglementScreen()),
           GoRoute(path: '/location-courte-duree/declarations/:id', builder: (_, s) => LcdDeclarationScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/location-courte-duree/sejours/nouveau', builder: (_, s) => LcdSejourFormScreen(sejourId: s.uri.queryParameters['sejour'], lotId: s.uri.queryParameters['lot'])),
           GoRoute(path: '/location-courte-duree/sejours/:id', builder: (_, s) => LcdSejourScreen(id: s.pathParameters['id']!)),
-          GoRoute(path: '/documents', builder: (_, __) => const DocumentsScreen()),
+          GoRoute(path: '/documents', pageBuilder: (_, s) => tabPage(s, const DocumentsScreen())),
           GoRoute(
             path: '/visionneuse',
             builder: (_, s) {
@@ -183,7 +201,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/membres/:id', builder: (_, s) => MembreDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/invitations', builder: (_, s) => InvitationsScreen(nouvelle: s.uri.queryParameters['nouvelle'] == '1')),
           GoRoute(path: '/parametres', builder: (_, __) => const ParametresScreen()),
-          GoRoute(path: '/admin', builder: (_, __) => const AdminScreen()),
+          GoRoute(path: '/admin', pageBuilder: (_, s) => tabPage(s, const AdminScreen())),
           GoRoute(path: '/admin/coproprietes/nouvelle', builder: (_, __) => const AdminCoproFormScreen()),
           GoRoute(path: '/admin/coproprietes/:id', builder: (_, s) => AdminCoproDetailScreen(id: s.pathParameters['id']!)),
         ],

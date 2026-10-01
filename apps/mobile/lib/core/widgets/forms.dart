@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../api/api_result.dart';
 import '../i18n/i18n.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'motion.dart';
 import 'states.dart';
 
 /// Champ de formulaire libellé (label + aide + erreur serveur `fields[name]`).
@@ -117,6 +119,7 @@ class SuSelect<T> extends StatelessWidget {
                 : () async {
                     final picked = await showModalBottomSheet<T>(
                       context: context,
+                      sheetAnimationStyle: SuMotion.sheet,
                       isScrollControlled: true,
                       builder: (ctx) => SafeArea(
                         child: ConstrainedBox(
@@ -169,24 +172,47 @@ class Segmented<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final n = options.length;
+    final idx = options.indexOf(value).clamp(0, n - 1);
+    // Une seule pastille blanche qui glisse (ressort) sous l'option active ; sens RTL respecté.
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(color: SuColors.canvas, borderRadius: BorderRadius.circular(SuRadius.field)),
-      child: Row(
+      child: Stack(
         children: [
-          for (final o in options)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onChanged(o),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 160),
-                  height: 40,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(color: o == value ? SuColors.surface : Colors.transparent, borderRadius: BorderRadius.circular(11), boxShadow: o == value ? [const BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 1))] : null),
-                  child: Text(labelOf(o), style: t.labelMedium?.copyWith(color: o == value ? SuColors.ink : SuColors.soft), maxLines: 1, overflow: TextOverflow.ellipsis),
-                ),
+          Positioned.fill(
+            child: AnimatedAlign(
+              alignment: AlignmentDirectional(n <= 1 ? 0 : -1 + 2 * idx / (n - 1), 0),
+              duration: SuMotion.of(context, const Duration(milliseconds: 420)),
+              curve: SuMotion.spring,
+              child: FractionallySizedBox(
+                widthFactor: 1 / n,
+                heightFactor: 1,
+                child: DecoratedBox(decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(11), boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 1))])),
               ),
             ),
+          ),
+          Row(
+            children: [
+              for (final o in options)
+                Expanded(
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => onChanged(o),
+                    child: SizedBox(
+                      height: 40,
+                      child: Center(
+                        child: AnimatedDefaultTextStyle(
+                          duration: SuMotion.of(context, SuMotion.base),
+                          style: (t.labelMedium ?? const TextStyle()).copyWith(color: o == value ? SuColors.ink : SuColors.soft),
+                          child: Text(labelOf(o), maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -268,16 +294,29 @@ class SubmitButton extends StatelessWidget {
   final IconData? icon;
   @override
   Widget build(BuildContext context) {
-    final child = loading
-        ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-        : Row(mainAxisSize: MainAxisSize.min, children: [if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)], Flexible(child: Text(label, overflow: TextOverflow.ellipsis))]);
+    final labelRow = Row(key: const ValueKey('label'), mainAxisSize: MainAxisSize.min, children: [if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)], Flexible(child: Text(label, overflow: TextOverflow.ellipsis))]);
+    Widget spinner(Color? c) => SizedBox(key: const ValueKey('spin'), width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: c));
+    // Libellé ↔ spinner en fondu-zoom, sans que le bouton ne change de taille ; pression ressort.
+    Widget swap(Widget w) => AnimatedSwitcher(
+          duration: SuMotion.of(context, const Duration(milliseconds: 240)),
+          switchInCurve: SuMotion.easeOut,
+          switchOutCurve: SuMotion.easeIn,
+          transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c)),
+          child: w,
+        );
     if (secondary) {
-      return OutlinedButton(onPressed: loading ? null : onPressed, child: loading ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4)) : child);
+      return SuPressable(
+        enabled: !loading && onPressed != null,
+        child: OutlinedButton(onPressed: loading ? null : onPressed, child: swap(loading ? spinner(null) : labelRow)),
+      );
     }
-    return FilledButton(
-      onPressed: loading ? null : onPressed,
-      style: danger ? FilledButton.styleFrom(backgroundColor: SuColors.danger) : null,
-      child: child,
+    return SuPressable(
+      enabled: !loading && onPressed != null,
+      child: FilledButton(
+        onPressed: loading ? null : onPressed,
+        style: danger ? FilledButton.styleFrom(backgroundColor: SuColors.danger) : null,
+        child: swap(loading ? spinner(Colors.white) : labelRow),
+      ),
     );
   }
 }
@@ -286,6 +325,7 @@ class SubmitButton extends StatelessWidget {
 Future<T?> showFormSheet<T>(BuildContext context, {required String title, required Widget Function(BuildContext ctx) builder}) {
   return showModalBottomSheet<T>(
     context: context,
+    sheetAnimationStyle: SuMotion.sheet,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (ctx) => Padding(

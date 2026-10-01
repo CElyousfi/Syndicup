@@ -285,7 +285,7 @@ class _VisiteRepondreScreenState extends ConsumerState<VisiteRepondreScreen> {
       appBar: AppBar(backgroundColor: SuColors.surface),
       body: SafeArea(
         child: visites.isLoading && v == null
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(child: LoadingOrb())
             : v == null
                 ? Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: visites.error ?? const ApiException(ApiError(code: 'NOT_FOUND', message: ''), 404), onRetry: () => ref.invalidate(visitesProvider)))
                 : Padding(

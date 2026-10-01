@@ -51,7 +51,7 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
       if (a != null && a.statut == 'CLOTUREE' && !ctx.isGestion) context.pushReplacement('/ag/${widget.id}/pv');
     });
     return ag.when(
-      loading: () => Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator())),
+      loading: () => Scaffold(appBar: AppBar(), body: const Center(child: LoadingOrb())),
       error: (e, _) => Scaffold(appBar: AppBar(), body: Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id))))),
       data: (a) => ctx.isGestion ? _Pupitre(ag: a) : _VueVotant(ag: a),
     );

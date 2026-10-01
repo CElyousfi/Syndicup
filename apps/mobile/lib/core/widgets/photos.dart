@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../api/providers.dart';
 import '../auth/app_state.dart';
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
 
 /// Photos de la résidence (M20) — emplacements personnalisables par le syndic, image du produit
@@ -48,14 +49,38 @@ class CoproPhoto extends ConsumerWidget {
     final url = photos[cle] ?? (fallbackCle == null ? null : photos[fallbackCle!]);
     final defaut = Image.asset(asset, fit: fit, width: width, height: height);
     if (url == null) return defaut;
-    return Image.network(
-      url,
-      fit: fit,
-      width: width,
-      height: height,
-      gaplessPlayback: true,
-      errorBuilder: (_, __, ___) => defaut,
-      loadingBuilder: (_, child, progress) => progress == null ? child : defaut,
+    // La photo personnalisée se pose en fondu (léger dézoom) par-dessus la photo par défaut,
+    // au lieu de la remplacer d'un coup une fois téléchargée.
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        defaut,
+        Positioned.fill(
+          child: Image.network(
+            url,
+            fit: fit,
+            width: width,
+            height: height,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            frameBuilder: (context, child, frame, sync) {
+              if (sync) return child;
+              final shown = frame != null;
+              return AnimatedOpacity(
+                opacity: shown ? 1 : 0,
+                duration: SuMotion.of(context, const Duration(milliseconds: 600)),
+                curve: SuMotion.easeOut,
+                child: AnimatedScale(
+                  scale: shown ? 1 : 1.04,
+                  duration: SuMotion.of(context, const Duration(milliseconds: 1100)),
+                  curve: SuMotion.easeOut,
+                  child: child,
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }

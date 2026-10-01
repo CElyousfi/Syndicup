@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -30,6 +31,9 @@ class SyndicUpApp extends ConsumerWidget {
         // Lisibilité : l'échelle système est respectée mais bornée pour préserver les mises en
         // page (le minimum effectif reste ≥ 14 px — Partie 14.1).
         final mq = MediaQuery.of(context);
+        // « Supprimer les animations » (système) : toutes les chaînes flutter_animate
+        // s'exécutent en zéro seconde et posent les éléments sur leur état final.
+        Animate.defaultDuration = mq.disableAnimations ? Duration.zero : const Duration(milliseconds: 300);
         return LocaleSwitchScope(
           onChange: (l) => ref.read(localeProvider.notifier).set(l),
           child: MediaQuery(

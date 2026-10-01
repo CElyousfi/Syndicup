@@ -1,6 +1,8 @@
+import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -17,6 +19,7 @@ import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
+import '../../core/theme/motion.dart';
 
 /// Coque applicative mobile : barre de titre compacte (copropriété + cloche), barre d'onglets
 /// fixe (4 destinations par rôle + « Plus »), menu complet en feuille du bas. Le pouce fait
@@ -168,6 +171,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _openMenu(BuildContext context, AppContext ctx, List<NavSection> nav, Dict dict) {
     showModalBottomSheet<void>(
       context: context,
+      sheetAnimationStyle: SuMotion.sheet,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheet) => _MenuSheet(ctx: ctx, nav: nav, dict: dict),
@@ -185,42 +189,83 @@ class _TabBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = [...tabs.map((t) => (t.label, navIcon(t.icon))), (plusLabel, Icons.menu_rounded)];
+    final n = items.length;
+    final has = current >= 0 && current < n;
+    final pillDuration = SuMotion.of(context, const Duration(milliseconds: 460));
     return Container(
       decoration: const BoxDecoration(color: SuColors.surface, border: Border(top: BorderSide(color: SuColors.hairline))),
       child: SafeArea(
         top: false,
         child: SizedBox(
           height: 66,
-          child: Row(
+          child: Stack(
             children: [
-              for (int i = 0; i < items.length; i++)
-                Expanded(
-                  child: InkWell(
-                    onTap: () => onTap(i),
-                    child: Semantics(
-                      selected: i == current,
-                      button: true,
-                      label: items[i].$1,
-                      child: Padding(
-                        padding: const EdgeInsets.only(top: 8, bottom: 4),
-                        child: Column(
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 180),
-                              width: 52,
-                              height: 30,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(color: i == current ? SuColors.ink : Colors.transparent, borderRadius: BorderRadius.circular(999)),
-                              child: Icon(items[i].$2, size: 20, color: i == current ? SuColors.sage : SuColors.soft),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(items[i].$1, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: i == current ? SuColors.ink : SuColors.soft)),
-                          ],
+              // Pastille encre unique qui glisse (ressort) vers l'onglet touché.
+              Positioned.fill(
+                child: AnimatedAlign(
+                  alignment: AlignmentDirectional(n <= 1 || !has ? 0 : -1 + 2 * current / (n - 1), -1),
+                  duration: pillDuration,
+                  curve: SuMotion.spring,
+                  child: FractionallySizedBox(
+                    widthFactor: 1 / n,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: AnimatedOpacity(
+                          opacity: has ? 1 : 0,
+                          duration: SuMotion.of(context, SuMotion.base),
+                          child: Container(width: 52, height: 30, decoration: BoxDecoration(color: SuColors.ink, borderRadius: BorderRadius.circular(999))),
                         ),
                       ),
                     ),
                   ),
                 ),
+              ),
+              Row(
+                children: [
+                  for (int i = 0; i < n; i++)
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => onTap(i),
+                        child: Semantics(
+                          selected: i == current,
+                          button: true,
+                          label: items[i].$1,
+                          child: Padding(
+                            padding: const EdgeInsets.only(top: 8, bottom: 4),
+                            child: Column(
+                              children: [
+                                SizedBox(
+                                  width: 52,
+                                  height: 30,
+                                  child: Center(
+                                    child: TweenAnimationBuilder<Color?>(
+                                      tween: ColorTween(end: i == current ? SuColors.sage : SuColors.soft),
+                                      duration: SuMotion.of(context, SuMotion.base),
+                                      builder: (_, c, __) {
+                                        final icon = Icon(items[i].$2, size: 20, color: c);
+                                        if (i != current || SuMotion.reduced(context)) return icon;
+                                        // Petit rebond de l'icône quand l'onglet devient actif.
+                                        return icon.animate(key: ValueKey('tab-$i')).scaleXY(begin: 0.72, end: 1, duration: 520.ms, curve: SuMotion.spring);
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedDefaultTextStyle(
+                                  duration: SuMotion.of(context, SuMotion.base),
+                                  style: TextStyle(fontSize: 10.5, fontWeight: FontWeight.w600, color: i == current ? SuColors.ink : SuColors.soft, fontFamily: DefaultTextStyle.of(context).style.fontFamily),
+                                  child: Text(items[i].$1, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ],
           ),
         ),
@@ -360,7 +405,7 @@ class _CountBadge extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
         decoration: BoxDecoration(color: SuColors.danger, borderRadius: BorderRadius.circular(999)),
         child: Text(n > 99 ? '99+' : '$n', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-      );
+      ).animate(key: ValueKey(n)).scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.4, end: 1, duration: 420.ms, curve: SuMotion.spring);
 }
 
 String? nomCompletProfil(AppContext ctx) {
@@ -420,7 +465,7 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.notifications_rounded, size: 26, color: SuColors.blue600),
+                _RingingBell(count: live.unread),
                 if (live.unread > 0)
                   PositionedDirectional(
                     end: -4,
@@ -429,7 +474,7 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                       padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(color: SuColors.danger, borderRadius: BorderRadius.circular(999)),
                       child: Text(live.unread > 9 ? '9+' : '${live.unread}', style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700)),
-                    ),
+                    ).animate(key: ValueKey(live.unread)).scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.4, end: 1, duration: 420.ms, curve: SuMotion.spring),
                   ),
               ],
             ),
@@ -464,4 +509,39 @@ class _Mark extends StatelessWidget {
   const _Mark();
   @override
   Widget build(BuildContext context) => ClipOval(child: Image.asset('assets/images/logo.png', width: 44, height: 44, fit: BoxFit.cover));
+}
+
+/// Cloche qui sonne (oscillation amortie) quand le compteur MONTE — pas au premier affichage.
+class _RingingBell extends StatefulWidget {
+  const _RingingBell({required this.count});
+  final int count;
+  @override
+  State<_RingingBell> createState() => _RingingBellState();
+}
+
+class _RingingBellState extends State<_RingingBell> with SingleTickerProviderStateMixin {
+  late final AnimationController _c = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
+
+  @override
+  void didUpdateWidget(covariant _RingingBell old) {
+    super.didUpdateWidget(old);
+    if (widget.count > old.count && !SuMotion.reduced(context)) _c.forward(from: 0);
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+        animation: _c,
+        builder: (_, child) {
+          final t = _c.value;
+          final angle = t == 0 || t == 1 ? 0.0 : 0.26 * math.sin(t * math.pi * 6) * (1 - t);
+          return Transform.rotate(angle: angle, alignment: const Alignment(0, -0.85), child: child);
+        },
+        child: const Icon(Icons.notifications_rounded, size: 26, color: SuColors.blue600),
+      );
 }

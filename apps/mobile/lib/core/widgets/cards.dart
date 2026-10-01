@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'motion.dart';
 import 'page.dart';
 
 /// `.card` du web : blanc, bordure rgb(32 31 35 / .05), rayon 22 (mobile), ombre lift.
@@ -26,7 +28,9 @@ class SuCard extends StatelessWidget {
         child: onTap == null ? Padding(padding: padding, child: child) : InkWell(onTap: onTap, child: Padding(padding: padding, child: child)),
       ),
     );
-    return margin == null ? card : Padding(padding: margin!, child: card);
+    // Carte cliquable : s'enfonce légèrement sous le doigt, rebondit au relâchement.
+    final Widget body = onTap == null ? card : SuPressable(child: card);
+    return margin == null ? body : Padding(padding: margin!, child: body);
   }
 }
 
@@ -127,7 +131,11 @@ class StatTile extends StatelessWidget {
           if (icon != null) ...[IconCircle(icon!, tone: tone, size: 38, iconSize: 20), const SizedBox(height: 10)],
           Text(label, style: t.labelMedium?.copyWith(fontSize: 12.5, color: SuColors.body, height: 1.25), maxLines: 2, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          Text(value, style: t.headlineMedium?.copyWith(fontSize: 21, fontFeatures: const [FontFeature.tabularFigures()]), maxLines: 2, overflow: TextOverflow.ellipsis),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: AnimatedDigits(value, style: t.headlineMedium?.copyWith(fontSize: 21)),
+          ),
           if (hint != null)
             Padding(
               padding: const EdgeInsets.only(top: 6),
@@ -185,11 +193,23 @@ class Gauge extends StatelessWidget {
   Widget build(BuildContext context) {
     final r = ratio.clamp(0.0, 1.0);
     final c = color ?? (r >= 1 ? SuColors.ok : r >= 0.6 ? SuColors.action : SuColors.warn);
+    // Se remplit au montage (et glisse vers la nouvelle valeur), depuis le début de ligne.
     return ClipRRect(
       borderRadius: BorderRadius.circular(999),
       child: SizedBox(
         height: height,
-        child: Stack(children: [Container(color: SuColors.ground), FractionallySizedBox(widthFactor: r, child: Container(color: c))]),
+        child: TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0, end: r),
+          duration: SuMotion.of(context, const Duration(milliseconds: 900)),
+          curve: SuMotion.easeOut,
+          builder: (_, v, __) => Stack(
+            alignment: AlignmentDirectional.centerStart,
+            children: [
+              Container(color: SuColors.ground),
+              FractionallySizedBox(widthFactor: v, heightFactor: 1, alignment: AlignmentDirectional.centerStart, child: DecoratedBox(decoration: BoxDecoration(color: c, borderRadius: BorderRadius.circular(999)))),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -278,7 +298,7 @@ class HeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return SuCard(
+    return SuEnter(index: 1, child: SuCard(
       onTap: onTap,
       padding: EdgeInsets.zero,
       radius: 24,
@@ -304,7 +324,7 @@ class HeroCard extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: Text(stats[i].value, style: t.displayLarge?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]))),
+                                FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: AnimatedDigits(stats[i].value, style: t.displayLarge)),
                                 const SizedBox(height: 2),
                                 Text(stats[i].caption, style: t.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
                               ],
@@ -325,6 +345,6 @@ class HeroCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ));
   }
 }
