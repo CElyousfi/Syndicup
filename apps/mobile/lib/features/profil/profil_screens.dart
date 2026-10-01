@@ -60,10 +60,14 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       return;
     }
     await ref.read(localeProvider.notifier).set(Locale(_langue == 'AR' ? 'ar' : 'fr'));
+    if (!mounted) return;
+    // Toast AVANT le rechargement de session : celui-ci repasse par l'écran de démarrage et
+    // démonte cette page (le toast vit dans l'overlay racine, il survit). Texte dans la langue
+    // qui vient d'être choisie.
+    showToast(context, ref.read(dictProvider).profil.enregistre);
     await ref.read(appStateProvider.notifier).reload();
     if (!mounted) return;
     setState(() => _loading = false);
-    showToast(context, context.dict.profil.enregistre);
   }
 
   @override
