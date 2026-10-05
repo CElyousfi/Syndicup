@@ -1,6 +1,6 @@
 import { getAppContext } from "../../../lib/app-context";
 import { apiFetch } from "../../../lib/api/client";
-import { buildNav, buildMobileTabs } from "../../../components/shell/nav";
+import { buildNav, buildMobileTabs, buildQuickActions } from "../../../components/shell/nav";
 import { AppFrame } from "../../../components/shell/app-frame";
 import { nomComplet } from "../../../lib/format";
 import type { Notification } from "../../../lib/api/types";
@@ -56,7 +56,11 @@ export default async function AppLayout({
         search: dict.common.search,
         plus: dict.nav.plus,
         menu: dict.nav.menu,
+        actions: dict.nav.actions,
+        quickTitle: dict.nav.quickTitle,
+        done: dict.common.done,
       }}
+      quick={buildQuickActions(nav, ctx.role, ctx.roles, dict, ctx.locale)}
       tour={dict.onboarding}
     >
       {children}

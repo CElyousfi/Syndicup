@@ -24,10 +24,10 @@ export function Segmented<T extends string>({
   return (
     <div
       role="tablist"
-      className={`relative inline-flex w-full rounded-btn border border-hairline bg-ground p-1 ${className}`}
+      className={`relative inline-flex w-full rounded-btn bg-wash p-1 ${className}`}
       style={{ "--n": n, "--idx": idx } as CSSProperties}
     >
-      <span aria-hidden className="seg-pill absolute inset-y-1 start-1 rounded-[10px] bg-surface shadow-sm" />
+      <span aria-hidden className="seg-pill absolute inset-y-1 start-1 rounded-full bg-surface shadow-[0_1px_3px_rgb(18_18_18/0.12)]" />
       {options.map((opt) => {
         const active = opt.value === value;
         return (
@@ -37,7 +37,7 @@ export function Segmented<T extends string>({
             type="button"
             aria-selected={active}
             onClick={() => onChange(opt.value)}
-            className={`relative h-9 flex-1 rounded-[10px] px-3 text-sm font-medium transition-colors duration-200 ${
+            className={`relative h-10 flex-1 rounded-full px-3 text-sm font-semibold transition-colors duration-200 ${
               active ? "text-ink" : "text-soft hover:text-ink-strong"
             }`}
           >

@@ -14,8 +14,9 @@ interface ToastItem extends ToastInput {
 
 /** Pastille d'icône teintée — le ton s'exprime par la couleur, la carte reste blanche (système). */
 const PASTILLE: Record<NonNullable<ToastInput["tone"]>, string> = {
-  ok: "bg-ok-tint text-ok",
-  info: "bg-action-tint text-action",
+  // Toast Wise : salle sombre encre, pastille lime (ok/info) ou teinte de statut.
+  ok: "bg-lime text-ink",
+  info: "bg-lime text-ink",
   warn: "bg-warn-tint text-warn",
   danger: "bg-danger-tint text-danger",
 };
@@ -88,7 +89,7 @@ export function Toaster() {
               if (Math.abs(info.offset.x) > 90 || Math.abs(info.velocity.x) > 500) fermer(t.id);
             }}
             onClick={ouvrir}
-            className="pointer-events-auto relative flex cursor-pointer touch-pan-y items-start gap-3 overflow-hidden rounded-card border border-hairline bg-surface px-4 py-3.5 shadow-pop"
+            className="pointer-events-auto relative flex cursor-pointer touch-pan-y items-start gap-3 overflow-hidden rounded-[20px] bg-ink px-4 py-3.5 text-white shadow-pop"
           >
             <span
               className={`animate-pop mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full ${PASTILLE[tone]}`}
@@ -96,11 +97,11 @@ export function Toaster() {
               <Icone width={17} height={17} />
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[14px] font-semibold leading-snug text-ink">
+              <span className="block text-[14px] font-semibold leading-snug text-white">
                 {t.titre}
               </span>
               {t.corps ? (
-                <span className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-soft">
+                <span className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-white/70">
                   {t.corps}
                 </span>
               ) : null}
@@ -112,14 +113,14 @@ export function Toaster() {
                 fermer(t.id);
               }}
               aria-label="×"
-              className="su-btn shrink-0 rounded-full p-1 text-faint hover:rotate-90 hover:bg-ground hover:text-ink"
+              className="su-btn shrink-0 rounded-full p-1 text-white/60 hover:rotate-90 hover:bg-white/10 hover:text-white"
             >
               <IconX width={14} height={14} />
             </button>
             {/* Temps restant : filet qui se vide (sens de lecture). */}
             <span
               aria-hidden
-              className="toast-timer absolute inset-x-0 bottom-0 h-[2px] bg-action/25"
+              className="toast-timer absolute inset-x-0 bottom-0 h-[3px] bg-lime/55"
               style={{ animationDuration: `${t.duree}ms` }}
             />
           </m.div>

@@ -2,11 +2,17 @@
 @import "./motion.css";
 
 /* ══════════════════════════════════════════════════════════════════════════
-   Système SyndicUp — thème « Résidence » : fond greige chaud, surfaces
-   blanches très arrondies, encre #121212, accent vert sauge profond,
-   accents secondaires lilas / sable / tosca pour les pastilles d'icônes.
-   Statuts : armée #395917 / ambre #A66A00 / rouge profond #98140B.
-   Rayons 24 cartes / 999 pills / 14 champs. Chiffres tabulaires pour
+   Système SyndicUp — couleurs du LOGO (vert marque #1E7552, lime #E3EF8D,
+   encre #121212, greige #ECEBE4) dans la grammaire du langage Wise, à
+   l'identique de l'app mobile (apps/mobile/lib/core/theme/tokens.dart) :
+     • toile BLANCHE, blocs de contenu = tuiles greige PLATES (ni bordure,
+       ni ombre) ;
+     • action principale = pill lime pleine au texte encre (15:1) ;
+     • liens et accents interactifs en vert marque, soulignés ;
+     • « salle de marque » verte au titre lime pour les cartes-affiches.
+   Inter pour l'interface, Archivo Black (affiche) pour les moments de marque.
+   Statuts : armée #395917 / ambre #8A5A00 / rouge profond #98140B.
+   Rayons 24 tuiles / 999 pills / 14 champs. Chiffres tabulaires pour
    l'argent. Propriétés logiques uniquement — l'AR (RTL) se pose sans
    redécoupe.
    ══════════════════════════════════════════════════════════════════════════ */
@@ -24,15 +30,28 @@
   --color-hover: #f7f6f2;
   --color-surface: #ffffff;
 
-  /* Action — vert sauge profond (liens, focus, jauges, éléments actifs) */
-  --color-action: #4c6c5a;
-  --color-action-deep: #3d5a4a;
-  --color-action-tint: #e6efea;
-  --color-action-wash: #f2f6f3;
+  /* Logo */
+  --color-brand: #1e7552;
+  --color-brand-deep: #17603f;
+  --color-lime: #e3ef8d;
+  --color-lime-hover: #d6e477;
+
+  /* Rôles Wise */
+  --color-cta: #e3ef8d; /* pill d'action principale, texte encre */
+  --color-link: #1e7552; /* liens, onglets actifs, accents interactifs */
+  --color-tile: #ecebe4; /* tuiles, surfaces secondaires */
+  --color-wash: rgb(18 18 18 / 0.063); /* voile d'encre : pistes, pastilles neutres — lisible sur blanc ET greige */
+  --color-wash-strong: rgb(18 18 18 / 0.11);
+
+  /* Action — vert marque (liens, focus, jauges, éléments actifs) */
+  --color-action: #1e7552;
+  --color-action-deep: #17603f;
+  --color-action-tint: #e2eee7;
+  --color-action-wash: #f0f6f2;
 
   /* Accents secondaires — pastilles d'icônes, séries de graphiques */
   --color-sage: #a4c8ae;
-  --color-sage-tint: #e6efea;
+  --color-sage-tint: #e2eee7;
   --color-moss: #617c6c;
   --color-army: #395917;
   --color-lilac: #595d75;
@@ -59,8 +78,11 @@
   --radius-field: 14px;
 
   /* Typo */
-  --font-sans: var(--font-geist-sans), var(--font-arabic), ui-sans-serif, system-ui,
+  --font-sans: var(--font-inter), var(--font-arabic), ui-sans-serif, system-ui,
     -apple-system, "Segoe UI", sans-serif;
+  /* Affiche (Wise Sans 900 → Archivo semi-condensé Black ; Noto Kufi Arabic en arabe). */
+  --font-display: var(--font-su-display), var(--font-su-display-ar), var(--font-inter), sans-serif;
+  --font-wordmark: var(--font-su-wordmark), var(--font-inter), sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
   --shadow-pop: 0 24px 48px -16px rgb(32 31 35 / 0.22), 0 4px 12px -4px rgb(32 31 35 / 0.08);
@@ -70,7 +92,8 @@
 
 /* RTL : la police arabe passe en tête quand la page est en arabe. */
 :root[lang="ar"] {
-  --font-sans: var(--font-arabic), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-arabic), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-su-display-ar), var(--font-su-display), sans-serif;
 }
 
 @layer base {
@@ -80,12 +103,12 @@
   }
 
   body {
-    background: var(--color-ground);
+    background: var(--color-surface);
     color: var(--color-ink-strong);
     font-family: var(--font-sans);
     font-size: 14px;
     line-height: 1.5;
-    font-feature-settings: "ss01";
+    font-feature-settings: "cv11", "ss03";
   }
 
   ::selection {
@@ -113,11 +136,14 @@
 }
 
 @layer utilities {
+  /* Tuile Wise : greige plate, ni bordure ni ombre — la hiérarchie vient de la couleur et de
+     l'échelle. À l'intérieur, les sous-blocs sont BLANCS (bg-surface) ou voilés (bg-wash),
+     jamais greige. */
   .card {
-    background: var(--color-surface);
-    border: 1px solid rgb(32 31 35 / 0.05);
+    background: var(--color-tile);
+    border: 0;
     border-radius: var(--radius-card);
-    box-shadow: var(--shadow-lift);
+    box-shadow: none;
     /* Enfant de grille : ne jamais laisser le min-content interne élargir la colonne
        (piège CSS min-width:auto — la page ne doit jamais défiler horizontalement). */
     min-width: 0;
@@ -130,6 +156,34 @@
   }
 
   /* Hachures diagonales — barre active des graphiques (cf. référence). */
+  /* Affiche : titres de marque en capitales serrées (latin) — l'arabe garde sa casse. */
+  .font-poster {
+    font-family: var(--font-display);
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+  }
+  :root[lang="ar"] .font-poster {
+    font-weight: 800;
+    line-height: 1.35;
+    letter-spacing: 0;
+    text-transform: none;
+    font-size: 0.82em;
+  }
+
+  /* Lien Wise : vert marque, souligné, 600. */
+  .link {
+    color: var(--color-link);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+  }
+  .link:hover {
+    color: var(--color-brand-deep);
+  }
+
   .bar-stripes {
     background-image: repeating-linear-gradient(
       135deg,
@@ -161,6 +215,11 @@
     transform-origin: bottom;
   }
 }
+
+/* En-tête de table en bandeau arrondi (Wise) ; dans une tuile greige, le bandeau passe au voile. */
+.su-table thead th:first-child { border-start-start-radius: 14px; border-end-start-radius: 14px; }
+.su-table thead th:last-child { border-start-end-radius: 14px; border-end-end-radius: 14px; }
+.card .su-table thead th { background: var(--color-wash); }
 
 /* Miroir RTL des icônes directionnelles (flèches, chevrons, sortie). */
 [dir="rtl"] .icon-flip {
@@ -217,11 +276,11 @@
 
 @keyframes tour-pulse {
   0% {
-    box-shadow: 0 0 0 0 rgb(164 200 174 / 0.75);
+    box-shadow: 0 0 0 0 rgb(227 239 141 / 0.85);
   }
   70%,
   100% {
-    box-shadow: 0 0 0 16px rgb(164 200 174 / 0);
+    box-shadow: 0 0 0 16px rgb(227 239 141 / 0);
   }
 }
 
@@ -233,18 +292,20 @@
    md (formulaires, tables). Le desktop reste strictement inchangé.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* Cartes statistiques : zones de grille, deux mises en page. */
+/* Tuiles statistiques (Wise, « soldes ») : icône, grand montant, libellé dessous — même
+   ordre que StatTile côté mobile. */
 .stat {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: 1fr;
   grid-template-areas:
-    "icon label"
-    "value value";
-  column-gap: 12px;
-  row-gap: 16px;
-  align-items: center;
-  padding: 20px;
+    "icon"
+    "value"
+    "label";
+  row-gap: 6px;
+  align-content: start;
+  padding: 22px;
 }
+.stat-icon { margin-bottom: 14px; }
 .stat-icon { grid-area: icon; }
 .stat-label { grid-area: label; }
 .stat-value-row { grid-area: value; }
@@ -259,8 +320,8 @@
     grid-template-columns: 1fr;
     grid-template-areas:
       "icon"
-      "label"
-      "value";
+      "value"
+      "label";
     row-gap: 4px;
     padding: 14px 14px 16px;
     border-radius: 20px;
@@ -287,7 +348,7 @@
 
   /* Barre de titre : voile translucide sous l'encoche. */
   .app-topbar {
-    background: color-mix(in srgb, var(--color-ground) 86%, transparent);
+    background: color-mix(in srgb, var(--color-surface) 88%, transparent);
     -webkit-backdrop-filter: blur(14px);
     backdrop-filter: blur(14px);
     padding-top: env(safe-area-inset-top);
@@ -309,9 +370,9 @@
     -webkit-user-select: none;
   }
   .app-tabbar .tab { min-height: 58px; }
-  /* Le fond encre de l'onglet actif est une pastille partagée qui glisse (app-frame.tsx). */
+  /* Onglet actif : glyphe et libellé encre, pastille lime partagée qui glisse (app-frame.tsx). */
   .app-tabbar .tab.is-active .tab-pill {
-    color: var(--color-sage);
+    color: var(--color-ink);
   }
   .app-tabbar .tab:active .tab-pill { transform: scale(0.9); transition-duration: 0.1s; }
   .app-tabbar .tab-pill { transition: transform 0.4s var(--ease-spring), color 0.2s ease; }
@@ -370,7 +431,7 @@
   .su-table, .su-table tbody, .su-table tr, .su-table td { display: block; width: 100%; }
   .su-table tr {
     padding: 12px 16px 12px;
-    border-bottom: 1px solid var(--color-hairline);
+    border-bottom: 1px solid var(--color-hairline-strong);
   }
   .su-table tr:last-child { border-bottom: 0; }
   .su-table tr:hover { background: transparent; }

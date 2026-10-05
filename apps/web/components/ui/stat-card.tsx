@@ -4,11 +4,10 @@ import { IconCircle, type IconTone } from "./color-icons";
 import { Odometer } from "./odometer";
 
 /**
- * Carte statistique (cf. référence design) : pastille d'icône teintée + libellé,
- * grande valeur, puce de tendance et texte de comparaison. Aucun calcul métier ici —
+ * Tuile statistique (Wise, tuile de solde) : pastille d'icône, grand montant gras, puce de
+ * tendance, libellé discret dessous. Greige plate (`.card`). Aucun calcul métier ici —
  * valeurs et tendances déjà formatées par l'appelant.
- * Mise en page par zones de grille (`.stat` dans globals.css) : desktop = icône + libellé
- * puis grande valeur ; mobile = rangée compacte icône | libellé / valeur, comme une app.
+ * Mise en page par zones de grille (`.stat` dans globals.css).
  */
 export function StatCard({
   icon,
@@ -37,7 +36,7 @@ export function StatCard({
     ok: "bg-ok text-white",
     warn: "bg-warn text-white",
     danger: "bg-danger text-white",
-    neutral: "bg-ground text-ink",
+    neutral: "bg-wash-strong text-ink",
   }[trendTone];
 
   const body = (
@@ -47,9 +46,9 @@ export function StatCard({
           {icon}
         </IconCircle>
       </div>
-      <p className="stat-label min-w-0 truncate text-sm font-medium text-body">{label}</p>
+      <p className="stat-label min-w-0 text-sm font-medium leading-snug text-soft">{label}</p>
       <div className="stat-value-row flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <p className="stat-value tnum text-[28px] font-semibold leading-none tracking-tight text-ink">
+        <p className="stat-value tnum text-[30px] font-bold leading-none tracking-[-0.02em] text-ink">
           {typeof value === "string" || typeof value === "number" ? <Odometer value={String(value)} /> : value}
         </p>
         {trend ? (

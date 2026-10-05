@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "../../lib/toast";
+import { celebrate } from "../../lib/success";
 import type { ReactNode } from "react";
 import type { FormState } from "../../lib/forms";
 import { Button, type ButtonVariant } from "./button";
@@ -62,17 +63,27 @@ export function FormAlert({
   legalGateTitle,
   legalGateAction,
   successRender,
+  celebrate: celebration,
 }: {
   state: FormState;
   legalGateTitle?: string;
   legalGateAction?: ReactNode;
   successRender?: (message?: string) => ReactNode;
+  /** Action MAJEURE : le succès s'annonce en écran plein (Wise) au lieu d'un toast —
+   *  `illustration` : ok-paiement, ok-incident, ok-vote, ok-reservation, ok-invitation,
+   *  ok-visiteur, ok-general. */
+  celebrate?: { illustration: string; corps?: string };
 }) {
-  // Un succès porteur d'un message est aussi annoncé en toast — visible même si la modale se ferme.
+  // Un succès porteur d'un message est aussi annoncé (toast, ou écran de succès pour une action
+  // majeure) — visible même si la modale se ferme.
   const succes = state.status === "success" ? state.message : undefined;
+  const illustration = celebration?.illustration;
+  const corps = celebration?.corps;
   useEffect(() => {
-    if (succes) toast({ titre: succes, tone: "ok", duree: 4000 });
-  }, [succes]);
+    if (!succes) return;
+    if (illustration) celebrate({ titre: succes, corps, illustration });
+    else toast({ titre: succes, tone: "ok", duree: 4000 });
+  }, [succes, illustration, corps]);
   if (state.status === "success") {
     if (successRender) return <>{successRender(state.message)}</>;
     if (!state.message) return null;

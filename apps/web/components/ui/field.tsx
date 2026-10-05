@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 
 const CONTROL =
-  "w-full rounded-field border border-hairline-strong bg-surface px-4 text-sm text-ink-strong placeholder:text-faint transition-[border-color,box-shadow] focus:border-action focus:outline-none focus:ring-4 focus:ring-action/15 disabled:bg-ground disabled:text-soft";
+  "w-full rounded-field border border-hairline-strong bg-surface px-4 text-[15px] text-ink-strong placeholder:text-faint transition-[border-color,box-shadow] hover:border-faint focus:border-ink focus:shadow-[inset_0_0_0_1px_var(--color-ink)] focus:outline-none disabled:bg-wash disabled:text-soft";
 
 /** `w-full` par défaut, sauf si l'appelant fixe lui-même une largeur (w-44, w-56…) —
  *  l'ordre de génération Tailwind ferait sinon toujours gagner `w-full`. */
@@ -15,12 +15,12 @@ function base(className: string) {
 // React signale mais ne « corrige » jamais (https://react.dev/link/hydration-mismatch). Centralisé
 // ici : tous les champs de l'app passent par ces trois composants.
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
-  return <input className={`${base(className)} h-11 ${className}`} suppressHydrationWarning {...props} />;
+  return <input className={`${base(className)} h-12 ${className}`} suppressHydrationWarning {...props} />;
 }
 
 export function Select({ className = "", children, ...props }: ComponentProps<"select">) {
   return (
-    <select className={`${base(className)} h-11 appearance-none ${className}`} suppressHydrationWarning {...props}>
+    <select className={`${base(className)} h-12 appearance-none ${className}`} suppressHydrationWarning {...props}>
       {children}
     </select>
   );
@@ -50,7 +50,7 @@ export function Field({
 }) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="flex items-baseline gap-2 text-[13px] font-medium text-ink-strong">
+      <label htmlFor={htmlFor} className="flex items-baseline gap-2 text-[14px] font-semibold text-ink">
         {label}
         {!required && optionalLabel ? (
           <span className="font-normal text-faint">({optionalLabel})</span>
@@ -99,7 +99,7 @@ export function Checkbox({
     <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
       <input
         type="checkbox"
-        className="su-check mt-0.5 size-[18px] shrink-0 rounded-[5px] border-hairline-strong text-action accent-[#4c6c5a] focus-visible:ring-2 focus-visible:ring-action/40"
+        className="su-check mt-0.5 size-[18px] shrink-0 rounded-[5px] border-hairline-strong text-action accent-[#1e7552] focus-visible:ring-2 focus-visible:ring-action/40"
         {...props}
       />
       <span className="min-w-0">

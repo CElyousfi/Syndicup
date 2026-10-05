@@ -18,7 +18,7 @@ export function Card({
   );
 }
 
-/** En-tête de section/carte : titre + sous-titre + action à l'extrémité. */
+/** En-tête de section (Wise : titre 20 px gras + lien souligné à l'extrémité). */
 export function SectionHeader({
   title,
   subtitle,
@@ -33,8 +33,8 @@ export function SectionHeader({
   return (
     <div className={`flex items-start justify-between gap-4 ${className}`}>
       <div className="min-w-0">
-        <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
-        {subtitle ? <p className="mt-0.5 text-[13px] text-soft">{subtitle}</p> : null}
+        <h2 className="text-[19px] font-bold tracking-tight text-ink">{title}</h2>
+        {subtitle ? <p className="mt-1 text-[13px] text-soft">{subtitle}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>

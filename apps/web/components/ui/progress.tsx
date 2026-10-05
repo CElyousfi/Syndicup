@@ -21,7 +21,7 @@ export function ProgressBar({
   return (
     <div
       title={`${Math.round(pct)}%`}
-      className={`h-2 w-full overflow-hidden rounded-full bg-ground ${className}`}
+      className={`h-2 w-full overflow-hidden rounded-full bg-wash ${className}`}
     >
       <div
         className={`pb-fill h-full rounded-full ${tones[tone]}`}

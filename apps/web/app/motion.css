@@ -96,7 +96,7 @@
   transform: translateX(calc(var(--dir) * 8px)) scale(0.96);
 }
 
-/* ── Cartes cliquables : élévation douce au survol, pression au toucher ──── */
+/* ── Tuiles cliquables : le greige fonce au survol (Wise, aucune ombre), pression au toucher ── */
 :is(.card-interactive, a.card) {
   transition:
     transform 0.32s var(--ease-out),
@@ -106,8 +106,7 @@
 }
 @media (hover: hover) {
   :is(.card-interactive, a.card):hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-float);
+    background-color: #e3e2da;
   }
 }
 :is(.card-interactive, a.card):active {

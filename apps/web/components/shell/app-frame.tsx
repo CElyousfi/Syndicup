@@ -4,22 +4,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, LazyMotion, MotionConfig, m, useDragControls } from "motion/react";
-import { Brand, BrandMark } from "../brand";
+import { Brand, BrandTile } from "../brand";
 import { LocaleSwitch } from "../locale-switch";
 import { Avatar } from "../ui/avatar";
-import { CBuilding } from "../ui/color-icons";
+import { CBuilding, IconCircle } from "../ui/color-icons";
 import { GuidedTour, type TourLabels } from "../onboarding/guided-tour";
 import { Toaster } from "./toaster";
+import { SuccessOverlay } from "./success-overlay";
 import { useLive } from "./live";
 import { seDeconnecter } from "../../lib/actions/session-actions";
 import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
-import type { NavSection, NavItem, IconKey } from "./nav";
+import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
   IconBell,
   IconBuilding,
   IconCalendar,
   IconChart,
   IconChevronDown,
+  IconChevronEnd,
   IconCoins,
   IconDoor,
   IconFile,
@@ -81,14 +83,17 @@ export interface FrameLabels {
   search: string;
   plus: string;
   menu: string;
+  actions: string;
+  quickTitle: string;
+  done: string;
 }
 
 /**
- * Coque applicative.
- *  - Desktop (≥ lg) : barre latérale flottante + en-tête avec recherche — inchangé.
- *  - Mobile/tablette : une vraie coque d'application — barre de titre compacte, barre
- *    d'onglets fixe en bas (4 destinations + « Plus »), menu complet en feuille qui
- *    monte du bas. Aucun tiroir latéral : le pouce fait tout depuis le bas de l'écran.
+ * Coque applicative (langage Wise, identique à l'app mobile).
+ *  - Desktop (≥ lg) : barre latérale blanche à plat — logo, pill lime « Actions » (actions
+ *    rapides du rôle), copropriété, navigation en lignes simples ; en-tête avec recherche.
+ *  - Mobile/tablette : barre de titre compacte, barre d'onglets fixe (3 destinations, bouton
+ *    d'action lime au centre, « Plus »), menu complet en feuille qui monte du bas.
  */
 export function AppFrame({
   locale,
@@ -105,6 +110,7 @@ export function AppFrame({
   unreadCount,
   labels,
   tour,
+  quick = [],
   children,
 }: {
   locale: "fr" | "ar";
@@ -123,30 +129,50 @@ export function AppFrame({
   unreadCount: number;
   labels: FrameLabels;
   tour: TourLabels;
+  quick?: QuickAction[];
   children: React.ReactNode;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const pathname = usePathname();
   const unread = useLive(unreadCount, locale);
   const logoSrc = coproId && coproLogo ? `/api/copro-logo?id=${coproId}&v=${encodeURIComponent(coproLogo)}` : null;
 
   // Fermer le menu mobile à chaque navigation.
-  useEffect(() => setSheetOpen(false), [pathname]);
+  useEffect(() => {
+    setSheetOpen(false);
+    setQuickOpen(false);
+  }, [pathname]);
 
   const isActive = (item: NavItem) =>
     item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
   const sidebar = (
     <div className="flex h-full flex-col">
-      <div className="flex h-[76px] shrink-0 items-center justify-between px-6">
-        <Link href={`/${locale}/tableau-de-bord`}>
-          <Brand size={32} />
+      <div className="flex h-[84px] shrink-0 items-center px-7">
+        <Link href={`/${locale}/tableau-de-bord`} aria-label="SyndicUp">
+          <Brand size={36} />
         </Link>
       </div>
 
+      {/* Action principale (Wise « Send money ») : actions rapides du rôle. */}
+      {quick.length > 0 ? (
+        <div className="px-5 pb-4">
+          <button
+            type="button"
+            onClick={() => setQuickOpen(true)}
+            aria-haspopup="dialog"
+            className="su-btn inline-flex h-11 w-full items-center justify-center gap-2 rounded-btn bg-cta text-[15px] font-semibold text-ink hover:bg-lime-hover"
+          >
+            <IconPlus />
+            {labels.actions}
+          </button>
+        </div>
+      ) : null}
+
       {/* M25 — Cabinet (portefeuille) au-dessus de la copropriété active */}
       {cabinetNom ? (
-        <Link href={`/${locale}/cabinet`} className="mx-4 mb-2 flex items-center gap-2 rounded-2xl border border-hairline px-3 py-2 text-[12.5px] font-medium text-ink-strong transition-colors hover:bg-hover">
+        <Link href={`/${locale}/cabinet`} className="mx-4 mb-2 flex items-center gap-2 rounded-full bg-wash px-3.5 py-2 text-[12.5px] font-semibold text-ink-strong transition-colors hover:bg-wash-strong">
           <IconSuitcase width={16} height={16} className="shrink-0 text-faint" />
           <span className="truncate">{cabinetNom}</span>
           <IconChevronDown width={14} height={14} className="ms-auto shrink-0 -rotate-90 rtl:rotate-90 text-faint" />
@@ -158,13 +184,13 @@ export function AppFrame({
           <Link
             href={`/${locale}/choisir-copropriete`}
             title={labels.switchCopro}
-            className="mx-4 mb-3 flex items-center gap-3 rounded-2xl bg-action-wash px-3 py-2.5 ring-1 ring-inset ring-action/10 transition-colors hover:bg-action-tint"
+            className="mx-4 mb-3 flex items-center gap-3 rounded-[20px] bg-tile px-3 py-2.5 transition-colors hover:bg-[#e3e2da]"
           >
             <CoproChip nom={coproNom} ville={coproVille} logo={logoSrc} />
             <IconChevronDown width={16} height={16} className="ms-auto shrink-0 text-faint" />
           </Link>
         ) : (
-          <div className="mx-4 mb-3 flex items-center gap-3 rounded-2xl bg-action-wash px-3 py-2.5 ring-1 ring-inset ring-action/10">
+          <div className="mx-4 mb-3 flex items-center gap-3 rounded-[20px] bg-tile px-3 py-2.5">
             <CoproChip nom={coproNom} ville={coproVille} logo={logoSrc} />
           </div>
         )
@@ -174,11 +200,11 @@ export function AppFrame({
         {nav.map((section, i) => (
           <div key={i} className="mt-5 first:mt-1">
             {section.label ? (
-              <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-faint">
+              <p className="px-4 pb-1.5 text-[12px] font-semibold text-faint">
                 {section.label}
               </p>
             ) : null}
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {section.items.map((item) => {
                 const active = isActive(item);
                 const Icon = ICONS[item.icon];
@@ -188,8 +214,8 @@ export function AppFrame({
                       href={item.href}
                       data-tour={`nav-${item.icon}`}
                       aria-current={active ? "page" : undefined}
-                      className={`group/nav relative flex items-center gap-3 rounded-2xl px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-                        active ? "text-white" : "text-body hover:bg-ground hover:text-ink"
+                      className={`group/nav relative flex items-center gap-3.5 rounded-full px-4 py-2.5 text-[14.5px] transition-colors duration-200 ${
+                        active ? "font-bold text-ink" : "font-medium text-ink-strong hover:bg-wash"
                       }`}
                     >
                       {/* Pastille active partagée : elle glisse d'une entrée à l'autre à chaque navigation. */}
@@ -197,7 +223,7 @@ export function AppFrame({
                         <m.span
                           layoutId="nav-pill"
                           transition={SPRING_LAYOUT}
-                          className="absolute inset-0 rounded-2xl bg-ink shadow-[0_10px_20px_-10px_rgb(18_18_18/0.5)]"
+                          className="absolute inset-0 rounded-full bg-tile"
                           aria-hidden
                         />
                       ) : null}
@@ -205,7 +231,7 @@ export function AppFrame({
                         width={18}
                         height={18}
                         className={`relative shrink-0 transition-[color,scale] duration-300 ${
-                          active ? "text-sage" : "text-soft group-hover/nav:scale-110"
+                          active ? "text-link" : "text-ink-strong group-hover/nav:scale-110"
                         }`}
                       />
                       <span className="relative truncate">{item.label}</span>
@@ -219,8 +245,8 @@ export function AppFrame({
       </nav>
 
       {/* Utilisateur */}
-      <div className="border-t border-hairline p-3">
-        <div className="flex items-center gap-3 rounded-2xl px-2 py-2">
+      <div className="p-3">
+        <div className="flex items-center gap-3 rounded-[20px] bg-tile px-3 py-2.5">
           <Avatar nom={userNom} size={38} solid />
           <div className="min-w-0 flex-1">
             <p className="truncate text-[13px] font-semibold text-ink">{userNom}</p>
@@ -230,7 +256,7 @@ export function AppFrame({
         <div className="mt-1 space-y-0.5">
           <Link
             href={`/${locale}/profil`}
-            className="flex h-9 items-center gap-2.5 rounded-2xl px-3 text-[13px] font-medium text-body transition-colors hover:bg-ground hover:text-ink"
+            className="flex h-9 items-center gap-2.5 rounded-full px-3 text-[13px] font-medium text-ink-strong transition-colors hover:bg-wash"
           >
             <IconSettings width={16} height={16} className="text-soft" />
             {labels.profil}
@@ -239,7 +265,7 @@ export function AppFrame({
             <input type="hidden" name="locale" value={locale} />
             <button
               type="submit"
-              className="flex h-9 w-full items-center gap-2.5 rounded-2xl px-3 text-[13px] font-medium text-body transition-colors hover:bg-danger-tint hover:text-danger"
+              className="flex h-9 w-full items-center gap-2.5 rounded-full px-3 text-[13px] font-medium text-ink-strong transition-colors hover:bg-danger-tint hover:text-danger"
             >
               <IconLogout width={16} height={16} />
               {labels.logout}
@@ -253,11 +279,16 @@ export function AppFrame({
   return (
     <LazyMotion features={loadMotionFeatures} strict>
     <MotionConfig reducedMotion="user">
-    <div className="min-h-screen bg-ground">
-      {/* Barre latérale desktop — panneau flottant arrondi */}
-      <aside className="fixed inset-y-3 start-3 z-30 hidden w-[268px] overflow-hidden rounded-[26px] bg-surface shadow-float lg:block">
+    <div className="min-h-screen bg-surface">
+      {/* Barre latérale desktop — blanche, à plat (Wise) */}
+      <aside className="fixed inset-y-0 start-0 z-30 hidden w-[272px] overflow-hidden bg-surface lg:block">
         {sidebar}
       </aside>
+
+      {/* Actions rapides — feuille (mobile) / fenêtre (desktop) */}
+      <AnimatePresence>
+        {quickOpen ? <QuickSheet key="quick" title={labels.quickTitle} close={labels.closeMenu} actions={quick} onClose={() => setQuickOpen(false)} /> : null}
+      </AnimatePresence>
 
       {/* Menu complet mobile — feuille qui monte du bas */}
       <AnimatePresence>
@@ -280,10 +311,10 @@ export function AppFrame({
       </AnimatePresence>
 
       {/* Zone contenu */}
-      <div className="lg:ps-[288px]">
+      <div className="lg:ps-[272px]">
         {/* En-tête desktop / tablette large */}
-        <header className="sticky top-0 z-20 hidden bg-ground/85 backdrop-blur-md lg:block">
-          <div className="mx-auto flex h-[68px] w-full max-w-[1240px] items-center gap-3 px-8">
+        <header className="sticky top-0 z-20 hidden bg-surface/90 backdrop-blur-md lg:block">
+          <div className="mx-auto flex h-[84px] w-full max-w-[1180px] items-center gap-3 px-10">
             <QuickSearch nav={nav} placeholder={labels.search} />
             <div className="ms-auto flex shrink-0 items-center gap-2">
               <LocaleSwitch locale={locale} subtle />
@@ -299,7 +330,7 @@ export function AppFrame({
               {logoSrc ? (
                 <img src={logoSrc} alt="" width={36} height={36} className="size-9 rounded-xl object-cover ring-1 ring-black/5" />
               ) : (
-                <BrandMark size={30} />
+                <BrandTile size={34} />
               )}
             </Link>
             <div className="min-w-0 flex-1">
@@ -314,7 +345,7 @@ export function AppFrame({
           </div>
         </header>
 
-        <main className="app-main mx-auto w-full max-w-[1240px] px-4 pt-3 sm:px-6 lg:px-8 lg:pb-12 lg:pt-4">
+        <main className="app-main mx-auto w-full max-w-[1180px] px-4 pt-3 sm:px-6 lg:px-10 lg:pb-16 lg:pt-2">
           {children}
         </main>
       </div>
@@ -322,10 +353,10 @@ export function AppFrame({
       {/* Barre d'onglets mobile */}
       <nav className="app-tabbar fixed inset-x-0 bottom-0 z-30 lg:hidden" aria-label={labels.menu}>
         <ul className="flex items-stretch justify-around px-1">
-          {tabs.map((item) => {
+          {(quick.length > 0 ? tabs.slice(0, 3) : tabs).map((item, i, shown) => {
             const active = isActive(item) && !sheetOpen;
             const Icon = ICONS[item.icon];
-            return (
+            const tab = (
               <li key={item.href} className="min-w-0 flex-1">
                 <Link
                   href={item.href}
@@ -340,6 +371,23 @@ export function AppFrame({
                 </Link>
               </li>
             );
+            // Bouton d'action lime au centre (Wise), entre la 2e et la 3e destination.
+            return quick.length > 0 && i === Math.min(1, shown.length - 1) ? [
+              tab,
+              <li key="__actions" className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setQuickOpen(true)}
+                  aria-haspopup="dialog"
+                  className="tab flex w-full flex-col items-center gap-1 pb-1 pt-1.5 text-[10.5px] font-semibold text-ink"
+                >
+                  <span className="flex size-[42px] items-center justify-center rounded-full bg-cta text-ink shadow-[0_6px_16px_-6px_rgb(18_18_18/0.35)] transition-transform active:scale-90">
+                    <IconPlus size={24} />
+                  </span>
+                  <span className="max-w-full truncate px-1">{labels.actions}</span>
+                </button>
+              </li>,
+            ] : tab;
           })}
           <li className="min-w-0 flex-1">
             <button
@@ -363,6 +411,7 @@ export function AppFrame({
           « menu » ouvrent la feuille de navigation à la place de l'ancien tiroir. */}
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
       <Toaster />
+      <SuccessOverlay doneLabel={labels.done} />
     </div>
     </MotionConfig>
     </LazyMotion>
@@ -435,13 +484,13 @@ function MobileSheet({
         >
         <div className="sheet-handle" aria-hidden />
         <div className="flex items-center justify-between gap-3 px-5 pb-2 pt-1">
-          <p className="text-[17px] font-semibold text-ink">{labels.menu}</p>
+          <p className="text-[22px] font-bold tracking-tight text-ink">{labels.menu}</p>
           <button
             type="button"
             onClick={onClose}
             aria-label={labels.closeMenu}
             onPointerDown={(e) => e.stopPropagation()}
-            className="su-btn flex size-9 items-center justify-center rounded-full bg-ground text-body"
+            className="su-btn flex size-9 items-center justify-center rounded-full bg-tile text-ink"
           >
             <IconX width={18} height={18} />
           </button>
@@ -453,13 +502,13 @@ function MobileSheet({
             multiCopro ? (
               <Link
                 href={`/${locale}/choisir-copropriete`}
-                className="mb-3 flex items-center gap-3 rounded-2xl bg-action-wash px-3 py-2.5 ring-1 ring-inset ring-action/10"
+                className="mb-3 flex items-center gap-3 rounded-[20px] bg-tile px-3 py-2.5"
               >
                 <CoproChip nom={coproNom} ville={coproVille} logo={logo} />
-                <span className="ms-auto shrink-0 text-[12px] font-medium text-action">{labels.switchCopro}</span>
+                <span className="link ms-auto shrink-0 text-[12px]">{labels.switchCopro}</span>
               </Link>
             ) : (
-              <div className="mb-3 flex items-center gap-3 rounded-2xl bg-action-wash px-3 py-2.5 ring-1 ring-inset ring-action/10">
+              <div className="mb-3 flex items-center gap-3 rounded-[20px] bg-tile px-3 py-2.5">
                 <CoproChip nom={coproNom} ville={coproVille} logo={logo} />
               </div>
             )
@@ -468,7 +517,7 @@ function MobileSheet({
           {nav.map((section, i) => (
             <div key={i} className="mt-4 first:mt-0">
               {section.label ? (
-                <p className="px-1 pb-2 text-[11px] font-semibold uppercase tracking-[0.1em] text-faint">
+                <p className="px-1 pb-2 text-[12px] font-semibold text-faint">
                   {section.label}
                 </p>
               ) : null}
@@ -483,10 +532,10 @@ function MobileSheet({
                         data-tour={`nav-${item.icon}`}
                         aria-current={active ? "page" : undefined}
                         className={`tile flex min-h-[84px] flex-col items-center justify-center gap-2 rounded-[18px] px-2 py-3 text-center text-[12px] font-medium leading-tight ${
-                          active ? "bg-ink text-white" : "bg-ground text-ink-strong"
+                          active ? "bg-brand text-white" : "bg-tile text-ink-strong"
                         }`}
                       >
-                        <Icon width={22} height={22} className={active ? "text-sage" : "text-action"} />
+                        <Icon width={22} height={22} className={active ? "text-lime" : "text-link"} />
                         <span className="line-clamp-2">{item.label}</span>
                       </Link>
                     </li>
@@ -496,7 +545,7 @@ function MobileSheet({
             </div>
           ))}
 
-          <div className="mt-5 rounded-[20px] bg-ground p-3">
+          <div className="mt-5 rounded-[20px] bg-tile p-3">
             <div className="flex items-center gap-3 px-1 py-1">
               <Avatar nom={userNom} size={40} solid />
               <div className="min-w-0 flex-1">
@@ -544,13 +593,13 @@ function BellLink({ href, label, count }: { href: string; label: string; count: 
       href={href}
       data-tour="bell"
       aria-label={label}
-      className="su-btn relative flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-body shadow-[0_1px_3px_rgb(32_31_35/0.08)] hover:text-ink hover:shadow-[0_4px_12px_-4px_rgb(32_31_35/0.18)]"
+      className="su-btn relative flex size-11 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:bg-[#e3e2da]"
     >
       <IconBell key={ring} width={18} height={18} className={ring > 0 ? "animate-ring" : undefined} />
       {count > 0 ? (
         <span
           key={count}
-          className="animate-pop absolute -top-0.5 -end-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white ring-2 ring-ground"
+          className="animate-pop absolute -top-0.5 -end-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-white ring-2 ring-surface"
         >
           {count > 9 ? "9+" : count}
         </span>
@@ -592,7 +641,7 @@ function QuickSearch({ nav, placeholder }: { nav: NavSection[]; placeholder: str
 
   return (
     <div ref={rootRef} data-tour="search" className="relative ms-1 w-full max-w-[400px]">
-      <div className="flex h-11 items-center rounded-full bg-surface pe-1.5 ps-4 shadow-[0_1px_3px_rgb(32_31_35/0.08)] focus-within:ring-2 focus-within:ring-action/25">
+      <div className="flex h-12 items-center rounded-full bg-tile pe-1.5 ps-5 focus-within:shadow-[inset_0_0_0_2px_var(--color-ink)]">
         <input
           value={q}
           onChange={(e) => {
@@ -610,7 +659,7 @@ function QuickSearch({ nav, placeholder }: { nav: NavSection[]; placeholder: str
           aria-expanded={open && matches.length > 0}
           aria-label={placeholder}
         />
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-ink text-white" aria-hidden>
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-full text-ink" aria-hidden>
           <IconSearch width={15} height={15} />
         </span>
       </div>
@@ -636,7 +685,7 @@ function QuickSearch({ nav, placeholder }: { nav: NavSection[]; placeholder: str
                   <button
                     type="button"
                     onClick={() => go(it.href)}
-                    className="group/qs flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm font-medium text-body transition-colors hover:bg-ground hover:text-ink"
+                    className="group/qs flex w-full items-center gap-3 px-4 py-2.5 text-start text-sm font-medium text-ink-strong transition-colors hover:bg-wash"
                   >
                     <Icon width={16} height={16} className="text-soft transition-[color,scale] duration-200 group-hover/qs:scale-110 group-hover/qs:text-action" />
                     {it.label}
@@ -654,7 +703,7 @@ function QuickSearch({ nav, placeholder }: { nav: NavSection[]; placeholder: str
 function CoproChip({ nom, ville, logo }: { nom: string; ville: string | null; logo: string | null }) {
   return (
     <>
-      <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface shadow-[0_1px_3px_rgb(32_31_35/0.08)]">
+      <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-surface">
         {logo ? (
           <img src={logo} alt="" width={40} height={40} className="size-10 object-cover" />
         ) : (
@@ -669,13 +718,13 @@ function CoproChip({ nom, ville, logo }: { nom: string; ville: string | null; lo
   );
 }
 
-/** Fond encre de l'onglet actif — partagé (layoutId) : il glisse vers l'onglet touché. */
+/** Pastille greige de l'onglet actif — partagée (layoutId) : elle glisse vers l'onglet touché. */
 function TabPill() {
   return (
     <m.span
       layoutId="tab-pill"
       transition={SPRING_LAYOUT}
-      className="absolute inset-0 rounded-full bg-ink"
+      className="absolute inset-0 rounded-full bg-tile"
       aria-hidden
     />
   );
@@ -687,6 +736,70 @@ function IconDots({ className }: { className?: string }) {
       <circle cx="5" cy="12" r="2" />
       <circle cx="12" cy="12" r="2" />
       <circle cx="19" cy="12" r="2" />
+    </svg>
+  );
+}
+
+/** Actions rapides (Wise) : feuille du bas sur mobile, fenêtre centrée sur desktop ; lignes à
+ *  pastille teintée + chevron, comme `_QuickSheet` côté mobile. */
+function QuickSheet({ title, close, actions, onClose }: { title: string; close: string; actions: QuickAction[]; onClose: () => void }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center lg:items-center" role="dialog" aria-modal="true" aria-label={title}>
+      <m.div
+        className="absolute inset-0 bg-ink/45 backdrop-blur-[3px]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1, transition: { duration: DUR.slow, ease: EASE_OUT } }}
+        exit={{ opacity: 0, transition: { duration: DUR.base, ease: EASE_IN } }}
+        onClick={onClose}
+      />
+      <m.div
+        className="app-sheet relative w-full rounded-t-[32px] bg-surface px-5 pb-6 pt-2 shadow-pop lg:max-w-[460px] lg:rounded-[32px] lg:px-7 lg:pb-7 lg:pt-6"
+        initial={{ y: 40, opacity: 0 }}
+        animate={{ y: 0, opacity: 1, transition: { type: "spring", stiffness: 420, damping: 38 } }}
+        exit={{ y: 30, opacity: 0, transition: { duration: 0.2, ease: EASE_IN } }}
+      >
+        <div className="sheet-handle lg:hidden" aria-hidden />
+        <div className="flex items-start justify-between gap-4 pb-3 pt-2 lg:pt-0">
+          <p className="text-[24px] font-bold leading-tight tracking-tight text-ink">{title}</p>
+          <button type="button" onClick={onClose} aria-label={close} className="su-btn flex size-10 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:rotate-90">
+            <IconX width={18} height={18} />
+          </button>
+        </div>
+        <ul className="stagger-grid -mx-2">
+          {actions.map((a) => {
+            const Icon = ICONS[a.icon];
+            return (
+              <li key={a.href}>
+                <Link href={a.href} onClick={onClose} className="group/qa flex items-center gap-4 rounded-[20px] px-2 py-2.5 transition-colors hover:bg-wash">
+                  <IconCircle tone={a.tone} size={48}>
+                    <Icon width={22} height={22} className="text-ink" />
+                  </IconCircle>
+                  <span className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{a.label}</span>
+                  <IconChevronEnd width={20} height={20} className="shrink-0 text-link transition-transform group-hover/qa:translate-x-0.5 rtl:group-hover/qa:-translate-x-0.5" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </m.div>
+    </div>
+  );
+}
+
+function IconPlus({ size = 20 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" aria-hidden>
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }

@@ -246,3 +246,40 @@ export function buildMobileTabs(nav: NavSection[], role: RoleApp, dict: Dict): N
   }
   return tabs.slice(0, 4);
 }
+
+/** Action rapide (bouton lime de la barre latérale / bouton central des onglets mobiles) —
+ *  mêmes entrées que l'app mobile (apps/mobile/lib/features/shell/app_shell.dart). */
+export interface QuickAction {
+  href: string;
+  label: string;
+  icon: IconKey;
+  tone: "sage" | "sand" | "lilac" | "tosca";
+}
+
+export function buildQuickActions(nav: NavSection[], role: RoleApp, roles: string[], dict: Dict, locale: Locale): QuickAction[] {
+  const p = (path: string) => `/${locale}${path}`;
+  const paths = new Set(nav.flatMap((s) => s.items).map((i) => i.href));
+  const has = (href: string) => {
+    const path = href.split("?")[0] ?? href;
+    return [...paths].some((x) => x === path || path.startsWith(`${x}/`));
+  };
+  const a = (r: string) => roles.includes(r);
+  const gestion = role === "SYNDIC" || role === "SYNDIC_COMPTABLE";
+  const isGestion = a("SYNDIC") || a("SUPER_ADMIN");
+  const proprietaire = a("PROPRIETAIRE") || a("INDIVISAIRE") || a("PERSONNE_MORALE_REPRESENTANT");
+  const resident = !isGestion && !a("CONSEIL_SYNDICAL") && !a("GARDIEN") && role !== "PRESTATAIRE";
+  const d = dict;
+  const all: Array<QuickAction | false> = [
+    role === "SUPER_ADMIN" && { href: p("/admin/coproprietes/nouvelle"), label: d.admin.creer, icon: "building", tone: "sage" },
+    role === "GARDIEN" && { href: p("/visites?enregistrer=1"), label: d.dash.enregistrerVisiteur, icon: "door", tone: "sage" },
+    gestion && { href: p("/finances/appels-de-fonds"), label: d.finances.enregistrerPaiement, icon: "wallet", tone: "sage" },
+    gestion && { href: p("/finances/appels-de-fonds?generer=1"), label: d.dash.genererAppel, icon: "coins", tone: "sand" },
+    role === "SYNDIC" && { href: p("/invitations?nouvelle=1"), label: d.dash.inviterResident, icon: "key", tone: "lilac" },
+    resident && role !== "LOCATAIRE" && role !== "GESTIONNAIRE_LCD" && { href: p("/finances/payer"), label: d.justificatifs.payerTitre, icon: "coins", tone: "sage" },
+    role !== "SUPER_ADMIN" && role !== "PRESTATAIRE" && role !== "MEMBRE_CABINET" && { href: p("/incidents/nouveau"), label: d.dash.signalerIncident, icon: "wrench", tone: "sand" },
+    (isGestion || proprietaire || a("GESTIONNAIRE_LCD")) && { href: p("/location-courte-duree/sejours/nouveau"), label: d.lcd.declarerSejour, icon: "suitcase", tone: "tosca" },
+    (resident || role === "CONSEIL_SYNDICAL") && { href: p("/espaces-communs"), label: d.espaces.reserver, icon: "calendar", tone: "lilac" },
+    role === "SYNDIC" && { href: p("/ag/nouvelle"), label: d.dash.creerAg, icon: "vote", tone: "tosca" },
+  ];
+  return all.filter((x): x is QuickAction => Boolean(x) && has((x as QuickAction).href));
+}

@@ -2,10 +2,12 @@
 
 import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 
-/** Conteneur DataTable : carte blanche, défilement horizontal interne (jamais la page). */
+/** Conteneur DataTable (Wise : la liste repose à plat sur la toile, en-tête en bandeau greige) ;
+ *  défilement horizontal interne (jamais la page). Dans une tuile greige, les lignes restent
+ *  lisibles : séparateurs et survol sont des voiles d'encre. */
 export function TableCard({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`card overflow-hidden ${className}`}>
+    <div className={`su-table-wrap min-w-0 overflow-hidden ${className}`}>
       <div className="overflow-x-auto scroll-thin">{children}</div>
     </div>
   );
@@ -51,7 +53,7 @@ export function Table({ children, className = "" }: { children: ReactNode; class
 export function THead({ children }: { children: ReactNode }) {
   return (
     <thead>
-      <tr className="border-b border-hairline text-[11px] uppercase tracking-[0.08em] text-soft">
+      <tr className="text-[12px] font-semibold text-soft">
         {children}
       </tr>
     </thead>
@@ -68,7 +70,7 @@ export function TH({
   className?: string;
 }) {
   const alignCls = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
-  return <th className={`px-4 py-3 font-medium ${alignCls} ${className}`}>{children}</th>;
+  return <th className={`bg-tile px-4 py-3 font-semibold ${alignCls} ${className}`}>{children}</th>;
 }
 
 export function TR({
@@ -78,7 +80,7 @@ export function TR({
 }: ComponentProps<"tr"> & { children: ReactNode }) {
   return (
     <tr
-      className={`border-b border-hairline last:border-b-0 transition-colors hover:bg-hover ${className}`}
+      className={`border-b border-wash-strong last:border-b-0 transition-colors hover:bg-wash ${className}`}
       {...props}
     >
       {children}
@@ -99,7 +101,7 @@ export function TD({
 }) {
   const alignCls = align === "end" ? "text-end" : align === "center" ? "text-center" : "text-start";
   return (
-    <td colSpan={colSpan} className={`px-4 py-3 align-middle ${alignCls} ${className}`}>
+    <td colSpan={colSpan} className={`px-4 py-3.5 align-middle ${alignCls} ${className}`}>
       {children}
     </td>
   );

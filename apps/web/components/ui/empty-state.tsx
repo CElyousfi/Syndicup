@@ -1,76 +1,66 @@
 import type { ReactNode } from "react";
+import { Illustration } from "./illustration";
 
 /**
- * État vide — toujours avec une explication ET, si le rôle le permet, l'action qui débloque.
- * L'illustration est un motif maison en couleurs de la palette (résidence sous le soleil),
- * jamais une image générique.
+ * État vide (Wise) — à plat sur la toile, illustration 2D au-dessus d'un titre gras et d'une
+ * explication, puis, si le rôle le permet, l'action qui débloque. `illustration` : nom d'un
+ * fichier public/illustrations (empty-incidents, empty-appels… — mêmes noms que le mobile) ;
+ * tant qu'il manque, le motif maison s'affiche.
  */
 export function EmptyState({
   title,
   hint,
   action,
   icon,
+  illustration,
   className = "",
 }: {
   title: ReactNode;
   hint?: ReactNode;
   action?: ReactNode;
   icon?: ReactNode;
+  illustration?: string;
   className?: string;
 }) {
+  const motif = icon ?? <MotifResidence />;
   return (
-    <div className={`card flex flex-col items-center px-8 py-14 text-center ${className}`}>
-      <div className="mb-6 animate-zoom-in">{icon ?? <MotifResidence />}</div>
-      <h3 className="text-[15px] font-semibold text-ink">{title}</h3>
-      {hint ? <p className="mt-1.5 max-w-sm text-[13px] leading-relaxed text-soft">{hint}</p> : null}
+    <div className={`flex flex-col items-center px-6 py-12 text-center ${className}`}>
+      <div className="mb-5 animate-zoom-in">
+        {illustration ? <Illustration name={illustration} size={150} fallback={motif} /> : motif}
+      </div>
+      <h3 className="text-[19px] font-bold tracking-tight text-ink">{title}</h3>
+      {hint ? <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-soft">{hint}</p> : null}
       {action ? <div className="mt-6">{action}</div> : null}
     </div>
   );
 }
 
-/** Motif « résidence sous le soleil » — vivant au repos : le soleil flotte, une fenêtre
+/** Motif « résidence » en aplats 2D aux couleurs du logo — vivant au repos : une fenêtre
  *  s'allume de temps en temps, les arbres se balancent (motion.css, coupé en mouvement réduit). */
 function MotifResidence() {
   return (
-    <svg width="132" height="88" viewBox="0 0 132 88" fill="none" aria-hidden className="motif overflow-visible">
-      {/* sol */}
-      <ellipse cx="66" cy="80" rx="58" ry="7" fill="#ECEBE4" />
-      {/* soleil */}
+    <svg width="132" height="96" viewBox="0 0 132 96" fill="none" aria-hidden className="motif overflow-visible">
+      <rect x="8" y="84" width="116" height="6" rx="3" fill="#ECEBE4" />
       <g className="motif-sun">
-        <circle cx="106" cy="18" r="10" fill="#E5D6B8" />
-        <circle cx="106" cy="18" r="6" fill="#F1EAD9" />
+        <circle cx="108" cy="18" r="9" fill="#E3EF8D" />
       </g>
-      {/* immeuble arrière */}
-      <rect x="24" y="26" width="30" height="54" rx="5" fill="#A4C8AE" opacity="0.55" />
-      <g>
-        <rect className="motif-win" x="30" y="34" width="6" height="6" rx="1.8" fill="#FFFFFF" opacity="0.8" />
-        <rect x="41" y="34" width="6" height="6" rx="1.8" fill="#FFFFFF" opacity="0.8" />
-        <rect x="30" y="46" width="6" height="6" rx="1.8" fill="#FFFFFF" opacity="0.6" />
-        <rect className="motif-win" x="41" y="46" width="6" height="6" rx="1.8" fill="#FFFFFF" opacity="0.6" />
-      </g>
-      {/* immeuble principal */}
-      <rect x="50" y="12" width="38" height="68" rx="5" fill="#4C6C5A" />
-      <g>
-        <rect x="57" y="22" width="7" height="7" rx="2" fill="#E6EFEA" />
-        <rect className="motif-win" x="74" y="22" width="7" height="7" rx="2" fill="#E6EFEA" />
-        <rect className="motif-win" x="57" y="36" width="7" height="7" rx="2" fill="#E6EFEA" opacity="0.85" />
-        <rect x="74" y="36" width="7" height="7" rx="2" fill="#E6EFEA" opacity="0.85" />
-        <rect className="motif-win" x="57" y="50" width="7" height="7" rx="2" fill="#E6EFEA" opacity="0.6" />
-        <rect x="74" y="50" width="7" height="7" rx="2" fill="#A4C8AE" opacity="0.9" />
-      </g>
-      <rect x="63" y="64" width="12" height="16" rx="2.5" fill="#E5D6B8" />
-      {/* petite maison */}
-      <rect x="92" y="52" width="22" height="28" rx="4" fill="#C1D8DA" />
-      <path d="m103 40 14 12H89z" fill="#48707A" />
-      <rect x="99.5" y="62" width="7" height="18" rx="2" fill="#48707A" opacity="0.7" />
-      {/* verdure */}
+      <rect x="22" y="34" width="30" height="50" rx="4" fill="#A4C8AE" />
+      <rect className="motif-win" x="28" y="42" width="7" height="7" rx="2" fill="#FFFFFF" />
+      <rect x="39" y="42" width="7" height="7" rx="2" fill="#FFFFFF" />
+      <rect x="28" y="55" width="7" height="7" rx="2" fill="#FFFFFF" />
+      <rect className="motif-win" x="39" y="55" width="7" height="7" rx="2" fill="#FFFFFF" />
+      {/* immeuble principal, coiffé du double chevron du logo */}
+      <path d="M48 30 69 16l21 14v54H48z" fill="#1E7552" />
+      <path d="M52 22 69 10l17 12v-6L69 4 52 16z" fill="#E3EF8D" />
+      <path d="M56 38a4 4 0 0 1 8 0v6h-8zM74 38a4 4 0 0 1 8 0v6h-8zM56 54a4 4 0 0 1 8 0v6h-8zM74 54a4 4 0 0 1 8 0v6h-8z" fill="#E3EF8D" />
+      <path d="M63 84V72a6 6 0 0 1 12 0v12z" fill="#121212" />
       <g className="motif-tree">
-        <circle cx="16" cy="72" r="8" fill="#A4C8AE" />
-        <rect x="14.8" y="72" width="2.4" height="9" rx="1.2" fill="#617C6C" />
+        <circle cx="104" cy="70" r="9" fill="#A4C8AE" />
+        <rect x="102.6" y="70" width="2.8" height="14" rx="1.4" fill="#1E7552" />
       </g>
       <g className="motif-tree motif-tree-2">
-        <circle cx="122" cy="74" r="6" fill="#A4C8AE" opacity="0.8" />
-        <rect x="121" y="74" width="2" height="7" rx="1" fill="#617C6C" />
+        <circle cx="13" cy="74" r="6" fill="#1E7552" />
+        <rect x="12" y="74" width="2" height="10" rx="1" fill="#121212" />
       </g>
     </svg>
   );

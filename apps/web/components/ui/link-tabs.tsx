@@ -18,18 +18,18 @@ export function LinkTabs({
           key={i}
           href={tab.href}
           aria-current={tab.active ? "page" : undefined}
-          className={`relative whitespace-nowrap px-3.5 pb-3 pt-1 text-sm font-medium transition-colors ${
+          className={`relative whitespace-nowrap px-3.5 pb-3 pt-1 text-[15px] font-semibold transition-colors ${
             tab.active ? "text-ink" : "text-soft hover:text-ink-strong"
           }`}
         >
           {tab.label}
           {typeof tab.count === "number" ? (
-            <span className="ms-1.5 rounded-full bg-ground px-1.5 py-0.5 text-[11px] text-soft">
+            <span className="ms-1.5 rounded-full bg-wash px-1.5 py-0.5 text-[11px] text-soft">
               {tab.count}
             </span>
           ) : null}
           {tab.active ? (
-            <span className="tab-static absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-action" />
+            <span className="tab-static absolute inset-x-2 bottom-0 h-[3px] rounded-full bg-link" />
           ) : null}
         </Link>
       ))}

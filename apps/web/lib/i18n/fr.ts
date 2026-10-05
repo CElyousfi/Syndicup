@@ -15,6 +15,7 @@ export const fr = {
     cancel: "Annuler",
     back: "Retour",
     close: "Fermer",
+    done: "Terminé",
     confirm: "Confirmer",
     retry: "Réessayer",
     search: "Rechercher",
@@ -69,6 +70,8 @@ export const fr = {
   },
 
   nav: {
+    actions: "Actions",
+    quickTitle: "Que souhaitez-vous faire ?",
     dashboard: "Tableau de bord",
     lots: "Lots",
     finances: "Finances",

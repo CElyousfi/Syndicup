@@ -1,6 +1,6 @@
 /**
  * Icônes couleur — glyphes multi-teintes (style « skeuomorphe doux », cf. référence design)
- * dans la palette du produit : sauge, mousse, armée, lilas, sable, tosca, rouge profond.
+ * dans la palette du produit : vert marque, sauge, armée, lilas, sable, tosca, rouge profond.
  * Elles se mélangent volontairement aux icônes filaires (`ui/icons.tsx`) : la couleur pour
  * les points d'entrée et les indicateurs, le trait pour la navigation et les actions.
  *
@@ -10,10 +10,10 @@ import type { ReactNode, SVGProps } from "react";
 
 /* ── Palette locale (tokens globals.css) ─────────────────────────────────── */
 const INK = "#201F23";
-const MOSS = "#4C6C5A";
-const MOSS_DEEP = "#3D5A4A";
+const MOSS = "#1E7552"; // vert marque (logo)
+const MOSS_DEEP = "#17603F";
 const SAGE = "#A4C8AE";
-const SAGE_00 = "#E6EFEA";
+const SAGE_00 = "#E2EEE7";
 const LILAC = "#595D75";
 const LILAC_MID = "#B8BED5";
 const LILAC_00 = "#E3E4EA";

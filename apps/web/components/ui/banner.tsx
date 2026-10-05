@@ -5,24 +5,24 @@ type Variant = "info" | "warn" | "danger" | "ok" | "legal";
 
 const STYLES: Record<Variant, { box: string; icon: ReactNode }> = {
   info: {
-    box: "border-action/25 bg-action-wash text-ink-strong",
+    box: "bg-action-tint text-ink-strong",
     icon: <IconInfo className="text-action" />,
   },
   warn: {
-    box: "border-warn/30 bg-warn-tint text-ink-strong",
+    box: "bg-warn-tint text-ink-strong",
     icon: <IconAlert className="text-warn" />,
   },
   danger: {
-    box: "border-danger/30 bg-danger-tint text-ink-strong",
+    box: "bg-danger-tint text-ink-strong",
     icon: <IconAlert className="text-danger" />,
   },
   ok: {
-    box: "border-ok/30 bg-ok-tint text-ink-strong",
+    box: "bg-ok-tint text-ink-strong",
     icon: <IconInfo className="text-ok" />,
   },
   // État « gaté légalement » (brief §6.3) : informatif, jamais une erreur rouge.
   legal: {
-    box: "border-hairline-strong bg-ground text-ink-strong",
+    box: "bg-tile text-ink-strong",
     icon: <IconShield className="text-soft" />,
   },
 };
@@ -42,7 +42,7 @@ export function Banner({
 }) {
   const s = STYLES[variant];
   return (
-    <div className={`flex gap-3 rounded-2xl border px-4 py-3.5 ${s.box} ${className}`}>
+    <div className={`flex gap-3 rounded-[20px] px-4 py-4 ${s.box} ${className}`}>
       <span className="mt-0.5 shrink-0">{s.icon}</span>
       <div className="min-w-0 flex-1 text-sm">
         {title ? <p className="font-semibold">{title}</p> : null}

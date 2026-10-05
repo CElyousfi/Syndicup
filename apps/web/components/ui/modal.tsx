@@ -71,24 +71,24 @@ export function Modal({
         onClose();
       }}
       onMouseDown={onBackdrop}
-      className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-card bg-surface p-0 text-ink-strong shadow-pop`}
+      className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-[28px] bg-surface p-0 text-ink-strong shadow-pop`}
     >
       <div className="sheet-handle md:hidden" aria-hidden />
-      <div className="flex items-start justify-between gap-4 border-b border-hairline px-5 py-4 md:px-6">
+      <div className="flex items-start justify-between gap-4 px-5 pb-1 pt-5 md:px-7 md:pt-6">
         <div className="min-w-0">
-          <h2 className="text-[16px] font-semibold text-ink md:text-[15px]">{title}</h2>
+          <h2 className="text-[20px] font-bold tracking-tight text-ink">{title}</h2>
           {subtitle ? <p className="mt-0.5 text-[13px] text-soft">{subtitle}</p> : null}
         </div>
         <button
           type="button"
           onClick={onClose}
           aria-label={closeLabel}
-          className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-ground text-soft hover:rotate-90 hover:text-ink md:size-8 md:bg-transparent md:hover:bg-ground"
+          className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:rotate-90 hover:bg-[#e3e2da]"
         >
           <IconX width={18} height={18} />
         </button>
       </div>
-      <div className="su-modal-body px-5 py-5 md:px-6">{children}</div>
+      <div className="su-modal-body px-5 py-5 md:px-7 md:pb-7">{children}</div>
     </dialog>
   );
 }

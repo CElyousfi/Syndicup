@@ -19,6 +19,7 @@ export const ar: DeepDict<typeof fr> = {
     cancel: "إلغاء",
     back: "رجوع",
     close: "إغلاق",
+    done: "تم",
     confirm: "تأكيد",
     retry: "إعادة المحاولة",
     search: "بحث",
@@ -73,6 +74,8 @@ export const ar: DeepDict<typeof fr> = {
   },
 
   nav: {
+    actions: "إجراءات",
+    quickTitle: "ماذا تودّون أن تفعلوا؟",
     dashboard: "لوحة القيادة",
     lots: "الشقق والمحلات",
     finances: "المالية",

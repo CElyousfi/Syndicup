@@ -3,7 +3,7 @@
  * (ou encre sur fond clair) — jamais de texte coloré sur teinte. Les statuts sont
  * OMNIPRÉSENTS dans le produit et doivent se lire d'un coup d'œil. Variantes :
  *  ok/warn/danger pleins · info (tosca profond) · ink (encre, chiffres mono — escalade N1→N6) ·
- *  neutral (fond greige, texte encre) · outline (liseré discret, texte encre).
+ *  neutral (voile d'encre, lisible sur blanc et sur tuile greige, texte encre) · outline (liseré discret, texte encre).
  */
 export type BadgeVariant = "ok" | "warn" | "danger" | "info" | "ink" | "neutral" | "outline";
 
@@ -13,7 +13,7 @@ const STYLES: Record<BadgeVariant, string> = {
   danger: "bg-danger text-white",
   info: "bg-tosca-deep text-white",
   ink: "bg-ink text-white font-mono tracking-tight",
-  neutral: "bg-ground text-ink",
+  neutral: "bg-wash-strong text-ink",
   outline: "border border-hairline-strong text-ink bg-surface",
 };
 
