@@ -175,7 +175,10 @@ export type ResultatAcceptation =
  * SQL est elle-même atomique et fermée (REVOKE ALL, GRANT application_role uniquement).
  * NE PAS utiliser ce client pour autre chose.
  */
-const rpcClient = new PrismaClient();
+const globalPourRpc = globalThis as unknown as { __syndicupRpcClient?: PrismaClient };
+// Singleton sur globalThis : évite un nouveau pool à chaque rechargement à chaud (`next dev`).
+const rpcClient = globalPourRpc.__syndicupRpcClient ?? new PrismaClient();
+if (process.env.NODE_ENV !== "production") globalPourRpc.__syndicupRpcClient = rpcClient;
 
 /** Empreinte du jeton d'ouverture (jamais le jeton en clair en base). */
 export function hacherJeton(jeton: string | null | undefined): string | null {

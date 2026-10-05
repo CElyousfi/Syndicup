@@ -23,8 +23,10 @@ import { assertValidTenantContext, type TenantContext } from "./context";
 // injecter une (Prisma rejetterait l'argument inconnu).
 const MODELES_SANS_ID = new Set(["IdempotencyKey"]);
 
-// Module-privé — volontairement non exporté.
-const basePrisma = new PrismaClient().$extends({
+// Module-privé — volontairement non exporté. Mémorisé sur globalThis : en `next dev`, chaque
+// rechargement à chaud réévalue ce module et ouvrait un nouveau pool sans fermer l'ancien
+// (connexions app_local orphelines jusqu'à saturer max_connections).
+const creerBasePrisma = () => new PrismaClient().$extends({
   query: {
     $allModels: {
       async create({ model, args, query }) {
@@ -46,6 +48,10 @@ const basePrisma = new PrismaClient().$extends({
     },
   },
 });
+
+const globalPourPrisma = globalThis as unknown as { __syndicupBasePrisma?: ReturnType<typeof creerBasePrisma> };
+const basePrisma = globalPourPrisma.__syndicupBasePrisma ?? creerBasePrisma();
+if (process.env.NODE_ENV !== "production") globalPourPrisma.__syndicupBasePrisma = basePrisma;
 
 /** Client transactionnel scopé tenant — le seul type que le code métier manipule. */
 export type TenantDb = Omit<
