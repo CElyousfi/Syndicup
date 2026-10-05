@@ -23,7 +23,6 @@ export function Illustration({
     <span className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
       {state !== "ok" ? <span className="absolute inset-0 flex items-center justify-center">{fallback}</span> : null}
       {state !== "absent" ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={`/illustrations/${name}.png`}
           alt=""
