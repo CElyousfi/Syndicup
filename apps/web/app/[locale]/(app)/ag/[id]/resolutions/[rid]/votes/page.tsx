@@ -49,12 +49,12 @@ export default async function VotesNominatifsPage({
         subtitle={resolution ? `${resolution.ordre}. ${resolution.texte}` : undefined}
       />
 
-      <Banner variant="legal" className="mb-5">
+      <Banner variant="legal" className="mb-6">
         {a.detailVotesBandeau}
       </Banner>
 
       {votesRes.data.length === 0 ? (
-        <EmptyState title={dict.common.emptyDefault} />
+        <EmptyState title={dict.common.emptyDefault} illustration="empty-ag" />
       ) : (
         <TableCard>
           <Table>

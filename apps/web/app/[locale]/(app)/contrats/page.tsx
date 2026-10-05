@@ -57,9 +57,9 @@ export default async function ContratsPage({ params, searchParams }: { params: P
   return (
     <div className="page-root">
       <PageHeader title={c.titre} subtitle={c.subtitle} actions={<><ButtonLink href={p("/contrats/calendrier")} variant="secondary"><CCalendar className="h-4 w-4" />{c.calendrier}</ButtonLink>{gestion ? <ButtonLink href={p("/contrats/nouveau")}><IconPlus width={16} height={16} />{c.nouveau}</ButtonLink> : null}</>} />
-      {assurance && !assurance.immeuble_active ? <Banner variant="danger" className="mb-4" title={c.assuranceAbsente} action={gestion ? <Link href={p("/contrats/nouveau?type=ASSURANCE_IMMEUBLE")} className="font-medium underline">{c.nouveau}</Link> : undefined}>{c.assuranceAbsenteCorps}</Banner> : null}
+      {assurance && !assurance.immeuble_active ? <Banner variant="danger" className="mb-4" title={c.assuranceAbsente} action={gestion ? <Link href={p("/contrats/nouveau?type=ASSURANCE_IMMEUBLE")} className="link text-[13px]">{c.nouveau}</Link> : undefined}>{c.assuranceAbsenteCorps}</Banner> : null}
       {!listeRes.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}
-      <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<CHandshake />} tone="sage" label={c.actifs} value={String(parStatut.ACTIF ?? 0)} href={qs("ACTIF")} />
         <StatCard icon={<CAlert />} tone={aRenouveler.length > 0 ? "warn" : "sage"} label={c.aRenouveler} value={String(aRenouveler.length)} hint={c.aRenouvelerAide} href={qs("A_RENOUVELER")} />
         <StatCard icon={<CCalendar />} tone="tosca" label={c.echeances30} value={String(prochaines.length)} hint={echRes.ok && prochaines.length ? mad(echRes.data.total_montant) : undefined} href={p("/contrats/calendrier")} />
@@ -72,14 +72,14 @@ export default async function ContratsPage({ params, searchParams }: { params: P
           <ExportButtons ressource="contrats" filtres={{ type, statut: onglet === "TOUS" || onglet === "A_RENOUVELER" ? undefined : onglet }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx }} size="sm" />
         </div>
       </div>
-      {rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} /> : (
+      {rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} illustration={onglet === "TOUS" && !type ? "empty-documents" : "empty-search"} /> : (
         <TableCard>
           <Table>
             <THead><TH>{c.libelle}</TH><TH>{c.type}</TH><TH>{c.prestataire}</TH><TH>{c.periodicite}</TH><TH align="end">{c.montantPeriode}</TH><TH>{c.dateFin}</TH><TH>{c.statut}</TH></THead>
             <tbody>
               {rows.map((x) => (
                 <TR key={x.id}>
-                  <TD className="font-semibold text-ink"><Link href={p(`/contrats/${x.id}`)} className="hover:text-action">{x.libelle}</Link>{x.reference ? <span className="block text-[12px] text-faint" dir="ltr">{x.reference}</span> : null}</TD>
+                  <TD className="font-semibold text-ink"><Link href={p(`/contrats/${x.id}`)} className="hover:text-link">{x.libelle}</Link>{x.reference ? <span className="block text-[12px] text-faint" dir="ltr">{x.reference}</span> : null}</TD>
                   <TD className="text-body">{e.typeContrat[x.type]}</TD>
                   <TD className="text-body">{x.prestataire?.nom ?? "—"}</TD>
                   <TD className="text-body">{e.periodicite[x.periodicite]}{x.tacite ? <span className="block text-[11px] text-faint">{c.tacite}</span> : null}</TD>

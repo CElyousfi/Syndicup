@@ -5,9 +5,6 @@ import { annuaireMembres } from "../../../../../../lib/membres";
 import { getLots } from "../../../../../../lib/finances-data";
 import type { AgProcuration, AssembleeGenerale } from "../../../../../../lib/api/types";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
-import { Badge } from "../../../../../../components/ui/badge";
-import { CVote, IconCircle } from "../../../../../../components/ui/color-icons";
-import { agVariant } from "../../../../../../lib/status";
 import { Pupitre } from "./pupitre";
 import { VueVotant } from "./vue-votant";
 
@@ -59,19 +56,7 @@ export default async function SeancePage({
     <div className="page-root">
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
-        title={
-          <span className="flex items-center gap-3">
-            <IconCircle tone="lilac" size={44}>
-              <CVote />
-            </IconCircle>
-            {gestion ? dict.ag.pupitre : dict.ag.seance}
-          </span>
-        }
-        badge={
-          <Badge variant={agVariant.EN_COURS} pulse>
-            {dict.enums.statutAg.EN_COURS}
-          </Badge>
-        }
+        title={gestion ? dict.ag.pupitre : dict.ag.seance}
         subtitle={dict.enums.typeAg[ag.type]}
       />
       {gestion ? (

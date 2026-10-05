@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
@@ -10,6 +10,7 @@ import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { CompteBancaire } from "../../../../../lib/api/types";
 import { formatMAD, formatPeriode } from "../../../../../lib/format";
 import { IconCamera, IconPlus } from "../../../../../components/ui/icons";
+import { celebrate } from "../../../../../lib/success";
 import { declarerJustificatif, saisirEspeces } from "./actions";
 
 export interface LotOption { id: string; numero: string }
@@ -28,11 +29,19 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
   const lignesDuLot = useMemo(() => lignes.filter((l) => l.lotId === lotId), [lignes, lotId]);
   const aujourdhui = new Date().toISOString().slice(0, 10);
 
-  if (state.status === "success") {
-    const type = (state.data as { type?: string } | undefined)?.type;
+  // Virement déclaré / espèces remises = geste de paiement : écran de succès plein (Wise).
+  const type = state.status === "success" ? (state.data as { type?: string } | undefined)?.type : undefined;
+  const titreSucces = mode === "especes" ? (type === "PAIEMENT" ? j.especesPaiement : j.especesSaisie) : j.declare;
+  const corpsSucces = mode === "especes" ? j.especesAideGardien : j.declareAide;
+  const succes = state.status === "success";
+  useEffect(() => {
+    if (succes) celebrate({ titre: titreSucces, corps: corpsSucces, illustration: "ok-paiement" });
+  }, [succes, titreSucces, corpsSucces]);
+
+  if (succes) {
     return (
-      <Banner variant="ok" title={mode === "especes" ? (type === "PAIEMENT" ? j.especesPaiement : j.especesSaisie) : j.declare}>
-        {mode === "especes" ? j.especesAideGardien : j.declareAide}
+      <Banner variant="ok" title={titreSucces}>
+        {corpsSucces}
       </Banner>
     );
   }
@@ -42,7 +51,7 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
       {auNom ? <input type="hidden" name="au_nom" value="1" /> : null}
       <Card>
         <SectionHeader title={mode === "especes" ? j.especesSaisir : j.declarerTitre} subtitle={mode === "especes" ? j.especesAideGardien : j.declarerAide} />
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <Field label={j.lot} htmlFor="lot_id" required error={fieldError(state, "lot_id")}>
             <Select id="lot_id" name="lot_id" required value={lotId} onChange={(ev) => setLotId(ev.target.value)}>
               {lots.map((l) => <option key={l.id} value={l.id}>{l.numero}</option>)}
@@ -93,20 +102,22 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
             </Field>
           )}
         </div>
+        <div className="mt-4">
         <Field label={j.preuve} htmlFor="preuve" hint={j.preuveAide} required={mode === "declarer" && !auNom} optionalLabel={mode === "declarer" && !auNom ? undefined : dict.common.optional} error={fieldError(state, "preuve")}>
           <div className="flex flex-wrap gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink hover:bg-hover">
+            <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
               <IconCamera width={16} height={16} />{j.prendrePhoto}
               <input type="file" name="preuve" accept="image/*" capture="environment" className="sr-only" />
             </label>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink hover:bg-hover">
+            <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
               <IconPlus width={16} height={16} />{j.choisirFichier}
               <input id="preuve" type="file" name="preuve" accept="image/*,application/pdf" className="sr-only" />
             </label>
           </div>
         </Field>
-        <FormAlert state={state} />
-        <div className="mt-4 flex justify-end"><SubmitButton>{mode === "especes" ? j.especesSaisir : j.declarer}</SubmitButton></div>
+        </div>
+        <div className="mt-4 empty:hidden"><FormAlert state={state} /></div>
+        <div className="mt-5 flex justify-end"><SubmitButton className="w-full sm:w-auto">{mode === "especes" ? j.especesSaisir : j.declarer}</SubmitButton></div>
       </Card>
     </form>
   );

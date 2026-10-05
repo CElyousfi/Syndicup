@@ -22,7 +22,7 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
 
   return (
     <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
-      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-ground ring-1 ring-black/5">
+      <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-surface">
         {src ? (
           <img src={src} alt="" className="size-24 object-cover" />
         ) : (
@@ -32,13 +32,13 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
         )}
       </div>
       <div className="min-w-0 flex-1 space-y-3">
-        <p className="text-[13px] leading-relaxed text-soft">{pa.logoAide}</p>
+        <p className="text-[14px] leading-relaxed text-soft">{pa.logoAide}</p>
         <form action={action} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="copro_id" value={coproId} />
           <input type="hidden" name="message_succes" value={pa.logoMisAJour} />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+            <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[14px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
               <input
                 type="file"

@@ -37,28 +37,28 @@ export default async function GrandLivrePage({ params, searchParams }: { params:
       <RapportsTabs dict={dict} locale={ctx.locale} active="grandLivre" exercice={exercice} />
       {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : (
         <>
-          <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <StatCard icon={<CWallet />} tone="sage" label={`${r.compteCourant} · ${r.ouverture}`} value={mad(res.data.ouverture.compte_courant)} hint={`${r.reserve} ${mad(res.data.ouverture.reserve)}`} />
             <StatCard icon={<CCoins />} tone="tosca" label={r.entrees} value={mad(res.data.totaux.entrees)} hint={fill(r.nbLignes, { n: res.data.nb_lignes })} />
             <StatCard icon={<CMoneyBag />} tone="sand" label={r.sorties} value={mad(res.data.totaux.sorties_compte_courant)} hint={`${r.reserve} −${mad(res.data.totaux.sorties_reserve)} / +${mad(res.data.totaux.mouvements_reserve)}`} />
             <StatCard icon={<CWallet />} tone={Number(res.data.cloture.compte_courant) >= 0 ? "ok" : "danger"} label={`${r.compteCourant} · ${r.cloture}`} value={mad(res.data.cloture.compte_courant)} hint={`${r.reserve} ${mad(res.data.cloture.reserve)}`} />
           </div>
-          {res.data.lignes.length === 0 ? <EmptyState title={r.aucuneLigne} /> : (
+          {res.data.lignes.length === 0 ? <EmptyState title={r.aucuneLigne} illustration="empty-documents" /> : (
             <TableCard>
               <Table>
                 <THead><TH>{r.date}</TH><TH>{r.type}</TH><TH>{r.libelle}</TH><TH>{r.tiers}</TH><TH>{r.reference}</TH><TH align="end">{r.entree}</TH><TH align="end">{r.sortie}</TH><TH align="end">{r.soldeCourant}</TH><TH align="end">{r.soldeReserve}</TH></THead>
                 <tbody>
                   {res.data.lignes.map((l) => (
                     <TR key={`${l.entite}-${l.entite_id}`}>
-                      <TD className="tnum text-soft">{formatDate(l.date, ctx.locale)}</TD>
+                      <TD className="tnum whitespace-nowrap text-soft">{formatDate(l.date, ctx.locale)}</TD>
                       <TD><Badge variant={ligneGrandLivreVariant[l.type]}>{dict.enumsRapports.typeLigne[l.type]}</Badge><span className="block text-[11px] text-faint">{dict.enumsRapports.compte[l.compte]}</span></TD>
-                      <TD className="font-medium text-ink">{l.libelle}{l.categorie ? <span className="block text-[12px] text-faint">{l.categorie}</span> : null}</TD>
+                      <TD className="font-semibold text-ink">{l.libelle}{l.categorie ? <span className="block text-[12px] text-faint">{l.categorie}</span> : null}</TD>
                       <TD className="text-body">{l.tiers ?? "—"}</TD>
                       <TD className="text-body"><span dir="ltr">{l.reference ?? "—"}</span></TD>
-                      <TD align="end" className="tnum text-ok">{l.entree ? mad(l.entree) : ""}</TD>
-                      <TD align="end" className="tnum text-danger">{l.sortie ? mad(l.sortie) : ""}</TD>
-                      <TD align="end" className="tnum font-medium text-ink">{mad(l.solde_compte_courant)}</TD>
-                      <TD align="end" className="tnum text-body">{mad(l.solde_reserve)}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ok">{l.entree ? mad(l.entree) : ""}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-danger">{l.sortie ? mad(l.sortie) : ""}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-bold text-ink">{mad(l.solde_compte_courant)}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap text-body">{mad(l.solde_reserve)}</TD>
                     </TR>
                   ))}
                 </tbody>

@@ -16,7 +16,8 @@ import { LinkTabs } from "../../../../components/ui/link-tabs";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { ProgressBar } from "../../../../components/ui/progress";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
-import { CBuilding, CCoins, CAlert, CWallet } from "../../../../components/ui/color-icons";
+import { IconCircle, CBuilding, CCoins, CAlert, CWallet, CCalendar } from "../../../../components/ui/color-icons";
+import { Avatar } from "../../../../components/ui/avatar";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { alerteVariant, mandatVariant } from "../../../../lib/status";
 import { CopierPrestataireModal, MandatModal, MembreModal, ParametresCabinetForm, PrestataireModeleModal, RetirerMembreModal, TerminerMandatModal } from "./cabinet-client";
@@ -77,7 +78,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
         subtitle={t.subtitle}
         badge={cabinet.monRole ? <Badge variant="outline">{cabinet.monRole === "SUPER_ADMIN" ? dict.roles.SUPER_ADMIN : t.roles[cabinet.monRole]}</Badge> : undefined}
         actions={<div className="flex flex-wrap gap-2">
-          {cabinets.length > 1 ? <div className="flex flex-wrap gap-1">{cabinets.map((c) => <Link key={c.id} href={`${p("/cabinet")}?cabinet=${c.id}&onglet=${onglet}`} className={`rounded-full border px-3 py-1 text-[12.5px] ${c.id === cabinet.id ? "border-ink bg-ink text-white" : "border-hairline text-body hover:bg-hover"}`}>{c.nom}</Link>)}</div> : null}
+          {cabinets.length > 1 ? <div className="flex flex-wrap gap-1">{cabinets.map((c) => <Link key={c.id} href={`${p("/cabinet")}?cabinet=${c.id}&onglet=${onglet}`} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${c.id === cabinet.id ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{c.nom}</Link>)}</div> : null}
           {onglet === "portefeuille" ? <ExportButtons ressource="portefeuille" filtres={{ cabinet_id: cabinet.id }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx }} size="sm" /> : null}
           {onglet === "membres" && admin ? <><MembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} /><MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} /></> : null}
           {onglet === "prestataires" && gestion ? <PrestataireModeleModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} /> : null}
@@ -98,8 +99,8 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
             </div>
           ) : null}
           <div className="flex flex-wrap items-center gap-2">
-            <Link href={href("portefeuille")} className={`rounded-full border px-3 py-1 text-[12.5px] ${sp.alerte !== "1" ? "border-ink bg-ink text-white" : "border-hairline text-body"}`}>{t.toutes}</Link>
-            <Link href={href("portefeuille", { alerte: "1" })} className={`rounded-full border px-3 py-1 text-[12.5px] ${sp.alerte === "1" ? "border-ink bg-ink text-white" : "border-hairline text-body"}`}>{t.seulementAlertes}</Link>
+            <Link href={href("portefeuille")} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${sp.alerte !== "1" ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{t.toutes}</Link>
+            <Link href={href("portefeuille", { alerte: "1" })} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${sp.alerte === "1" ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{t.seulementAlertes}</Link>
             {meta.calcule_le ? <span className="ms-auto text-[12px] text-faint">{fill(t.calculeLe, { date: formatDateHeure(meta.calcule_le, ctx.locale) })}</span> : null}
           </div>
           {lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} /> : (
@@ -120,8 +121,13 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
               <tbody>{lignes.map((l) => (
                 <TR key={l.mandat_id}>
                   <TD>
-                    <p className="font-medium text-ink-strong">{l.nom}</p>
+                    <div className="flex items-center gap-3">
+                    <IconCircle tone="sage" size={40}><CBuilding width={20} height={20} /></IconCircle>
+                    <div className="min-w-0">
+                    <p className="text-[15px] font-bold text-ink">{l.nom}</p>
                     <p className="text-[12px] text-soft">{l.ville}{l.alertes.length ? <span className="ms-1.5 inline-flex gap-1">{l.alertes.map((a) => <Badge key={a} variant={a === "ASSURANCE_ABSENTE" || a === "INCIDENTS_URGENTS" ? "danger" : "warn"}>{fill(t.codesAlerte[a], { v: a === "RECOUVREMENT_FAIBLE" ? (l.taux_recouvrement ?? 0) : a === "TACHES_EN_RETARD" ? l.taches_retard : a === "JUSTIFICATIFS_EN_ATTENTE" ? l.justificatifs_en_attente : l.incidents_urgents })}</Badge>)}</span> : null}</p>
+                    </div>
+                    </div>
                   </TD>
                   <TD align="end" className="tnum">{l.nb_lots}</TD>
                   <TD><div className="flex items-center gap-2"><div className="w-16"><ProgressBar ratio={(l.taux_recouvrement ?? 0) / 100} tone={tauxTone(l.taux_recouvrement) === "ok" ? "ok" : tauxTone(l.taux_recouvrement) === "warn" ? "warn" : tauxTone(l.taux_recouvrement) === "danger" ? "danger" : "ink"} /></div><span className="tnum text-[13px]">{l.taux_recouvrement === null ? "—" : `${l.taux_recouvrement} %`}</span></div></TD>
@@ -142,13 +148,14 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
 
       {onglet === "alertes" ? (
         alertes.length === 0 ? <EmptyState title={t.aucuneAlerte} /> : (
-          <Card padded={false}><ul className="divide-y divide-hairline">{alertes.map((a, i) => (
-            <li key={`${a.code}-${a.copropriete_id}-${i}`} className="flex flex-wrap items-center gap-3 px-5 py-3">
+          <ul className="stagger-grid -mx-3">{alertes.map((a, i) => (
+            <li key={`${a.code}-${a.copropriete_id}-${i}`} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+              <IconCircle tone={a.niveau === "danger" ? "danger" : "warn"} size={44}><CAlert width={20} height={20} /></IconCircle>
+              <div className="min-w-0 flex-1 basis-48"><p className="text-[15px] font-bold text-ink">{fill(t.codesAlerte[a.code], { v: a.valeur ?? "" })}</p><p className="text-[13px] text-soft">{a.copropriete}</p></div>
               <Badge variant={alerteVariant[a.niveau]}>{a.niveau === "danger" ? "!" : "•"}</Badge>
-              <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink-strong">{fill(t.codesAlerte[a.code], { v: a.valeur ?? "" })}</p><p className="text-[12px] text-soft">{a.copropriete}</p></div>
               <Ouvrir coproId={a.copropriete_id} next={a.lien} label={t.ouvrir} />
             </li>
-          ))}</ul></Card>
+          ))}</ul>
         )
       ) : null}
 
@@ -156,44 +163,48 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
         <div className="space-y-3">
           <p className="text-[13px] text-soft">{t.agendaAide} · {agendaRes.ok ? fill(t.jours, { n: 60 }) : ""}</p>
           {!agendaRes.ok || agendaRes.data.evenements.length === 0 ? <EmptyState title={t.aucunEvenement} /> : (
-            <Card padded={false}><ul className="divide-y divide-hairline">{agendaRes.data.evenements.map((e) => (
-              <li key={`${e.type}-${e.id}`} className="flex flex-wrap items-center gap-3 px-5 py-3">
-                <span className="w-24 shrink-0 text-[12.5px] tnum text-soft">{formatDate(e.date, ctx.locale)}</span>
+            <ul className="stagger-grid -mx-3">{agendaRes.data.evenements.map((e) => (
+              <li key={`${e.type}-${e.id}`} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+                <IconCircle tone={e.retard ? "danger" : e.type === "AG" ? "lilac" : "sand"} size={44}><CCalendar width={20} height={20} /></IconCircle>
+                <div className="min-w-0 flex-1 basis-48"><p className="text-[15px] font-bold text-ink">{e.titre}</p><p className="text-[13px] text-soft"><span className="tnum">{formatDate(e.date, ctx.locale)}</span> · {e.copropriete}</p></div>
                 <Badge variant={e.retard ? "danger" : e.type === "AG" ? "info" : "outline"}>{t.typesEvenement[e.type]}{e.retard ? ` · ${t.enRetard}` : ""}</Badge>
-                <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink-strong">{e.titre}</p><p className="text-[12px] text-soft">{e.copropriete}</p></div>
                 <Ouvrir coproId={e.copropriete_id} next={e.lien} />
               </li>
-            ))}</ul></Card>
+            ))}</ul>
           )}
         </div>
       ) : null}
 
       {onglet === "membres" ? (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-8 lg:grid-cols-2">
+          <section className="min-w-0">
             <SectionHeader title={t.membres} subtitle={t.ajouterMembreAide} />
-            <ul className="mt-3 divide-y divide-hairline">{membres.map((m) => (
-              <li key={m.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink-strong">{`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId.slice(0, 8)}</p><p className="text-[12px] text-soft">{t.roles[m.role]}{m.nbCoproprietes ? ` · ${fill(t.nbCoproprietes, { n: m.nbCoproprietes })}` : ""}</p></div>
+            <ul className="-mx-3 mt-3">{membres.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+                <Avatar nom={`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId} size={44} />
+                <div className="min-w-0 flex-1 basis-40"><p className="truncate text-[15px] font-bold text-ink">{`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId.slice(0, 8)}</p><p className="text-[13px] text-soft">{t.roles[m.role]}{m.nbCoproprietes ? ` · ${fill(t.nbCoproprietes, { n: m.nbCoproprietes })}` : ""}</p></div>
                 <Badge variant={m.actif ? "ok" : "neutral"}>{m.actif ? t.actif : t.inactif}</Badge>
                 {admin && m.actif ? <span className="inline-flex gap-1"><MembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /><RetirerMembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /></span> : null}
               </li>
             ))}</ul>
-          </Card>
-          <Card>
+          </section>
+          <section className="min-w-0">
             <SectionHeader title={t.mandats} subtitle={t.proposerMandatAide} />
             {mandats.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunMandat}</p> : (
-              <ul className="mt-3 divide-y divide-hairline">{mandats.map((m) => (
-                <li key={m.id} className="py-2.5">
-                  <div className="flex items-center gap-3"><p className="min-w-0 flex-1 truncate text-sm font-medium text-ink-strong">{m.copropriete.nom}</p><Badge variant={mandatVariant[m.statut]}>{t.statuts[m.statut]}</Badge></div>
+              <ul className="-mx-3 mt-3">{mandats.map((m) => (
+                <li key={m.id} className="flex items-start gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+                  <IconCircle tone="sage" size={44}><CBuilding width={20} height={20} /></IconCircle>
+                  <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-3"><p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">{m.copropriete.nom}</p><Badge variant={mandatVariant[m.statut]}>{t.statuts[m.statut]}</Badge></div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <p className="text-[12px] text-soft tnum">{formatDate(m.dateDebutMandat, ctx.locale)}{m.dateFinMandat ? ` → ${formatDate(m.dateFinMandat, ctx.locale)}` : ""} · {nomMembre(m.gestionnairePrincipalId)}{m.honorairesMensuels ? ` · ${formatMontant(m.honorairesMensuels)} MAD` : ""}</p>
+                    <p className="text-[13px] text-soft tnum">{formatDate(m.dateDebutMandat, ctx.locale)}{m.dateFinMandat ? ` → ${formatDate(m.dateFinMandat, ctx.locale)}` : ""} · {nomMembre(m.gestionnairePrincipalId)}{m.honorairesMensuels ? ` · ${formatMontant(m.honorairesMensuels)} MAD` : ""}</p>
                     {admin && m.actif ? <span className="ms-auto inline-flex gap-1"><MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} mandat={m} /><TerminerMandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} mandat={m} /></span> : null}
+                  </div>
                   </div>
                 </li>
               ))}</ul>
             )}
-          </Card>
+          </section>
         </div>
       ) : null}
 
@@ -202,7 +213,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
           <TableCard><Table>
             <THead><TH>{t.nom}</TH><TH>{t.specialite}</TH><TH>{t.telephone}</TH><TH>{t.email}</TH><TH align="end" /></THead>
             <tbody>{(prestaRes?.ok ? prestaRes.data : []).map((x) => (
-              <TR key={x.id}><TD className="font-medium text-ink-strong">{x.nom}</TD><TD className="text-body">{x.specialite}</TD><TD className="text-body"><span dir="ltr">{x.telephone ?? "—"}</span></TD><TD className="text-body"><span dir="ltr">{x.email ?? "—"}</span></TD><TD align="end">{gestion ? <CopierPrestataireModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} modele={x} coproprietes={lignes.map((l) => ({ id: l.copropriete_id, nom: l.nom }))} /> : null}</TD></TR>
+              <TR key={x.id}><TD className="font-bold text-ink">{x.nom}</TD><TD className="text-body">{x.specialite}</TD><TD className="text-body"><span dir="ltr">{x.telephone ?? "—"}</span></TD><TD className="text-body"><span dir="ltr">{x.email ?? "—"}</span></TD><TD align="end">{gestion ? <CopierPrestataireModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} modele={x} coproprietes={lignes.map((l) => ({ id: l.copropriete_id, nom: l.nom }))} /> : null}</TD></TR>
             ))}</tbody>
           </Table></TableCard>
         )

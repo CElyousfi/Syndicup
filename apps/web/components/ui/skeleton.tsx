@@ -1,17 +1,41 @@
 /**
- * Squelettes — blocs greige traversés par un reflet (sens de lecture respecté, cf. `.skeleton`
- * dans motion.css). Chaque variante reprend la silhouette de la page qui arrive, pour que le
- * contenu « se pose » à la place du squelette au lieu de surgir.
+ * Squelettes — blocs en voile d'encre (lisibles sur la toile blanche ET dans une tuile greige)
+ * traversés par un reflet (sens de lecture respecté, cf. `.skeleton` dans motion.css). Chaque
+ * variante reprend la silhouette de la page qui arrive (langage Wise : tuiles greige plates,
+ * listes à plat sur la toile), pour que le contenu « se pose » au lieu de surgir.
  */
+// Le voile passe en style en ligne : `.skeleton` (motion.css, hors couche) l'emporterait sur un utilitaire.
+const VOILE = { background: "var(--color-wash)" } as const;
+
 export function Skeleton({ className = "" }: { className?: string }) {
-  return <div className={`skeleton rounded-lg ${className}`} aria-hidden />;
+  // Rayon par défaut seulement si l'appelant n'en donne pas (sinon rounded-lg l'emporterait dans la cascade).
+  return <div className={`skeleton ${/\brounded-/.test(className) ? "" : "rounded-lg"} ${className}`} style={VOILE} aria-hidden />;
+}
+
+/** Tuile greige vide (graphique, bloc) — la silhouette d'une `.card`. */
+function TileSkeleton({ className = "" }: { className?: string }) {
+  return <div className={`skeleton rounded-card ${className}`} style={{ background: "var(--color-tile)" }} aria-hidden />;
 }
 
 function HeaderSkeleton() {
   return (
-    <div className="space-y-2.5">
-      <Skeleton className="h-7 w-56 rounded-full" />
+    <div className="space-y-3">
+      <Skeleton className="h-9 w-64 max-w-[80%] rounded-full" />
       <Skeleton className="h-4 w-80 max-w-full rounded-full" />
+    </div>
+  );
+}
+
+/** Ligne de liste Wise : pastille ronde, titre + sous-titre, valeur à l'extrémité. */
+function RowSkeleton() {
+  return (
+    <div className="flex items-center gap-4 px-2 py-3.5">
+      <Skeleton className="size-11 shrink-0 rounded-full" />
+      <div className="min-w-0 flex-1 space-y-2">
+        <Skeleton className="h-4 w-1/3 rounded-full" />
+        <Skeleton className="h-3 w-1/2 rounded-full" />
+      </div>
+      <Skeleton className="hidden h-6 w-20 rounded-full sm:block" />
     </div>
   );
 }
@@ -36,11 +60,11 @@ export function PageSkeleton() {
     <div className="space-y-6 animate-fade" role="status" aria-busy="true">
       <HeaderSkeleton />
       <div className="grid gap-4 md:grid-cols-3">
-        <Skeleton className="h-32 rounded-card" />
-        <Skeleton className="h-32 rounded-card" />
-        <Skeleton className="h-32 rounded-card" />
+        <StatSkeleton />
+        <StatSkeleton />
+        <StatSkeleton />
       </div>
-      <Skeleton className="h-72 rounded-card" />
+      <TileSkeleton className="h-72" />
     </div>
   );
 }
@@ -50,7 +74,7 @@ export function DashboardSkeleton() {
   return (
     <div className="space-y-6 animate-fade" role="status" aria-busy="true">
       <HeaderSkeleton />
-      <Skeleton className="h-36 rounded-card sm:h-44" />
+      <TileSkeleton className="h-36 sm:h-44" />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatSkeleton />
         <StatSkeleton />
@@ -58,8 +82,21 @@ export function DashboardSkeleton() {
         <StatSkeleton />
       </div>
       <div className="grid gap-4 lg:grid-cols-3">
-        <Skeleton className="h-80 rounded-card lg:col-span-2" />
-        <Skeleton className="h-80 rounded-card" />
+        <div className="card space-y-5 p-6 lg:col-span-2">
+          <Skeleton className="h-5 w-40 rounded-full" />
+          <div className="flex h-52 items-end gap-3">
+            {[55, 80, 40, 95, 65, 75, 50, 85].map((h, i) => (
+              <div key={i} className="flex-1" style={{ height: `${h}%` }}>
+                <Skeleton className="size-full rounded-[12px]" />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card space-y-1 p-4">
+          {Array.from({ length: 4 }, (_, i) => (
+            <RowSkeleton key={i} />
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -78,20 +115,14 @@ export function ListSkeleton({ stats = 3 }: { stats?: number }) {
         </div>
       ) : null}
       <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-11 w-64 max-w-full rounded-field" />
-        <Skeleton className="h-11 w-40 rounded-field" />
-        <Skeleton className="h-11 w-40 rounded-field" />
+        <Skeleton className="h-11 w-64 max-w-full rounded-full" />
+        <Skeleton className="h-11 w-28 rounded-full" />
+        <Skeleton className="h-11 w-28 rounded-full" />
       </div>
-      <div className="card divide-y divide-hairline overflow-hidden">
+      <div>
+        <Skeleton className="mb-1 h-11 rounded-[14px]" />
         {Array.from({ length: 6 }, (_, i) => (
-          <div key={i} className="flex items-center gap-4 px-4 py-4">
-            <Skeleton className="size-9 shrink-0 rounded-full" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-3.5 w-1/3 rounded-full" />
-              <Skeleton className="h-3 w-1/2 rounded-full" />
-            </div>
-            <Skeleton className="hidden h-6 w-20 rounded-full sm:block" />
-          </div>
+          <RowSkeleton key={i} />
         ))}
       </div>
     </div>
@@ -102,12 +133,15 @@ export function ListSkeleton({ stats = 3 }: { stats?: number }) {
 export function DetailSkeleton() {
   return (
     <div className="space-y-6 animate-fade" role="status" aria-busy="true">
-      <Skeleton className="h-4 w-28 rounded-full" />
+      <div className="flex items-center gap-2.5">
+        <Skeleton className="size-10 rounded-full" />
+        <Skeleton className="hidden h-3.5 w-24 rounded-full sm:block" />
+      </div>
       <div className="flex items-center gap-3">
-        <Skeleton className="h-7 w-64 max-w-[70%] rounded-full" />
+        <Skeleton className="h-9 w-72 max-w-[70%] rounded-full" />
         <Skeleton className="h-6 w-20 rounded-full" />
       </div>
-      <div className="flex gap-2 border-b border-hairline pb-3">
+      <div className="flex gap-5 border-b border-hairline pb-3">
         <Skeleton className="h-4 w-20 rounded-full" />
         <Skeleton className="h-4 w-24 rounded-full" />
         <Skeleton className="h-4 w-16 rounded-full" />
@@ -123,8 +157,8 @@ export function DetailSkeleton() {
         </div>
         <div className="card space-y-3 p-6">
           <Skeleton className="h-4 w-24 rounded-full" />
-          <Skeleton className="h-20 rounded-2xl" />
-          <Skeleton className="h-10 rounded-full" />
+          <Skeleton className="h-20 rounded-[18px]" />
+          <Skeleton className="h-11 rounded-full" />
         </div>
       </div>
     </div>
@@ -135,7 +169,7 @@ export function DetailSkeleton() {
 export function FormSkeleton() {
   return (
     <div className="mx-auto max-w-3xl space-y-6 animate-fade" role="status" aria-busy="true">
-      <Skeleton className="h-4 w-28 rounded-full" />
+      <Skeleton className="size-10 rounded-full" />
       <HeaderSkeleton />
       <div className="card space-y-5 p-6">
         {Array.from({ length: 4 }, (_, i) => (
@@ -145,8 +179,8 @@ export function FormSkeleton() {
           </div>
         ))}
         <div className="flex justify-end gap-2 pt-2">
-          <Skeleton className="h-10 w-24 rounded-full" />
-          <Skeleton className="h-10 w-32 rounded-full" />
+          <Skeleton className="h-11 w-24 rounded-full" />
+          <Skeleton className="h-11 w-32 rounded-full" />
         </div>
       </div>
     </div>

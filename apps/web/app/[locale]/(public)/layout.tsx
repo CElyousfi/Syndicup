@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Brand } from "../../../components/brand";
 import { LocaleSwitch } from "../../../components/locale-switch";
 import { RevealText } from "../../../components/ui/reveal-text";
+import { IconShield } from "../../../components/ui/icons";
 import { getDict, isLocale, type Locale } from "../../../lib/i18n";
 
 export default async function PublicLayout({
@@ -17,25 +18,26 @@ export default async function PublicLayout({
   const dict = getDict(locale);
 
   return (
-    <div className="flex min-h-screen bg-ground">
-      {/* Colonne formulaire */}
-      <main className="flex flex-1 flex-col px-6 sm:px-10">
-        <header className="flex h-20 items-center justify-between">
-          <Brand />
+    <div className="flex min-h-screen bg-surface">
+      {/* Colonne formulaire — toile blanche (Wise) : marque en tête, pill de langue, contenu en colonne. */}
+      <main className="flex min-w-0 flex-1 flex-col px-4 sm:px-10">
+        <header className="flex h-[72px] items-center justify-between sm:h-20">
+          <Brand size={36} />
           <Suspense>
             <LocaleSwitch locale={locale} />
           </Suspense>
         </header>
-        <div className="flex flex-1 items-center justify-center py-10">
-          <div className="w-full max-w-sm animate-in-up">{children}</div>
+        <div className="flex flex-1 items-center justify-center py-8 sm:py-10">
+          <div className="w-full max-w-[400px] animate-in-up">{children}</div>
         </div>
-        <footer className="pb-6 text-center text-[12px] text-faint">
-          {dict.auth.securityNote}
+        <footer className="flex items-center justify-center gap-1.5 pb-6 text-center text-[12px] text-faint">
+          <IconShield width={14} height={14} className="shrink-0" />
+          <span>{dict.auth.securityNote}</span>
         </footer>
       </main>
 
-      {/* Panneau image — résidence, palette du produit */}
-      <aside className="relative m-3 hidden w-[44%] overflow-hidden rounded-[28px] shadow-float lg:block">
+      {/* Panneau image — la résidence, titre-affiche lime (moment de marque). À plat, sans ombre. */}
+      <aside className="relative m-3 hidden w-[44%] overflow-hidden rounded-[28px] bg-brand lg:block">
         {/* Travelling arrière à l'ouverture, puis lente respiration de la photo. */}
         <div className="hero-zoom absolute inset-0">
           <div className="hero-drift absolute inset-0">
@@ -49,19 +51,19 @@ export default async function PublicLayout({
             />
           </div>
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
         <div className="absolute inset-x-0 bottom-0 p-10 xl:p-12">
-          <p className="max-w-md text-3xl font-semibold leading-snug tracking-tight text-white">
+          <p className="font-poster max-w-lg text-[44px] text-lime xl:text-[56px] [:root[lang=ar]_&]:text-[36px] xl:[:root[lang=ar]_&]:text-[44px]">
             <RevealText text={dict.brand.tagline} delayMs={350} />
           </p>
-          <p className="hero-rise mt-4 max-w-md text-[15px] leading-relaxed text-white/75" style={{ animationDelay: "750ms" }}>
+          <p className="hero-rise mt-5 max-w-md text-[16px] leading-relaxed text-white/80" style={{ animationDelay: "750ms" }}>
             {dict.brand.subtitle}
           </p>
           <div className="mt-8 flex flex-wrap gap-2">
             {[dict.nav.appels, dict.nav.ag, dict.nav.incidents, dict.nav.documents].map((f, i) => (
               <span
                 key={f}
-                className="hero-rise rounded-full border border-white/20 bg-white/10 px-3.5 py-1.5 text-[13px] text-white backdrop-blur-sm transition-colors duration-300 hover:bg-white/20"
+                className="hero-rise rounded-full bg-white/15 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur-sm transition-colors duration-300 hover:bg-white/25"
                 style={{ animationDelay: `${950 + i * 70}ms` }}
               >
                 {f}

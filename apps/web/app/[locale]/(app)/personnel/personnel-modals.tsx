@@ -1,10 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
+import { Banner } from "../../../../components/ui/banner";
+import { celebrate } from "../../../../lib/success";
 import { IDLE } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { StatutPersonnel } from "../../../../lib/api/types";
@@ -23,6 +25,12 @@ export function CreerFicheModal({
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(creerPersonnel, IDLE);
   const pe = dict.personnel;
+  // Création de fiche = action majeure : écran de succès plein (Wise), la modale se ferme.
+  useEffect(() => {
+    if (state.status !== "success") return;
+    celebrate({ titre: pe.ficheCreee, illustration: "ok-general" });
+    setOpen(false);
+  }, [state, pe.ficheCreee]);
 
   return (
     <>
@@ -33,7 +41,7 @@ export function CreerFicheModal({
       <Modal open={open} onClose={() => setOpen(false)} title={pe.nouvelleFiche} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{pe.ficheCreee}</p>
+            <Banner variant="ok">{pe.ficheCreee}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}
@@ -121,7 +129,7 @@ export function ChangerPresenceModal({
       <Modal open={open} onClose={() => setOpen(false)} title={pe.changerStatut} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{pe.statutChange}</p>
+            <Banner variant="ok">{pe.statutChange}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}

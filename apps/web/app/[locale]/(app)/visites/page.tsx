@@ -6,10 +6,11 @@ import { getDict, isLocale, fill } from "../../../../lib/i18n";
 import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
-import { Card, SectionHeader } from "../../../../components/ui/card";
+import { SectionHeader } from "../../../../components/ui/card";
+import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { CBell, CDoor, IconCircle } from "../../../../components/ui/color-icons";
+import { CBell, CDoor } from "../../../../components/ui/color-icons";
 import { visiteVariant } from "../../../../lib/status";
 import { EnregistrerVisiteModal, RepondreVisiteForm } from "./visite-actions";
 import { PlaceVisiteurModal } from "../parkings/parkings-client";
@@ -71,39 +72,45 @@ export default async function VisitesPage({
   const CarteVisite = ({ visite }: { visite: Visite }) => {
     const peutRepondre =
       visite.statut === "EN_ATTENTE" && (resident ? mesLotIds.has(visite.lotId) : false);
+    const peutPlacer =
+      (gardien || gestion) && placesVisiteurs.length > 0 && new Date(visite.horodatage).toDateString() === aujourdhui;
     return (
-      <div className="flex flex-wrap items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6">
-        <IconCircle tone={visite.statut === "EN_ATTENTE" ? "warn" : "sand"} size={40}>
-          <CDoor width={20} height={20} />
-        </IconCircle>
-        <div className="min-w-0 flex-1">
-          {peutRepondre ? (
-            <p className="text-sm font-semibold text-ink">
-              {fill(v.demandeAcces, {
+      <Ligne
+        icon={<CDoor width={22} height={22} />}
+        tone={visite.statut === "EN_ATTENTE" ? "warn" : visite.statut === "AUTORISE" ? "sage" : "sand"}
+        title={
+          peutRepondre
+            ? fill(v.demandeAcces, {
                 nom: visite.visiteurNom,
                 lot: lotParId.get(visite.lotId) ?? "—",
-              })}
-            </p>
-          ) : (
-            <p className="text-sm font-semibold text-ink">{visite.visiteurNom}</p>
-          )}
-          <p className="mt-0.5 text-[13px] text-soft">
+              })
+            : visite.visiteurNom
+        }
+        subtitle={
+          <>
             {dict.invitations.lot} {lotParId.get(visite.lotId) ?? "—"} ·{" "}
-            {formatDateHeure(visite.horodatage, ctx.locale)}
+            <span className="tnum">{formatDateHeure(visite.horodatage, ctx.locale)}</span>
             {visite.emplacementId ? <span dir="ltr"> · {dict.parkings.placeVisiteur} {placesVisiteurs.find((x) => x.id === visite.emplacementId)?.code ?? ""}{visite.immatriculation ? ` · ${visite.immatriculation}` : ""}</span> : null}
-          </p>
-        </div>
-        {(gardien || gestion) && placesVisiteurs.length > 0 && new Date(visite.horodatage).toDateString() === aujourdhui ? (
-          <PlaceVisiteurModal dict={dict} locale={ctx.locale} visite={visite} places={placesVisiteurs} />
-        ) : null}
-        {peutRepondre ? (
-          <RepondreVisiteForm dict={dict} locale={ctx.locale} visiteId={visite.id} />
-        ) : (
-          <Badge variant={visiteVariant[visite.statut]} pulse={visite.statut === "EN_ATTENTE"}>
-            {dict.enums.statutVisite[visite.statut]}
-          </Badge>
-        )}
-      </div>
+          </>
+        }
+        end={
+          peutRepondre ? undefined : (
+            <Badge variant={visiteVariant[visite.statut]} pulse={visite.statut === "EN_ATTENTE"}>
+              {dict.enums.statutVisite[visite.statut]}
+            </Badge>
+          )
+        }
+        actions={
+          peutPlacer || peutRepondre ? (
+            <>
+              {peutPlacer ? (
+                <PlaceVisiteurModal dict={dict} locale={ctx.locale} visite={visite} places={placesVisiteurs} />
+              ) : null}
+              {peutRepondre ? <RepondreVisiteForm dict={dict} locale={ctx.locale} visiteId={visite.id} /> : null}
+            </>
+          ) : undefined
+        }
+      />
     );
   };
 
@@ -125,7 +132,7 @@ export default async function VisitesPage({
       />
 
       {(gardien || gestion) && visites.length > 0 ? (
-        <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        <div className="mb-10 grid gap-4 sm:grid-cols-3">
           <StatCard icon={<CDoor />} tone="sand" label={v.titre} value={visites.length} />
           <StatCard icon={<CDoor />} tone="tosca" label={v.duJour} value={duJour.length} />
           <StatCard
@@ -141,32 +148,28 @@ export default async function VisitesPage({
         <EmptyState
           title={v.aucuneVisite}
           hint={gardien || gestion ? v.aucuneVisiteAide : undefined}
-          icon={
-            <IconCircle tone="sand" size={64}>
-              <CDoor width={30} height={30} />
-            </IconCircle>
-          }
+          illustration="empty-visites"
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-10">
           {duJour.length > 0 ? (
             <div>
               <SectionHeader title={v.duJour} className="mb-3" />
-              <Card padded={false} className="divide-y divide-hairline">
+              <Lignes>
                 {duJour.map((x) => (
                   <CarteVisite key={x.id} visite={x} />
                 ))}
-              </Card>
+              </Lignes>
             </div>
           ) : null}
           {historique.length > 0 ? (
             <div>
               <SectionHeader title={v.historique} className="mb-3" />
-              <Card padded={false} className="divide-y divide-hairline">
+              <Lignes>
                 {historique.map((x) => (
                   <CarteVisite key={x.id} visite={x} />
                 ))}
-              </Card>
+              </Lignes>
             </div>
           ) : null}
         </div>

@@ -1,13 +1,13 @@
 /**
- * Avatar initiales — teinte déterministe (palette produit) dérivée du nom, pour que
- * chaque personne garde sa couleur partout. Jamais de photo générique.
+ * Avatar initiales — teinte déterministe (palette du logo + accents secondaires) dérivée du
+ * nom, pour que chaque personne garde sa couleur partout. Jamais de photo générique.
  */
 const TONES = [
-  { bg: "bg-sage-tint", fg: "text-action" },
+  { bg: "bg-sage-tint", fg: "text-brand" },
+  { bg: "bg-lime", fg: "text-brand-deep" },
   { bg: "bg-lilac-tint", fg: "text-lilac" },
   { bg: "bg-sand-tint", fg: "text-sand" },
   { bg: "bg-tosca-tint", fg: "text-tosca-deep" },
-  { bg: "bg-ok-tint", fg: "text-ok" },
 ] as const;
 
 export function Avatar({
@@ -19,7 +19,7 @@ export function Avatar({
   nom: string;
   size?: number;
   className?: string;
-  /** Variante encre pleine (utilisateur courant dans la barre latérale). */
+  /** Variante pleine vert marque, initiales lime (utilisateur courant). */
   solid?: boolean;
 }) {
   const initiales = nom
@@ -32,10 +32,10 @@ export function Avatar({
   for (const ch of nom) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
   // Modulo borné — l'index est toujours valide.
   const tone = TONES[hash % TONES.length]!;
-  const cls = solid ? "bg-ink text-white" : `${tone.bg} ${tone.fg}`;
+  const cls = solid ? "bg-brand text-lime" : `${tone.bg} ${tone.fg}`;
   return (
     <span
-      className={`avatar-in inline-flex shrink-0 select-none items-center justify-center rounded-full font-semibold ${cls} ${className}`}
+      className={`avatar-in inline-flex shrink-0 select-none items-center justify-center rounded-full font-bold ${cls} ${className}`}
       style={{ width: size, height: size, fontSize: Math.max(10, Math.round(size * 0.34)) }}
       aria-hidden
     >

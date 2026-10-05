@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../ui/modal";
 import { Field, Textarea } from "../ui/field";
 import { FormAlert, SubmitButton } from "../ui/form";
@@ -8,6 +8,7 @@ import { Button } from "../ui/button";
 import { Banner } from "../ui/banner";
 import { IDLE } from "../../lib/forms";
 import type { Dict, Locale } from "../../lib/i18n";
+import { celebrate } from "../../lib/success";
 import { contesterLigne } from "../../app/[locale]/(app)/finances/actions";
 
 /** D6 côté résident — contester une ligne de son solde. Le montant reste dû (mention légale). */
@@ -22,6 +23,14 @@ export function ContesterModal({
 }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(contesterLigne, IDLE);
+  // Contestation déposée = action majeure : écran de succès plein (Wise), la modale se referme.
+  const envoyee = dict.finances.contestationEnvoyee;
+  const corps = dict.finances.contesterMention;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: envoyee, corps, illustration: "ok-general" });
+  }, [state, envoyee, corps]);
 
   return (
     <>

@@ -34,8 +34,8 @@ export default async function SondagePage({ params, searchParams }: { params: Pr
   const ouvertEncore = s.statut === "OUVERT" && new Date(s.dateFin).getTime() > Date.now();
   return (
     <div className="page-root mx-auto max-w-3xl space-y-4">
-      <BackLink href={p("/affichage")} label={c.titre} />
       <PageHeader
+        back={<BackLink href={p("/affichage")} label={c.titre} />}
         title={s.question}
         subtitle={`${s.statut === "CLOS" ? fill(c.closLe, { date: formatDateHeure(s.closLe ?? s.dateFin, ctx.locale) }) : fill(c.finLe, { date: formatDateHeure(s.dateFin, ctx.locale) })} · ${fill(c.par, { nom: nomComplet(s.auteur) ?? "—" })} · ${e.audience[s.audience]}${s.batiment ? ` ${s.batiment}` : ""}`}
         badge={<Badge variant={sondageVariant[s.statut]}>{e.statutSondage[s.statut]}</Badge>}
@@ -44,10 +44,10 @@ export default async function SondagePage({ params, searchParams }: { params: Pr
       {sp.cree === "1" ? <Banner variant="ok">{c.sondageEnregistre}</Banner> : null}
       <Banner variant="info">{c.mention}</Banner>
       {s.description ? <Card><Markdown source={s.description} /></Card> : null}
-      <Card>
-        <SectionHeader title={s.maReponse || !ouvertEncore ? c.resultats : c.repondre} subtitle={s.choixMultiple ? c.choixMultiple : undefined} />
+      <Card className="sm:p-8">
+        <SectionHeader title={s.maReponse || !ouvertEncore ? c.resultats : c.repondre} subtitle={s.choixMultiple ? c.choixMultiple : undefined} className="mb-4" />
         {ouvertEncore && !s.maReponse ? <RepondreForm dict={dict} locale={ctx.locale} sondage={s} /> : <ResultatsSondage dict={dict} sondage={s} />}
-        {s.maReponse && ouvertEncore ? <p className="mt-3 text-[12px] text-ok">{c.dejaRepondu}</p> : null}
+        {s.maReponse && ouvertEncore ? <p className="mt-3 text-[13px] font-semibold text-ok">{c.dejaRepondu}</p> : null}
       </Card>
     </div>
   );

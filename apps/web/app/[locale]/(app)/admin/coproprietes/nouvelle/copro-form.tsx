@@ -20,6 +20,8 @@ import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import { formatDateHeure } from "../../../../../../lib/format";
 import type { CanalInvitation, TypeResidence } from "../../../../../../lib/api/types";
 import { creerCopropriete, inviterSyndicAdmin } from "../../actions";
+import { CodeInvitation } from "../../../invitations/invitation-modals";
+import { celebrate } from "../../../../../../lib/success";
 
 export function CoproForm({ dict, locale }: { dict: Dict; locale: Locale }) {
   const ad = dict.admin;
@@ -30,7 +32,7 @@ export function CoproForm({ dict, locale }: { dict: Dict; locale: Locale }) {
   return (
     <div className="max-w-2xl">
       {/* Fil d'avancement */}
-      <ol className="mb-5 flex items-center gap-2">
+      <ol className="mb-6 flex items-center gap-2">
         {etapes.map((label, i) => {
           const n = (i + 1) as 1 | 2;
           const faite = etape > n;
@@ -38,16 +40,16 @@ export function CoproForm({ dict, locale }: { dict: Dict; locale: Locale }) {
           return (
             <li key={label} className="flex min-w-0 items-center gap-2">
               <span
-                className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-semibold ${
-                  faite ? "bg-ok-tint text-ok" : active ? "bg-ink text-white" : "bg-ground text-soft"
+                className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition-colors ${
+                  faite ? "bg-ok text-white" : active ? "bg-brand text-white ring-4 ring-cta" : "bg-tile text-soft"
                 }`}
               >
                 {faite ? <IconCheck width={15} height={15} /> : n}
               </span>
-              <span className={`truncate text-[13px] font-medium ${active ? "text-ink" : "text-soft"}`}>
+              <span className={`truncate text-[14px] font-semibold ${active ? "text-ink" : "text-soft"}`}>
                 {label}
               </span>
-              {n < 2 ? <span className="mx-1 h-px w-6 shrink-0 bg-hairline-strong" /> : null}
+              {n < 2 ? <span className={`mx-1 h-0.5 w-8 shrink-0 rounded-full ${faite ? "bg-ok/50" : "bg-wash-strong"}`} /> : null}
             </li>
           );
         })}
@@ -119,7 +121,7 @@ function EtapeInfos({
         </Select>
       </Field>
       <FormAlert state={state} />
-      <div className="flex justify-end border-t border-hairline pt-5">
+      <div className="flex justify-end border-t border-wash-strong pt-5">
         <SubmitButton>{dict.common.create}</SubmitButton>
       </div>
     </form>
@@ -144,6 +146,10 @@ function EtapeSyndic({
     [state]
   );
   const canaux = Object.keys(dict.enums.canal) as CanalInvitation[];
+  // Invitation du premier syndic émise : écran de succès plein écran (le code reste affiché dessous).
+  useEffect(() => {
+    if (resultat) celebrate({ titre: ad.codePret, corps: copro.nom, illustration: "ok-invitation" });
+  }, [resultat, ad.codePret, copro.nom]);
 
   if (resultat) {
     const lien =
@@ -152,37 +158,30 @@ function EtapeSyndic({
         : "";
     const message = fill(ad.messageWhatsApp, { nom: copro.nom, lien, code: resultat.code });
     return (
-      <div className="card space-y-5 p-6 text-center sm:p-7">
+      <div className="card space-y-5 p-5 sm:p-7">
         <Banner variant="ok" title={ad.codePret}>
           {copro.nom}
         </Banner>
-        <p className="tnum text-3xl font-semibold tracking-[0.2em] text-ink" dir="ltr">
-          {resultat.code}
-        </p>
-        <p className="text-[12px] text-faint">
-          {fill(dict.auth.inviteExpireLe, { date: formatDateHeure(resultat.expireLe, locale) })}
-        </p>
-        {lien ? (
-          <img
-            src={`/api/qr?data=${encodeURIComponent(lien)}`}
-            alt=""
-            width={180}
-            height={180}
-            className="mx-auto rounded-xl border border-hairline"
-          />
-        ) : null}
-        <div className="flex flex-wrap justify-center gap-2">
-          <CopyButton value={resultat.code} label={dict.common.copy} copiedLabel={dict.common.copied} />
-          <a
-            href={`https://wa.me/?text=${encodeURIComponent(message)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex h-9 items-center gap-2 rounded-btn bg-ok px-4 text-[13px] font-medium text-white"
-          >
-            {ad.partagerWhatsApp}
-          </a>
-        </div>
-        <div className="border-t border-hairline pt-5">
+        <CodeInvitation
+          code={resultat.code}
+          lien={lien}
+          pied={fill(dict.auth.inviteExpireLe, { date: formatDateHeure(resultat.expireLe, locale) })}
+          actions={
+            <>
+              <CopyButton value={resultat.code} label={dict.common.copy} copiedLabel={dict.common.copied} />
+              <ButtonLink
+                href={`https://wa.me/?text=${encodeURIComponent(message)}`}
+                target="_blank"
+                rel="noreferrer"
+                variant="secondary"
+                size="sm"
+              >
+                {ad.partagerWhatsApp}
+              </ButtonLink>
+            </>
+          }
+        />
+        <div className="flex justify-end border-t border-wash-strong pt-5">
           <ButtonLink href={`/${locale}/admin/coproprietes/${copro.id}`}>{ad.terminer}</ButtonLink>
         </div>
       </div>
@@ -193,12 +192,12 @@ function EtapeSyndic({
     <form action={action} className="card space-y-5 p-6 sm:p-7">
       <input type="hidden" name="copropriete_id" value={copro.id} />
       <div className="flex items-start gap-3.5">
-        <IconCircle tone="sand" size={44}>
+        <IconCircle tone="sand" size={48}>
           <CHandshake />
         </IconCircle>
         <div className="min-w-0">
-          <h2 className="text-[15px] font-semibold text-ink">{ad.inviterSyndic}</h2>
-          <p className="mt-0.5 text-[13px] text-soft">{ad.syndicAide}</p>
+          <h2 className="text-[19px] font-bold tracking-tight text-ink">{ad.inviterSyndic}</h2>
+          <p className="mt-1 text-[13px] text-soft">{ad.syndicAide}</p>
         </div>
       </div>
       <Field label={dict.invitations.canal} htmlFor="w_canal" required>
@@ -211,7 +210,7 @@ function EtapeSyndic({
         </Select>
       </Field>
       <FormAlert state={state} />
-      <div className="flex flex-wrap justify-end gap-2 border-t border-hairline pt-5">
+      <div className="flex flex-wrap justify-end gap-2 border-t border-wash-strong pt-5">
         <ButtonLink href={`/${locale}/admin/coproprietes/${copro.id}`} variant="ghost">
           {ad.plusTard}
         </ButtonLink>

@@ -10,6 +10,7 @@ import type { Dict, Locale } from "../../../../lib/i18n";
 import type { VisibiliteDocument } from "../../../../lib/api/types";
 import { televerserFichierDocument } from "./actions";
 import { IconFile, IconPlus } from "../../../../components/ui/icons";
+import { IconCircle } from "../../../../components/ui/color-icons";
 
 export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) {
   const [open, setOpen] = useState(false);
@@ -43,9 +44,11 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
               <span className="mb-1.5 block text-[13px] font-medium text-ink-strong">
                 {d.fichier}
               </span>
-              <label className="flex cursor-pointer items-center gap-3 rounded-field border border-dashed border-hairline-strong bg-ground/50 px-4 py-4 transition-colors hover:border-action/50 hover:bg-action-wash">
-                <IconFile width={20} height={20} className="shrink-0 text-soft" />
-                <span className="min-w-0 flex-1 truncate text-sm text-body">
+              <label className="flex cursor-pointer items-center gap-3.5 rounded-2xl border-[1.5px] border-dashed border-hairline-strong bg-surface px-4 py-4 transition-colors hover:border-link hover:bg-action-wash">
+                <IconCircle tone={nomFichier ? "sage" : "tosca"} size={44}>
+                  <IconFile width={20} height={20} className="text-link" />
+                </IconCircle>
+                <span className={`min-w-0 flex-1 truncate text-[15px] ${nomFichier ? "font-semibold text-ink" : "text-body"}`}>
                   {nomFichier ?? d.fichierAide}
                 </span>
                 <input

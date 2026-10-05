@@ -151,16 +151,16 @@ export function AjouterProprietaireModal({
 
             <div className="space-y-3">
               {lignes.map((l, i) => (
-                <div key={l.cle} className="rounded-2xl border border-hairline bg-ground/40 p-4">
+                <div key={l.cle} className="rounded-[20px] bg-tile p-4">
                   <div className="mb-3 flex items-center justify-between">
-                    <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-faint">
+                    <p className="text-[14px] font-bold text-ink">
                       {fill(dict.lots.coproprietaireN, { n: i + 1 })}
                     </p>
                     {lignes.length > 1 ? (
                       <button
                         type="button"
                         onClick={() => retirerLigne(l.cle)}
-                        className="text-[12px] font-medium text-danger hover:underline"
+                        className="text-[13px] font-semibold text-danger hover:underline"
                       >
                         {dict.lots.retirerLigne}
                       </button>
@@ -221,7 +221,7 @@ export function AjouterProprietaireModal({
                         onChange={() =>
                           setLignes((prev) => prev.map((x) => ({ ...x, representant: x.cle === l.cle })))
                         }
-                        className="accent-[#285bff]"
+                        className="size-4 accent-brand"
                       />
                       {dict.lots.representantIndivision}
                     </label>
@@ -232,8 +232,8 @@ export function AjouterProprietaireModal({
 
             {/* Jauge de la règle des 100 % pendant la saisie */}
             <div>
-              <div className="mb-1 flex items-center justify-between text-[12px]">
-                <span className="text-soft">{dict.lots.quotePartTotal}</span>
+              <div className="mb-1.5 flex items-center justify-between text-[13px]">
+                <span className="font-medium text-soft">{dict.lots.quotePartTotal}</span>
                 <span className={`tnum font-semibold ${totalOk ? "text-ok" : "text-warn"}`}>
                   {Math.round(total * 100) / 100} %
                 </span>

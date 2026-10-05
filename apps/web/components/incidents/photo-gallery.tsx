@@ -31,13 +31,13 @@ export function PhotoGallery({
 
   return (
     <>
-      <ul className="flex flex-wrap gap-2.5">
+      <ul className="grid grid-cols-3 gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
         {photos.map((p, i) => (
           <li key={p.path}>
             <button
               type="button"
               onClick={() => setOuverte(i)}
-              className="block overflow-hidden rounded-xl border border-hairline transition-all hover:shadow-float focus-visible:ring-2 focus-visible:ring-action"
+              className="block w-full overflow-hidden rounded-2xl bg-tile focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2"
               aria-label={fill(altTemplate, { n: i + 1 })}
             >
               {/* URL signée courte durée — next/image inapplicable. */}
@@ -45,7 +45,7 @@ export function PhotoGallery({
                 src={p.url}
                 alt={fill(altTemplate, { n: i + 1 })}
                 loading="lazy"
-                className="size-24 object-cover transition-transform duration-300 hover:scale-105 sm:size-28"
+                className="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105 sm:size-32"
               />
             </button>
           </li>
@@ -78,7 +78,7 @@ export function PhotoGallery({
                 <button
                   type="button"
                   onClick={() => naviguer(-1)}
-                  className="flex size-10 items-center justify-center rounded-full border border-hairline-strong bg-surface text-body transition-colors hover:bg-hover"
+                  className="flex size-11 items-center justify-center rounded-full bg-tile text-link transition-colors hover:bg-wash-strong"
                 >
                   <IconChevronEnd width={16} height={16} className="rotate-180" />
                 </button>
@@ -88,7 +88,7 @@ export function PhotoGallery({
                 <button
                   type="button"
                   onClick={() => naviguer(1)}
-                  className="flex size-10 items-center justify-center rounded-full border border-hairline-strong bg-surface text-body transition-colors hover:bg-hover"
+                  className="flex size-11 items-center justify-center rounded-full bg-tile text-link transition-colors hover:bg-wash-strong"
                 >
                   <IconChevronEnd width={16} height={16} />
                 </button>

@@ -72,6 +72,7 @@ export default async function AppelsPage({
       {appels.length === 0 ? (
         <EmptyState
           title={f.aucunAppel}
+          illustration="empty-appels"
           hint={gestion ? f.aucunAppelAide : undefined}
           action={
             gestion ? (
@@ -86,7 +87,7 @@ export default async function AppelsPage({
       ) : (
         <>
           {/* Indicateurs globaux — dérivés de la synthèse déjà chargée. */}
-          <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <StatCard
               icon={<CMoneyBag />}
               tone="sage"
@@ -130,12 +131,12 @@ export default async function AppelsPage({
                     <TR key={a.id}>
                       <TD>
                         <span className="flex items-center gap-3">
-                          <IconCircle tone="sand" size={36} className="hidden sm:inline-flex">
-                            <CCoins width={18} height={18} />
+                          <IconCircle tone="sand" size={40} className="hidden sm:inline-flex">
+                            <CCoins width={20} height={20} />
                           </IconCircle>
                           <Link
                             href={`/${ctx.locale}/finances/appels-de-fonds/${a.id}`}
-                            className="truncate font-semibold text-ink hover:text-action"
+                            className="truncate font-semibold text-ink hover:text-link"
                           >
                             {formatPeriode(a.periode, ctx.locale)}
                           </Link>
@@ -155,7 +156,7 @@ export default async function AppelsPage({
                             tone={r >= 1 ? "ok" : r >= 0.6 ? "action" : "warn"}
                             className="w-24"
                           />
-                          <span className="tnum text-[12px] font-medium text-soft">
+                          <span className="tnum whitespace-nowrap text-[12px] font-medium text-soft">
                             {formatMAD(versChaine(paye), ctx.locale)}
                           </span>
                         </div>

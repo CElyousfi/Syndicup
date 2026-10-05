@@ -17,12 +17,14 @@ import type {
 import { PhotoGallery } from "../../../../../components/incidents/photo-gallery";
 import { fill } from "../../../../../lib/i18n";
 import { formatDate, formatDateHeure, formatMAD, formatTelephone, nomComplet } from "../../../../../lib/format";
-import { PageHeader, BackLink } from "../../../../../components/page-header";
+import { BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Avatar } from "../../../../../components/ui/avatar";
-import { CAlert, CSend, CWrench, IconCircle } from "../../../../../components/ui/color-icons";
+import { CCoins, CSend, IconCircle } from "../../../../../components/ui/color-icons";
+import { IconArrowEnd, IconCheck, IconChevronEnd } from "../../../../../components/ui/icons";
+import { CategorieIcon } from "../../../../../components/incidents/categorie-icon";
 import { depenseVariant, incidentVariant, urgenceVariant } from "../../../../../lib/status";
 import { AssignerModal, ChangerStatutModal } from "./incident-actions";
 import { CreerDepenseIncidentModal, EvaluerPrestataireModal } from "./incident-depense-modals";
@@ -102,6 +104,9 @@ export default async function IncidentDetailPage({
     !["RESOLU", "FERME"].includes(incident.statut) &&
     new Date(incident.slaDeadline).getTime() < Date.now();
 
+  const lienDetail = (href: string) => `/${locale}${href}`;
+  const ligne = "flex items-start justify-between gap-4 py-3.5";
+
   return (
     <div className="page-root">
       {sp.signale === "1" ? (
@@ -110,30 +115,45 @@ export default async function IncidentDetailPage({
         </Banner>
       ) : null}
 
-      <PageHeader
-        back={<BackLink href={`/${locale}/incidents`} label={dict.nav.incidents} />}
-        title={incident.sousCategorie}
-        badge={
-          <span className="inline-flex gap-1.5">
-            <Badge variant={incidentVariant[incident.statut]}>
-              {dict.enums.statutIncident[incident.statut]}
-            </Badge>
-            <Badge variant={urgenceVariant[incident.urgence]}>
-              {dict.enums.urgence[incident.urgence]}
-            </Badge>
+      <div className="mb-4 sm:mb-5">
+        <BackLink href={`/${locale}/incidents`} label={dict.nav.incidents} />
+      </div>
+
+      {/* Résumé — pastille de catégorie, titre, statut + urgence, actions */}
+      <section className="mb-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-4 sm:mb-8">
+        <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
+          <span className="hidden sm:block">
+            <CategorieIcon categorie={incident.categorie} size={64} />
           </span>
-        }
-        subtitle={
-          <>
-            {dict.enums.categorieIncident[incident.categorie]} ·{" "}
-            {dict.enums.partie[incident.partie]}
-            {lotConcerne ? ` · ${dict.invitations.lot} ${lotConcerne.numero}` : ""}
-            {" · "}
-            {fill(i.creeLe, { date: formatDateHeure(incident.creeLe, ctx.locale) })}
-          </>
-        }
-        actions={
-          <>
+          <span className="sm:hidden">
+            <CategorieIcon categorie={incident.categorie} size={52} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="break-words text-[26px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">
+              {incident.sousCategorie}
+            </h1>
+            <p className="mt-1.5 text-sm text-soft sm:text-[15px]">
+              {dict.enums.categorieIncident[incident.categorie]} · {dict.enums.partie[incident.partie]}
+              {" · "}
+              <span className="tnum">{fill(i.creeLe, { date: formatDateHeure(incident.creeLe, ctx.locale) })}</span>
+            </p>
+            <div className="mt-3 flex flex-wrap items-center gap-1.5">
+              <Badge variant={incidentVariant[incident.statut]}>
+                {dict.enums.statutIncident[incident.statut]}
+              </Badge>
+              <Badge variant={urgenceVariant[incident.urgence]}>
+                {dict.enums.urgence[incident.urgence]}
+              </Badge>
+              {enRetard ? (
+                <Badge variant="danger" pulse>
+                  {i.slaDepasse}
+                </Badge>
+              ) : null}
+            </div>
+          </div>
+        </div>
+        {peutChangerStatut || syndic || ctx.roles.includes("GARDIEN") ? (
+          <div className="page-actions flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
             {peutChangerStatut ? (
               <ChangerStatutModal
                 dict={dict}
@@ -158,9 +178,9 @@ export default async function IncidentDetailPage({
                 }))}
               />
             ) : null}
-          </>
-        }
-      />
+          </div>
+        ) : null}
+      </section>
 
       {enRetard ? (
         <Banner variant="danger" className="mb-5" title={i.slaDepasse}>
@@ -168,30 +188,61 @@ export default async function IncidentDetailPage({
         </Banner>
       ) : null}
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
+      <div className="grid gap-x-8 gap-y-8 lg:grid-cols-3">
+        <div className="min-w-0 space-y-8 lg:col-span-2">
+          {/* Clés / valeurs : prise en charge, catégorie, lot, date */}
+          <Card className="py-2 sm:py-2">
+            <dl className="divide-y divide-wash-strong text-sm">
+              <div className={ligne}>
+                <dt className="text-soft">{i.sla}</dt>
+                <dd className="text-end">
+                  <span className={`tnum block whitespace-nowrap font-semibold ${enRetard ? "text-danger" : "text-ink"}`}>
+                    {incident.slaDeadline ? formatDateHeure(incident.slaDeadline, ctx.locale) : dict.common.none}
+                  </span>
+                  <span className="mt-0.5 block whitespace-nowrap text-[12px] text-soft">{dict.enums.urgenceSla[incident.urgence]}</span>
+                </dd>
+              </div>
+              <div className={ligne}>
+                <dt className="text-soft">{i.categorie}</dt>
+                <dd className="text-end font-semibold text-ink">{dict.enums.categorieIncident[incident.categorie]}</dd>
+              </div>
+              {lotConcerne ? (
+                <div className={ligne}>
+                  <dt className="text-soft">{dict.invitations.lot}</dt>
+                  <dd className="tnum text-end font-semibold text-ink">{lotConcerne.numero}</dd>
+                </div>
+              ) : null}
+              {incident.immatriculationSignalee ? (
+                <div className={ligne}>
+                  <dt className="text-soft">{i.immatriculationSignalee}</dt>
+                  <dd className="font-mono font-semibold text-ink" dir="ltr">{incident.immatriculationSignalee}</dd>
+                </div>
+              ) : null}
+              {incident.emplacementId ? (
+                <div className={ligne}>
+                  <dt className="text-soft">{i.emplacementConcerne}</dt>
+                  <dd>
+                    <Link href={lienDetail(`/parkings/${incident.emplacementId}`)} className="link font-mono font-semibold" dir="ltr">
+                      {emplacementCode ?? dict.parkings.titre}
+                    </Link>
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </Card>
+
           {incident.description ? (
-            <Card>
+            <section>
               <SectionHeader title={i.description} />
-              <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-body">
+              <p className="mt-3 whitespace-pre-wrap text-[15px] leading-relaxed text-body">
                 {incident.description}
               </p>
-            </Card>
-          ) : null}
-
-          {incident.immatriculationSignalee || incident.emplacementId ? (
-            <Card>
-              <SectionHeader title={dict.enums.categorieIncident.PARKING} />
-              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-                {incident.immatriculationSignalee ? <div><dt className="text-[12px] text-faint">{i.immatriculationSignalee}</dt><dd className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{incident.immatriculationSignalee}</dd></div> : null}
-                {incident.emplacementId ? <div><dt className="text-[12px] text-faint">{i.emplacementConcerne}</dt><dd className="text-sm text-ink-strong"><Link href={`/${locale}/parkings/${incident.emplacementId}`} className="font-mono text-action hover:underline" dir="ltr">{emplacementCode ?? dict.parkings.titre}</Link></dd></div> : null}
-              </dl>
-            </Card>
+            </section>
           ) : null}
 
           {/* Photos du signalement — vignettes + visionneuse plein cadre */}
           {photos.length > 0 ? (
-            <Card>
+            <section>
               <SectionHeader title={i.photos} />
               <div className="mt-4">
                 <PhotoGallery
@@ -200,122 +251,116 @@ export default async function IncidentDetailPage({
                   closeLabel={dict.common.close}
                 />
               </div>
-            </Card>
+            </section>
           ) : null}
 
-          {/* Journal append-only */}
-          <Card>
+          {/* Journal append-only — frise plate */}
+          <section>
             <SectionHeader title={i.journal} />
             {incident.logs.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{i.journalVide}</p>
             ) : (
-              <ol className="mt-6 ms-2">
+              <ol className="mt-5">
                 {incident.logs.map((log, idx) => {
                   const clos = log.statutApres === "RESOLU" || log.statutApres === "FERME";
                   const enCours = log.statutApres === "EN_COURS";
                   const dernier = idx === incident.logs.length - 1;
+                  const acteur = nomActeur(log.acteurId, log.acteur);
                   return (
-                  <li
-                    key={log.id}
-                    className={`relative ps-7 ${dernier ? "pb-0" : "border-s border-hairline pb-7"}`}
-                  >
-                    <span
-                      className={`absolute -start-[9px] top-0 flex size-[18px] items-center justify-center rounded-full ${
-                        clos ? "bg-ok-tint" : enCours ? "bg-warn-tint" : "bg-tosca-tint"
-                      }`}
-                    >
-                      <span
-                        className={`size-2 rounded-full ${
-                          clos ? "bg-ok" : enCours ? "bg-warn" : "bg-action"
-                        }`}
-                      />
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        {log.statutAvant ? (
-                          <>
-                            <Badge variant="outline">
-                              {dict.enums.statutIncident[log.statutAvant]}
-                            </Badge>
-                            <span className="text-faint">→</span>
-                          </>
-                        ) : null}
-                        <Badge variant={incidentVariant[log.statutApres]}>
-                          {dict.enums.statutIncident[log.statutApres]}
-                        </Badge>
+                    <li key={log.id} className="relative flex gap-4">
+                      {/* Nœud + trait vers l'événement suivant */}
+                      <div className="relative flex w-9 shrink-0 justify-center">
+                        <span
+                          className={`relative z-[1] flex size-9 items-center justify-center rounded-full ${
+                            clos ? "bg-ok-tint text-ok" : enCours ? "bg-warn-tint text-warn" : "bg-action-tint text-link"
+                          }`}
+                        >
+                          {clos ? <IconCheck width={16} height={16} /> : <span className="size-2.5 rounded-full bg-current" />}
+                        </span>
+                        {!dernier ? <span className="absolute top-9 bottom-0 w-0.5 bg-wash-strong" aria-hidden /> : null}
                       </div>
-                      {log.commentaire ? (
-                        <p className="mt-1.5 text-sm leading-relaxed text-body">
-                          {log.commentaire}
+                      <div className={`min-w-0 flex-1 pt-1.5 ${dernier ? "" : "pb-7"}`}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {log.statutAvant ? (
+                            <>
+                              <Badge variant="outline">
+                                {dict.enums.statutIncident[log.statutAvant]}
+                              </Badge>
+                              <IconArrowEnd width={14} height={14} className="text-faint" />
+                            </>
+                          ) : null}
+                          <Badge variant={incidentVariant[log.statutApres]}>
+                            {dict.enums.statutIncident[log.statutApres]}
+                          </Badge>
+                        </div>
+                        {log.commentaire ? (
+                          <p className="mt-2 text-[15px] leading-relaxed text-ink-strong">
+                            {log.commentaire}
+                          </p>
+                        ) : null}
+                        <p className="mt-1.5 text-[13px] text-soft">
+                          {acteur ? <span className="font-semibold text-body">{acteur} · </span> : null}
+                          <span className="tnum">{formatDateHeure(log.horodatage, ctx.locale)}</span>
                         </p>
-                      ) : null}
-                      <p className="mt-1 text-[12px] text-faint">
-                        {nomActeur(log.acteurId, log.acteur) ? `${nomActeur(log.acteurId, log.acteur)} · ` : ""}
-                        {formatDateHeure(log.horodatage, ctx.locale)}
-                      </p>
-                    </div>
-                  </li>
+                      </div>
+                    </li>
                   );
                 })}
               </ol>
             )}
-          </Card>
+          </section>
 
           {voitDepenses ? (
-            <Card>
-              <SectionHeader
-                title={d.depensesLiees}
-                subtitle={incident.total_depenses ? `${d.totalDepensesLiees} : ${formatMAD(incident.total_depenses, ctx.locale)}` : undefined}
-                action={syndic ? <CreerDepenseIncidentModal dict={dict} locale={ctx.locale} incidentId={id} postes={postesActifs} /> : undefined}
-              />
+            <section>
+              {/* En-tête + action : l'action passe dessous sur mobile (titre jamais écrasé). */}
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <SectionHeader
+                  title={d.depensesLiees}
+                  subtitle={incident.total_depenses ? <span className="tnum">{`${d.totalDepensesLiees} : ${formatMAD(incident.total_depenses, ctx.locale)}`}</span> : undefined}
+                />
+                {syndic ? <CreerDepenseIncidentModal dict={dict} locale={ctx.locale} incidentId={id} postes={postesActifs} /> : null}
+              </div>
               {depenses.length === 0 ? (
                 <p className="mt-3 text-sm text-soft">{d.aucuneDepenseLiee}</p>
               ) : (
-                <ul className="mt-3 divide-y divide-hairline">
+                <ul className="-mx-3 mt-3">
                   {depenses.map((dep) => (
-                    <li key={dep.id} className="flex items-center justify-between gap-3 py-2.5">
-                      <div className="min-w-0">
-                        <Link href={`/${locale}/finances/depenses/${dep.id}`} className="block truncate text-sm font-medium text-ink hover:text-action">{dep.libelle}</Link>
-                        <span className="tnum text-[12px] text-faint">{formatDate(dep.dateDepense, ctx.locale)}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={depenseVariant[dep.statut]}>{e.statutDepense[dep.statut]}</Badge>
-                        <span className="tnum text-sm font-medium text-ink">{formatMAD(dep.montantTtc, ctx.locale)}</span>
-                      </div>
+                    <li key={dep.id}>
+                      <Link
+                        href={lienDetail(`/finances/depenses/${dep.id}`)}
+                        className="flex items-center gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash"
+                      >
+                        <IconCircle tone="sand" size={44}>
+                          <CCoins />
+                        </IconCircle>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[15px] font-bold text-ink">{dep.libelle}</span>
+                          <span className="tnum block text-[13px] text-soft">{formatDate(dep.dateDepense, ctx.locale)}</span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+                          <span className="tnum text-[15px] font-semibold text-ink">{formatMAD(dep.montantTtc, ctx.locale)}</span>
+                          <Badge variant={depenseVariant[dep.statut]}>{e.statutDepense[dep.statut]}</Badge>
+                        </span>
+                        <IconChevronEnd width={18} height={18} className="shrink-0 text-link" />
+                      </Link>
                     </li>
                   ))}
                 </ul>
               )}
-            </Card>
+            </section>
           ) : null}
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
-            <SectionHeader title={i.sla} />
-            <div className="mt-3 flex items-start gap-3">
-              <IconCircle tone={enRetard ? "danger" : "tosca"} size={40}>
-                {enRetard ? <CAlert width={20} height={20} /> : <CWrench width={20} height={20} />}
-              </IconCircle>
-              <div className="min-w-0">
-                <p className="text-sm text-body">{dict.enums.urgenceSla[incident.urgence]}</p>
-                {incident.slaDeadline ? (
-                  <p className={`tnum mt-1 text-sm font-medium ${enRetard ? "text-danger" : "text-ink"}`}>
-                    {formatDateHeure(incident.slaDeadline, ctx.locale)}
-                  </p>
-                ) : null}
-              </div>
-            </div>
-          </Card>
-          <Card>
-            <SectionHeader title={i.assigneA} />
+            <p className="text-[13px] font-semibold text-soft">{i.assigneA}</p>
             {prestataireAssigne ? (
               <div className="mt-3 flex items-start gap-3">
-                <IconCircle tone="tosca" size={40}>
-                  <CSend width={20} height={20} />
+                <IconCircle tone="tosca" size={44}>
+                  <CSend />
                 </IconCircle>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-ink">{prestataireAssigne.nom}</p>
+                  <p className="truncate text-[15px] font-bold text-ink">{prestataireAssigne.nom}</p>
                   <p className="mt-0.5 truncate text-[13px] text-soft">{prestataireAssigne.specialite}</p>
                   <p className="mt-0.5 truncate text-[13px] text-body" dir="ltr">
                     {prestataireAssigne.contact}
@@ -323,30 +368,35 @@ export default async function IncidentDetailPage({
                 </div>
               </div>
             ) : (
-              <p className="mt-3 text-sm text-soft">{i.nonAssigne}</p>
+              <div className="mt-3 flex items-center gap-3">
+                <IconCircle tone="surface" size={44}>
+                  <CSend />
+                </IconCircle>
+                <p className="text-[15px] font-semibold text-soft">{i.nonAssigne}</p>
+              </div>
             )}
             {incident.notePrestataire != null ? (
-              <p className="mt-3 text-sm text-body">
+              <p className="mt-4 text-sm text-body">
                 <span className="tnum text-warn" aria-hidden>{"★".repeat(incident.notePrestataire)}</span>{" "}
                 {fill(d.dejaEvalue, { note: incident.notePrestataire })}
                 {incident.commentairePrestataire ? <span className="block text-[13px] text-soft">« {incident.commentairePrestataire} »</span> : null}
               </p>
             ) : peutEvaluer ? (
-              <div className="mt-3">
+              <div className="mt-4">
                 <EvaluerPrestataireModal dict={dict} locale={ctx.locale} incidentId={id} prestataireNom={prestataireAssigne?.nom ?? ""} />
               </div>
             ) : null}
           </Card>
           <Card>
-            <SectionHeader title={i.creePar} />
+            <p className="text-[13px] font-semibold text-soft">{i.creePar}</p>
             <div className="mt-3 flex items-center gap-3">
-              <Avatar nom={auteurNom ?? "•"} size={40} />
+              <Avatar nom={auteurNom ?? "•"} size={44} />
               <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink">{auteurNom ?? dict.common.none}</p>
+                <p className="truncate text-[15px] font-bold text-ink">{auteurNom ?? dict.common.none}</p>
                 {incident.createur?.telephone ? (
                   <a
                     href={`tel:${incident.createur.telephone}`}
-                    className="tnum block truncate text-[13px] text-action hover:underline"
+                    className="link tnum block truncate text-[13px]"
                     dir="ltr"
                   >
                     {formatTelephone(incident.createur.telephone)}

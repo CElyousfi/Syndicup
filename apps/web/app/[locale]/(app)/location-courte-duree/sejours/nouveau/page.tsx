@@ -8,7 +8,6 @@ import { vueLcd } from "../../../../../../lib/lcd";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { EmptyState } from "../../../../../../components/ui/empty-state";
 import { ButtonLink } from "../../../../../../components/ui/button";
-import { CKey, IconCircle } from "../../../../../../components/ui/color-icons";
 import { SejourForm } from "../sejour-form";
 
 export async function generateMetadata({
@@ -56,11 +55,7 @@ export default async function NouveauSejourPage({
       {lots.length === 0 ? (
         <EmptyState
           title={l.aucunLotValide}
-          icon={
-            <IconCircle tone="sand" size={64}>
-              <CKey width={30} height={30} />
-            </IconCircle>
-          }
+          illustration="empty-lcd"
           action={
             <ButtonLink href={`/${locale}/location-courte-duree`} variant="secondary" size="sm">
               {dict.common.back}

@@ -156,7 +156,9 @@
   }
 
   /* Hachures diagonales — barre active des graphiques (cf. référence). */
-  /* Affiche : titres de marque en capitales serrées (latin) — l'arabe garde sa casse. */
+  /* Affiche : titres de marque en capitales serrées (latin) — l'arabe garde sa casse. La taille
+     reste celle de l'appelant ; réduire l'arabe (Kufi plus haut) avec la variante
+     [:root[lang=ar]_&]:text-… sur l'élément. */
   .font-poster {
     font-family: var(--font-display);
     font-weight: 900;
@@ -169,7 +171,6 @@
     line-height: 1.35;
     letter-spacing: 0;
     text-transform: none;
-    font-size: 0.82em;
   }
 
   /* Lien Wise : vert marque, souligné, 600. */

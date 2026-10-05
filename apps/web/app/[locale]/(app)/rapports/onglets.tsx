@@ -9,15 +9,15 @@ export function RapportsTabs({ dict, locale, active, exercice }: { dict: Dict; l
   return <LinkTabs className="mb-5" tabs={(Object.keys(HREFS) as OngletRapports[]).map((o) => ({ href: `/${locale}${HREFS[o]}${o === "gestion" || o === "exports" ? "" : q}`, label: dict.rapports.onglets[o], active: o === active }))} />;
 }
 
-/** Sélecteur d'exercice (liens) — l'exercice courant et les quatre précédents. */
+/** Sélecteur d'exercice (liens) — l'exercice courant et les quatre précédents, en pills (Wise : actif lime). */
 export function ExerciceLinks({ base, exercice, locale }: { base: string; exercice: string; locale: Locale }) {
   const courant = new Date().getFullYear();
   const annees = Array.from({ length: 5 }, (_, i) => String(courant - i));
   if (!annees.includes(exercice)) annees.push(exercice);
   return (
-    <div className="inline-flex overflow-hidden rounded-btn border border-hairline-strong bg-surface">
+    <div className="flex flex-wrap gap-1.5">
       {annees.map((a) => (
-        <a key={a} href={`/${locale}${base}?exercice=${a}`} className={`tnum px-3 py-1.5 text-[13px] font-medium transition-colors ${a === exercice ? "bg-ink text-white" : "text-ink-strong hover:bg-hover"}`}>{a}</a>
+        <a key={a} href={`/${locale}${base}?exercice=${a}`} aria-current={a === exercice ? "page" : undefined} className={`tnum inline-flex h-10 shrink-0 items-center rounded-full border px-4 text-[14px] font-semibold transition-colors ${a === exercice ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{a}</a>
       ))}
     </div>
   );

@@ -15,7 +15,7 @@ export function RibButton({ dict, locale, prestataireId, ribMasque }: { dict: Di
   return (
     <div className="mt-2">
       {rib ? (
-        <p className="tnum rounded-field bg-hover px-3 py-2 font-mono text-[14px] text-ink" dir="ltr">
+        <p className="tnum rounded-field bg-surface px-3 py-2 font-mono text-[14px] text-ink" dir="ltr">
           {rib.replace(/(\d{3})(\d{3})(\d{16})(\d{2})/, "$1 $2 $3 $4")}
         </p>
       ) : (

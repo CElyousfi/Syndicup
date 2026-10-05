@@ -35,19 +35,19 @@ export default async function RapportsGestionPage({ params }: { params: Promise<
     <div className="page-root">
       <PageHeader title={r.gestionTitre} subtitle={r.gestionSubtitle} actions={gestion ? <GenererModal dict={dict} locale={ctx.locale} budgets={budgetsRes?.ok ? budgetsRes.data : []} exerciceDefaut={String(new Date().getFullYear() - 1)} /> : undefined} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="gestion" />
-      {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} /> : (
+      {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} illustration="empty-documents" /> : (
         <TableCard>
           <Table>
             <THead><TH>{r.exercice}</TH><TH>{r.statut}</TH><TH align="end">{r.compteCourant}</TH><TH align="end">{r.recouvrement}</TH><TH align="end">{r.impayes}</TH><TH align="end">{r.depenses}</TH><TH>{r.generePar}</TH></THead>
             <tbody>
               {rows.map((x) => (
                 <TR key={x.id}>
-                  <TD className="tnum font-semibold text-ink"><Link href={p(`/rapports/gestion/${x.id}`)} className="hover:text-action">{x.exercice}</Link></TD>
+                  <TD className="tnum text-[15px] font-bold text-ink"><Link href={p(`/rapports/gestion/${x.id}`)} className="link">{x.exercice}</Link></TD>
                   <TD><Badge variant={rapportVariant[x.statut]}>{dict.enumsRapports.statutRapport[x.statut]}</Badge>{x.ag ? <span className="block text-[11px] text-faint">{dict.nav.ag} · {formatDate(x.ag.date_ag, ctx.locale)}</span> : null}</TD>
-                  <TD align="end" className="tnum text-ink">{mad(x.resume.compte_courant_cloture)}</TD>
+                  <TD align="end" className="tnum whitespace-nowrap font-semibold text-ink">{mad(x.resume.compte_courant_cloture)}</TD>
                   <TD align="end" className="tnum text-body">{x.resume.taux_recouvrement ? `${x.resume.taux_recouvrement} %` : "—"}</TD>
-                  <TD align="end" className="tnum text-danger">{mad(x.resume.impayes_total)}<span className="block text-[11px] text-faint">{fill(r.lotsEnRetard, { n: x.resume.nb_lots_en_retard })}</span></TD>
-                  <TD align="end" className="tnum text-body">{mad(x.resume.depenses_total)}</TD>
+                  <TD align="end" className="tnum whitespace-nowrap font-semibold text-danger">{mad(x.resume.impayes_total)}<span className="block text-[11px] text-faint">{fill(r.lotsEnRetard, { n: x.resume.nb_lots_en_retard })}</span></TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-body">{mad(x.resume.depenses_total)}</TD>
                   <TD className="text-body">{nomComplet(x.genere_par) ?? "—"}<span className="block text-[11px] text-faint">{formatDate(x.genere_le, ctx.locale)}</span></TD>
                 </TR>
               ))}

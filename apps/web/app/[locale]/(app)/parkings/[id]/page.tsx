@@ -54,25 +54,29 @@ export default async function EmplacementPage({ params }: { params: Promise<{ lo
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <SectionHeader title={t.attributionCourante} />
-            {!c ? <p className="mt-3 text-sm text-soft">{t.aucuneAttribution}</p> : (
-              <dl className="mt-3 grid gap-3 sm:grid-cols-2">
-                <div><dt className="text-[12px] text-faint">{t.lotBeneficiaire}</dt><dd className="text-sm font-medium text-ink-strong">{c.lotNumero ?? "—"}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.type}</dt><dd className="text-sm text-ink-strong">{e.typeAttribution[c.type]}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.periode}</dt><dd className="text-sm text-ink-strong tnum">{formatDate(c.dateDebut, ctx.locale)} → {c.dateFin ? formatDate(c.dateFin, ctx.locale) : t.sansFin}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.redevance}</dt><dd className="text-sm text-ink-strong tnum">{c.redevanceMensuelle ? `${formatMontant(c.redevanceMensuelle)} MAD` : "—"}</dd></div>
-                {c.resolutionAgId ? <div><dt className="text-[12px] text-faint">{t.resolutionAg}</dt><dd className="font-mono text-[12px] text-body" dir="ltr">{c.resolutionAgId}</dd></div> : null}
-                {c.notes ? <div className="sm:col-span-2"><dt className="text-[12px] text-faint">{t.notes}</dt><dd className="whitespace-pre-wrap text-sm text-body">{c.notes}</dd></div> : null}
-              </dl>
+            {!c ? <p className="mt-4 rounded-[16px] bg-surface px-4 py-3.5 text-sm text-soft">{t.aucuneAttribution}</p> : (
+              <>
+                <div className="mt-5 flex items-center gap-4">
+                  <span className="flex h-14 min-w-14 items-center justify-center rounded-full bg-brand px-4 text-[17px] font-bold text-lime" dir="ltr">{c.lotNumero ?? "—"}</span>
+                  <div className="min-w-0"><p className="text-[13px] text-soft">{t.lotBeneficiaire}</p><p className="text-[18px] font-bold text-ink">{e.typeAttribution[c.type]}</p></div>
+                </div>
+                <dl className="mt-5 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
+                  <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 py-3"><dt className="text-soft">{t.periode}</dt><dd className="tnum font-semibold text-ink">{formatDate(c.dateDebut, ctx.locale)} → {c.dateFin ? formatDate(c.dateFin, ctx.locale) : t.sansFin}</dd></div>
+                  <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 py-3"><dt className="text-soft">{t.redevance}</dt><dd className="tnum font-semibold text-ink">{c.redevanceMensuelle ? `${formatMontant(c.redevanceMensuelle)} MAD` : "—"}</dd></div>
+                  {c.resolutionAgId ? <div className="flex flex-wrap justify-between gap-x-4 gap-y-0.5 py-3"><dt className="text-soft">{t.resolutionAg}</dt><dd className="min-w-0 break-all font-mono text-[12px] text-body" dir="ltr">{c.resolutionAgId}</dd></div> : null}
+                  {c.notes ? <div className="py-3"><dt className="text-soft">{t.notes}</dt><dd className="mt-0.5 whitespace-pre-wrap text-body">{c.notes}</dd></div> : null}
+                </dl>
+              </>
             )}
           </Card>
-          <TableCard>
-            <div className="p-5 pb-2"><SectionHeader title={t.historique} /></div>
-            {x.attributions.length === 0 ? <p className="px-5 pb-5 text-sm text-soft">{t.aucunHistorique}</p> : (
-              <Table>
+          <section className="pt-4">
+            <SectionHeader title={t.historique} className="mb-3" />
+            {x.attributions.length === 0 ? <p className="text-sm text-soft">{t.aucunHistorique}</p> : (
+              <TableCard><Table>
                 <THead><TH>{t.lot}</TH><TH>{t.type}</TH><TH>{t.periode}</TH><TH align="end">{t.redevance}</TH><TH>{t.statut}</TH><TH>{t.notes}</TH></THead>
                 <tbody>{x.attributions.map((a) => { const s = etat(a); return (
                   <TR key={a.id}>
-                    <TD className="font-medium text-ink-strong">{a.lotNumero ?? "—"}</TD>
+                    <TD className="font-bold text-ink">{a.lotNumero ?? "—"}</TD>
                     <TD className="text-body">{e.typeAttribution[a.type]}</TD>
                     <TD className="text-body tnum">{formatDate(a.dateDebut, ctx.locale)} → {a.dateFin ? formatDate(a.dateFin, ctx.locale) : t.sansFin}</TD>
                     <TD align="end" className="tnum">{a.redevanceMensuelle ? `${formatMontant(a.redevanceMensuelle)} MAD` : "—"}</TD>
@@ -80,14 +84,14 @@ export default async function EmplacementPage({ params }: { params: Promise<{ lo
                     <TD className="text-[12px] text-soft">{a.creePar ? nomComplet(a.creePar) ?? "—" : "—"} · {formatDateHeure(a.creeLe, ctx.locale)}</TD>
                   </TR>
                 ); })}</tbody>
-              </Table>
+              </Table></TableCard>
             )}
-          </TableCard>
+          </section>
         </div>
-        <Card>
+        <Card className="lg:self-start">
           <SectionHeader title={t.notes} />
-          <p className="mt-3 whitespace-pre-wrap text-sm text-body">{x.notes ?? "—"}</p>
-          <p className="mt-4 text-[12px] text-faint">{formatDateHeure(x.creeLe, ctx.locale)}</p>
+          <p className="mt-4 whitespace-pre-wrap rounded-[16px] bg-surface px-4 py-3.5 text-sm text-body">{x.notes ?? "—"}</p>
+          <p className="mt-4 text-[12px] text-soft">{formatDateHeure(x.creeLe, ctx.locale)}</p>
         </Card>
       </div>
     </div>

@@ -11,7 +11,7 @@ import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import { annulerSejour, ajouterPiecesJointes, retirerPieceJointe } from "../../actions";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
-import { IconFile } from "../../../../../../components/ui/icons";
+import { IconCamera, IconFile } from "../../../../../../components/ui/icons";
 
 /** Annulation d'un séjour PREVU — confirmation explicite, motif facultatif, gardien notifié. */
 export function AnnulerSejourModal({
@@ -96,12 +96,12 @@ export function PiecesJointesCard({
     <Card>
       <SectionHeader title={l.piecesJointes} subtitle={l.piecesJointesAide} />
       {pieces.length === 0 ? (
-        <p className="mt-4 text-[13px] text-faint">{l.aucunePiece}</p>
+        <p className="mt-4 text-[13px] text-soft">{l.aucunePiece}</p>
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {pieces.map((pj) => (
-            <li key={pj.path} className="flex items-center gap-3 rounded-2xl border border-hairline bg-ground/60 p-2">
-              <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-surface">
+            <li key={pj.path} className="flex items-center gap-3 rounded-2xl bg-surface p-2.5">
+              <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-wash">
                 {pj.type === "IMAGE" ? (
                   <img src={pj.src} alt="" className="size-16 object-cover" />
                 ) : (
@@ -109,7 +109,7 @@ export function PiecesJointesCard({
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-medium text-ink" dir="ltr">
+                <p className="truncate text-[14px] font-semibold text-ink" dir="ltr">
                   {pj.nom}
                 </p>
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
@@ -133,16 +133,18 @@ export function PiecesJointesCard({
       )}
       <FormAlert state={retraitState} />
       {peutJoindre && pieces.length < 10 ? (
-        <form action={action} className="mt-4 space-y-2 border-t border-hairline pt-4">
+        <form action={action} className="mt-5 space-y-2 border-t border-wash-strong pt-4">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="sejour_id" value={sejourId} />
           <input type="hidden" name="message_succes" value={l.pieceAjoutee} />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3.5 text-[13px] font-medium text-ink-strong hover:bg-hover">
+            <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link hover:bg-action-wash has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
+              <IconCamera width={15} height={15} />
               {l.prendrePhoto}
               <input type="file" name="pieces_jointes" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setNb((n) => n + (e.target.files?.length ?? 0))} />
             </label>
-            <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3.5 text-[13px] font-medium text-ink-strong hover:bg-hover">
+            <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link hover:bg-action-wash has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
+              <IconFile width={15} height={15} />
               {l.choisirFichier}
               <input type="file" name="pieces_jointes" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf" multiple className="sr-only" onChange={(e) => setNb((n) => n + (e.target.files?.length ?? 0))} />
             </label>

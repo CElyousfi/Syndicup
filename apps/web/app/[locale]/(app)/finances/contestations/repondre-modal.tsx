@@ -43,7 +43,7 @@ export function RepondreModal({
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="contestation_id" value={contestationId} />
-            <blockquote className="rounded-xl border-s-2 border-hairline-strong bg-ground px-4 py-3 text-[13px] italic leading-relaxed text-body">
+            <blockquote className="rounded-[18px] border-s-[3px] border-link bg-tile px-4 py-3 text-[14px] leading-relaxed text-body">
               {motif}
             </blockquote>
             <Field label={f.reponseStatut} htmlFor="statut" required>

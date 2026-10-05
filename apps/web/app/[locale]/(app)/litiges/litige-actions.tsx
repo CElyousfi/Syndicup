@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
@@ -8,12 +8,20 @@ import { Button } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import { cloturerLitige, declarerLitige, escaladerLitige } from "./actions";
+import { celebrate } from "../../../../lib/success";
 import { IconPlus } from "../../../../components/ui/icons";
 
 export function DeclarerLitigeModal({ dict, locale }: { dict: Dict; locale: Locale }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(declarerLitige, IDLE);
   const li = dict.litiges;
+
+  // Action majeure : le litige déclaré s'annonce en écran de succès plein (comme le mobile).
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: li.declare, illustration: "ok-general" });
+  }, [state, li.declare]);
 
   return (
     <>

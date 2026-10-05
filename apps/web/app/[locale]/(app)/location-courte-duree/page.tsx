@@ -26,6 +26,7 @@ import { CCalendar, CKey, CShield, IconCircle } from "../../../../components/ui/
 import { IconPlus, IconSettings } from "../../../../components/ui/icons";
 import { declarationLcdVariant, regimeLcdVariant } from "../../../../lib/status";
 import { SejourListe } from "../../../../components/lcd/sejour-list";
+import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
 import { ConfirmerArriveeForm, ConfirmerDepartForm, DeclarerLotModal } from "./lcd-modals";
 
 export async function generateMetadata({
@@ -170,6 +171,7 @@ export default async function LocationCourteDureePage({
                 locale={ctx.locale}
                 lots={lotsDeclarables}
                 ouvertInitialement={sp.declarer === "1"}
+                variant={peutDeclarerSejour ? "secondary" : "primary"}
               />
             ) : null}
             {gestion ? (
@@ -196,50 +198,49 @@ export default async function LocationCourteDureePage({
 
       {/* ── Syndic / conseil : régime + indicateurs ── */}
       {(gestion || vue === "conseil") && reglement ? (
-        <div className="mb-5 grid gap-4 sm:grid-cols-3">
-          <Card className="sm:col-span-1">
-            <SectionHeader title={l.regime} subtitle={l.regimeAide} />
-            <div className="mt-3 flex items-center gap-3">
-              <IconCircle tone={regime === "INTERDITE" ? "danger" : regime === "NON_DEFINI" ? "sand" : "sage"} size={40}>
-                <CShield width={20} height={20} />
+        <div className="mb-10 grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+          <Card className="flex flex-col">
+            <div className="flex items-start justify-between gap-3">
+              <IconCircle tone={regime === "INTERDITE" ? "danger" : regime === "NON_DEFINI" ? "sand" : "sage"} size={44}>
+                <CShield width={22} height={22} />
               </IconCircle>
               <Badge variant={regimeLcdVariant[reglement.regimeLcd]}>
                 {dict.enums.regimeLcd[reglement.regimeLcd]}
               </Badge>
             </div>
+            <p className="mt-4 text-[17px] font-bold text-ink">{l.regime}</p>
+            <p className="mt-0.5 text-[13px] text-soft">{l.regimeAide}</p>
             {regime === "ENCADREE" && reglement.parametresLcdJson ? (
-              <ul className="mt-3 space-y-1 text-[13px] text-body">
+              <dl className="mt-3 divide-y divide-wash-strong text-[13px]">
                 {reglement.parametresLcdJson.nb_nuits_max_par_an !== null ? (
-                  <li>
-                    {l.nuitsMax} :{" "}
-                    <span className="tnum font-medium text-ink">{reglement.parametresLcdJson.nb_nuits_max_par_an}</span>
-                  </li>
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <dt className="text-soft">{l.nuitsMax}</dt>
+                    <dd className="tnum font-semibold text-ink">{reglement.parametresLcdJson.nb_nuits_max_par_an}</dd>
+                  </div>
                 ) : null}
                 {reglement.parametresLcdJson.nb_voyageurs_max_par_lot !== null ? (
-                  <li>
-                    {l.voyageursMax} :{" "}
-                    <span className="tnum font-medium text-ink">{reglement.parametresLcdJson.nb_voyageurs_max_par_lot}</span>
-                  </li>
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <dt className="text-soft">{l.voyageursMax}</dt>
+                    <dd className="tnum font-semibold text-ink">{reglement.parametresLcdJson.nb_voyageurs_max_par_lot}</dd>
+                  </div>
                 ) : null}
                 {reglement.parametresLcdJson.delai_declaration_heures !== null ? (
-                  <li>
-                    {l.delaiDeclaration} :{" "}
-                    <span className="tnum font-medium text-ink">{reglement.parametresLcdJson.delai_declaration_heures}</span>
-                  </li>
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <dt className="text-soft">{l.delaiDeclaration}</dt>
+                    <dd className="tnum font-semibold text-ink">{reglement.parametresLcdJson.delai_declaration_heures}</dd>
+                  </div>
                 ) : null}
-              </ul>
+              </dl>
             ) : regime === "AUTORISEE" ? (
-              <p className="mt-3 text-[13px] text-soft">{l.regimeAutorisee}</p>
+              <p className="mt-3 text-[13px] text-body">{l.regimeAutorisee}</p>
             ) : null}
             {gestion ? (
-              <Link
-                href={p("/location-courte-duree/reglement")}
-                className="mt-3 inline-block text-[13px] font-medium text-action hover:underline"
-              >
+              <Link href={p("/location-courte-duree/reglement")} className="link mt-auto inline-block pt-4 text-[14px]">
                 {l.configurerReglement}
               </Link>
             ) : null}
           </Card>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
           <StatCard
             icon={<CKey />}
             tone="warn"
@@ -252,10 +253,11 @@ export default async function LocationCourteDureePage({
             label={l.enCours}
             value={duJour ? duJour.enCours.length : declarations.filter((d) => d.statut === "VALIDEE").length}
           />
+          </div>
         </div>
       ) : null}
 
-      <div className="space-y-6">
+      <div className="space-y-10">
         {/* ── Aujourd'hui (syndic, gardien) ── */}
         {duJour ? (
           <div>
@@ -265,37 +267,29 @@ export default async function LocationCourteDureePage({
               className="mb-3"
             />
             {duJour.arrivees.length + duJour.departs.length + duJour.enCours.length === 0 ? (
-              <EmptyState
-                title={l.rienAujourdhui}
-                icon={
-                  <IconCircle tone="tosca" size={64}>
-                    <CCalendar width={30} height={30} />
-                  </IconCircle>
-                }
-              />
+              <div className="card flex items-center gap-4 p-5">
+                <IconCircle tone="surface" size={46}>
+                  <CCalendar width={22} height={22} />
+                </IconCircle>
+                <p className="text-[15px] font-semibold text-ink-strong">{l.rienAujourdhui}</p>
+              </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-6">
                 {duJour.arrivees.length > 0 ? (
                   <div>
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-soft">
-                      {l.arrivees}
-                    </p>
+                    <h3 className="mb-1 text-[15px] font-bold text-ink">{l.arrivees}</h3>
                     <SejourListe sejours={duJour.arrivees} dict={dict} locale={ctx.locale} actions={boutonsSejour} />
                   </div>
                 ) : null}
                 {duJour.departs.length > 0 ? (
                   <div>
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-soft">
-                      {l.departs}
-                    </p>
+                    <h3 className="mb-1 text-[15px] font-bold text-ink">{l.departs}</h3>
                     <SejourListe sejours={duJour.departs} dict={dict} locale={ctx.locale} actions={boutonsSejour} />
                   </div>
                 ) : null}
                 {duJour.enCours.length > 0 ? (
                   <div>
-                    <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-soft">
-                      {l.enCours}
-                    </p>
+                    <h3 className="mb-1 text-[15px] font-bold text-ink">{l.enCours}</h3>
                     <SejourListe sejours={duJour.enCours} dict={dict} locale={ctx.locale} actions={boutonsSejour} />
                   </div>
                 ) : null}
@@ -317,15 +311,7 @@ export default async function LocationCourteDureePage({
           <div>
             <SectionHeader title={l.declarations} className="mb-3" />
             {declarations.length === 0 ? (
-              <EmptyState
-                title={l.aucuneDeclaration}
-                hint={l.aucuneDeclarationAide}
-                icon={
-                  <IconCircle tone="sand" size={64}>
-                    <CKey width={30} height={30} />
-                  </IconCircle>
-                }
-              />
+              <EmptyState title={l.aucuneDeclaration} hint={l.aucuneDeclarationAide} illustration="empty-lcd" />
             ) : (
               <TableCard>
                 <Table>
@@ -343,7 +329,7 @@ export default async function LocationCourteDureePage({
                         <TD>
                           <Link
                             href={p(`/location-courte-duree/declarations/${d.id}`)}
-                            className="font-medium text-ink hover:text-action"
+                            className="font-semibold text-ink hover:text-link"
                           >
                             {d.lot?.numero ?? "—"}
                           </Link>
@@ -381,42 +367,38 @@ export default async function LocationCourteDureePage({
               <EmptyState
                 title={l.aucuneDeclarationResident}
                 hint={regimeOuvert && vue === "resident" ? l.declarerLotAide : undefined}
-                icon={
-                  <IconCircle tone="sand" size={64}>
-                    <CKey width={30} height={30} />
-                  </IconCircle>
-                }
+                illustration="empty-lcd"
               />
             ) : (
-              <Card padded={false} className="divide-y divide-hairline">
+              <Lignes>
                 {declarations.map((d) => (
-                  <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6">
-                    <IconCircle tone={d.statut === "VALIDEE" ? "sage" : d.statut === "EN_ATTENTE" ? "warn" : "sand"} size={40}>
-                      <CKey width={20} height={20} />
-                    </IconCircle>
-                    <div className="min-w-0 flex-1">
-                      <Link
-                        href={p(`/location-courte-duree/declarations/${d.id}`)}
-                        className="block text-sm font-semibold text-ink hover:text-action"
-                      >
-                        {l.lot} {d.lot?.numero ?? "—"}
-                      </Link>
-                      <p className="mt-0.5 text-[13px] text-soft">
+                  <Ligne
+                    key={d.id}
+                    icon={<CKey width={22} height={22} />}
+                    tone={d.statut === "VALIDEE" ? "sage" : d.statut === "EN_ATTENTE" ? "warn" : "sand"}
+                    href={p(`/location-courte-duree/declarations/${d.id}`)}
+                    title={`${l.lot} ${d.lot?.numero ?? "—"}`}
+                    subtitle={
+                      <>
                         {d.plateformesJson && d.plateformesJson.length > 0 ? `${d.plateformesJson.join(", ")} · ` : ""}
                         {d.gestionnaireId ? l.gestionnaire : l.aucunGestionnaire}
                         {" · "}
                         <span className="tnum">{formatDate(d.dateDebut, ctx.locale)}</span>
-                      </p>
-                      {d.motifDecision && (d.statut === "REFUSEE" || d.statut === "SUSPENDUE") ? (
+                      </>
+                    }
+                    extra={
+                      d.motifDecision && (d.statut === "REFUSEE" || d.statut === "SUSPENDUE") ? (
                         <p className="mt-1 text-[13px] text-danger">{d.motifDecision}</p>
-                      ) : null}
-                    </div>
-                    <Badge variant={declarationLcdVariant[d.statut]} pulse={d.statut === "EN_ATTENTE"}>
-                      {dict.enums.statutDeclarationLcd[d.statut]}
-                    </Badge>
-                  </div>
+                      ) : undefined
+                    }
+                    end={
+                      <Badge variant={declarationLcdVariant[d.statut]} pulse={d.statut === "EN_ATTENTE"}>
+                        {dict.enums.statutDeclarationLcd[d.statut]}
+                      </Badge>
+                    }
+                  />
                 ))}
-              </Card>
+              </Lignes>
             )}
           </div>
         ) : null}
@@ -429,9 +411,9 @@ export default async function LocationCourteDureePage({
               className="mb-3"
               action={
                 peutDeclarerSejour ? (
-                  <ButtonLink href={p("/location-courte-duree/sejours/nouveau")} size="sm" variant="secondary">
+                  <Link href={p("/location-courte-duree/sejours/nouveau")} className="link text-[14px]">
                     {l.declarerSejour}
-                  </ButtonLink>
+                  </Link>
                 ) : undefined
               }
             />
@@ -439,11 +421,7 @@ export default async function LocationCourteDureePage({
               <EmptyState
                 title={l.aucunSejour}
                 hint={aValidee ? l.aucunSejourAide : regimeOuvert ? l.aucunLotValide : undefined}
-                icon={
-                  <IconCircle tone="tosca" size={64}>
-                    <CCalendar width={30} height={30} />
-                  </IconCircle>
-                }
+                illustration="empty-lcd"
               />
             ) : (
               <SejourListe sejours={sejours} dict={dict} locale={ctx.locale} />

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import type React from "react";
 import { Modal, IrreversibleNotice } from "./modal";
+import { Banner } from "./banner";
 import { Button } from "./button";
 import { FormAlert, SubmitButton } from "./form";
 import { IDLE, type FormState } from "../../lib/forms";
@@ -80,14 +81,14 @@ export function ConfirmDelete({
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title={titre ?? libelle} closeLabel={dict.common.close}>
         {state.status === "success" ? (
-          <p className="text-sm font-medium text-ok">{g.supprime}</p>
+          <Banner variant="ok">{g.supprime}</Banner>
         ) : (
           <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             {Object.entries(champs).map(([k, v]) => (
               <input key={k} type="hidden" name={k} value={v} />
             ))}
-            <p className="text-[15px] font-semibold text-ink">{fill(g.supprimerQuestion, { nom })}</p>
+            <p className="text-[16px] font-bold leading-snug text-ink">{fill(g.supprimerQuestion, { nom })}</p>
             {children}
             <IrreversibleNotice>{aide ?? g.supprimerIrreversible}</IrreversibleNotice>
             <FormAlert state={state} />

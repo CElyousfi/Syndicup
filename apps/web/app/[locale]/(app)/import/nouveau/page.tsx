@@ -4,7 +4,7 @@ import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { getDict, isLocale } from "../../../../../lib/i18n";
 import type { TypeImport } from "../../../../../lib/api/types";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
-import { ImportForm } from "../import-client";
+import { EtapesImport, ImportForm } from "../import-client";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -20,8 +20,8 @@ export default async function NouvelImportPage({ params, searchParams }: { param
   const types: TypeImport[] = ["LOTS_PROPRIETAIRES", "SOLDES_OUVERTURE", "PRESTATAIRES", "CONTRATS", "VEHICULES_BADGES", "PERSONNEL"];
   return (
     <div className="page-root">
-      <PageHeader back={<BackLink href={`/${locale}/import`} label={t.titre} />} title={t.nouvelImport} subtitle={`${t.etapes.fichier} → ${t.etapes.mapping} → ${t.etapes.apercu} → ${t.etapes.execution}`} />
-      <div className="max-w-3xl"><ImportForm dict={dict} locale={ctx.locale} typeInitial={types.includes(sp.type as TypeImport) ? (sp.type as TypeImport) : undefined} /></div>
+      <PageHeader back={<BackLink href={`/${locale}/import`} label={t.titre} />} title={t.nouvelImport} />
+      <div className="max-w-3xl"><EtapesImport dict={dict} etape={1} /><ImportForm dict={dict} locale={ctx.locale} typeInitial={types.includes(sp.type as TypeImport) ? (sp.type as TypeImport) : undefined} /></div>
     </div>
   );
 }

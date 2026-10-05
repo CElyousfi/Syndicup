@@ -46,7 +46,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
       />
       {x.statut === "BROUILLON" ? <Banner variant="warn" className="mb-4">{r.pdfEchec}</Banner> : null}
       {d.seuil_approbation_non_configure ? <Banner variant="legal" className="mb-4" title={r.seuilNonConfigure}>{dict.depenses.seuilNonConfigureCorps}</Banner> : null}
-      <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<CWallet />} tone="sage" label={`${r.compteCourant} · ${r.cloture}`} value={mad(d.tresorerie.cloture.compte_courant)} hint={`${r.ouverture} ${mad(d.tresorerie.ouverture.compte_courant)}`} />
         <StatCard icon={<CMoneyBag />} tone="lilac" label={`${r.reserve} · ${r.cloture}`} value={d.tresorerie.reserve_configuree ? mad(d.tresorerie.cloture.reserve) : "—"} trend={d.tresorerie.reserve_configuree ? undefined : r.reserveAbsente} trendTone="neutral" hint={d.tresorerie.reserve_configuree ? `${r.ouverture} ${mad(d.tresorerie.ouverture.reserve)}` : undefined} />
         <StatCard icon={<CChart />} tone="tosca" label={r.recouvrement} value={d.recouvrement.taux ? `${d.recouvrement.taux} %` : "—"} hint={`${r.encaisse} ${mad(d.recouvrement.encaisse)}`} />
@@ -80,7 +80,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
                 <THead><TH>{r.date}</TH><TH>{r.libelle}</TH><TH>{r.prestataire}</TH><TH align="end">{r.montant}</TH></THead>
                 <tbody>
                   {d.depenses.map((dep) => (
-                    <TR key={dep.id}><TD className="tnum text-soft">{formatDate(dep.date, ctx.locale)}</TD><TD className="font-medium text-ink"><Link href={p(`/finances/depenses/${dep.id}`)} className="hover:text-action">{dep.libelle}</Link><span className="block text-[12px] text-faint">{dict.enumsDepenses.categorieDepense[dep.categorie]}</span></TD><TD className="text-body">{dep.prestataire ?? "—"}</TD><TD align="end" className="tnum text-ink">{mad(dep.montant_ttc)}</TD></TR>
+                    <TR key={dep.id}><TD className="tnum text-soft">{formatDate(dep.date, ctx.locale)}</TD><TD className="font-medium text-ink"><Link href={p(`/finances/depenses/${dep.id}`)} className="hover:text-link">{dep.libelle}</Link><span className="block text-[12px] text-faint">{dict.enumsDepenses.categorieDepense[dep.categorie]}</span></TD><TD className="text-body">{dep.prestataire ?? "—"}</TD><TD align="end" className="tnum text-ink">{mad(dep.montant_ttc)}</TD></TR>
                   ))}
                 </tbody>
               </Table>
@@ -94,7 +94,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
                   <THead><TH>{r.lot}</TH><TH align="center">{r.lignes}</TH><TH align="center">{r.retardMax}</TH><TH align="end">{r.resteDu}</TH></THead>
                   <tbody>
                     {d.impayes.par_lot.map((l) => (
-                      <TR key={l.lot_id}><TD className="font-medium text-ink"><Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="hover:text-action">{l.lot_numero}</Link>{l.conteste ? <Badge variant="warn" className="ms-2">{r.conteste}</Badge> : null}</TD><TD align="center" className="tnum text-body">{l.nb_lignes}</TD><TD align="center" className="tnum text-body">{l.retard_max_jours} j</TD><TD align="end" className="tnum text-danger">{mad(l.reste_du)}</TD></TR>
+                      <TR key={l.lot_id}><TD className="font-medium text-ink"><Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="hover:text-link">{l.lot_numero}</Link>{l.conteste ? <Badge variant="warn" className="ms-2">{r.conteste}</Badge> : null}</TD><TD align="center" className="tnum text-body">{l.nb_lignes}</TD><TD align="center" className="tnum text-body">{l.retard_max_jours} j</TD><TD align="end" className="tnum text-danger">{mad(l.reste_du)}</TD></TR>
                     ))}
                   </tbody>
                 </Table>
@@ -108,36 +108,36 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
             <SectionHeader title={r.resolution} />
             {x.resolution && x.ag ? (
               <div className="mt-3 space-y-2 text-sm">
-                <p className="text-ink">{x.resolution.texte}</p>
+                <p className="font-semibold text-ink">{x.resolution.texte}</p>
                 <p className="text-soft">{dict.enumsRapports.typeMajorite[x.resolution.type_majorite]}</p>
                 <Badge variant={resolutionVariant[x.resolution.resultat]}>{dict.enums.resultatResolution[x.resolution.resultat]}</Badge>
-                <p><Link href={p(`/ag/${x.ag.id}`)} className="text-action hover:underline">{r.voirAg} · {formatDate(x.ag.date_ag, ctx.locale)}</Link></p>
+                <p className="pt-1"><Link href={p(`/ag/${x.ag.id}`)} className="link">{r.voirAg} · {formatDate(x.ag.date_ag, ctx.locale)}</Link></p>
               </div>
             ) : <p className="mt-3 text-sm text-soft">{x.statut === "GENERE" ? r.soumettreAide : "—"}</p>}
           </Card>
           <Card>
             <SectionHeader title={r.reserveMouvements} />
             {d.reserve.mouvements.length === 0 ? <p className="mt-3 text-sm text-soft">{r.aucun}</p> : (
-              <ul className="mt-3 divide-y divide-hairline text-sm">
-                {d.reserve.mouvements.map((m) => <li key={m.id} className="flex items-center justify-between gap-3 py-2"><span className="text-body">{formatDate(m.date, ctx.locale)} · {m.description ?? m.type}</span><span className={`tnum font-medium ${m.montant.startsWith("-") ? "text-danger" : "text-ok"}`}>{mad(m.montant)}</span></li>)}
+              <ul className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
+                {d.reserve.mouvements.map((m) => <li key={m.id} className="flex items-center justify-between gap-3 py-3"><span className="text-body">{formatDate(m.date, ctx.locale)} · {m.description ?? m.type}</span><span className={`tnum whitespace-nowrap font-bold ${m.montant.startsWith("-") ? "text-danger" : "text-ok"}`}>{mad(m.montant)}</span></li>)}
               </ul>
             )}
           </Card>
           <Card>
             <SectionHeader title={r.faits} />
-            <dl className="mt-3 space-y-3 text-sm">
-              <div><dt className="text-soft">{dict.nav.incidents}</dt><dd className="tnum text-ink">{d.faits_marquants.nb_incidents}</dd></div>
-              <div><dt className="text-soft">{r.incidentsMajeurs}</dt><dd className="text-ink">{d.faits_marquants.incidents_majeurs.length === 0 ? r.aucun : d.faits_marquants.incidents_majeurs.map((i) => <Link key={i.id} href={p(`/incidents/${i.id}`)} className="block hover:text-action">{formatDate(i.date, ctx.locale)} · {dict.enums.categorieIncident[i.categorie as never]} — {i.sous_categorie}</Link>)}</dd></div>
-              <div><dt className="text-soft">{r.agTenues}</dt><dd className="text-ink">{d.faits_marquants.ag_tenues.length === 0 ? r.aucun : d.faits_marquants.ag_tenues.map((a) => <Link key={a.id} href={p(`/ag/${a.id}`)} className="block hover:text-action">{formatDate(a.date, ctx.locale)} · {dict.enums.typeAg[a.type as never]} · {a.nb_resolutions}</Link>)}</dd></div>
+            <dl className="mt-4 space-y-3 rounded-[16px] bg-surface p-4 text-sm">
+              <div><dt className="text-soft">{dict.nav.incidents}</dt><dd className="tnum text-[17px] font-bold text-ink">{d.faits_marquants.nb_incidents}</dd></div>
+              <div><dt className="text-soft">{r.incidentsMajeurs}</dt><dd className="text-ink">{d.faits_marquants.incidents_majeurs.length === 0 ? r.aucun : d.faits_marquants.incidents_majeurs.map((i) => <Link key={i.id} href={p(`/incidents/${i.id}`)} className="block font-medium hover:text-link">{formatDate(i.date, ctx.locale)} · {dict.enums.categorieIncident[i.categorie as never]} — {i.sous_categorie}</Link>)}</dd></div>
+              <div><dt className="text-soft">{r.agTenues}</dt><dd className="text-ink">{d.faits_marquants.ag_tenues.length === 0 ? r.aucun : d.faits_marquants.ag_tenues.map((a) => <Link key={a.id} href={p(`/ag/${a.id}`)} className="block font-medium hover:text-link">{formatDate(a.date, ctx.locale)} · {dict.enums.typeAg[a.type as never]} · {a.nb_resolutions}</Link>)}</dd></div>
               <div><dt className="text-soft">{r.contratsSignes}</dt><dd className="text-ink">{d.faits_marquants.contrats_signes.length === 0 ? r.aucun : d.faits_marquants.contrats_signes.map((c) => <span key={c.id} className="block">{formatDate(c.date, ctx.locale)} · {c.libelle}</span>)}</dd></div>
             </dl>
           </Card>
           <Card>
             <SectionHeader title={r.signatures} />
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-soft">{r.syndic}</dt><dd className="text-ink">{d.syndic.nom ?? r.nonRenseigne}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{r.presidentConseil}</dt><dd className="text-ink">{d.president_conseil.nom ?? r.nonRenseigne}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{r.justificatifsAttente}</dt><dd className="tnum text-ink">{d.justificatifs_en_attente.nb} · {mad(d.justificatifs_en_attente.montant)}</dd></div>
+            <dl className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
+              <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.syndic}</dt><dd className="text-end font-semibold text-ink">{d.syndic.nom ?? r.nonRenseigne}</dd></div>
+              <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.presidentConseil}</dt><dd className="text-end font-semibold text-ink">{d.president_conseil.nom ?? r.nonRenseigne}</dd></div>
+              <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.justificatifsAttente}</dt><dd className="text-end font-semibold tnum text-ink">{d.justificatifs_en_attente.nb} · {mad(d.justificatifs_en_attente.montant)}</dd></div>
             </dl>
           </Card>
         </div>

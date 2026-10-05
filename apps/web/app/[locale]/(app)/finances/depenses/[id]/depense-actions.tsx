@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
@@ -10,6 +10,7 @@ import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import type { DepenseDetail, StatutFacture } from "../../../../../../lib/api/types";
 import { formatMAD } from "../../../../../../lib/format";
 import { IconCamera, IconPlus } from "../../../../../../components/ui/icons";
+import { celebrate } from "../../../../../../lib/success";
 import { soumettreDepense, approuverDepense, rejeterDepense, payerDepense, annulerDepense, ajouterFacture, changerStatutFacture } from "../actions";
 
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
@@ -100,6 +101,14 @@ export function PayerModal({ dict, locale, depense }: Props) {
   const e = dict.enumsDepenses;
   const [methode, setMethode] = useState<"VIREMENT" | "CHEQUE" | "ESPECES">("VIREMENT");
   const aujourdhui = new Date().toISOString().slice(0, 10);
+  // Dépense payée = paiement enregistré : écran de succès plein (Wise), la modale se referme.
+  const { payee, payeeReserve } = d;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    const reserve = (state.data as { source?: string } | undefined)?.source === "FONDS_RESERVE";
+    celebrate({ titre: payee, corps: reserve ? payeeReserve : undefined, illustration: "ok-paiement" });
+  }, [state, payee, payeeReserve]);
   return (
     <>
       <Button onClick={() => setOpen(true)}>{d.payer}</Button>
@@ -128,12 +137,12 @@ export function PayerModal({ dict, locale, depense }: Props) {
             </Field>
             <Field label={d.justificatif} htmlFor="justificatif" hint={d.justificatifAide} optionalLabel={dict.common.optional} error={fieldError(state, "justificatif")}>
               <div className="flex flex-wrap gap-2">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink hover:bg-hover">
+                <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
                   <IconCamera width={16} height={16} />
                   {d.prendrePhoto}
                   <input type="file" name="justificatif" accept="image/*" capture="environment" className="sr-only" />
                 </label>
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-3 py-2 text-[13px] font-medium text-ink hover:bg-hover">
+                <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
                   <IconPlus width={16} height={16} />
                   {d.choisirFichier}
                   <input id="justificatif" type="file" name="justificatif" accept="image/*,application/pdf" className="sr-only" />

@@ -14,7 +14,7 @@ import { ButtonLink } from "../../../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { Avatar } from "../../../../../../components/ui/avatar";
 import { EmptyState } from "../../../../../../components/ui/empty-state";
-import { CCalendar, CKey, IconCircle } from "../../../../../../components/ui/color-icons";
+import { CKey, IconCircle } from "../../../../../../components/ui/color-icons";
 import { declarationLcdVariant } from "../../../../../../lib/status";
 import { SejourListe } from "../../../../../../components/lcd/sejour-list";
 import {
@@ -33,6 +33,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   return { title: getDict(isLocale(locale) ? locale : "fr").lcd.declaration };
+}
+
+/** Ligne clé/valeur : libellé discret au début, valeur affirmée à l'extrémité. */
+function Kv({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2.5">
+      <dt className="shrink-0 text-soft">{label}</dt>
+      <dd className="min-w-0 text-end font-semibold text-ink">{children}</dd>
+    </div>
+  );
 }
 
 export default async function DeclarationLcdPage({
@@ -143,48 +153,41 @@ export default async function DeclarationLcdPage({
               title={l.declaration}
               action={peutEditer ? <ModifierContactsModal dict={dict} locale={ctx.locale} declaration={d} /> : undefined}
             />
-            <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.plateformes}</dt>
-                <dd className="mt-1 flex flex-wrap gap-1.5">
-                  {d.plateformesJson && d.plateformesJson.length > 0 ? (
-                    d.plateformesJson.map((pf) => (
+            <dl className="mt-3 divide-y divide-wash-strong text-sm">
+              <Kv label={l.plateformes}>
+                {d.plateformesJson && d.plateformesJson.length > 0 ? (
+                  <span className="inline-flex flex-wrap justify-end gap-1.5">
+                    {d.plateformesJson.map((pf) => (
                       <Badge key={pf} variant="outline">
                         {pf}
                       </Badge>
-                    ))
-                  ) : (
-                    <span className="text-faint">{dict.common.none}</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.contactUrgence}</dt>
-                <dd className="mt-1 text-body">
-                  {d.contactUrgenceNom ?? <span className="text-faint">{dict.common.none}</span>}
-                  {d.contactUrgenceTelephone ? (
-                    <a href={`tel:${d.contactUrgenceTelephone}`} className="tnum block text-action hover:underline" dir="ltr">
-                      {formatTelephone(d.contactUrgenceTelephone)}
-                    </a>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.dateDebut}</dt>
-                <dd className="tnum mt-1 text-body">{formatDate(d.dateDebut, ctx.locale)}</dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.dateFin}</dt>
-                <dd className="tnum mt-1 text-body">{d.dateFin ? formatDate(d.dateFin, ctx.locale) : <span className="text-faint">{dict.common.none}</span>}</dd>
-              </div>
+                    ))}
+                  </span>
+                ) : (
+                  <span className="font-normal text-faint">{dict.common.none}</span>
+                )}
+              </Kv>
+              <Kv label={l.contactUrgence}>
+                {d.contactUrgenceNom ?? (d.contactUrgenceTelephone ? null : <span className="font-normal text-faint">{dict.common.none}</span>)}
+                {d.contactUrgenceTelephone ? (
+                  <a href={`tel:${d.contactUrgenceTelephone}`} className="link tnum block" dir="ltr">
+                    {formatTelephone(d.contactUrgenceTelephone)}
+                  </a>
+                ) : null}
+              </Kv>
+              <Kv label={l.dateDebut}>
+                <span className="tnum">{formatDate(d.dateDebut, ctx.locale)}</span>
+              </Kv>
+              <Kv label={l.dateFin}>
+                {d.dateFin ? <span className="tnum">{formatDate(d.dateFin, ctx.locale)}</span> : <span className="font-normal text-faint">{dict.common.none}</span>}
+              </Kv>
               {d.decideLe && d.statut !== "EN_ATTENTE" ? (
-                <div className="sm:col-span-2">
-                  <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.decision}</dt>
-                  <dd className="mt-1 text-body">
+                <Kv label={l.decision}>
+                  <span className="font-normal text-body">
                     {fill(l.decideLe, { date: formatDateHeure(d.decideLe, ctx.locale) })}
                     {d.motifDecision ? ` — ${d.motifDecision}` : ""}
-                  </dd>
-                </div>
+                  </span>
+                </Kv>
               ) : null}
             </dl>
           </Card>
@@ -195,11 +198,7 @@ export default async function DeclarationLcdPage({
               <EmptyState
                 title={l.aucunSejour}
                 hint={d.statut === "VALIDEE" ? l.aucunSejourAide : undefined}
-                icon={
-                  <IconCircle tone="tosca" size={64}>
-                    <CCalendar width={30} height={30} />
-                  </IconCircle>
-                }
+                illustration="empty-lcd"
               />
             ) : (
               <SejourListe sejours={sejours} dict={dict} locale={ctx.locale} lotNumero={numero} />
@@ -211,33 +210,31 @@ export default async function DeclarationLcdPage({
           <Card>
             <SectionHeader title={l.declarant} />
             <div className="mt-3 flex items-center gap-3">
-              <Avatar nom={nom(d.declareParId) ?? "•"} size={40} />
-              <p className="truncate text-sm font-medium text-ink">{nom(d.declareParId) ?? dict.common.none}</p>
+              <Avatar nom={nom(d.declareParId) ?? "•"} size={44} />
+              <p className="truncate text-[15px] font-bold text-ink">{nom(d.declareParId) ?? dict.common.none}</p>
             </div>
           </Card>
           <Card>
-            <SectionHeader
-              title={l.gestionnaire}
-              action={
-                peutGererGestionnaire ? (
-                  <DesignerGestionnaireModal dict={dict} locale={ctx.locale} declarationId={d.id} dejaDesigne={!!d.gestionnaireId} />
-                ) : undefined
-              }
-            />
+            <SectionHeader title={l.gestionnaire} />
             {d.gestionnaireId ? (
               <div className="mt-3 flex items-center gap-3">
-                <IconCircle tone="sage" size={40}>
-                  <CKey width={20} height={20} />
+                <IconCircle tone="sage" size={44}>
+                  <CKey width={22} height={22} />
                 </IconCircle>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">{nom(d.gestionnaireId)}</p>
+                  <p className="truncate text-[15px] font-bold text-ink">{nom(d.gestionnaireId)}</p>
                   <p className="text-[13px] text-soft">{dict.roles.GESTIONNAIRE_LCD}</p>
                 </div>
               </div>
             ) : (
               <p className="mt-3 text-sm text-soft">{l.aucunGestionnaire}</p>
             )}
-            <p className="mt-3 text-[13px] text-faint">{l.gestionnaireAide}</p>
+            <p className="mt-3 text-[13px] text-soft">{l.gestionnaireAide}</p>
+            {peutGererGestionnaire ? (
+              <div className="mt-4">
+                <DesignerGestionnaireModal dict={dict} locale={ctx.locale} declarationId={d.id} dejaDesigne={!!d.gestionnaireId} />
+              </div>
+            ) : null}
           </Card>
           {peutCloturer ? (
             <Card>

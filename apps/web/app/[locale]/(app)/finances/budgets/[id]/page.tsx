@@ -63,9 +63,9 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
         }
       />
 
-      {actif && gestion ? <Banner variant="info" className="mb-4">{d.posteModifieApresActivation}</Banner> : null}
+      {actif && gestion ? <Banner variant="info" className="mb-6">{d.posteModifieApresActivation}</Banner> : null}
 
-      <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard icon={<CWallet />} tone="sage" label={f.montantVote} value={formatMAD(budget.montantTotal, ctx.locale)} hint={`${postes.length} ${d.postes.toLowerCase()}`} />
         {rapport ? (
           <>
@@ -76,8 +76,8 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
       </div>
 
       {rapport && postes.length > 0 ? (
-        <Card className="mb-4">
-          <SectionHeader title={d.prevuVsRealise} subtitle={d.prevuVsRealiseAide} action={<Link href={p(`/finances/depenses?exercice=${budget.exercice}`)} className="text-[13px] font-medium text-action hover:underline">{d.voirDepenses}</Link>} />
+        <Card className="mb-10">
+          <SectionHeader title={d.prevuVsRealise} subtitle={d.prevuVsRealiseAide} action={<Link href={p(`/finances/depenses?exercice=${budget.exercice}`)} className="link text-[13px]">{d.voirDepenses}</Link>} />
           <Bars
             className="mt-6"
             height={220}
@@ -102,6 +102,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
         </Card>
       ) : null}
 
+      <SectionHeader title={d.postes} className="mb-4" />
       <TableCard>
         <Table>
           <THead>
@@ -119,7 +120,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
               const ratio = l && l.montant_prevu ? Number(versCentimes(l.consomme)) / Math.max(1, Number(versCentimes(l.montant_prevu))) : 0;
               return (
                 <TR key={x.id}>
-                  <TD className="font-medium text-ink">
+                  <TD className="font-semibold text-ink">
                     {x.libelle}
                     <span className="tnum block text-[12px] font-normal text-faint">{Math.round(part * 100)} %</span>
                   </TD>
@@ -159,13 +160,13 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
       </TableCard>
 
       {rapport && rapport.hors_poste.length > 0 ? (
-        <Card className="mt-4">
+        <Card className="mt-8">
           <SectionHeader title={d.horsPoste} subtitle={d.parCategorie} />
-          <ul className="mt-3 divide-y divide-hairline text-sm">
+          <ul className="mt-3 divide-y divide-wash-strong text-sm">
             {rapport.hors_poste.map((h) => (
-              <li key={h.categorie} className="flex items-center justify-between gap-3 py-2">
+              <li key={h.categorie} className="flex items-center justify-between gap-3 py-3">
                 <span className="text-body">{e.categorieDepense[h.categorie]}</span>
-                <span className="tnum font-medium text-ink">{formatMAD(h.consomme, ctx.locale)}</span>
+                <span className="tnum font-semibold text-ink">{formatMAD(h.consomme, ctx.locale)}</span>
               </li>
             ))}
           </ul>

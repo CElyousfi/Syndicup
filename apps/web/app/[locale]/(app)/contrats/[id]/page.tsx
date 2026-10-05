@@ -51,7 +51,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
       {sp.cree ? <Banner variant="ok" className="mb-4" title={c.cree}>{c.creeAide}</Banner> : null}
       {x.statut === "RESILIE" && x.motifResiliation ? <Banner variant="warn" className="mb-4" title={`${c.motifResiliation}${x.dateResiliation ? ` · ${formatDate(x.dateResiliation, ctx.locale)}` : ""}`}>{x.motifResiliation}</Banner> : null}
       {x.statut === "ACTIF" && x.jours_avant_fin !== null && x.jours_avant_fin <= 90 ? <Banner variant={x.jours_avant_fin <= 30 ? "danger" : "warn"} className="mb-4">{fill(c.joursAvantFin, { n: x.jours_avant_fin })}{x.tacite ? ` · ${c.tacite}` : ""}</Banner> : null}
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-x-8 gap-y-6 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <div className="flex flex-wrap items-center justify-between gap-3">
@@ -66,7 +66,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
                     {x.echeances.map((ec) => (
                       <TR key={ec.id}>
                         <TD className="tnum font-medium text-ink">{formatDate(ec.dateEcheance, ctx.locale)}</TD>
-                        <TD className="text-body">{e.typeEcheance[ec.type]}{ec.depense ? <Link href={p(`/finances/depenses/${ec.depense.id}`)} className="block text-[12px] text-action hover:underline">{ec.depense.libelle} · {dict.enumsDepenses.statutDepense[ec.depense.statut]}</Link> : null}</TD>
+                        <TD className="text-body">{e.typeEcheance[ec.type]}{ec.depense ? <Link href={p(`/finances/depenses/${ec.depense.id}`)} className="link mt-0.5 block text-[12px]">{ec.depense.libelle} · {dict.enumsDepenses.statutDepense[ec.depense.statut]}</Link> : null}</TD>
                         <TD align="end" className="tnum text-ink">{mad(ec.montant)}</TD>
                         <TD><Badge variant={echeanceVariant[ec.statut]}>{e.statutEcheance[ec.statut]}</Badge></TD>
                         {gestion ? <TD align="end">{vivant ? <EcheanceActions dict={dict} locale={ctx.locale} contrat={x} echeance={ec} /> : null}</TD> : null}
@@ -78,12 +78,12 @@ export default async function ContratDetailPage({ params, searchParams }: { para
             )}
           </Card>
           <Card>
-            <SectionHeader title={c.depensesLiees} action={<Link href={p(`/finances/depenses?contrat_id=${id}`)} className="text-[13px] font-medium text-action hover:underline">{dict.nav.depenses}</Link>} />
+            <SectionHeader title={c.depensesLiees} action={<Link href={p(`/finances/depenses?contrat_id=${id}`)} className="link text-[13px]">{dict.nav.depenses}</Link>} />
             {x.depenses.length === 0 ? <p className="mt-3 text-sm text-soft">{c.aucuneDepenseLiee}</p> : (
-              <ul className="mt-3 divide-y divide-hairline">
+              <ul className="mt-3 divide-y divide-wash-strong">
                 {x.depenses.map((d) => (
                   <li key={d.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-                    <div className="min-w-0"><Link href={p(`/finances/depenses/${d.id}`)} className="font-medium text-ink hover:text-action">{d.libelle}</Link><span className="block text-[12px] text-faint">{formatDate(d.dateDepense, ctx.locale)}</span></div>
+                    <div className="min-w-0"><Link href={p(`/finances/depenses/${d.id}`)} className="font-semibold text-ink hover:text-link">{d.libelle}</Link><span className="block text-[12px] text-faint">{formatDate(d.dateDepense, ctx.locale)}</span></div>
                     <div className="flex items-center gap-2"><Badge variant={depenseVariant[d.statut]}>{dict.enumsDepenses.statutDepense[d.statut]}</Badge><span className="tnum font-medium text-ink">{mad(d.montantTtc)}</span></div>
                   </li>
                 ))}
@@ -94,7 +94,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
             <SectionHeader title={c.journal} />
             <ol className="mt-3 space-y-2 text-sm">
               {x.logs.map((l) => (
-                <li key={l.id} className="flex items-start justify-between gap-3 border-b border-hairline pb-2 last:border-0">
+                <li key={l.id} className="flex items-start justify-between gap-3 border-b border-wash-strong pb-2 last:border-0">
                   <div><span className="font-medium text-ink">{c.journalTypes[l.type as keyof typeof c.journalTypes] ?? l.type}</span><span className="block text-[12px] text-faint">{l.acteur ? nomComplet(l.acteur) : c.systeme}</span></div>
                   <span className="tnum whitespace-nowrap text-[12px] text-soft">{formatDateHeure(l.horodatage, ctx.locale)}</span>
                 </li>
@@ -105,29 +105,29 @@ export default async function ContratDetailPage({ params, searchParams }: { para
         <div className="min-w-0 space-y-4">
           <Card>
             <SectionHeader title={c.type} />
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.periodicite}</dt><dd className="text-ink">{e.periodicite[x.periodicite]}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.montantPeriode}</dt><dd className="tnum font-semibold text-ink">{mad(x.montantPeriode)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.dateDebut}</dt><dd className="tnum text-ink">{formatDate(x.dateDebut, ctx.locale)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.dateFin}</dt><dd className="tnum text-ink">{x.dateFin ? formatDate(x.dateFin, ctx.locale) : c.dureeIndeterminee}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.tacite}</dt><dd className="text-ink">{x.tacite ? dict.common.yes : dict.common.no}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.preavis}</dt><dd className="tnum text-ink">{x.preavisJours ?? "—"}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{c.poste}</dt><dd className="text-ink">{x.budgetPoste?.libelle ?? c.horsPoste}</dd></div>
-              {x.resolutionAg ? <div className="flex justify-between gap-3"><dt className="text-soft">{c.resolutionAg}</dt><dd className="text-ink"><Link href={p(`/ag/${x.resolutionAg.agId}`)} className="text-action hover:underline">{x.resolutionAg.texte.slice(0, 60)}</Link></dd></div> : null}
-              {x.prestataire ? <div className="flex justify-between gap-3"><dt className="text-soft">{c.prestataire}</dt><dd className="text-ink"><Link href={p(`/prestataires/${x.prestataire.id}`)} className="text-action hover:underline">{x.prestataire.nom}</Link></dd></div> : null}
+            <dl className="mt-3 divide-y divide-wash-strong text-sm">
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.periodicite}</dt><dd className="text-end font-semibold text-ink">{e.periodicite[x.periodicite]}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.montantPeriode}</dt><dd className="tnum font-semibold text-ink">{mad(x.montantPeriode)}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.dateDebut}</dt><dd className="tnum text-end font-semibold text-ink">{formatDate(x.dateDebut, ctx.locale)}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.dateFin}</dt><dd className="tnum text-end font-semibold text-ink">{x.dateFin ? formatDate(x.dateFin, ctx.locale) : c.dureeIndeterminee}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.tacite}</dt><dd className="text-end font-semibold text-ink">{x.tacite ? dict.common.yes : dict.common.no}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.preavis}</dt><dd className="tnum text-end font-semibold text-ink">{x.preavisJours ?? "—"}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.poste}</dt><dd className="text-end font-semibold text-ink">{x.budgetPoste?.libelle ?? c.horsPoste}</dd></div>
+              {x.resolutionAg ? <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.resolutionAg}</dt><dd className="text-end font-semibold text-ink"><Link href={p(`/ag/${x.resolutionAg.agId}`)} className="link">{x.resolutionAg.texte.slice(0, 60)}</Link></dd></div> : null}
+              {x.prestataire ? <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.prestataire}</dt><dd className="text-end font-semibold text-ink"><Link href={p(`/prestataires/${x.prestataire.id}`)} className="link">{x.prestataire.nom}</Link></dd></div> : null}
             </dl>
-            {x.notes ? <p className="mt-3 border-t border-hairline pt-3 text-sm text-body">{x.notes}</p> : null}
+            {x.notes ? <p className="mt-3 border-t border-wash-strong pt-3 text-sm text-body">{x.notes}</p> : null}
           </Card>
           {x.est_assurance ? (
             <Card>
               <SectionHeader title={c.assurance} />
               {det ? (
-                <dl className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between gap-3"><dt className="text-soft">{c.assureur}</dt><dd className="text-ink">{det.assureur}</dd></div>
-                  <div className="flex justify-between gap-3"><dt className="text-soft">{c.numeroPolice}</dt><dd className="text-ink" dir="ltr">{det.numero_police}</dd></div>
-                  {det.franchise ? <div className="flex justify-between gap-3"><dt className="text-soft">{c.franchise}</dt><dd className="tnum text-ink">{mad(det.franchise)}</dd></div> : null}
-                  {det.capital_assure ? <div className="flex justify-between gap-3"><dt className="text-soft">{c.capitalAssure}</dt><dd className="tnum text-ink">{mad(det.capital_assure)}</dd></div> : null}
-                  {det.garanties.length ? <div><dt className="text-soft">{c.garanties}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{det.garanties.map((g) => <Badge key={g} variant="neutral">{g}</Badge>)}</dd></div> : null}
+                <dl className="mt-3 divide-y divide-wash-strong text-sm">
+                  <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.assureur}</dt><dd className="text-end font-semibold text-ink">{det.assureur}</dd></div>
+                  <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.numeroPolice}</dt><dd className="font-semibold text-ink" dir="ltr">{det.numero_police}</dd></div>
+                  {det.franchise ? <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.franchise}</dt><dd className="tnum text-end font-semibold text-ink">{mad(det.franchise)}</dd></div> : null}
+                  {det.capital_assure ? <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{c.capitalAssure}</dt><dd className="tnum text-end font-semibold text-ink">{mad(det.capital_assure)}</dd></div> : null}
+                  {det.garanties.length ? <div className="py-2.5"><dt className="text-soft">{c.garanties}</dt><dd className="mt-1 flex flex-wrap gap-1.5">{det.garanties.map((g) => <Badge key={g} variant="neutral">{g}</Badge>)}</dd></div> : null}
                 </dl>
               ) : <p className="mt-3 text-sm text-soft">—</p>}
             </Card>

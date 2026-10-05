@@ -1220,6 +1220,22 @@ export const ar: DeepDict<typeof fr> = {
   },
 
   documents: {
+    typesConnus: {
+      ANNONCE_PJ: "مرفق إعلان",
+      FACTURE: "فاتورة",
+      FICHE_PAIE: "ورقة الأجر",
+      IMPORT_SOURCE: "ملف الاستيراد",
+      RAPPORT_GESTION: "تقرير التسيير",
+      REGLEMENT_INTERIEUR: "النظام الداخلي",
+      PV: "محضر",
+      CONTRAT: "عقد",
+      QUITTANCE: "توصيل",
+      CONVOCATION: "استدعاء",
+      JUSTIFICATIF: "وثيقة إثبات",
+      ASSURANCE: "تأمين",
+      DEVIS: "عرض أسعار",
+      CV: "سيرة ذاتية",
+    } as Record<string, string>,
     titre: "الوثائق",
     subtitle: "النظام الداخلي، المحاضر، العقود وتقارير الملكية المشتركة.",
     televerser: "إضافة وثيقة",

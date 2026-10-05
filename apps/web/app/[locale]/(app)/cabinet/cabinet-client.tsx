@@ -6,6 +6,7 @@ import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
+import { Segmented } from "../../../../components/ui/tabs";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { Cabinet, CabinetMandat, CabinetMembre, CabinetPrestataire, MandatCopropriete, RoleCabinet } from "../../../../lib/api/types";
@@ -79,7 +80,7 @@ export function MandatModal({ dict, locale, cabinetId, gestionnaires, mandat }: 
               <>
                 <p className="text-sm text-body">{t.proposerMandatAide}</p>
                 <input type="hidden" name="mode" value={mode} />
-                <div className="flex gap-2">{(["existante", "nouvelle"] as const).map((m) => <button key={m} type="button" onClick={() => setMode(m)} className={`rounded-full border px-3 py-1 text-[12.5px] ${mode === m ? "border-ink bg-ink text-white" : "border-hairline text-body"}`}>{m === "existante" ? t.coproprieteExistante : t.nouvelleCopropriete}</button>)}</div>
+                <Segmented value={mode} onChange={setMode} options={[{ value: "existante", label: t.coproprieteExistante }, { value: "nouvelle", label: t.nouvelleCopropriete }]} />
                 {mode === "existante" ? <Field label={t.coproprieteExistante} htmlFor="copropriete_id" required error={fieldError(state, "copropriete_id")}><Input id="copropriete_id" name="copropriete_id" required dir="ltr" className="font-mono text-[12px] text-start" /></Field> : (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="sm:col-span-2"><Field label={t.nom} htmlFor="nom_copro" required><Input id="nom_copro" name="nom" required maxLength={200} /></Field></div>

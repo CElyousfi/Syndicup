@@ -8,13 +8,13 @@ import { formatHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
-import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
 import { incidentVariant, visiteVariant } from "../../../../lib/status";
-import { IconDoor, IconWrench } from "../../../../components/ui/icons";
+import { IconChevronEnd, IconDoor, IconWrench } from "../../../../components/ui/icons";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { Avatar } from "../../../../components/ui/avatar";
-import { IconCircle, CBell, CDoor, CWrench } from "../../../../components/ui/color-icons";
+import { CBell, CDoor, CWrench } from "../../../../components/ui/color-icons";
+import { EmptyLine, FlatList, Row, RowIcon, Section } from "./parts";
 
 /** B5 — orienté terrain : l'action primaire est énorme et sans détour. */
 export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
@@ -42,39 +42,40 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
 
   return (
     <div className="page-root">
+      <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6 shadow-none!" />
       <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={ctx.copropriete?.nom ?? undefined} />
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6" />
-
-      {/* Deux gestes du quotidien, en très grand */}
+      {/* Deux gestes du quotidien, en très grand : tuile encre (geste principal) et tuile greige. */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Link
           href={p("/visites?enregistrer=1")}
-          className="card group flex items-center gap-5 p-7 transition-all hover:border-action/40 hover:shadow-lift"
+          className="group flex items-center gap-5 rounded-[28px] bg-ink p-6 transition-transform active:scale-[0.99] sm:p-7"
         >
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-action text-white transition-transform group-hover:scale-105">
+          <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-cta text-ink transition-transform group-hover:scale-105">
             <IconDoor width={30} height={30} />
           </span>
-          <span>
-            <span className="block text-lg font-semibold text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[20px] font-bold leading-tight text-white">
               {dict.dash.enregistrerVisiteur}
             </span>
-            <span className="mt-1 block text-[13px] text-soft">{dict.visites.titre}</span>
+            <span className="mt-1 block text-[14px] text-white/70">{dict.visites.titre}</span>
           </span>
+          <IconChevronEnd width={22} height={22} className="shrink-0 text-lime" />
         </Link>
         <Link
           href={p("/incidents/nouveau")}
-          className="card group flex items-center gap-5 p-7 transition-all hover:border-action/40 hover:shadow-lift"
+          className="card group flex items-center gap-5 p-6 transition-colors hover:bg-hairline-strong/50 sm:p-7"
         >
-          <span className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-ink text-white transition-transform group-hover:scale-105">
+          <span className="flex size-16 shrink-0 items-center justify-center rounded-full bg-sand-mid text-ink transition-transform group-hover:scale-105">
             <IconWrench width={28} height={28} />
           </span>
-          <span>
-            <span className="block text-lg font-semibold text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block text-[20px] font-bold leading-tight text-ink">
               {dict.dash.signalerIncident}
             </span>
-            <span className="mt-1 block text-[13px] text-soft">{dict.incidents.titre}</span>
+            <span className="mt-1 block text-[14px] text-soft">{dict.incidents.titre}</span>
           </span>
+          <IconChevronEnd width={22} height={22} className="shrink-0 text-link" />
         </Link>
       </div>
 
@@ -103,116 +104,75 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">
         {/* Visites en attente */}
-        <Card padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader
-              title={dict.dash.visitesEnAttente}
-              action={
-                <Link href={p("/visites")} className="text-[13px] font-medium text-action hover:underline">
-                  {dict.common.seeAll}
-                </Link>
-              }
-            />
-          </div>
+        <Section title={dict.dash.visitesEnAttente} href={p("/visites")} linkLabel={dict.common.seeAll}>
           {enAttente.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{dict.visites.aucuneVisite}</p>
+            <EmptyLine text={dict.visites.aucuneVisite} icon={<IconDoor width={20} height={20} />} />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <FlatList>
               {enAttente.slice(0, 6).map((v) => (
-                <li key={v.id} className="flex items-center gap-4 px-6 py-3">
-                  <Avatar nom={v.visiteurNom} size={36} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{v.visiteurNom}</p>
-                    <p className="mt-0.5 text-[12px] text-soft">
-                      {formatHeure(v.horodatage, locale)}
-                    </p>
-                  </div>
-                  <Badge variant="warn" pulse>
-                    {dict.enums.statutVisite.EN_ATTENTE}
-                  </Badge>
-                </li>
+                <Row
+                  key={v.id}
+                  icon={<Avatar nom={v.visiteurNom} size={46} />}
+                  title={v.visiteurNom}
+                  subtitle={formatHeure(v.horodatage, locale)}
+                  trailing={
+                    <Badge variant="warn" pulse>
+                      {dict.enums.statutVisite.EN_ATTENTE}
+                    </Badge>
+                  }
+                />
               ))}
-            </ul>
+            </FlatList>
           )}
-        </Card>
+        </Section>
 
         {/* Visites du jour */}
-        <Card padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader title={dict.visites.duJour} />
-          </div>
+        <Section title={dict.visites.duJour}>
           {visitesDuJour.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{dict.visites.aucuneVisite}</p>
+            <EmptyLine text={dict.visites.aucuneVisite} icon={<IconDoor width={20} height={20} />} />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <FlatList>
               {visitesDuJour.slice(0, 6).map((v) => (
-                <li key={v.id} className="flex items-center gap-4 px-6 py-3">
-                  <Avatar nom={v.visiteurNom} size={36} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-ink">{v.visiteurNom}</p>
-                    <p className="mt-0.5 text-[12px] text-soft">
-                      {formatHeure(v.horodatage, locale)}
-                    </p>
-                  </div>
-                  <Badge variant={visiteVariant[v.statut]}>
-                    {dict.enums.statutVisite[v.statut]}
-                  </Badge>
-                </li>
+                <Row
+                  key={v.id}
+                  icon={<Avatar nom={v.visiteurNom} size={46} />}
+                  title={v.visiteurNom}
+                  subtitle={formatHeure(v.horodatage, locale)}
+                  trailing={<Badge variant={visiteVariant[v.statut]}>{dict.enums.statutVisite[v.statut]}</Badge>}
+                />
               ))}
-            </ul>
+            </FlatList>
           )}
-        </Card>
+        </Section>
 
         {/* Incidents ouverts */}
-        <Card className="lg:col-span-2" padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader
-              title={dict.dash.incidentsOuverts}
-              action={
-                <Link href={p("/incidents")} className="text-[13px] font-medium text-action hover:underline">
-                  {dict.common.seeAll}
-                </Link>
-              }
-            />
-          </div>
+        <Section title={dict.dash.incidentsOuverts} href={p("/incidents")} linkLabel={dict.common.seeAll}>
           {incidents.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{dict.incidents.aucunIncident}</p>
+            <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <FlatList>
               {incidents.slice(0, 6).map((i) => (
-                <li key={i.id}>
-                  <Link
-                    href={p(`/incidents/${i.id}`)}
-                    className="flex items-center gap-4 px-6 py-3 transition-colors hover:bg-hover"
-                  >
-                    <IconCircle tone="tosca" size={40}>
-                      <CWrench width={20} height={20} />
-                    </IconCircle>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{i.sousCategorie}</p>
-                      <p className="mt-0.5 text-[12px] text-soft">
-                        {dict.enums.categorieIncident[i.categorie]}
-                      </p>
-                    </div>
-                    <Badge variant={incidentVariant[i.statut]}>
-                      {dict.enums.statutIncident[i.statut]}
-                    </Badge>
-                  </Link>
-                </li>
+                <Row
+                  key={i.id}
+                  href={p(`/incidents/${i.id}`)}
+                  icon={
+                    <RowIcon tone="tosca">
+                      <CWrench />
+                    </RowIcon>
+                  }
+                  title={i.sousCategorie}
+                  subtitle={dict.enums.categorieIncident[i.categorie]}
+                  trailing={<Badge variant={incidentVariant[i.statut]}>{dict.enums.statutIncident[i.statut]}</Badge>}
+                />
               ))}
-            </ul>
+            </FlatList>
           )}
-        </Card>
+        </Section>
 
         {/* Documents de la copropriété — consultables dans l'app (règlements, consignes…) */}
-        <DocumentsCard
-          documents={documents}
-          dict={dict}
-          locale={locale}
-          className="lg:col-span-2"
-        />
+        <DocumentsCard documents={documents} dict={dict} locale={locale} />
       </div>
     </div>
   );

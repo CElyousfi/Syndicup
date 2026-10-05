@@ -66,16 +66,16 @@ export default async function QuittancePage({
         />
       </div>
 
-      {/* Document */}
-      <div className="card mx-auto max-w-2xl p-6 sm:p-10 print:border-0 print:shadow-none">
-        <div className="flex flex-wrap items-start justify-between gap-6 border-b border-hairline pb-7">
+      {/* Document — tuile greige à l'écran, page blanche nue à l'impression (marque conservée). */}
+      <div className="card mx-auto max-w-2xl p-6 [print-color-adjust:exact] sm:p-10 print:max-w-none print:rounded-none print:bg-transparent print:p-0">
+        <div className="flex flex-wrap items-start justify-between gap-6 border-b border-wash-strong pb-7 print:border-hairline-strong">
           <Brand />
           <div className="flex items-center gap-3.5">
-            <IconCircle tone="tosca" size={40} className="print:hidden">
-              <CFile width={20} height={20} />
+            <IconCircle tone="tosca" size={44} className="print:hidden">
+              <CFile width={22} height={22} />
             </IconCircle>
             <div className="text-end">
-              <p className="text-[17px] font-semibold text-ink">{f.quittanceTitre}</p>
+              <p className="text-[18px] font-bold tracking-tight text-ink">{f.quittanceTitre}</p>
               <p className="mt-0.5 font-mono text-[13px] text-soft" dir="ltr">
                 {quittance.numero}
               </p>
@@ -83,9 +83,18 @@ export default async function QuittancePage({
           </div>
         </div>
 
-        <p className="mt-7 text-sm leading-relaxed text-body">{f.quittanceCorps}</p>
+        <p className="mt-7 text-[15px] leading-relaxed text-body">{f.quittanceCorps}</p>
 
-        <dl className="mt-7 space-y-4">
+        {contexte.montant ? (
+          <div className="mt-7 rounded-[20px] bg-surface px-5 py-5 print:border print:border-hairline-strong">
+            <p className="text-sm font-medium text-soft">{f.montant}</p>
+            <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">
+              {formatMAD(contexte.montant, ctx.locale)}
+            </p>
+          </div>
+        ) : null}
+
+        <dl className="mt-6 divide-y divide-wash-strong print:divide-hairline-strong">
           {ctx.copropriete ? (
             <LigneDoc label={dict.parametres.nom} valeur={ctx.copropriete.nom} />
           ) : null}
@@ -98,23 +107,13 @@ export default async function QuittancePage({
           {contexte.periode ? (
             <LigneDoc label={f.periode} valeur={formatPeriode(contexte.periode, ctx.locale)} />
           ) : null}
-          {contexte.montant ? (
-            <div className="flex items-baseline justify-between gap-6 rounded-field bg-action-wash px-4 py-3 print:bg-transparent print:px-0 print:py-0">
-              <dt className="text-[13px] font-medium text-ink">{f.montant}</dt>
-              <dd className="text-end text-sm font-medium text-ink">
-                <span className="tnum text-lg font-semibold">
-                  {formatMAD(contexte.montant, ctx.locale)}
-                </span>
-              </dd>
-            </div>
-          ) : null}
         </dl>
 
         <p className="mt-6 text-[13px] text-soft">
           {fill(f.emiseLe, { date: formatDate(quittance.dateEmission, ctx.locale) })}
         </p>
 
-        <p className="mt-9 border-t border-hairline pt-5 text-[12px] text-faint">
+        <p className="mt-9 border-t border-wash-strong pt-5 text-[12px] text-faint print:border-hairline-strong">
           {f.quittanceConservation}
         </p>
       </div>
@@ -124,9 +123,9 @@ export default async function QuittancePage({
 
 function LigneDoc({ label, valeur }: { label: string; valeur: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-6">
-      <dt className="text-[13px] text-soft">{label}</dt>
-      <dd className="text-end text-sm font-medium text-ink">{valeur}</dd>
+    <div className="flex items-baseline justify-between gap-6 py-3.5">
+      <dt className="text-sm text-soft">{label}</dt>
+      <dd className="text-end text-[15px] font-semibold text-ink">{valeur}</dd>
     </div>
   );
 }

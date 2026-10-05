@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BrandMark } from "../brand";
+import { BrandTile } from "../brand";
 import { Button } from "../ui/button";
 import { fill } from "../../lib/i18n";
 
@@ -322,7 +322,7 @@ export function GuidedTour({
         <>
           <div
             aria-hidden
-            className="absolute rounded-2xl ring-2 ring-sage transition-all duration-300 ease-out"
+            className="absolute rounded-2xl ring-[3px] ring-lime transition-all duration-300 ease-out"
             style={{
               top: zone.top,
               left: zone.left,
@@ -356,11 +356,10 @@ export function GuidedTour({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
           <div key={idx} className="pointer-events-auto w-full max-w-md rounded-card bg-surface p-6 shadow-pop animate-in-up sm:p-8">
             <div className="flex flex-col items-center text-center">
-              <span className="flex size-[72px] items-center justify-center rounded-full bg-ground">
-                <BrandMark size={52} />
-              </span>
-              <h2 className="mt-5 text-xl font-semibold tracking-tight text-ink">{etape.titre}</h2>
-              <p className="mt-2.5 text-sm leading-relaxed text-soft">{etape.corps}</p>
+              {/* Icône d'app : symbole lime sur carré vert — le moment de marque de la visite. */}
+              <BrandTile size={72} />
+              <h2 className="mt-6 text-[24px] font-bold leading-tight tracking-[-0.02em] text-ink">{etape.titre}</h2>
+              <p className="mt-2.5 text-[15px] leading-relaxed text-soft">{etape.corps}</p>
             </div>
             <PiedDeCarte
               idx={idx}
@@ -379,11 +378,11 @@ export function GuidedTour({
           className="pointer-events-auto absolute inset-x-3 bottom-3 rounded-card bg-surface p-5 shadow-pop animate-in-up sm:inset-auto sm:p-5"
           style={carteStyle}
         >
-          <h2 className="text-[15px] font-semibold tracking-tight text-ink">{etape.titre}</h2>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-soft">{etape.corps}</p>
+          <h2 className="text-[17px] font-bold tracking-tight text-ink">{etape.titre}</h2>
+          <p className="mt-1.5 text-[14px] leading-relaxed text-soft">{etape.corps}</p>
           {etape.action ? (
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-sage-tint px-2.5 py-1 text-[12px] font-medium text-action">
-              <span className="size-1.5 rounded-full bg-action animate-pulse-dot" aria-hidden />
+            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[12px] font-semibold text-ink">
+              <span className="size-1.5 rounded-full bg-ink animate-pulse-dot" aria-hidden />
               {labels.clickHint}
             </p>
           ) : null}
@@ -425,16 +424,16 @@ function PiedDeCarte({
   return (
     <div className={compacte ? "mt-4" : "mt-6"}>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-medium text-faint">
+        <p className="text-[12px] font-medium text-soft">
           {fill(labels.stepOf, { n: idx + 1, total })}
         </p>
         {/* Pastilles d'étapes : un repère vert unique glisse (transform) d'une étape à l'autre. */}
         <div className="relative flex gap-1.5" aria-hidden>
           {Array.from({ length: total }, (_, i) => (
-            <span key={i} className="size-1.5 rounded-full bg-hairline-strong" />
+            <span key={i} className="size-1.5 rounded-full bg-wash-strong" />
           ))}
           <span
-            className="tour-dot absolute start-0 top-0 size-1.5 rounded-full bg-action"
+            className="tour-dot absolute start-0 top-0 size-1.5 rounded-full bg-brand"
             style={{ "--idx": idx } as React.CSSProperties}
           />
         </div>
@@ -443,7 +442,7 @@ function PiedDeCarte({
         <button
           type="button"
           onClick={onSkip}
-          className="rounded-full px-2.5 py-1.5 text-[13px] font-medium text-soft transition-colors hover:bg-ground hover:text-ink"
+          className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-soft transition-colors hover:bg-wash hover:text-ink"
         >
           {labels.skip}
         </button>

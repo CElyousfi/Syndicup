@@ -23,7 +23,7 @@ export default async function InvitationEntreePage({
 
   return (
     <div>
-      <div className="relative mb-6 h-32 overflow-hidden rounded-card shadow-lift">
+      <div className="relative mb-7 h-36 overflow-hidden rounded-[28px] bg-tile">
         <Image
           src="/images/residence-entrance.jpg"
           alt=""
@@ -32,9 +32,9 @@ export default async function InvitationEntreePage({
           className="object-cover"
         />
       </div>
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">{dict.auth.inviteTitle}</h1>
-      <p className="mt-1 text-sm text-soft">{dict.auth.inviteSignInFirst}</p>
-      <form action={ouvrir} className="card mt-6 space-y-4 p-5 sm:p-6">
+      <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">{dict.auth.inviteTitle}</h1>
+      <p className="mt-2 text-[15px] text-soft">{dict.auth.inviteSignInFirst}</p>
+      <form action={ouvrir} className="mt-7 space-y-5">
         <Field label={dict.auth.inviteCodeLabel} htmlFor="code" hint={dict.auth.inviteCodeHint} required>
           <Input
             id="code"
@@ -45,14 +45,14 @@ export default async function InvitationEntreePage({
             maxLength={16}
             autoComplete="off"
             placeholder="ABCD2345"
-            className="h-12 text-center font-mono text-lg uppercase tracking-[0.35em]"
+            className="h-14 text-center font-mono text-xl font-bold uppercase tracking-[0.35em]"
           />
         </Field>
         <Button type="submit" size="lg" className="w-full">
           {dict.common.next}
         </Button>
       </form>
-      <div className="mt-4 flex justify-center">
+      <div className="mt-3 flex justify-center">
         <QrScannerButton
           locale={locale}
           labels={{
@@ -63,6 +63,7 @@ export default async function InvitationEntreePage({
             insecure: dict.auth.scanInsecure,
             close: dict.common.close,
           }}
+          size="lg"
           className="w-full"
         />
       </div>

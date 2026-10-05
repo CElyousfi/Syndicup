@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { celebrate } from "../../../../lib/success";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { IconPlus } from "../../../../components/ui/icons";
 import { confirmerArrivee, confirmerDepart, declarerLot } from "./actions";
@@ -17,21 +18,32 @@ export function DeclarerLotModal({
   locale,
   lots,
   ouvertInitialement = false,
+  variant = "primary",
 }: {
   dict: Dict;
   locale: Locale;
   lots: Array<{ id: string; numero: string }>;
   ouvertInitialement?: boolean;
+  /** Secondaire quand « Déclarer un séjour » porte déjà l'action principale de l'en-tête. */
+  variant?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(ouvertInitialement);
   const [state, action] = useActionState(declarerLot, IDLE);
   const l = dict.lcd;
   const statut =
     state.status === "success" ? (state.data as { statut: string } | undefined)?.statut : null;
+  // Déclaration de lot = action majeure : écran de succès plein (Wise).
+  const { declaree, declareeEnAttente } = l;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    const s = (state.data as { statut: string } | undefined)?.statut;
+    setOpen(false);
+    celebrate({ titre: s === "VALIDEE" ? declaree : declareeEnAttente, illustration: "ok-general" });
+  }, [state, declaree, declareeEnAttente]);
 
   return (
     <>
-      <Button onClick={() => setOpen(true)}>
+      <Button variant={variant} onClick={() => setOpen(true)}>
         <IconPlus width={16} height={16} />
         {l.declarerLot}
       </Button>

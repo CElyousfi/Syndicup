@@ -17,22 +17,28 @@ import { formatDateHeure, formatMAD, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
-import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { agVariant, incidentVariant, reservationVariant } from "../../../../lib/status";
-import { IconArrowEnd, IconWrench } from "../../../../components/ui/icons";
+import { incidentVariant, reservationVariant } from "../../../../lib/status";
+import {
+  IconBell,
+  IconCalendar,
+  IconChevronEnd,
+  IconHome,
+  IconMegaphone,
+  IconVote,
+  IconWrench,
+} from "../../../../components/ui/icons";
 import {
   IconCircle,
   CBell,
   CCalendar,
   CCoins,
   CHome,
-  CVote,
   CWrench,
 } from "../../../../components/ui/color-icons";
-import { EcheanceRelative } from "./syndic";
+import { AgPoster, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
 import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
 
@@ -89,21 +95,11 @@ export async function DashboardResident({
 
   return (
     <div className="page-root">
-      <PageHeader
-        title={fill(dict.dash.greeting, { prenom })}
-        reveal
-        subtitle={ctx.copropriete?.nom ?? undefined}
-        actions={
-          <ButtonLink href={p("/incidents/nouveau")} variant="secondary">
-            <IconWrench width={16} height={16} />
-            {dict.dash.signalerIncident}
-          </ButtonLink>
-        }
-      />
+      {/* Accueil Wise : la résidence en bandeau, puis le GRAND bonjour. */}
+      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6 shadow-none!" />
+      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={ctx.copropriete?.nom ?? undefined} />
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
-
-      {/* Indicateurs personnels */}
+      {/* Soldes Wise : tuiles chiffres clés */}
       <div
         className={`grid gap-4 sm:grid-cols-2 ${locataire ? "" : "xl:grid-cols-3"}`}
         data-tour="dash-stats"
@@ -135,240 +131,171 @@ export async function DashboardResident({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        {/* Mon solde par lot */}
-        {!locataire ? (
-          <Card className="lg:col-span-2" padded={false}>
-            <div className="p-6 pb-3">
-              <SectionHeader title={dict.dash.monSolde} />
-            </div>
-            {lotsAvecSolde.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-soft">{dict.common.emptyDefault}</p>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {lotsAvecSolde.map((lot) => {
-                  const du = soldes.get(lot.id) ?? 0n;
-                  const aJour = du <= 0n;
-                  return (
-                    <li key={lot.id}>
-                      <Link
-                        href={p(`/lots/${lot.id}?onglet=finances`)}
-                        className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-hover"
-                      >
-                        <IconCircle tone={aJour ? "sage" : "sand"} size={40}>
-                          <CHome width={20} height={20} />
-                        </IconCircle>
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-semibold text-ink">
-                            {dict.enums.typeLot[lot.typeLot]} {lot.numero}
-                          </p>
-                          <p className="mt-0.5 text-[12px] text-soft">
-                            {aJour ? dict.dash.monSoldeAJour : dict.dash.soldeDu}
-                          </p>
-                        </div>
-                        <div className="text-end">
-                          {aJour ? (
-                            <Badge variant="ok">{dict.enums.statutLigne.PAYE}</Badge>
-                          ) : (
-                            <p className="tnum text-lg font-semibold text-danger">
-                              {formatMAD(versChaine(du), locale)}
-                            </p>
-                          )}
-                          <span className="mt-0.5 flex items-center justify-end gap-1 text-[12px] font-medium text-action">
-                            {dict.dash.voirDetail}
-                            <IconArrowEnd width={12} height={12} />
-                          </span>
-                        </div>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-            <div className="border-t border-hairline px-6 py-3">
-              {/* CMI volontairement inactif (D7) : emplacement présent, action désactivée. */}
-              <span
-                className="inline-flex h-9 cursor-not-allowed items-center gap-2 rounded-btn border border-hairline bg-ground px-3.5 text-[13px] font-medium text-faint"
-                title={dict.finances.cmiIndisponible}
-              >
-                {dict.dash.payerEnLigne}
-                <Badge variant="neutral">{dict.dash.bientotDisponible}</Badge>
-              </span>
-            </div>
-          </Card>
-        ) : (
-          <Card className="lg:col-span-2" padded={false}>
-            <div className="p-6 pb-3">
-              <SectionHeader title={dict.dash.mesIncidents} />
-            </div>
-            <ListeIncidents incidents={incidents} ctx={ctx} />
-          </Card>
-        )}
+      {/* Actions rondes — mêmes entrées et mêmes droits que le bouton « Actions ». */}
+      <RoundActions ctx={ctx} />
 
-        {/* Prochaine AG (pas pour le locataire) */}
-        {!locataire ? (
-          <Card>
-            <SectionHeader title={dict.dash.prochaineAg} />
-            {prochaineAg ? (
-              <div className="mt-4">
-                <div className="flex items-center gap-3.5">
-                  <IconCircle tone="lilac" size={44}>
-                    <CVote />
-                  </IconCircle>
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-ink">
-                      {dict.enums.typeAg[prochaineAg.type]}
-                    </p>
-                    <p className="mt-0.5 text-[13px] text-soft">
-                      {formatDateHeure(prochaineAg.dateAg, locale)}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <Badge variant={agVariant[prochaineAg.statut]}>
-                    {dict.enums.statutAg[prochaineAg.statut]}
-                  </Badge>
-                  <EcheanceRelative iso={prochaineAg.dateAg} dict={dict} />
-                </div>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <ButtonLink href={p(`/ag/${prochaineAg.id}`)} variant="secondary" size="sm">
-                    {dict.common.details}
-                  </ButtonLink>
-                  {prochaineAg.statut === "CONVOQUEE" ? (
-                    <ButtonLink
-                      href={p(`/ag/${prochaineAg.id}#procurations`)}
-                      variant="ghost"
-                      size="sm"
-                    >
-                      {dict.dash.donnerProcuration}
-                    </ButtonLink>
-                  ) : null}
-                  {prochaineAg.statut === "EN_COURS" ? (
-                    <ButtonLink href={p(`/ag/${prochaineAg.id}/seance`)} size="sm">
-                      {dict.ag.rejoindreSeance}
-                    </ButtonLink>
-                  ) : null}
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4 flex items-center gap-3.5">
-                <IconCircle tone="lilac" size={44}>
-                  <CVote />
-                </IconCircle>
-                <p className="text-sm text-soft">{dict.dash.aucuneAg}</p>
-              </div>
-            )}
-          </Card>
-        ) : (
-          <Card>
-            <SectionHeader title={dict.dash.mesReservations} />
-            <ListeReservations reservations={reservations} ctx={ctx} />
-          </Card>
-        )}
-
-        {/* Incidents (résident) / réservations */}
-        {!locataire ? (
-          <>
-            <Card className="lg:col-span-2" padded={false}>
-              <div className="p-6 pb-3">
-                <SectionHeader
-                  title={dict.dash.mesIncidents}
-                  action={
-                    <Link
-                      href={p("/incidents")}
-                      className="text-[13px] font-medium text-action hover:underline"
-                    >
-                      {dict.common.seeAll}
-                    </Link>
-                  }
-                />
-              </div>
-              <ListeIncidents incidents={incidents} ctx={ctx} />
-            </Card>
-            <Card>
-              <SectionHeader title={dict.dash.mesReservations} />
-              <ListeReservations reservations={reservations} ctx={ctx} />
-            </Card>
-          </>
-        ) : null}
-
-        {/* M21 — Tableau d'affichage */}
-        <Card className="lg:col-span-3" padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader
-              title={dict.communication.titre}
-              subtitle={annoncesNonLues > 0 ? fill(dict.communication.nonLues, { n: annoncesNonLues }) : undefined}
-              action={<Link href={p("/affichage")} className="text-[13px] font-medium text-action hover:underline">{dict.common.seeAll}</Link>}
-            />
-          </div>
-          {annonces.length === 0 ? <p className="px-6 pb-6 text-sm text-soft">{dict.communication.aucune}</p> : (
-            <ul className="divide-y divide-hairline">
-              {annonces.map((a) => (
-                <li key={a.id}>
-                  <Link href={p(`/affichage/${a.id}`)} className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-hover">
-                    <IconCircle tone={a.categorie === "URGENCE" || a.categorie === "SECURITE" ? "sand" : "sage"} size={40}><CBell width={20} height={20} /></IconCircle>
-                    <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm ${a.lu ? "font-medium" : "font-semibold"} text-ink`}>{a.titre}</p>
-                      <p className="mt-0.5 truncate text-[12px] text-soft">{dict.enumsCommunication.categorieAnnonce[a.categorie]}{a.publieLe ? ` · ${formatDateHeure(a.publieLe, locale)}` : ""}</p>
+      {/* Mon solde, lot par lot (blocs de solde Wise) */}
+      {!locataire ? (
+        <Section
+          className="mt-10"
+          title={dict.dash.monSolde}
+          subtitle={`${dict.dash.payerEnLigne} · ${dict.dash.bientotDisponible}`}
+        >
+          {lotsAvecSolde.length === 0 ? (
+            <EmptyLine text={dict.common.emptyDefault} icon={<IconHome width={20} height={20} />} />
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {lotsAvecSolde.map((lot) => {
+                const du = soldes.get(lot.id) ?? 0n;
+                const aJour = du <= 0n;
+                return (
+                  <Link
+                    key={lot.id}
+                    href={p(`/lots/${lot.id}?onglet=finances`)}
+                    className="card group block p-5 transition-colors hover:bg-hairline-strong/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <IconCircle tone={aJour ? "sage" : "sand"} size={40}>
+                        <CHome width={20} height={20} />
+                      </IconCircle>
+                      <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">
+                        {dict.enums.typeLot[lot.typeLot]} {lot.numero}
+                      </p>
+                      <Badge variant={aJour ? "ok" : "danger"}>
+                        {aJour ? dict.enums.statutLigne.PAYE : dict.enums.statutLigne.IMPAYE}
+                      </Badge>
                     </div>
-                    {!a.lu ? <Badge variant="warn">{dict.communication.nonLue}</Badge> : a.epingle ? <Badge variant="ink">{dict.communication.epinglee}</Badge> : null}
+                    <p className={`tnum mt-6 truncate text-[30px] font-bold leading-none tracking-[-0.02em] ${aJour ? "text-ink" : "text-danger"}`}>
+                      {formatMAD(versChaine(du), locale)}
+                    </p>
+                    <div className="mt-2 flex items-center justify-between gap-2">
+                      <p className="text-[14px] text-soft">{aJour ? dict.dash.monSoldeAJour : dict.dash.soldeDu}</p>
+                      <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-[13px] font-semibold text-link">
+                        {dict.dash.voirDetail}
+                        <IconChevronEnd width={16} height={16} />
+                      </span>
+                    </div>
                   </Link>
-                </li>
-              ))}
-            </ul>
+                );
+              })}
+            </div>
           )}
-        </Card>
+          {/* CMI volontairement inactif (D7) : emplacement présent, action désactivée. */}
+          <span
+            className="mt-4 inline-flex h-10 cursor-not-allowed items-center gap-2 rounded-btn bg-wash px-4 text-[14px] font-semibold text-soft"
+            title={dict.finances.cmiIndisponible}
+          >
+            {dict.dash.payerEnLigne}
+            <Badge variant="outline">{dict.dash.bientotDisponible}</Badge>
+          </span>
+        </Section>
+      ) : null}
 
-        {/* Notifications récentes */}
-        <Card className="lg:col-span-3" padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader
-              title={dict.dash.notificationsRecentes}
-              action={
-                <Link
-                  href={p("/notifications")}
-                  className="text-[13px] font-medium text-action hover:underline"
-                >
-                  {dict.notifs.voirToutes}
-                </Link>
+      {/* Prochaine AG (pas pour le locataire) — carte-affiche */}
+      {!locataire ? (
+        <div className="mt-10">
+          {prochaineAg ? (
+            <AgPoster
+              ag={prochaineAg}
+              dict={dict}
+              locale={locale}
+              actions={
+                <>
+                  {prochaineAg.statut === "EN_COURS" ? (
+                    <ButtonLink href={p(`/ag/${prochaineAg.id}/seance`)}>{dict.ag.rejoindreSeance}</ButtonLink>
+                  ) : null}
+                  {prochaineAg.statut === "CONVOQUEE" ? (
+                    <ButtonLink href={p(`/ag/${prochaineAg.id}#procurations`)}>{dict.dash.donnerProcuration}</ButtonLink>
+                  ) : null}
+                  {/* Contour blanc : la pill secondaire verte disparaîtrait sur la salle verte. */}
+                  <Link
+                    href={p(`/ag/${prochaineAg.id}`)}
+                    className="su-btn inline-flex h-11 items-center rounded-btn border-[1.5px] border-white/70 px-5 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+                  >
+                    {dict.common.details}
+                  </Link>
+                </>
               }
             />
-          </div>
-          {notifs.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{dict.notifs.aucune}</p>
           ) : (
-            <ul className="divide-y divide-hairline">
-              {notifs.map((n) => (
-                <li key={n.id}>
-                  <Link
-                    href={lienNotification(n.templateCode, n.contenuJson, locale)}
-                    className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-hover"
-                  >
-                    <IconCircle tone={n.lu ? "surface" : "sand"} size={36}>
-                      <CBell width={18} height={18} />
-                    </IconCircle>
-                    <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm ${n.lu ? "text-body" : "font-medium text-ink"}`}>
-                        {n.rendu?.titre ?? n.templateCode}
-                      </p>
-                    </div>
-                    <span className="shrink-0 text-[12px] text-faint">
-                      {formatDateHeure(n.horodatageEnvoi, locale)}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <Section title={dict.dash.prochaineAg}>
+              <EmptyLine text={dict.dash.aucuneAg} icon={<IconVote width={20} height={20} />} />
+            </Section>
           )}
-        </Card>
+        </div>
+      ) : null}
+
+      <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">
+        <Section title={dict.dash.mesIncidents} href={p("/incidents")} linkLabel={dict.common.seeAll}>
+          <ListeIncidents incidents={incidents} ctx={ctx} />
+        </Section>
+
+        <Section title={dict.dash.mesReservations} href={p("/reservations")} linkLabel={dict.common.seeAll}>
+          <ListeReservations reservations={reservations} ctx={ctx} />
+        </Section>
+
+        {/* M21 — Tableau d'affichage */}
+        <Section
+          title={dict.communication.titre}
+          subtitle={annoncesNonLues > 0 ? fill(dict.communication.nonLues, { n: annoncesNonLues }) : undefined}
+          href={p("/affichage")}
+          linkLabel={dict.common.seeAll}
+        >
+          {annonces.length === 0 ? (
+            <EmptyLine text={dict.communication.aucune} icon={<IconMegaphone width={20} height={20} />} />
+          ) : (
+            <FlatList>
+              {annonces.map((a) => (
+                <Row
+                  key={a.id}
+                  href={p(`/affichage/${a.id}`)}
+                  strong={!a.lu}
+                  icon={
+                    <RowIcon tone={a.categorie === "URGENCE" || a.categorie === "SECURITE" ? "sand" : "sage"}>
+                      <CBell />
+                    </RowIcon>
+                  }
+                  title={a.titre}
+                  subtitle={`${dict.enumsCommunication.categorieAnnonce[a.categorie]}${a.publieLe ? ` · ${formatDateHeure(a.publieLe, locale)}` : ""}`}
+                  trailing={
+                    !a.lu ? (
+                      <Badge variant="warn">{dict.communication.nonLue}</Badge>
+                    ) : a.epingle ? (
+                      <Badge variant="ink">{dict.communication.epinglee}</Badge>
+                    ) : null
+                  }
+                />
+              ))}
+            </FlatList>
+          )}
+        </Section>
+
+        {/* Notifications récentes */}
+        <Section title={dict.dash.notificationsRecentes} href={p("/notifications")} linkLabel={dict.notifs.voirToutes}>
+          {notifs.length === 0 ? (
+            <EmptyLine text={dict.notifs.aucune} icon={<IconBell width={20} height={20} />} />
+          ) : (
+            <FlatList>
+              {notifs.map((n) => (
+                <Row
+                  key={n.id}
+                  href={lienNotification(n.templateCode, n.contenuJson, locale)}
+                  strong={!n.lu}
+                  icon={
+                    <RowIcon tone={n.lu ? "surface" : "sand"}>
+                      <CBell />
+                    </RowIcon>
+                  }
+                  title={n.rendu?.titre ?? n.templateCode}
+                  subtitle={formatDateHeure(n.horodatageEnvoi, locale)}
+                />
+              ))}
+            </FlatList>
+          )}
+        </Section>
 
         {/* Documents de la copropriété — consultables dans l'app */}
-        <DocumentsCard
-          documents={documents}
-          dict={dict}
-          locale={locale}
-          className="lg:col-span-3"
-        />
+        <DocumentsCard documents={documents} dict={dict} locale={locale} className="lg:col-span-2" />
       </div>
     </div>
   );
@@ -377,29 +304,24 @@ export async function DashboardResident({
 function ListeIncidents({ incidents, ctx }: { incidents: Incident[]; ctx: AppContext }) {
   const { dict, locale } = ctx;
   if (incidents.length === 0)
-    return <p className="px-6 pb-6 text-sm text-soft">{dict.incidents.aucunIncident}</p>;
+    return <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />;
   return (
-    <ul className="divide-y divide-hairline">
+    <FlatList>
       {incidents.slice(0, 5).map((i) => (
-        <li key={i.id}>
-          <Link
-            href={`/${locale}/incidents/${i.id}`}
-            className="flex items-center gap-4 px-6 py-3 transition-colors hover:bg-hover"
-          >
-            <IconCircle tone="tosca" size={40}>
-              <CWrench width={20} height={20} />
-            </IconCircle>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-ink">{i.sousCategorie}</p>
-              <p className="mt-0.5 text-[12px] text-soft">
-                {dict.enums.categorieIncident[i.categorie]}
-              </p>
-            </div>
-            <Badge variant={incidentVariant[i.statut]}>{dict.enums.statutIncident[i.statut]}</Badge>
-          </Link>
-        </li>
+        <Row
+          key={i.id}
+          href={`/${locale}/incidents/${i.id}`}
+          icon={
+            <RowIcon tone="tosca">
+              <CWrench />
+            </RowIcon>
+          }
+          title={i.sousCategorie}
+          subtitle={dict.enums.categorieIncident[i.categorie]}
+          trailing={<Badge variant={incidentVariant[i.statut]}>{dict.enums.statutIncident[i.statut]}</Badge>}
+        />
       ))}
-    </ul>
+    </FlatList>
   );
 }
 
@@ -412,22 +334,21 @@ function ListeReservations({
 }) {
   const { dict, locale } = ctx;
   if (reservations.length === 0)
-    return <p className="mt-4 text-sm text-soft">{dict.espaces.aucuneReservation}</p>;
+    return <EmptyLine text={dict.espaces.aucuneReservation} icon={<IconCalendar width={20} height={20} />} />;
   return (
-    <ul className="mt-4 space-y-3">
+    <FlatList>
       {reservations.map((r) => (
-        <li key={r.id} className="flex items-center gap-3">
-          <IconCircle tone="sand" size={36}>
-            <CCalendar width={18} height={18} />
-          </IconCircle>
-          <p className="min-w-0 flex-1 truncate text-[13px] font-medium text-ink">
-            {formatDateHeure(r.dateDebut, locale)}
-          </p>
-          <Badge variant={reservationVariant[r.statut]}>
-            {dict.enums.statutReservation[r.statut]}
-          </Badge>
-        </li>
+        <Row
+          key={r.id}
+          icon={
+            <RowIcon tone="sand">
+              <CCalendar />
+            </RowIcon>
+          }
+          title={formatDateHeure(r.dateDebut, locale)}
+          trailing={<Badge variant={reservationVariant[r.statut]}>{dict.enums.statutReservation[r.statut]}</Badge>}
+        />
       ))}
-    </ul>
+    </FlatList>
   );
 }

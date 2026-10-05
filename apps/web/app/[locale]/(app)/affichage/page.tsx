@@ -1,5 +1,6 @@
 /** Tableau d'affichage (M21) — annonces épinglées d'abord, filtre par catégorie, badge non lues ; sondages en cours ; contacts utiles. Tout membre (sauf prestataire). */
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { getAppContext } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
@@ -12,8 +13,8 @@ import { Banner } from "../../../../components/ui/banner";
 import { ButtonLink } from "../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
-import { LinkTabs } from "../../../../components/ui/link-tabs";
-import { IconMegaphone, IconPlus } from "../../../../components/ui/icons";
+import { IconCircle, type IconTone } from "../../../../components/ui/color-icons";
+import { IconChevronEnd, IconMegaphone, IconPlus } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { annonceVariant, categorieAnnonceVariant, sondageVariant } from "../../../../lib/status";
 
@@ -60,48 +61,71 @@ export default async function AffichagePage({ params, searchParams }: { params: 
       />
       {sp.supprimee === "1" ? <Banner variant="ok" className="mb-4">{c.supprimee}</Banner> : null}
       {!annRes.ok ? <Banner variant="danger" className="mb-4">{c.chargementImpossible}</Banner> : null}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <LinkTabs tabs={[{ href: qs({ statut }), label: c.toutes, active: !categorie }, ...CATEGORIES.map((k) => ({ href: qs({ categorie: k, statut }), label: e.categorieAnnonce[k], active: categorie === k }))]} />
-          </div>
-          {gestion ? <div className="flex gap-1.5 text-[12.5px]"><Link href={qs({ categorie })} className={`rounded-full border px-3 py-1 ${!statut ? "border-ink bg-ink text-white" : "border-hairline text-soft"}`}>{e.statutAnnonce.PUBLIEE}</Link><Link href={qs({ categorie, statut: "BROUILLON" })} className={`rounded-full border px-3 py-1 ${statut === "BROUILLON" ? "border-ink bg-ink text-white" : "border-hairline text-soft"}`}>{c.brouillons}</Link><Link href={qs({ categorie, statut: "ARCHIVEE" })} className={`rounded-full border px-3 py-1 ${statut === "ARCHIVEE" ? "border-ink bg-ink text-white" : "border-hairline text-soft"}`}>{c.archivees}</Link></div> : null}
-          {annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} icon={<IconMegaphone width={44} height={44} />} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}>{c.nouvelle}</ButtonLink> : undefined} /> : (
-            <ul className="space-y-3">
-              {annonces.map((a) => (
-                <li key={a.id}>
-                  <Link href={p(`/affichage/${a.id}`)} className={`block rounded-card border bg-surface p-5 transition-colors hover:bg-hover ${!a.lu && a.statut === "PUBLIEE" ? "border-action/40" : "border-hairline"}`}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={categorieAnnonceVariant[a.categorie]}>{e.categorieAnnonce[a.categorie]}</Badge>
-                      {a.epingle ? <Badge variant="ink">{c.epinglee}</Badge> : null}
-                      {a.statut !== "PUBLIEE" ? <Badge variant={annonceVariant[a.statut]}>{e.statutAnnonce[a.statut]}</Badge> : null}
-                      {!a.lu && a.statut === "PUBLIEE" ? <Badge variant="warn">{c.nonLue}</Badge> : null}
-                      {a.audience !== "TOUS" ? <span className="text-[12px] text-soft">{e.audience[a.audience]}{a.batiment ? ` ${a.batiment}` : ""}</span> : null}
-                    </div>
-                    <h2 className={`mt-2 text-[16px] ${!a.lu ? "font-semibold" : "font-medium"} text-ink-strong`}>{a.titre}</h2>
-                    <p className="mt-1 text-[13.5px] text-body">{a.apercu}</p>
-                    <p className="mt-2 text-[12px] text-soft">
-                      {a.publieLe ? (a.statut === "BROUILLON" ? fill(c.programmeeLe, { date: formatDateHeure(a.publieLe, ctx.locale) }) : fill(c.publieeLe, { date: formatDateHeure(a.publieLe, ctx.locale) })) : formatDateHeure(a.creeLe, ctx.locale)} · {fill(c.par, { nom: nomComplet(a.auteur) ?? "—" })}
-                      {a.nbCommentaires ? ` · ${a.nbCommentaires} ${c.commentaires.toLowerCase()}` : ""}
-                      {a.nbLectures !== null && a.statut === "PUBLIEE" ? ` · ${c.lectures} ${a.nbLectures}` : ""}
-                    </p>
-                  </Link>
-                </li>
-              ))}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="min-w-0 space-y-4 lg:col-span-2">
+          {/* Filtres en pastilles (Wise) : catégorie, puis statut pour la gestion. */}
+          <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scroll-thin sm:mx-0 sm:flex-wrap sm:px-0">
+            <Puce href={qs({ statut })} actif={!categorie}>{c.toutes}</Puce>
+            {CATEGORIES.map((k) => <Puce key={k} href={qs({ categorie: k, statut })} actif={categorie === k}>{e.categorieAnnonce[k]}</Puce>)}
+          </nav>
+          {gestion ? (
+            <div className="flex flex-wrap gap-2">
+              <Puce href={qs({ categorie })} actif={!statut} petite>{e.statutAnnonce.PUBLIEE}</Puce>
+              <Puce href={qs({ categorie, statut: "BROUILLON" })} actif={statut === "BROUILLON"} petite>{c.brouillons}</Puce>
+              <Puce href={qs({ categorie, statut: "ARCHIVEE" })} actif={statut === "ARCHIVEE"} petite>{c.archivees}</Puce>
+            </div>
+          ) : null}
+          {annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
+            <ul className="-mx-2 space-y-1 sm:-mx-3">
+              {annonces.map((a) => {
+                const nonLue = !a.lu && a.statut === "PUBLIEE";
+                return (
+                  <li key={a.id}>
+                    <Link href={p(`/affichage/${a.id}`)} className="group flex items-start gap-3.5 rounded-2xl px-2 py-3.5 transition-colors hover:bg-wash sm:gap-4 sm:px-3">
+                      <span className="relative shrink-0">
+                        <IconCircle tone={TON_CATEGORIE[a.categorie]} size={48}>
+                          <IconMegaphone width={22} height={22} className="text-ink-strong" />
+                        </IconCircle>
+                        {nonLue ? <span aria-hidden className="absolute -top-0.5 end-0 size-3 rounded-full bg-brand ring-2 ring-surface" /> : null}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <Badge variant={categorieAnnonceVariant[a.categorie]}>{e.categorieAnnonce[a.categorie]}</Badge>
+                          {a.epingle ? <Badge variant="ink">{c.epinglee}</Badge> : null}
+                          {a.statut !== "PUBLIEE" ? <Badge variant={annonceVariant[a.statut]}>{e.statutAnnonce[a.statut]}</Badge> : null}
+                          {nonLue ? <Badge variant="warn">{c.nonLue}</Badge> : null}
+                          {a.audience !== "TOUS" ? <span className="text-[12px] text-soft">{e.audience[a.audience]}{a.batiment ? ` ${a.batiment}` : ""}</span> : null}
+                        </div>
+                        <h2 className={`mt-1.5 text-[16px] leading-snug text-ink ${!a.lu ? "font-bold" : "font-semibold"}`}>{a.titre}</h2>
+                        <p className="mt-1 line-clamp-2 text-[14px] leading-relaxed text-body">{a.apercu}</p>
+                        <p className="mt-1.5 text-[12px] text-soft">
+                          <span className="tnum">{a.publieLe ? (a.statut === "BROUILLON" ? fill(c.programmeeLe, { date: formatDateHeure(a.publieLe, ctx.locale) }) : fill(c.publieeLe, { date: formatDateHeure(a.publieLe, ctx.locale) })) : formatDateHeure(a.creeLe, ctx.locale)}</span> · {fill(c.par, { nom: nomComplet(a.auteur) ?? "—" })}
+                          {a.nbCommentaires ? ` · ${a.nbCommentaires} ${c.commentaires.toLowerCase()}` : ""}
+                          {a.nbLectures !== null && a.statut === "PUBLIEE" ? ` · ${c.lectures} ${a.nbLectures}` : ""}
+                        </p>
+                      </div>
+                      <IconChevronEnd width={18} height={18} className="mt-3.5 shrink-0 text-link transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
-            <SectionHeader title={c.sondages} />
+            <SectionHeader title={c.sondages} className="mb-3" />
             {sondages.length === 0 ? <p className="text-[13px] text-soft">{c.aucunSondage}</p> : (
-              <ul className="divide-y divide-hairline">
+              <ul className="-mx-2 space-y-1">
                 {sondages.slice(0, 6).map((s) => (
-                  <li key={s.id} className="py-3">
-                    <Link href={p(`/affichage/sondages/${s.id}`)} className="block hover:text-action">
-                      <div className="flex items-center gap-2"><Badge variant={sondageVariant[s.statut]}>{e.statutSondage[s.statut]}</Badge>{s.maReponse ? <span className="text-[12px] text-ok">{c.dejaRepondu}</span> : null}</div>
-                      <p className="mt-1.5 text-[14px] font-medium text-ink-strong">{s.question}</p>
-                      <p className="mt-0.5 text-[12px] text-soft">{s.statut === "CLOS" ? fill(c.closLe, { date: formatDate(s.closLe ?? s.dateFin, ctx.locale) }) : fill(c.finLe, { date: formatDateHeure(s.dateFin, ctx.locale) })}</p>
+                  <li key={s.id}>
+                    <Link href={p(`/affichage/sondages/${s.id}`)} className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-wash">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2"><Badge variant={sondageVariant[s.statut]}>{e.statutSondage[s.statut]}</Badge>{s.maReponse ? <span className="text-[12px] font-semibold text-ok">{c.dejaRepondu}</span> : null}</div>
+                        <p className="mt-1.5 text-[15px] font-bold leading-snug text-ink">{s.question}</p>
+                        <p className="tnum mt-0.5 text-[12px] text-soft">{s.statut === "CLOS" ? fill(c.closLe, { date: formatDate(s.closLe ?? s.dateFin, ctx.locale) }) : fill(c.finLe, { date: formatDateHeure(s.dateFin, ctx.locale) })}</p>
+                      </div>
+                      <IconChevronEnd width={16} height={16} className="shrink-0 text-link" />
                     </Link>
                   </li>
                 ))}
@@ -109,13 +133,13 @@ export default async function AffichagePage({ params, searchParams }: { params: 
             )}
           </Card>
           <Card>
-            <SectionHeader title={c.contacts} action={ctx.roles.includes("SYNDIC" as never) || ctx.roles.includes("SUPER_ADMIN" as never) ? <Link href={p("/affichage/contacts")} className="text-[13px] font-medium text-action">{dict.common.modify}</Link> : undefined} />
+            <SectionHeader title={c.contacts} className="mb-3" action={ctx.roles.includes("SYNDIC" as never) || ctx.roles.includes("SUPER_ADMIN" as never) ? <Link href={p("/affichage/contacts")} className="link text-[13px]">{dict.common.modify}</Link> : undefined} />
             {contacts.length === 0 ? <p className="text-[13px] text-soft">{c.aucunContact}</p> : (
-              <ul className="divide-y divide-hairline">
+              <ul className="space-y-2">
                 {contacts.map((x) => (
-                  <li key={x.id} className="flex items-center justify-between gap-3 py-2.5">
-                    <div className="min-w-0"><p className="truncate text-[14px] font-medium text-ink-strong">{x.libelle}</p><p className="tnum text-[13px] text-soft" dir="ltr">{x.telephone}</p></div>
-                    <a href={`tel:${x.telephone.replace(/[^+0-9]/g, "")}`} className="inline-flex h-9 shrink-0 items-center rounded-btn border border-hairline-strong px-3 text-[13px] font-medium text-ink-strong hover:bg-hover">{c.appeler}</a>
+                  <li key={x.id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-3.5 py-3">
+                    <div className="min-w-0"><p className="truncate text-[14px] font-bold text-ink">{x.libelle}</p><p className="tnum text-[13px] text-soft" dir="ltr">{x.telephone}</p></div>
+                    <a href={`tel:${x.telephone.replace(/[^+0-9]/g, "")}`} className="inline-flex h-9 shrink-0 items-center rounded-full border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash">{c.appeler}</a>
                   </li>
                 ))}
               </ul>
@@ -126,3 +150,27 @@ export default async function AffichagePage({ params, searchParams }: { params: 
     </div>
   );
 }
+
+/** Puce de filtre (Wise) : contour neutre au repos, lime quand active. */
+function Puce({ href, actif, petite = false, children }: { href: string; actif: boolean; petite?: boolean; children: ReactNode }) {
+  return (
+    <Link
+      href={href}
+      aria-current={actif ? "page" : undefined}
+      className={`inline-flex shrink-0 items-center whitespace-nowrap rounded-full border font-semibold transition-colors ${petite ? "h-8 px-3.5 text-[13px]" : "h-9 px-4 text-[14px]"} ${actif ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-hover"}`}
+    >
+      {children}
+    </Link>
+  );
+}
+
+const TON_CATEGORIE: Record<CategorieAnnonce, IconTone> = {
+  INFORMATION: "tosca",
+  TRAVAUX: "sand",
+  COUPURE: "warn",
+  SECURITE: "danger",
+  URGENCE: "danger",
+  AG: "lilac",
+  CONVIVIALITE: "sage",
+  REGLEMENT: "sand",
+};

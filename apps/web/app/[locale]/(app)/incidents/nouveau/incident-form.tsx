@@ -7,6 +7,7 @@ import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import { PhotoPicker } from "../../../../../components/incidents/photo-picker";
+import { CategorieGlyphe } from "../../../../../components/incidents/categorie-icon";
 import type { CategorieIncident, PartieIncident, UrgenceIncident } from "../../../../../lib/api/types";
 import { signalerIncident } from "../actions";
 
@@ -39,9 +40,15 @@ export function IncidentForm({
   const [partie, setPartie] = useState<PartieIncident>("COMMUNE");
 
   const categories = Object.keys(dict.enums.categorieIncident) as CategorieIncident[];
+  // Tuiles sélectionnables (Wise) : greige au repos, lime une fois choisies.
+  const tuile = (actif: boolean) =>
+    `rounded-[18px] transition-[background-color,box-shadow,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2 ${
+      actif ? "bg-cta text-ink" : "bg-tile text-ink-strong hover:bg-wash-strong"
+    }`;
+  const legende = "mb-3 text-[14px] font-semibold text-ink";
 
   return (
-    <form action={action} className="card max-w-2xl space-y-6 p-5 sm:p-7">
+    <form action={action} className="max-w-2xl space-y-8">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="categorie" value={categorie} />
       <input type="hidden" name="partie" value={partie} />
@@ -49,21 +56,20 @@ export function IncidentForm({
 
       {/* Catégorie */}
       <fieldset>
-        <legend className="mb-2.5 text-[13px] font-medium text-ink-strong">{i.categorie}</legend>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <legend className={legende}>{i.categorie}</legend>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
           {categories.map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setCategorie(c)}
               aria-pressed={categorie === c}
-              className={`min-h-11 rounded-field border px-3 py-2.5 text-start text-[13px] font-medium transition-colors ${
-                categorie === c
-                  ? "border-action bg-action-wash text-action"
-                  : "border-hairline text-body hover:border-hairline-strong hover:bg-hover"
-              }`}
+              className={`flex min-h-[60px] items-center gap-3 px-3 py-2.5 text-start text-[14px] font-semibold ${tuile(categorie === c)}`}
             >
-              {dict.enums.categorieIncident[c]}
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface" aria-hidden>
+                <CategorieGlyphe categorie={c} size={22} />
+              </span>
+              <span className="min-w-0 leading-snug">{dict.enums.categorieIncident[c]}</span>
             </button>
           ))}
         </div>
@@ -81,20 +87,16 @@ export function IncidentForm({
 
       {/* Partie commune / privative */}
       <fieldset>
-        <legend className="mb-1 text-[13px] font-medium text-ink-strong">{i.partie}</legend>
-        <p className="mb-2.5 text-[13px] text-soft">{i.partieAide}</p>
-        <div className="grid grid-cols-2 gap-2">
+        <legend className="mb-1 text-[14px] font-semibold text-ink">{i.partie}</legend>
+        <p className="mb-3 text-[13px] text-soft">{i.partieAide}</p>
+        <div className="grid grid-cols-2 gap-2.5">
           {(["COMMUNE", "PRIVATIVE"] as PartieIncident[]).map((pa) => (
             <button
               key={pa}
               type="button"
               onClick={() => setPartie(pa)}
               aria-pressed={partie === pa}
-              className={`min-h-11 rounded-field border px-3 py-2.5 text-[13px] font-medium transition-colors ${
-                partie === pa
-                  ? "border-action bg-action-wash text-action"
-                  : "border-hairline text-body hover:border-hairline-strong hover:bg-hover"
-              }`}
+              className={`min-h-[52px] px-3 py-2.5 text-[14px] font-semibold ${tuile(partie === pa)}`}
             >
               {dict.enums.partie[pa]}
             </button>
@@ -104,34 +106,38 @@ export function IncidentForm({
 
       {/* Urgence */}
       <fieldset>
-        <legend className="mb-2.5 text-[13px] font-medium text-ink-strong">{i.urgence}</legend>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <legend className={legende}>{i.urgence}</legend>
+        <div className="grid gap-2.5 sm:grid-cols-3">
           {(["NORMALE", "URGENTE", "URGENCE_MAXIMALE"] as UrgenceIncident[]).map((u) => (
             <button
               key={u}
               type="button"
               onClick={() => setUrgence(u)}
               aria-pressed={urgence === u}
-              className={`min-h-11 rounded-field border px-3 py-3 text-start transition-colors ${
+              className={`min-h-[60px] rounded-[18px] px-4 py-3 text-start transition-[background-color,box-shadow,transform] duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2 ${
                 urgence === u
                   ? u === "URGENCE_MAXIMALE"
-                    ? "border-danger bg-danger-tint"
-                    : "border-action bg-action-wash"
-                  : "border-hairline hover:border-hairline-strong hover:bg-hover"
+                    ? "bg-danger-tint shadow-[inset_0_0_0_2px_var(--color-danger)]"
+                    : "bg-surface shadow-[inset_0_0_0_2px_var(--color-link)]"
+                  : "bg-tile hover:bg-wash-strong"
               }`}
             >
-              <span
-                className={`block text-[13px] font-semibold ${
-                  urgence === u && u === "URGENCE_MAXIMALE"
-                    ? "text-danger"
-                    : urgence === u
-                      ? "text-action"
-                      : "text-ink-strong"
-                }`}
-              >
-                {dict.enums.urgence[u]}
+              <span className="flex items-center gap-2">
+                <span
+                  className={`size-2.5 shrink-0 rounded-full ${
+                    u === "URGENCE_MAXIMALE" ? "bg-danger" : u === "URGENTE" ? "bg-warn" : "bg-link"
+                  }`}
+                  aria-hidden
+                />
+                <span
+                  className={`block text-[14px] font-semibold ${
+                    urgence === u && u === "URGENCE_MAXIMALE" ? "text-danger" : "text-ink"
+                  }`}
+                >
+                  {dict.enums.urgence[u]}
+                </span>
               </span>
-              <span className="mt-0.5 block text-[12px] text-soft">
+              <span className="mt-1 block text-[12px] text-soft">
                 {dict.enums.urgenceSla[u]}
               </span>
             </button>
@@ -227,7 +233,7 @@ export function IncidentForm({
 
       <FormAlert state={state} />
 
-      <div className="flex justify-end border-t border-hairline pt-5">
+      <div className="flex justify-end border-t border-hairline pt-6">
         <SubmitButton
           size="lg"
           className="w-full sm:w-auto"

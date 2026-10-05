@@ -71,13 +71,13 @@ export function PhotoPicker({
     setFichiers((prev) => [...prev, ...compresses].slice(0, MAX_PHOTOS));
   };
 
+  // Déclencheurs : pills blanches sur la tuile pointillée (greige).
   const boutonCls =
-    "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover sm:flex-none";
+    "inline-flex h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-btn bg-surface px-4 text-[14px] font-semibold text-ink-strong transition-colors hover:bg-hover sm:flex-none";
 
   return (
     <div>
-      <p className="text-[13px] font-medium text-ink-strong">{labels.photos}</p>
-      <p className="mt-0.5 text-[13px] text-soft">{labels.aide}</p>
+      <p className="text-[14px] font-semibold text-ink">{labels.photos}</p>
 
       {/* Champ réel (multipart) + déclencheurs cachés caméra / galerie */}
       <input ref={champRef} type="file" name={name} multiple hidden tabIndex={-1} aria-hidden />
@@ -104,41 +104,47 @@ export function PhotoPicker({
         }}
       />
 
-      {fichiers.length < MAX_PHOTOS ? (
-        <div className="mt-3 flex flex-wrap gap-2">
-          <button type="button" onClick={() => cameraRef.current?.click()} className={boutonCls}>
-            <IconCamera width={17} height={17} className="text-action" />
-            {labels.prendre}
-          </button>
-          <button type="button" onClick={() => galerieRef.current?.click()} className={boutonCls}>
-            <IconImage width={17} height={17} className="text-action" />
-            {labels.galerie}
-          </button>
+      {/* Zone de dépôt : tuile greige pointillée */}
+      <div className="mt-2 rounded-[20px] border-2 border-dashed border-hairline-strong bg-tile p-4 sm:p-5">
+        <div className="flex items-start gap-3.5">
+          <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface text-link" aria-hidden>
+            <IconCamera width={20} height={20} />
+          </span>
+          <p className="pt-0.5 text-[13px] leading-relaxed text-soft">{labels.aide}</p>
         </div>
-      ) : null}
 
-      {apercus.length > 0 ? (
-        <ul className="mt-3 flex flex-wrap gap-2.5">
-          {apercus.map((url, i) => (
-            <li key={url} className="relative animate-in-up">
-              {/* Aperçu local (URL d'objet) — next/image inapplicable. */}
-              <img
-                src={url}
-                alt=""
-                className="size-20 rounded-xl border border-hairline object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => setFichiers((prev) => prev.filter((_, j) => j !== i))}
-                aria-label={labels.retirer(i + 1)}
-                className="absolute -end-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full bg-ink text-white shadow-pop transition-transform hover:scale-110"
-              >
-                <IconX width={12} height={12} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+        {apercus.length > 0 ? (
+          <ul className="mt-4 flex flex-wrap gap-2.5">
+            {apercus.map((url, i) => (
+              <li key={url} className="relative animate-in-up">
+                {/* Aperçu local (URL d'objet) — next/image inapplicable. */}
+                <img src={url} alt="" className="size-20 rounded-2xl object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setFichiers((prev) => prev.filter((_, j) => j !== i))}
+                  aria-label={labels.retirer(i + 1)}
+                  className="absolute -end-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full bg-ink text-white transition-transform hover:scale-110"
+                >
+                  <IconX width={12} height={12} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+
+        {fichiers.length < MAX_PHOTOS ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button type="button" onClick={() => cameraRef.current?.click()} className={boutonCls}>
+              <IconCamera width={17} height={17} className="text-link" />
+              {labels.prendre}
+            </button>
+            <button type="button" onClick={() => galerieRef.current?.click()} className={boutonCls}>
+              <IconImage width={17} height={17} className="text-link" />
+              {labels.galerie}
+            </button>
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }

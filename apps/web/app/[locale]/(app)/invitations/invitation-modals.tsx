@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useMemo, useRef, useState, type ReactNode } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
@@ -12,8 +12,7 @@ import type { Dict, Locale } from "../../../../lib/i18n";
 import type { CanalInvitation, RoleType } from "../../../../lib/api/types";
 import { creerInvitation, regenererInvitation } from "./actions";
 import { IconPlus } from "../../../../components/ui/icons";
-import { toast } from "../../../../lib/toast";
-import { useEffect } from "react";
+import { celebrate } from "../../../../lib/success";
 
 const ROLES_SANS_LOT: RoleType[] = ["SYNDIC", "GARDIEN", "PRESTATAIRE"];
 // SYNDIC volontairement absent : un syndic n'invite jamais un autre syndic — seul le super
@@ -27,6 +26,49 @@ const ROLES_INVITABLES: RoleType[] = [
   "GARDIEN",
   "PRESTATAIRE",
 ];
+
+/** Code d'invitation + QR sur un sous-bloc blanc — à poser dans une tuile greige (ou une carte). */
+export function CodeInvitation({
+  code,
+  lien,
+  titre,
+  pied,
+  qrLegende,
+  actions,
+}: {
+  code: string;
+  lien: string;
+  titre?: ReactNode;
+  pied?: ReactNode;
+  /** Légende au-dessus du QR (ex. « ou faites-lui scanner ce QR code »). */
+  qrLegende?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-5 rounded-[20px] bg-surface p-5 sm:flex-row sm:items-center sm:gap-7 sm:p-6">
+      <div className="min-w-0 flex-1 text-center sm:order-last sm:text-start">
+        {titre ? <p className="text-[13px] text-soft">{titre}</p> : null}
+        <p className="mt-1 font-mono text-[28px] font-bold leading-tight tracking-[0.22em] text-ink sm:text-[30px]" dir="ltr">
+          {code}
+        </p>
+        {pied ? <p className="mt-1 text-[12px] text-soft">{pied}</p> : null}
+        {actions ? <div className="mt-4 flex flex-wrap justify-center gap-2 sm:justify-start">{actions}</div> : null}
+      </div>
+      {lien ? (
+        <figure className="flex shrink-0 flex-col items-center gap-2">
+          {qrLegende ? <figcaption className="max-w-[200px] text-center text-[12px] text-soft">{qrLegende}</figcaption> : null}
+          <img
+            src={`/api/qr?data=${encodeURIComponent(lien)}`}
+            alt="QR"
+            width={148}
+            height={148}
+            className="size-[148px] rounded-xl bg-surface"
+          />
+        </figure>
+      ) : null}
+    </div>
+  );
+}
 
 /** Résultat commun : le code + QR + lien — le syndic transmet lui-même (envoi auto absent). */
 function ResultatInvitation({
@@ -47,28 +89,22 @@ function ResultatInvitation({
       <Banner variant="ok" title={inv.creee}>
         {inv.envoiManuel}
       </Banner>
-      <p className="text-[13px] text-body">{inv.transmettre}</p>
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
-        <span className="font-mono text-xl font-semibold tracking-[0.3em] text-ink" dir="ltr">
-          {code}
-        </span>
-        <CopyButton value={code} label={dict.common.copy} copiedLabel={dict.common.copied} />
-      </div>
-      <div className="flex flex-wrap items-center gap-5">
-        <img
-          src={`/api/qr?data=${encodeURIComponent(lien)}`}
-          alt="QR"
-          width={132}
-          height={132}
-          className="rounded-xl border border-hairline"
+      <div className="rounded-[24px] bg-tile p-3 sm:p-4">
+        <CodeInvitation
+          code={code}
+          lien={lien}
+          titre={inv.transmettre}
+          qrLegende={inv.ouQr}
+          actions={
+            <>
+              <CopyButton value={code} label={dict.common.copy} copiedLabel={dict.common.copied} />
+              <CopyButton value={lien} label={inv.lienDirect} copiedLabel={dict.common.copied} />
+            </>
+          }
         />
-        <div className="min-w-0 space-y-2">
-          <p className="text-[13px] text-body">{inv.ouQr}</p>
-          <p className="truncate rounded-lg bg-ground px-3 py-1.5 font-mono text-[11px] text-soft" dir="ltr">
-            {lien}
-          </p>
-          <CopyButton value={lien} label={inv.lienDirect} copiedLabel={dict.common.copied} />
-        </div>
+        <p className="mt-3 truncate rounded-xl bg-wash px-3 py-2 font-mono text-[11px] text-soft" dir="ltr">
+          {lien}
+        </p>
       </div>
       <div className="flex justify-end">
         <Button variant="secondary" onClick={onClose}>
@@ -93,10 +129,9 @@ export function CreerInvitationModal({
   const [open, setOpen] = useState(ouvertInitialement);
   const [role, setRole] = useState<RoleType>("PROPRIETAIRE");
   const [state, action] = useActionState(creerInvitation, IDLE);
-  useEffect(() => {
-    if (state.status === "success") toast({ titre: inv.creee, tone: "ok", duree: 3500 });
-  }, [state.status]);
   const inv = dict.invitations;
+  // Code déjà célébré : l'écran de succès ne s'affiche qu'une fois par invitation.
+  const celebre = useRef<string | null>(null);
 
   const lotRequis = !ROLES_SANS_LOT.includes(role);
   const resultat = useMemo(
@@ -104,7 +139,15 @@ export function CreerInvitationModal({
     [state]
   );
 
-  const fermer = () => setOpen(false);
+  // Écran de succès plein écran à la fermeture : la modale (couche supérieure du navigateur)
+  // le masquerait tant que le code et le QR y sont affichés pour être transmis.
+  const fermer = () => {
+    setOpen(false);
+    if (resultat && celebre.current !== resultat.code) {
+      celebre.current = resultat.code;
+      celebrate({ titre: inv.creee, illustration: "ok-invitation" });
+    }
+  };
 
   return (
     <>

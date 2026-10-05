@@ -15,6 +15,8 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { LinkTabs } from "../../../../components/ui/link-tabs";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { IconPlus } from "../../../../components/ui/icons";
+import { Avatar } from "../../../../components/ui/avatar";
+import { IconCircle, CFile } from "../../../../components/ui/color-icons";
 import { importVariant } from "../../../../lib/status";
 import { OnboardingCard, chargerOnboarding } from "./onboarding-card";
 import { InvitationsMasseModal } from "./import-client";
@@ -58,9 +60,9 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
           <div className="space-y-4">
             <Card>
               <SectionHeader title={t.modeles} subtitle={t.modelesAide} />
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-4 divide-y divide-wash-strong rounded-[20px] bg-surface px-4">
                 {(["LOTS_PROPRIETAIRES", "SOLDES_OUVERTURE", "PRESTATAIRES", "CONTRATS", "VEHICULES_BADGES", "PERSONNEL"] as const).map((x) => (
-                  <li key={x} className="flex items-center justify-between gap-2 text-[13px]"><span className="text-ink-strong">{t.typesImport[x]}</span><span className="shrink-0"><a className="text-action hover:underline" href={`/api/import-fichier?kind=modele&type=${x}&langue=fr`}>FR</a> · <a className="text-action hover:underline" href={`/api/import-fichier?kind=modele&type=${x}&langue=ar`}>AR</a></span></li>
+                  <li key={x} className="flex items-center justify-between gap-3 py-3 text-[14px]"><span className="min-w-0 font-semibold text-ink">{t.typesImport[x]}</span><span className="shrink-0 text-soft"><a className="link" href={`/api/import-fichier?kind=modele&type=${x}&langue=fr`}>FR</a> · <a className="link" href={`/api/import-fichier?kind=modele&type=${x}&langue=ar`}>AR</a></span></li>
                 ))}
               </ul>
             </Card>
@@ -70,12 +72,12 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
       ) : null}
 
       {onglet === "imports" ? (
-        imports.length === 0 ? <EmptyState title={t.aucunImport} hint={t.aucunImportAide} /> : (
+        imports.length === 0 ? <EmptyState title={t.aucunImport} hint={t.aucunImportAide} illustration="empty-documents" action={gestion ? <ButtonLink href={p("/import/nouveau")}><IconPlus width={16} height={16} />{t.nouvelImport}</ButtonLink> : undefined} /> : (
           <TableCard><Table>
             <THead><TH>{t.fichierSource}</TH><TH>{t.typeImport}</TH><TH>{dict.lots.statut}</TH><TH align="end">{t.nbLignes}</TH><TH align="end">{t.nbErreurs}</TH><TH>{t.lancePar}</TH><TH>{dict.lots.dateDebut}</TH></THead>
             <tbody>{imports.map((j) => (
               <TR key={j.id}>
-                <TD><Link href={p(`/import/${j.id}`)} className="font-medium text-action hover:underline">{j.nomFichier}</Link></TD>
+                <TD><Link href={p(`/import/${j.id}`)} className="inline-flex max-w-full items-center gap-3 font-bold text-ink hover:text-link"><IconCircle tone="sage" size={40}><CFile width={20} height={20} /></IconCircle><span className="min-w-0 truncate">{j.nomFichier}</span></Link></TD>
                 <TD className="text-body">{t.typesImport[j.type]}</TD>
                 <TD><Badge variant={importVariant[j.statut as StatutImport]}>{t.statuts[j.statut]}</Badge></TD>
                 <TD align="end" className="tnum">{j.statut === "EN_COURS" ? `${j.nbTraitees}/${j.nbLignes}` : j.nbLignes}</TD>
@@ -89,24 +91,30 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
       ) : null}
 
       {onglet === "invitations" && gestion ? (
-        <div className="space-y-4">
-          <Card>
-            <SectionHeader title={t.invitationsEnAttente} subtitle={t.invitationsMasseAide} action={<InvitationsMasseModal dict={dict} locale={ctx.locale} nb={nonEnvoyees.length} />} />
-            {preRemplies.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneInvitationMasse}</p> : (
-              <ul className="mt-3 divide-y divide-hairline">
-                {preRemplies.map((i) => (
-                  <li key={i.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                    <span className="text-sm font-medium text-ink-strong">{`${i.preRempliJson?.prenom ?? ""} ${i.preRempliJson?.nom ?? ""}`.trim() || "—"}</span>
-                    <span className="text-[12.5px] text-soft" dir="ltr">{i.preRempliJson?.telephone ?? i.preRempliJson?.email ?? "—"}</span>
-                    <Badge variant="outline">{dict.roles[i.roleCible as keyof typeof dict.roles] ?? i.roleCible}</Badge>
-                    {i.lotId ? <span className="text-[12px] text-soft">{dict.invitations.lot} {lotsParId.get(i.lotId) ?? ""}</span> : null}
-                    <span className="ms-auto text-[12px] text-soft tnum">{i.envoyeeLe ? `${t.envoyeeLe} ${formatDateHeure(i.envoyeeLe, ctx.locale)}` : t.nonEnvoyee}</span>
+        <section>
+          <SectionHeader title={t.invitationsEnAttente} subtitle={t.invitationsMasseAide} action={<InvitationsMasseModal dict={dict} locale={ctx.locale} nb={nonEnvoyees.length} />} />
+          {preRemplies.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneInvitationMasse}</p> : (
+            <ul className="stagger-grid -mx-3 mt-3">
+              {preRemplies.map((i) => {
+                const nom = `${i.preRempliJson?.prenom ?? ""} ${i.preRempliJson?.nom ?? ""}`.trim();
+                return (
+                  <li key={i.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+                    <Avatar nom={nom || "—"} size={44} />
+                    <span className="min-w-0 flex-1 basis-40">
+                      <span className="block truncate text-[15px] font-bold text-ink">{nom || "—"}</span>
+                      <span className="block truncate text-[13px] text-soft" dir="ltr">{i.preRempliJson?.telephone ?? i.preRempliJson?.email ?? "—"}</span>
+                    </span>
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant="neutral">{dict.roles[i.roleCible as keyof typeof dict.roles] ?? i.roleCible}</Badge>
+                      {i.lotId ? <span className="text-[12px] text-soft">{dict.invitations.lot} {lotsParId.get(i.lotId) ?? ""}</span> : null}
+                    </span>
+                    <Badge variant={i.envoyeeLe ? "ok" : "outline"}>{i.envoyeeLe ? `${t.envoyeeLe} ${formatDateHeure(i.envoyeeLe, ctx.locale)}` : t.nonEnvoyee}</Badge>
                   </li>
-                ))}
-              </ul>
-            )}
-          </Card>
-        </div>
+                );
+              })}
+            </ul>
+          )}
+        </section>
       ) : null}
     </div>
   );

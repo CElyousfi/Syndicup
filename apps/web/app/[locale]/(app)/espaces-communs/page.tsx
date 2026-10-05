@@ -7,7 +7,6 @@ import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { Card } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
-import { CHome, IconCircle } from "../../../../components/ui/color-icons";
 import { EspaceImage, espaceImageCle } from "../../../../components/espaces/espace-image";
 import { photoSrc } from "../../../../lib/photos";
 import { CreerEspaceModal, ModifierEspaceModal, ReserverModal } from "./espace-modals";
@@ -62,20 +61,16 @@ export default async function EspacesPage({
         <EmptyState
           title={e.aucunEspace}
           hint={gestion ? e.aucunEspaceAide : undefined}
-          icon={
-            <IconCircle tone="sage" size={64}>
-              <CHome width={30} height={30} />
-            </IconCircle>
-          }
+          illustration="empty-reservations"
           action={gestion ? <CreerEspaceModal dict={dict} locale={ctx.locale} /> : undefined}
         />
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="stagger-grid grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {espaces.map((esp) => (
-            <Card key={esp.id} padded={false} className="flex flex-col overflow-hidden">
+            <Card key={esp.id} padded={false} className="group flex flex-col overflow-hidden">
               {/* Photo de l'espace — la carte devient un lieu, pas une ligne de texte. */}
               <div className="relative">
-                <EspaceImage src={photoSrc(ctx.copropriete, `espace:${esp.id}`, photoSrc(ctx.copropriete, espaceImageCle(esp.nom, esp.type)))} className="h-36 w-full" />
+                <EspaceImage src={photoSrc(ctx.copropriete, `espace:${esp.id}`, photoSrc(ctx.copropriete, espaceImageCle(esp.nom, esp.type)))} className="h-44 w-full" />
                 <span className="absolute end-3 top-3">
                   <Badge variant={esp.reservable ? "ok" : "neutral"}>
                     {esp.reservable ? e.reservable : e.nonReservable}
@@ -83,16 +78,16 @@ export default async function EspacesPage({
                 </span>
               </div>
               <div className="flex flex-1 flex-col p-5">
-              <h2 className="truncate text-[15px] font-semibold text-ink">{esp.nom}</h2>
-              <p className="mt-0.5 truncate text-[13px] text-soft">
+              <h2 className="truncate text-[19px] font-bold tracking-tight text-ink">{esp.nom}</h2>
+              <p className="mt-1 truncate text-[14px] text-soft">
                 {esp.type}
                 {esp.capacite ? ` · ${fill(e.personnes, { n: esp.capacite })}` : ""}
               </p>
-              <p className="mt-1 text-[12px] text-faint">
+              <p className="mt-3 inline-flex w-fit items-center rounded-full bg-wash px-2.5 py-1 text-[12px] font-medium text-ink-strong">
                 {esp.validationAutomatique ? e.validationAuto : e.validationManuelle}
               </p>
               {esp.reservable && peutReserver && mesLots.length > 0 ? (
-                <div className="mt-4 border-t border-hairline pt-4">
+                <div className="mt-auto pt-5">
                   <ReserverModal
                     dict={dict}
                     locale={ctx.locale}
@@ -103,7 +98,7 @@ export default async function EspacesPage({
                 </div>
               ) : null}
               {gestion ? (
-                <div className="mt-4 flex flex-wrap items-center justify-end gap-1.5 border-t border-hairline pt-3">
+                <div className={`flex flex-wrap items-center justify-end gap-1.5 border-t border-wash-strong pt-3 ${esp.reservable && peutReserver && mesLots.length > 0 ? "mt-4" : "mt-auto"}`}>
                   <ModifierEspaceModal dict={dict} locale={ctx.locale} espace={esp} />
                   <ConfirmDelete
                     dict={dict}

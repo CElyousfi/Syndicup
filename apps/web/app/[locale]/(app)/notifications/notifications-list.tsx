@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "../../../../components/ui/badge";
-import { Card } from "../../../../components/ui/card";
-import { IconArrowEnd, IconCheck } from "../../../../components/ui/icons";
+import { CBell, IconCircle } from "../../../../components/ui/color-icons";
+import { IconCheck, IconChevronEnd } from "../../../../components/ui/icons";
 import { marquerLueEnFond } from "../../../../lib/notifications-link";
 
 export interface NotificationItem {
@@ -43,67 +43,75 @@ export function NotificationsList({
     router.push(n.href);
   };
 
+  // Liste Wise à plat sur la toile : pastille cloche, titre gras (non lue), date grise,
+  // action et chevron vert à l'extrémité — aucune boîte autour.
   return (
-    <Card padded={false} className="divide-y divide-hairline overflow-hidden">
+    <ul className="-mx-3 space-y-1">
       {items.map((n) => (
-        <div
-          key={n.id}
-          role="link"
-          tabIndex={0}
-          onClick={() => ouvrir(n)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              ouvrir(n);
-            }
-          }}
-          className={`group flex cursor-pointer items-start gap-4 px-5 py-4 transition-colors duration-300 sm:px-6 ${
-            n.lu ? "bg-surface hover:bg-hover" : "bg-action-wash/70 hover:bg-action-wash"
-          }`}
-        >
-          <span
-            className={`mt-2 size-2 shrink-0 rounded-full transition-all duration-300 ${
-              n.lu ? "scale-0 bg-transparent" : "scale-100 bg-action"
-            }`}
-          />
-          <div className="min-w-0 flex-1">
-            <p
-              className={`text-sm transition-colors duration-300 ${
-                n.lu ? "text-body" : "font-semibold text-ink"
-              }`}
-            >
-              {n.titre}
-            </p>
-            {n.corps ? (
-              <p className="mt-0.5 text-[13px] leading-relaxed text-soft">{n.corps}</p>
-            ) : null}
-            <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-faint">
-              {n.date}
-              {n.canal ? <Badge variant="outline">{n.canal}</Badge> : null}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1 self-center">
-            {!n.lu ? (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  marquer(n.id);
-                }}
-                className="inline-flex h-8 items-center gap-1.5 rounded-btn px-2.5 text-[12px] font-medium text-action transition-colors hover:bg-action-tint"
+        <li key={n.id}>
+          <div
+            role="link"
+            tabIndex={0}
+            onClick={() => ouvrir(n)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                ouvrir(n);
+              }
+            }}
+            className="group flex cursor-pointer items-start gap-4 rounded-[20px] px-3 py-3.5 transition-colors duration-300 hover:bg-wash"
+          >
+            <span className="relative shrink-0">
+              <IconCircle tone={n.lu ? "surface" : "sand"} size={46}>
+                <CBell width={22} height={22} />
+              </IconCircle>
+              <span
+                aria-hidden
+                className={`absolute -top-0.5 -end-0.5 size-3 rounded-full border-2 border-surface bg-brand transition-transform duration-300 ${
+                  n.lu ? "scale-0" : "scale-100"
+                }`}
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p
+                className={`text-[15px] leading-snug transition-colors duration-300 ${
+                  n.lu ? "font-medium text-body" : "font-bold text-ink"
+                }`}
               >
-                <IconCheck width={14} height={14} />
-                {marquerLuLabel}
-              </button>
-            ) : null}
-            <IconArrowEnd
-              width={16}
-              height={16}
-              className="text-faint transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
-            />
+                {n.titre}
+              </p>
+              {n.corps ? (
+                <p className="mt-1 text-[14px] leading-relaxed text-soft">{n.corps}</p>
+              ) : null}
+              <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-soft">
+                {n.date}
+                {n.canal ? <Badge variant="outline">{n.canal}</Badge> : null}
+              </p>
+            </div>
+            <div className="flex shrink-0 items-center gap-1 self-center">
+              {!n.lu ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    marquer(n.id);
+                  }}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-btn px-3 text-[13px] font-semibold text-link transition-colors hover:bg-action-tint"
+                >
+                  <IconCheck width={15} height={15} />
+                  <span className="hidden sm:inline">{marquerLuLabel}</span>
+                  <span className="sr-only sm:hidden">{marquerLuLabel}</span>
+                </button>
+              ) : null}
+              <IconChevronEnd
+                width={18}
+                height={18}
+                className="text-link transition-transform duration-200 group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+              />
+            </div>
           </div>
-        </div>
+        </li>
       ))}
-    </Card>
+    </ul>
   );
 }

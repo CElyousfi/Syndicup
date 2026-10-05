@@ -32,10 +32,11 @@ export function LoginForm({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">{dict.auth.loginTitle}</h1>
-      <p className="mt-1 text-sm text-soft">{dict.auth.loginSubtitle}</p>
+      <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">{dict.auth.loginTitle}</h1>
+      <p className="mt-2 text-[15px] text-soft">{dict.auth.loginSubtitle}</p>
 
-      <div className="card mt-6 p-5 sm:p-6">
+      {/* À plat sur la toile (Wise) : bascule, champs, pill lime pleine largeur. */}
+      <div className="mt-7">
         <Segmented
           value={mode}
           onChange={setMode}
@@ -46,7 +47,7 @@ export function LoginForm({
         />
 
       {mode === "phone" ? (
-        <form action={otpAction} className="mt-5 space-y-4" suppressHydrationWarning>
+        <form action={otpAction} className="mt-6 space-y-5" suppressHydrationWarning>
           <input type="hidden" name="locale" value={locale} />
           {next ? <input type="hidden" name="next" value={next} /> : null}
           <Field
@@ -78,7 +79,7 @@ export function LoginForm({
           </SubmitButton>
         </form>
       ) : (
-        <form action={emailAction} className="mt-5 space-y-4" suppressHydrationWarning>
+        <form action={emailAction} className="mt-6 space-y-5" suppressHydrationWarning>
           <input type="hidden" name="locale" value={locale} />
           {next ? <input type="hidden" name="next" value={next} /> : null}
           <Field label={dict.auth.emailLabel} htmlFor="email" required>
@@ -128,7 +129,7 @@ export function LoginForm({
       </div>
 
       {/* Invité : scanner le QR de son invitation directement ici, ou saisir le code. */}
-      <div className="mt-6 flex flex-col items-center gap-3">
+      <div className="mt-6 flex flex-col items-stretch gap-4">
         <QrScannerButton
           locale={locale}
           labels={{
@@ -139,9 +140,10 @@ export function LoginForm({
             insecure: dict.auth.scanInsecure,
             close: dict.common.close,
           }}
-          className="w-full sm:w-auto"
+          size="lg"
+          className="w-full"
         />
-        <Link href={`/${locale}/invitation`} className="text-[13px] font-medium text-action hover:underline">
+        <Link href={`/${locale}/invitation`} className="link self-center text-[14px]">
           {dict.auth.inviteEnterCode}
         </Link>
       </div>

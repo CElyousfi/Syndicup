@@ -34,27 +34,28 @@ export default async function PlanningPage({ params, searchParams }: { params: P
   if (!res.ok) return <div className="page-root space-y-4"><BackLink href={p("/personnel")} label={dict.nav.personnel} /><Banner variant="danger">{pe.chargementImpossible}</Banner></div>;
   const x = res.data;
   const JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"] as const;
+  const aujourdhui = new Date().toISOString().slice(0, 10);
   return (
-    <div className="page-root space-y-5">
-      <BackLink href={p("/personnel")} label={dict.nav.personnel} />
+    <div className="page-root space-y-6">
       <PageHeader
+        back={<BackLink href={p("/personnel")} label={dict.nav.personnel} />}
         title={pe.planning}
         subtitle={`${pe.planningSubtitle} ${formatDate(x.jours[0]!, ctx.locale)} → ${formatDate(x.jours[6]!, ctx.locale)}`}
         actions={<div className="flex gap-1.5"><ButtonLink href={p(`/personnel/planning?semaine=${decaler(x.semaine, -7)}`)} variant="secondary" size="sm">{pe.semainePrecedente}</ButtonLink><ButtonLink href={p("/personnel/planning")} variant="secondary" size="sm">{dict.common.today}</ButtonLink><ButtonLink href={p(`/personnel/planning?semaine=${decaler(x.semaine, 7)}`)} variant="secondary" size="sm">{pe.semaineSuivante}</ButtonLink></div>}
       />
-      {x.personnels.length === 0 ? <EmptyState title={pe.aucuneFiche} /> : (
+      {x.personnels.length === 0 ? <EmptyState title={pe.aucuneFiche} illustration="empty-personnel" /> : (
         <TableCard>
           <table className="w-full min-w-[880px] text-[12.5px]">
-            <thead><tr className="border-b border-hairline text-start text-soft"><th className="px-3 py-2 text-start font-medium">{pe.titre}</th>{x.jours.map((j, i) => <th key={j} className="px-2 py-2 text-start font-medium"><span>{en.jour[JOURS[i]!]}</span><span className="ms-1 tnum text-faint">{j.slice(8, 10)}/{j.slice(5, 7)}</span></th>)}</tr></thead>
+            <thead><tr className="text-[12px] text-soft"><th className="rounded-s-[14px] bg-tile px-3 py-3 text-start font-semibold">{pe.titre}</th>{x.jours.map((j, i) => <th key={j} className={`bg-tile px-2 py-2 text-start font-semibold last:rounded-e-[14px] ${j === aujourdhui ? "text-ink" : ""}`}><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${j === aujourdhui ? "bg-cta" : ""}`}><span>{en.jour[JOURS[i]!]}</span><span className={`tnum ${j === aujourdhui ? "text-ink" : "text-faint"}`}>{j.slice(8, 10)}/{j.slice(5, 7)}</span></span></th>)}</tr></thead>
             <tbody>
               {x.personnels.map((pp) => {
                 const nom = (pp.utilisateur ? nomComplet(pp.utilisateur) : null) ?? en.poste[pp.poste];
                 return (
-                  <tr key={pp.id} className="border-b border-hairline align-top last:border-0">
-                    <td className="px-3 py-2"><a href={p(`/personnel/${pp.id}`)} className="font-medium text-ink-strong hover:text-action">{nom}</a><p className="text-[12px] text-soft">{en.poste[pp.poste]}</p></td>
+                  <tr key={pp.id} className="border-b border-wash-strong align-top transition-colors last:border-0 hover:bg-wash">
+                    <td className="px-3 py-3"><a href={p(`/personnel/${pp.id}`)} className="text-[14px] font-bold text-ink hover:text-link">{nom}</a><p className="text-[12px] text-soft">{en.poste[pp.poste]}</p></td>
                     {pp.jours.map((j) => (
-                      <td key={j.date} className={`px-2 py-2 ${j.conge ? "bg-info-soft/40" : ""}`}>
-                        {j.conge ? <p className="text-[12px] text-info">{en.typeConge[j.conge.type]}{j.conge.remplacant ? <span className="block text-faint">→ {j.conge.remplacant}</span> : null}</p> : j.plages.length ? j.plages.map((pl, i) => <p key={i} className="tnum text-ink-strong" dir="ltr">{pl.debut}–{pl.fin}</p>) : <p className="text-faint">{pe.aucunePlage}</p>}
+                      <td key={j.date} className="px-1.5 py-2">
+                        {j.conge ? <p className="rounded-[10px] bg-tosca-tint px-2 py-1.5 text-[12px] font-semibold text-tosca-deep">{en.typeConge[j.conge.type]}{j.conge.remplacant ? <span className="block font-normal text-soft">→ {j.conge.remplacant}</span> : null}</p> : j.plages.length ? j.plages.map((pl, i) => <p key={i} className="tnum mb-1 w-fit rounded-full bg-sage-tint px-2 py-0.5 font-semibold text-brand-deep" dir="ltr">{pl.debut}–{pl.fin}</p>) : <p className="px-2 text-faint">{pe.aucunePlage}</p>}
                         {j.presence ? <Badge variant={presenceVariant[j.presence.statut]} className="mt-1">{en.statutPresence[j.presence.statut]}</Badge> : null}
                       </td>
                     ))}

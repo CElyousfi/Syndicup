@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Field, Input, Select, Switch } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
+import { Button } from "../../../../components/ui/button";
 import { IDLE } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { Copropriete, TypeResidence } from "../../../../lib/api/types";
@@ -25,7 +26,7 @@ function PiedSection({ dict, state }: { dict: Dict; state: import("../../../../l
       {state.status === "success" ? (
         <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p>
       ) : null}
-      <SubmitButton variant="secondary">{dict.common.save}</SubmitButton>
+      <SubmitButton>{dict.common.save}</SubmitButton>
     </div>
   );
 }
@@ -165,7 +166,7 @@ export function RecouvrementForm({
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
-      <p className="text-[13px] text-soft">{pa.recouvrementAide}</p>
+      <p className="text-[14px] text-soft">{pa.recouvrementAide}</p>
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
         {(["N1", "N2", "N3", "N4", "N5", "N6"] as const).map((n) => (
           <Field key={n} label={n} htmlFor={`rec_${n}`}>
@@ -182,7 +183,7 @@ export function RecouvrementForm({
           </Field>
         ))}
       </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-faint">
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-soft">
         {(["N1", "N2", "N3", "N4", "N5", "N6"] as const).map((n) => (
           <span key={n}>{dict.enums.escalade[n]}</span>
         ))}
@@ -208,7 +209,8 @@ export function LegauxForm({
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
-      <Banner variant="legal" title={dict.legalGate.banner}>
+      {/* Dans la tuile greige : la bannière légale passe en blanc (jamais greige sur greige). */}
+      <Banner variant="legal" title={dict.legalGate.banner} className="bg-surface!">
         {pa.legauxBanner}
       </Banner>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -294,7 +296,7 @@ export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Loc
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
-      <Banner variant="legal">{pa.paieAide}</Banner>
+      <Banner variant="legal" className="bg-surface!">{pa.paieAide}</Banner>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {champs.map(([name, label, val]) => (
           <Field key={name} label={label} htmlFor={`paie_${name}`} optionalLabel={name === "smig_mensuel" || name === "jours_conge_annuels" ? dict.common.optional : undefined}>
@@ -303,8 +305,8 @@ export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Loc
         ))}
       </div>
       <div>
-        <p className="text-sm font-medium text-ink-strong">{pa.paieTranches}</p>
-        <p className="mt-1 text-[12px] text-soft">{pa.paieTranchesAide}</p>
+        <p className="text-[14px] font-semibold text-ink">{pa.paieTranches}</p>
+        <p className="mt-1 text-[13px] text-soft">{pa.paieTranchesAide}</p>
         <div className="mt-2 space-y-2">
           {Array.from({ length: Math.max(6, tranches.length) }, (_, i) => tranches[i] ?? { jusqua: "", taux: "", deduction: "" }).map((t, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
@@ -321,8 +323,8 @@ export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Loc
       </Field>
       <FormAlert state={state} />
       <div className="flex items-center justify-between gap-3 border-t border-hairline pt-4">
-        <button type="submit" name="effacer" value="1" className="text-[13px] font-medium text-danger hover:underline">{pa.paieEffacer}</button>
-        <div className="flex items-center gap-3">{state.status === "success" ? <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p> : null}<SubmitButton variant="secondary">{dict.common.save}</SubmitButton></div>
+        <Button type="submit" name="effacer" value="1" variant="dangerGhost" size="sm">{pa.paieEffacer}</Button>
+        <div className="flex items-center gap-3">{state.status === "success" ? <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p> : null}<SubmitButton>{dict.common.save}</SubmitButton></div>
       </div>
     </form>
   );

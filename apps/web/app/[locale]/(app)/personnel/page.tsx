@@ -14,7 +14,6 @@ import { Card } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { Avatar } from "../../../../components/ui/avatar";
 import { personnelVariant } from "../../../../lib/status";
-import { IconUsers } from "../../../../components/ui/icons";
 import { ChangerPresenceModal, CreerFicheModal } from "./personnel-modals";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 
@@ -64,7 +63,7 @@ export default async function PersonnelPage({ params }: { params: Promise<{ loca
         <EmptyState
           title={pe.aucuneFiche}
           hint={gestion ? pe.aucuneFicheAide : undefined}
-          icon={<IconUsers width={44} height={44} />}
+          illustration="empty-personnel"
           action={gestion ? <CreerFicheModal dict={dict} locale={ctx.locale} loges={loges} /> : undefined}
         />
       ) : (
@@ -75,21 +74,23 @@ export default async function PersonnelPage({ params }: { params: Promise<{ loca
             const jf = finProche(f);
             const ouvrable = gestion || estMoi;
             return (
-              <Card key={f.id}>
+              <Card key={f.id} className="flex flex-col">
                 <div className="flex items-start justify-between gap-3">
-                  <Avatar nom={nom} size={44} solid={estMoi} />
+                  <Avatar nom={nom} size={52} solid={estMoi} />
                   <Badge variant={personnelVariant[f.statut]} pulse={f.statut === "ABSENT"}>{dict.enums.statutPersonnel[f.statut]}</Badge>
                 </div>
-                <h2 className="mt-4 truncate text-[15px] font-semibold text-ink">
-                  {ouvrable ? <Link href={p(`/personnel/${f.id}`)} className="hover:text-action">{nom}</Link> : nom}
-                  {estMoi ? <span className="ms-2 text-[12px] font-normal text-soft">({pe.maFiche})</span> : null}
+                <h2 className="mt-4 truncate text-[18px] font-bold tracking-tight text-ink">
+                  {ouvrable ? <Link href={p(`/personnel/${f.id}`)} className="hover:text-link">{nom}</Link> : nom}
+                  {estMoi ? <span className="ms-2 text-[12px] font-medium text-soft">({pe.maFiche})</span> : null}
                 </h2>
-                <p className="mt-0.5 text-[13px] text-body">{en.poste[f.poste]}{f.typeContrat && ouvrable ? ` · ${en.typeContratTravail[f.typeContrat]}` : ""}</p>
-                <p className="mt-1 text-[13px] text-soft">{pe.logement} : {f.logementLot?.numero ?? pe.aucuneLoge}</p>
-                <p className="mt-0.5 text-[12px] text-faint">{f.dateEmbauche ? `${pe.dateEmbauche} ${formatDate(f.dateEmbauche, ctx.locale)}` : formatDate(f.creeLe, ctx.locale)}</p>
-                {jf !== null && jf >= 0 && jf <= 30 && ouvrable ? <p className="mt-2 rounded-field bg-warn-soft px-2 py-1 text-[12px] text-warn">{fill(pe.finContratProche, { n: jf })}</p> : null}
+                <p className="mt-0.5 text-[14px] font-medium text-body">{en.poste[f.poste]}{f.typeContrat && ouvrable ? ` · ${en.typeContratTravail[f.typeContrat]}` : ""}</p>
+                <div className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-3.5 text-[13px]">
+                  <p className="flex items-center justify-between gap-3 py-2.5"><span className="text-soft">{pe.logement}</span><span className="font-semibold text-ink">{f.logementLot?.numero ?? pe.aucuneLoge}</span></p>
+                </div>
+                <p className="mt-3 text-[12px] text-soft">{f.dateEmbauche ? `${pe.dateEmbauche} ${formatDate(f.dateEmbauche, ctx.locale)}` : formatDate(f.creeLe, ctx.locale)}</p>
+                {jf !== null && jf >= 0 && jf <= 30 && ouvrable ? <p className="mt-3 rounded-[14px] bg-warn-tint px-3 py-2 text-[12.5px] font-semibold text-warn">{fill(pe.finContratProche, { n: jf })}</p> : null}
                 {gestion || estMoi || conseil ? (
-                  <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-4">
+                  <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-5">
                     <ButtonLink href={p(`/personnel/${f.id}${conseil ? "?onglet=evaluations" : ""}`)} variant="secondary" size="sm">{estMoi && !gestion ? pe.monDossier : pe.dossier}</ButtonLink>
                     {gestion ? <ChangerPresenceModal dict={dict} locale={ctx.locale} personnelId={f.id} statutActuel={f.statut} logementActuel={f.logementLotId} loges={loges} /> : null}
                   </div>

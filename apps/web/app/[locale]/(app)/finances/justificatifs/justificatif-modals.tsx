@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../../components/ui/modal";
 import { Field, Input, Textarea } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
@@ -10,6 +10,7 @@ import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { CompteBancaire, Justificatif } from "../../../../../lib/api/types";
 import { formatMAD } from "../../../../../lib/format";
 import { IconPlus } from "../../../../../components/ui/icons";
+import { celebrate } from "../../../../../lib/success";
 import { validerJustificatif, rejeterJustificatif, annulerJustificatif, remplacerComptes, lireRibCompte } from "./actions";
 
 function Succes({ dict, message, onClose }: { dict: Dict; message: string; onClose: () => void }) {
@@ -23,6 +24,13 @@ export function ValiderModal({ dict, locale, justificatif }: { dict: Dict; local
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(validerJustificatif, IDLE);
   const j = dict.justificatifs;
+  // Validation = paiement encaissé : écran de succès plein (Wise), la modale se referme.
+  const titreValide = j.valide;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: titreValide, illustration: "ok-paiement" });
+  }, [state, titreValide]);
   return (
     <>
       <Button onClick={() => setOpen(true)}>{j.valider}</Button>
@@ -69,7 +77,7 @@ export function RejeterModal({ dict, locale, justificatif }: { dict: Dict; local
 export function AnnulerBouton({ dict, locale, justificatif }: { dict: Dict; locale: Locale; justificatif: Justificatif }) {
   const [state, action] = useActionState(annulerJustificatif, IDLE);
   const j = dict.justificatifs;
-  if (state.status === "success") return <span className="text-[13px] text-soft">{j.annule}</span>;
+  if (state.status === "success") return <span className="text-[13px] font-medium text-soft">{j.annule}</span>;
   return (
     <form action={action} className="inline-flex flex-col items-end gap-1">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
@@ -96,7 +104,7 @@ export function ComptesModal({ dict, locale, coproprieteId, comptes }: { dict: D
             {Array.from({ length: n }).map((_, i) => {
               const c = comptes[i];
               return (
-                <div key={i} className="grid gap-3 rounded-field border border-hairline p-3 sm:grid-cols-3">
+                <div key={i} className="grid gap-3 rounded-[20px] bg-tile p-4 sm:grid-cols-3">
                   <Field label={j.libelle} htmlFor={`lib_${i}`} required><Input id={`lib_${i}`} name="libelle" required maxLength={120} defaultValue={c?.libelle ?? ""} /></Field>
                   <Field label={j.banque} htmlFor={`bq_${i}`} required><Input id={`bq_${i}`} name="banque" required maxLength={120} defaultValue={c?.banque ?? ""} /></Field>
                   <Field label={c ? `${j.rib} · ${c.rib_masque}` : j.rib} htmlFor={`rib_${i}`} required={!c} error={fieldError(state, `comptes.${i}.rib`)}>

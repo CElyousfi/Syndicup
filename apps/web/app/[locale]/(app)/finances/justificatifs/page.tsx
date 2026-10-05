@@ -9,7 +9,7 @@ import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { EmptyState } from "../../../../../components/ui/empty-state";
 import { LinkTabs } from "../../../../../components/ui/link-tabs";
 import { StatCard } from "../../../../../components/ui/stat-card";
-import { CAlert, CCoins, CMoneyBag } from "../../../../../components/ui/color-icons";
+import { CAlert, CBuilding, CCoins, CMoneyBag, IconCircle } from "../../../../../components/ui/color-icons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { justificatifVariant } from "../../../../../lib/status";
 import { ComptesModal, RibCompteButton } from "./justificatif-modals";
@@ -41,20 +41,20 @@ export default async function JustificatifsPage({ params, searchParams }: { para
   return (
     <div className="page-root">
       <PageHeader title={j.titre} subtitle={j.subtitle} actions={gestion && coproId ? <ComptesModal dict={dict} locale={ctx.locale} coproprieteId={coproId} comptes={comptes} /> : undefined} />
-      <div className="stat mb-5 grid gap-4 sm:grid-cols-3">
+      <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <StatCard icon={<CAlert />} tone={(parStatut.EN_ATTENTE?.nb ?? 0) > 0 ? "warn" : "sage"} label={e.statutJustificatif.EN_ATTENTE} value={String(parStatut.EN_ATTENTE?.nb ?? 0)} hint={parStatut.EN_ATTENTE ? formatMAD(parStatut.EN_ATTENTE.montant, ctx.locale) : undefined} />
         <StatCard icon={<CMoneyBag />} tone="sage" label={e.statutJustificatif.VALIDE} value={String(parStatut.VALIDE?.nb ?? 0)} hint={parStatut.VALIDE ? formatMAD(parStatut.VALIDE.montant, ctx.locale) : undefined} />
         <StatCard icon={<CCoins />} tone="danger" label={e.statutJustificatif.REJETE} value={String(parStatut.REJETE?.nb ?? 0)} />
       </div>
       <LinkTabs className="mb-4" tabs={ONGLETS.map((o) => ({ href: p(`/finances/justificatifs?statut=${o}`), label: o === "TOUS" ? j.tous : e.statutJustificatif[o], active: o === "TOUS" ? statut === undefined : statut === o, count: o === "TOUS" ? undefined : parStatut[o]?.nb }))} />
-      {rows.length === 0 ? <EmptyState title={j.aucun} hint={j.aucunAide} /> : (
+      {rows.length === 0 ? <EmptyState title={j.aucun} hint={j.aucunAide} illustration="empty-documents" /> : (
         <TableCard>
           <Table>
             <THead><TH>{j.lot}</TH><TH>{j.declarePar}</TH><TH>{j.methode}</TH><TH>{j.reference}</TH><TH>{j.datePaiement}</TH><TH>{dict.lots.statut}</TH><TH align="end">{j.montant}</TH></THead>
             <tbody>
               {rows.map((x) => (
                 <TR key={x.id}>
-                  <TD className="font-semibold text-ink"><Link href={p(`/finances/justificatifs/${x.id}`)} className="hover:text-action">{x.lot?.numero ?? "—"}</Link></TD>
+                  <TD className="font-semibold text-ink"><Link href={p(`/finances/justificatifs/${x.id}`)} className="hover:text-link">{x.lot?.numero ?? "—"}</Link></TD>
                   <TD className="text-body">{nomComplet(x.declarePar ?? null) ?? "—"}</TD>
                   <TD className="text-body">{e.methode[x.methode]}{x.banqueEmettrice ? <span className="block text-[12px] text-faint">{x.banqueEmettrice}</span> : null}</TD>
                   <TD className="text-body"><span dir="ltr">{x.reference ?? "—"}</span></TD>
@@ -68,14 +68,14 @@ export default async function JustificatifsPage({ params, searchParams }: { para
         </TableCard>
       )}
       {gestion && coproId ? (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <Card>
             <SectionHeader title={j.comptesEnregistres} subtitle={dict.depenses.ribAfficherAide} />
-            {comptes.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucunCompteAide}</p> : (
-              <ul className="mt-3 divide-y divide-hairline">
+            {comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompteAide}</p> : (
+              <ul className="mt-4 space-y-2">
                 {comptes.map((c) => (
-                  <li key={c.index} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
-                    <div><p className="text-sm font-semibold text-ink">{c.libelle}</p><p className="text-[13px] text-soft">{c.banque}</p></div>
+                  <li key={c.index} className="flex flex-wrap items-center justify-between gap-2 rounded-[20px] bg-surface px-4 py-3">
+                    <div className="flex min-w-0 items-center gap-3"><IconCircle tone="sage" size={40}><CBuilding width={20} height={20} /></IconCircle><div className="min-w-0"><p className="truncate text-[15px] font-semibold text-ink">{c.libelle}</p><p className="text-[13px] text-soft">{c.banque}</p></div></div>
                     <RibCompteButton dict={dict} locale={ctx.locale} coproprieteId={coproId} compte={c} />
                   </li>
                 ))}

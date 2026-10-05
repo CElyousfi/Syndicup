@@ -7,8 +7,10 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Banner } from "../../../../components/ui/banner";
+import { IconCircle } from "../../../../components/ui/color-icons";
 import { ProgressBar } from "../../../../components/ui/progress";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { celebrate } from "../../../../lib/success";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { AnnonceDetail, AudienceCommunication, CategorieAnnonce, ContactUtile, PreferencesNotification, Sondage } from "../../../../lib/api/types";
 import { IconPlus } from "../../../../components/ui/icons";
@@ -90,17 +92,27 @@ export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Lo
   const [state, action] = useActionState(publierAnnonce, IDLE);
   const c = dict.communication;
   const diff = state.status === "success" ? (state.data as { programmee?: boolean; envoyes?: number } | undefined) : undefined;
+  const messageSucces = diff?.programmee ? c.programmee : fill(c.publiee, { n: diff?.envoyes ?? 0 });
+  // Annonce publiée = action majeure : écran de succès plein (la modale disparaît avec le brouillon).
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: messageSucces, illustration: "ok-general" });
+  }, [state, messageSucces]);
   return (
     <>
       <Button onClick={() => setOpen(true)}>{c.publier}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={c.publierTitre} subtitle={annonce.titre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={diff?.programmee ? c.programmee : fill(c.publiee, { n: diff?.envoyes ?? 0 })} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={messageSucces} onClose={() => setOpen(false)} /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="annonce_id" value={annonce.id} /><input type="hidden" name="mode" value={mode} />
             <p className="text-sm text-body">{c.publierCorps}</p>
-            <div className="flex gap-2">
-              <Button type="button" variant={mode === "maintenant" ? "primary" : "secondary"} size="sm" onClick={() => setMode("maintenant")}>{c.publierMaintenant}</Button>
-              <Button type="button" variant={mode === "programmer" ? "primary" : "secondary"} size="sm" onClick={() => setMode("programmer")}>{c.programmer}</Button>
+            <div className="flex flex-wrap gap-2">
+              {(["maintenant", "programmer"] as const).map((m) => (
+                <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)} className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-semibold transition-colors ${mode === m ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-hover"}`}>
+                  {m === "maintenant" ? c.publierMaintenant : c.programmer}
+                </button>
+              ))}
             </div>
             {mode === "programmer" ? <Field label={c.dateProgrammee} htmlFor="publie_le" required error={fieldError(state, "publie_le")}><Input id="publie_le" name="publie_le" type="datetime-local" required dir="ltr" defaultValue={localInput(annonce.publieLe) || localInput(new Date(Date.now() + 3600_000).toISOString())} className="tnum text-start" /></Field> : null}
             <FormAlert state={state} />
@@ -188,7 +200,7 @@ export function SondageForm({ dict, locale, batiments }: { dict: Dict; locale: L
         <Field label={c.question} htmlFor="question" required error={fieldError(state, "question")}><Input id="question" name="question" required maxLength={300} /></Field>
         <div className="mt-4"><Field label={c.description} htmlFor="description" optionalLabel={dict.common.optional}><Textarea id="description" name="description" rows={3} maxLength={4000} /></Field></div>
         <div className="mt-4">
-          <p className="mb-2 text-sm font-medium text-ink-strong">{c.options}</p>
+          <p className="mb-2 text-[13px] font-medium text-ink-strong">{c.options}</p>
           <div className="grid gap-2 sm:grid-cols-2">
             {Array.from({ length: nb }, (_, i) => <Input key={i} name={`option_${i + 1}`} required={i < 2} maxLength={200} placeholder={fill(c.option, { n: i + 1 })} />)}
           </div>
@@ -204,7 +216,7 @@ export function SondageForm({ dict, locale, batiments }: { dict: Dict; locale: L
           <Checkbox name="choix_multiple" label={c.choixMultiple} />
           <Checkbox name="ponderation_tantiemes" label={c.ponderation} hint={c.ponderationAide} />
         </div>
-        <p className="mt-3 text-[12px] text-soft">{c.anonymeAide}</p>
+        <p className="mt-4 text-[13px] text-soft">{c.anonymeAide}</p>
       </Card>
       <FormAlert state={state} />
       <div className="flex flex-wrap justify-end gap-2">
@@ -220,6 +232,13 @@ export function SondageTransitionModal({ dict, locale, sondage, action: quoi }: 
   const [state, action] = useActionState(quoi === "ouvrir" ? ouvrirSondage : cloreSondage, IDLE);
   const c = dict.communication;
   const label = quoi === "ouvrir" ? c.ouvrir : c.clore;
+  // Ouverture = sondage lancé (majeur, écran de succès) ; clôture = changement d'état (toast-like, inchangé).
+  const ouvert = c.ouvert;
+  useEffect(() => {
+    if (state.status !== "success" || quoi !== "ouvrir") return;
+    setOpen(false);
+    celebrate({ titre: ouvert, illustration: "ok-general" });
+  }, [state, quoi, ouvert]);
   return (
     <>
       <Button variant={quoi === "ouvrir" ? "primary" : "secondary"} onClick={() => setOpen(true)}>{label}</Button>
@@ -240,21 +259,26 @@ export function SondageTransitionModal({ dict, locale, sondage, action: quoi }: 
 export function RepondreForm({ dict, locale, sondage }: { dict: Dict; locale: Locale; sondage: Sondage }) {
   const [state, action] = useActionState(repondreSondage, IDLE);
   const c = dict.communication;
+  // Réponse à un sondage = geste de vote : écran de succès plein.
+  const envoyee = c.reponseEnvoyee;
+  useEffect(() => {
+    if (state.status === "success") celebrate({ titre: envoyee, illustration: "ok-vote" });
+  }, [state, envoyee]);
   if (state.status === "success") return <Banner variant="ok">{c.reponseEnvoyee}</Banner>;
   return (
     <form action={action} className="space-y-3">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="sondage_id" value={sondage.id} />
-      <p className="text-sm font-medium text-ink-strong">{c.votreReponse}</p>
+      <p className="text-[15px] font-bold text-ink">{c.votreReponse}</p>
       <div className="space-y-2">
         {sondage.options.map((o) => (
-          <label key={o.id} className="flex cursor-pointer items-center gap-3 rounded-field border border-hairline px-3 py-2.5 text-[14px] hover:bg-hover">
-            <input type={sondage.choixMultiple ? "checkbox" : "radio"} name="choix" value={o.id} required={!sondage.choixMultiple} className="size-4 accent-[#4c6c5a]" />
-            <span className="text-ink-strong">{o.libelle}</span>
+          <label key={o.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-full bg-surface px-5 py-3 text-[15px] transition-colors hover:bg-lime-hover/40 has-[:checked]:bg-cta">
+            <input type={sondage.choixMultiple ? "checkbox" : "radio"} name="choix" value={o.id} required={!sondage.choixMultiple} className="size-5 shrink-0 accent-brand" />
+            <span className="font-semibold text-ink">{o.libelle}</span>
           </label>
         ))}
       </div>
       <FormAlert state={state} />
-      <div className="flex justify-end"><SubmitButton>{c.repondre}</SubmitButton></div>
+      <div className="flex justify-end"><SubmitButton size="lg" className="w-full sm:w-auto">{c.repondre}</SubmitButton></div>
     </form>
   );
 }
@@ -269,13 +293,13 @@ export function ResultatsSondage({ dict, sondage }: { dict: Dict; sondage: Sonda
       <div className="space-y-3">
         {r.options.map((o) => (
           <div key={o.id}>
-            <div className="mb-1 flex items-baseline justify-between gap-3 text-[14px]"><span className="text-ink-strong">{o.libelle}{sondage.maReponse?.includes(o.id) ? <span className="ms-2 text-[12px] text-action">✓</span> : null}</span><span className="tnum text-soft">{o.nb} · {o.pourcentage} %</span></div>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[14px]"><span className="font-semibold text-ink">{o.libelle}{sondage.maReponse?.includes(o.id) ? <span className="ms-2 text-[13px] text-link">✓</span> : null}</span><span className="tnum shrink-0 font-semibold text-ink">{o.pourcentage} % <span className="font-normal text-soft">· {o.nb}</span></span></div>
             <ProgressBar ratio={o.pourcentage / 100} tone="action" />
-            {r.ponderation_tantiemes ? <div className="mt-1"><ProgressBar ratio={o.pourcentage_tantiemes / 100} tone="ink" /><p className="mt-0.5 text-[11px] text-faint">{c.parTantiemes} · {o.pourcentage_tantiemes} %</p></div> : null}
+            {r.ponderation_tantiemes ? <div className="mt-1"><ProgressBar ratio={o.pourcentage_tantiemes / 100} tone="ink" /><p className="mt-1 text-[12px] text-soft">{c.parTantiemes} · <span className="tnum">{o.pourcentage_tantiemes} %</span></p></div> : null}
           </div>
         ))}
       </div>
-      <p className="text-[12px] text-faint">{c.mention}</p>
+      <p className="text-[12px] text-soft">{c.mention}</p>
     </div>
   );
 }
@@ -306,20 +330,20 @@ export function ContactsGestion({ dict, locale, contacts }: { dict: Dict; locale
   const [edition, setEdition] = useState<string | null>(null);
   const c = dict.communication;
   return (
-    <div className="space-y-4">
-      <ul className="divide-y divide-hairline">
+    <div className="space-y-6">
+      <ul className="-mx-2 space-y-1">
         {contacts.map((x) => (
-          <li key={x.id} className="py-3">
+          <li key={x.id} className={`rounded-2xl px-2 py-3 transition-colors ${edition === x.id ? "bg-wash" : "hover:bg-wash"}`}>
             {edition === x.id ? <ContactForm dict={dict} locale={locale} contact={x} onDone={() => setEdition(null)} /> : (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div><p className="text-[14px] font-medium text-ink-strong">{x.libelle}</p><p className="tnum text-[13px] text-soft" dir="ltr">{x.telephone}</p></div>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3.5"><IconCircle tone="sage" size={44}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-link" aria-hidden><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" /></svg></IconCircle><div className="min-w-0"><p className="truncate text-[15px] font-bold text-ink">{x.libelle}</p><p className="tnum text-[13px] text-soft" dir="ltr">{x.telephone}</p></div></div>
                 <div className="flex gap-1.5"><Button variant="secondary" size="sm" onClick={() => setEdition(x.id)}>{dict.common.modify}</Button><SupprimerContactBouton dict={dict} locale={locale} id={x.id} /></div>
               </div>
             )}
           </li>
         ))}
       </ul>
-      <Card><SectionHeader title={c.nouveauContact} /><ContactForm dict={dict} locale={locale} /></Card>
+      <Card><SectionHeader title={c.nouveauContact} className="mb-4" /><ContactForm dict={dict} locale={locale} /></Card>
     </div>
   );
 }
@@ -337,8 +361,8 @@ export function PreferencesForm({ dict, locale, prefs }: { dict: Dict; locale: L
       <Field label={c.canalDigest} htmlFor="canal_digest"><Select id="canal_digest" name="canal_digest" defaultValue={prefs.canal_digest}>{(["EMAIL", "PUSH", "SMS", "AUCUN"] as const).map((k) => <option key={k} value={k}>{e.canalPreference[k]}</option>)}</Select></Field>
       <Switch name="annonces_push" label={c.annoncesPush} hint={c.annoncesPushAide} defaultChecked={prefs.annonces_push} />
       {/* Push sur le téléphone — niveaux (Master Spec 13.4) : bannières, alertes, écran verrouillé. */}
-      <div className="rounded-2xl border border-hairline p-4">
-        <p className="text-sm font-medium text-ink-strong">{c.pushTitre}</p>
+      <div className="rounded-2xl bg-surface p-4">
+        <p className="text-[15px] font-bold text-ink">{c.pushTitre}</p>
         <p className="mb-3 text-[12.5px] text-soft">{c.pushAide}</p>
         <div className="space-y-3">
           <Switch name="push_normal" label={c.pushNormal} hint={c.pushNormalAide} defaultChecked={prefs.push_normal} />

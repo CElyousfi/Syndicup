@@ -22,7 +22,7 @@ const STYLES: Record<Variant, { box: string; icon: ReactNode }> = {
   },
   // État « gaté légalement » (brief §6.3) : informatif, jamais une erreur rouge.
   legal: {
-    box: "bg-tile text-ink-strong",
+    box: "bg-tile text-ink-strong [.card_&]:bg-surface",
     icon: <IconShield className="text-soft" />,
   },
 };

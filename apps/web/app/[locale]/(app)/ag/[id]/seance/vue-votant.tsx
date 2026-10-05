@@ -1,8 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Badge } from "../../../../../../components/ui/badge";
 import { Banner } from "../../../../../../components/ui/banner";
 import { Button } from "../../../../../../components/ui/button";
 import { Field, Select } from "../../../../../../components/ui/field";
@@ -11,9 +10,10 @@ import { Modal } from "../../../../../../components/ui/modal";
 import { IDLE } from "../../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import type { AgResolution, ValeurVote } from "../../../../../../lib/api/types";
-import { resolutionVariant } from "../../../../../../lib/status";
 import { voter } from "../../actions";
-import { IconCheck } from "../../../../../../components/ui/icons";
+import { IconCheck, IconX } from "../../../../../../components/ui/icons";
+import { celebrate } from "../../../../../../lib/success";
+import { SalleSeance } from "./salle";
 
 interface ProcurationVotant {
   id: string;
@@ -85,6 +85,12 @@ export function VueVotant({
       const d = state.data as { resolutionId: string; valeur: ValeurVote };
       setVotes((v) => ({ ...v, [`${d.resolutionId}|${identite}`]: d.valeur }));
       setChoix(null);
+      // Vote = action majeure : écran de succès plein (Wise).
+      celebrate({
+        titre: a.voteEnregistre,
+        corps: `${dict.enums.valeurVote[d.valeur]} · ${a.voteImmuable}`,
+        illustration: "ok-vote",
+      });
     }
     // (identite volontairement hors dépendances : on n'applique le vote qu'au retour d'action)
   }, [state]);
@@ -111,81 +117,62 @@ export function VueVotant({
     state.status === "error" &&
     (state.code === "CONFLICT" || /déjà voté/i.test(state.message));
 
+  const changer = (i: number) => {
+    setIndex(Math.max(0, Math.min(statuts.length - 1, i)));
+    setChoix(null);
+  };
+
+  const gestes: Array<{ v: ValeurVote; pastille: string; icone: ReactNode }> = [
+    { v: "POUR", pastille: "bg-ok-tint text-ok", icone: <IconCheck width={22} height={22} /> },
+    { v: "CONTRE", pastille: "bg-danger-tint text-danger", icone: <IconX width={22} height={22} /> },
+    {
+      v: "ABSTENTION",
+      pastille: "bg-wash-strong text-ink",
+      icone: (
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden>
+          <path d="M6 12h12" />
+        </svg>
+      ),
+    },
+  ];
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      {/* Navigation résolutions */}
-      <div className="flex items-center justify-between">
-        <Button
-          variant="ghost"
-          size="md"
-          className="h-11"
-          disabled={index === 0}
-          onClick={() => {
-            setIndex((i) => Math.max(0, i - 1));
-            setChoix(null);
-          }}
-        >
-          {a.resolutionPrecedente}
-        </Button>
-        <span className="tnum text-[13px] font-medium text-soft">
-          {index + 1} / {statuts.length}
-        </span>
-        <Button
-          variant="ghost"
-          size="md"
-          className="h-11"
-          disabled={index >= statuts.length - 1}
-          onClick={() => {
-            setIndex((i) => Math.min(statuts.length - 1, i + 1));
-            setChoix(null);
-          }}
-        >
-          {a.resolutionSuivante}
-        </Button>
-      </div>
+      {/* Salle verte : résolution active en affiche + navigation. */}
+      <SalleSeance
+        dict={dict}
+        resolutions={statuts}
+        index={index}
+        onPrev={index > 0 ? () => changer(index - 1) : undefined}
+        onNext={index < statuts.length - 1 ? () => changer(index + 1) : undefined}
+      />
 
       {/* VoteCard */}
-      <div className="card p-5 sm:p-8">
-        <div className="flex items-center justify-between gap-3">
-          <span className="tnum flex size-9 items-center justify-center rounded-full bg-action-tint text-[15px] font-semibold text-action">
-            {resolution.ordre}
-          </span>
-          <Badge variant={resolutionVariant[resolution.resultat]}>
-            {dict.enums.resultatResolution[resolution.resultat]}
-          </Badge>
-        </div>
-        <p className="mt-5 text-lg font-medium leading-relaxed text-ink">{resolution.texte}</p>
-        <p className="mt-2 text-[13px] text-soft">
-          {dict.enums.typeMajorite[resolution.typeMajorite]} —{" "}
-          {dict.enums.typeMajoriteAide[resolution.typeMajorite]}
-        </p>
-
+      <div className="card p-5 sm:p-7">
         {identiteOptions.length > 1 ? (
-          <div className="mt-6">
-            <Field label={a.voterEnTantQue} htmlFor="identite">
-              <Select id="identite" value={identite} onChange={(e) => setIdentite(e.target.value)}>
-                {identiteOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          </div>
+          <Field label={a.voterEnTantQue} htmlFor="identite">
+            <Select id="identite" value={identite} onChange={(e) => setIdentite(e.target.value)}>
+              {identiteOptions.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </Field>
         ) : identiteOptions.length === 1 ? (
-          <p className="mt-6 text-[13px] font-medium text-soft">{identiteOptions[0]!.label}</p>
+          <p className="text-[14px] font-semibold text-ink-strong">{identiteOptions[0]!.label}</p>
         ) : null}
 
         {voteExistant || resolution.resultat !== "EN_ATTENTE" ? (
-          <div className="mt-6 space-y-3">
+          <div className={identiteOptions.length > 0 ? "mt-5" : ""}>
             {voteExistant ? (
-              <div className="flex items-center gap-3 rounded-xl bg-ok-tint px-4 py-3.5">
-                <span className="flex size-8 items-center justify-center rounded-full bg-ok text-white">
-                  <IconCheck width={16} height={16} />
+              <div className="flex items-center gap-3.5 rounded-[20px] bg-ok-tint px-4 py-4">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-full bg-ok text-white">
+                  <IconCheck width={20} height={20} />
                 </span>
-                <div>
-                  <p className="text-sm font-semibold text-ink">{a.voteEnregistre}</p>
-                  <p className="text-[12px] text-soft">
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-ink">{a.voteEnregistre}</p>
+                  <p className="mt-0.5 text-[13px] text-body">
                     {dict.enums.valeurVote[voteExistant]} · {a.voteImmuable}
                   </p>
                 </div>
@@ -195,35 +182,38 @@ export function VueVotant({
             )}
           </div>
         ) : (
-          <div className="mt-7 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {(
-              [
-                { v: "POUR" as const, cls: "border-ok text-ok hover:bg-ok hover:text-white" },
-                {
-                  v: "CONTRE" as const,
-                  cls: "border-danger text-danger hover:bg-danger hover:text-white",
-                },
-                {
-                  v: "ABSTENTION" as const,
-                  cls: "border-hairline-strong text-body hover:bg-ink hover:border-ink hover:text-white",
-                },
-              ] as Array<{ v: ValeurVote; cls: string }>
-            ).map(({ v, cls }) => (
-              <button
-                key={v}
-                type="button"
-                onClick={() => setChoix(v)}
-                disabled={!identite}
-                className={`h-14 rounded-btn border-2 text-[15px] font-semibold transition-colors disabled:opacity-40 sm:h-16 ${cls}`}
-              >
-                {dict.enums.valeurVote[v]}
-              </button>
-            ))}
+          <div className={`grid grid-cols-1 gap-3 sm:grid-cols-3 ${identiteOptions.length > 0 ? "mt-5" : ""}`}>
+            {gestes.map(({ v, pastille, icone }) => {
+              const choisi = choix === v;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setChoix(v)}
+                  disabled={!identite}
+                  aria-pressed={choisi}
+                  className={`group flex h-16 items-center gap-3 rounded-full ps-2 pe-5 text-start transition-colors disabled:opacity-40 sm:h-[68px] ${
+                    choisi ? "bg-cta text-ink" : "bg-surface text-ink hover:bg-lime-hover/40"
+                  }`}
+                >
+                  <span
+                    className={`flex size-12 shrink-0 items-center justify-center rounded-full transition-colors ${
+                      choisi ? "bg-ink text-lime" : pastille
+                    }`}
+                  >
+                    {icone}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[17px] font-bold">
+                    {dict.enums.valeurVote[v]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         )}
 
         {dejaVoteErreur ? (
-          <p className="mt-4 text-[13px] text-warn">{a.dejaVote}</p>
+          <p className="mt-4 text-[13px] font-medium text-warn">{a.dejaVote}</p>
         ) : state.status === "error" && !dejaVoteErreur ? (
           <div className="mt-4">
             <FormAlert state={state} />
@@ -231,7 +221,7 @@ export function VueVotant({
         ) : null}
       </div>
 
-      <p className="text-center text-[12px] text-faint">{a.voteAnonymeNote}</p>
+      <p className="text-center text-[13px] text-soft">{a.voteAnonymeNote}</p>
 
       {/* Confirmation du vote */}
       <Modal

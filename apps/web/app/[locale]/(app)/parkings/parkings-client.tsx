@@ -1,12 +1,14 @@
 "use client";
 
 /** Parkings (M23) — modales : emplacement, attribution, libération, véhicule, badge (remise, perdu, restitution, désactivation), place visiteur, recherche de plaque, véhicule gênant. */
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
 import { Field, Input, Select, Textarea, Checkbox } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Badge } from "../../../../components/ui/badge";
+import { Banner } from "../../../../components/ui/banner";
+import { celebrate } from "../../../../lib/success";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { BadgeAcces, Emplacement, RechercheVehicule, StatutEmplacement, TypeAttributionEmplacement, TypeBadge, TypeEmplacement, TypeVehicule, Vehicule, Visite } from "../../../../lib/api/types";
@@ -23,8 +25,17 @@ const aujourdhui = () => new Date().toISOString().slice(0, 10);
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
   return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
-function Succes({ dict, message, onClose }: { dict: Dict; message: string; onClose: () => void }) {
-  return <div className="space-y-4"><p className="text-sm text-ink-strong">{message}</p><div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button></div></div>;
+/** Retour de succès. Avec `illustration` (création majeure), l'écran de succès plein (Wise) prend
+ *  le relais et la modale se ferme ; sinon le message reste dans la modale. */
+function Succes({ dict, message, onClose, illustration }: { dict: Dict; message: string; onClose: () => void; illustration?: string }) {
+  const fait = useRef(false);
+  useEffect(() => {
+    if (!illustration || fait.current) return;
+    fait.current = true;
+    celebrate({ titre: message, illustration });
+    onClose();
+  }, [illustration, message, onClose]);
+  return <div className="space-y-4"><Banner variant="ok">{message}</Banner><div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button></div></div>;
 }
 function LotSelect({ dict, lots, defaultValue, error }: { dict: Dict; lots: LotOption[]; defaultValue?: string; error?: string }) {
   const t = dict.parkings;
@@ -42,7 +53,7 @@ export function EmplacementModal({ dict, locale, emplacement, grand }: { dict: D
     <>
       <Button variant={emplacement ? "secondary" : "primary"} size={grand ? "md" : "sm"} onClick={() => setOpen(true)}>{emplacement ? dict.common.modify : <><IconPlus width={16} height={16} />{t.nouvelEmplacement}</>}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={emplacement ? t.modifierEmplacement : t.nouvelEmplacement} subtitle={emplacement?.code} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={emplacement ? t.emplacementModifie : t.emplacementCree} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={emplacement ? t.emplacementModifie : t.emplacementCree} onClose={() => setOpen(false)} illustration={emplacement ? undefined : "ok-general"} /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             {emplacement ? <input type="hidden" name="emplacement_id" value={emplacement.id} /> : null}
@@ -90,7 +101,7 @@ export function AttribuerModal({ dict, locale, emplacement, lots }: { dict: Dict
     <>
       <Button onClick={() => setOpen(true)}>{t.attribuer}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={fill(t.attribuerA, { code: emplacement.code })} subtitle={e.typeEmplacement[emplacement.type]} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={t.attribue} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={t.attribue} onClose={() => setOpen(false)} illustration="ok-general" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="emplacement_id" value={emplacement.id} />
             <div className="grid gap-4 sm:grid-cols-2">
@@ -143,7 +154,7 @@ export function VehiculeModal({ dict, locale, lots, vehicule, grand }: { dict: D
     <>
       <Button variant={vehicule ? "ghost" : "primary"} size={grand ? "md" : "sm"} onClick={() => setOpen(true)}>{vehicule ? dict.common.modify : <><IconPlus width={16} height={16} />{t.declarerVehicule}</>}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={vehicule ? t.modifierVehicule : t.declarerVehicule} subtitle={vehicule?.immatriculation} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={vehicule ? t.vehiculeModifie : t.vehiculeDeclare} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={vehicule ? t.vehiculeModifie : t.vehiculeDeclare} onClose={() => setOpen(false)} illustration={vehicule ? undefined : "ok-general"} /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             {vehicule ? <input type="hidden" name="vehicule_id" value={vehicule.id} /> : null}
@@ -190,8 +201,8 @@ export function RechercheVehiculeForm({ dict }: { dict: Dict }) {
   const e = dict.enumsParkings;
   const r = state.status === "success" ? (state.data as RechercheVehicule | undefined) : undefined;
   const Ligne = ({ v }: { v: Vehicule }) => (
-    <div className="flex flex-wrap items-center gap-3 rounded-field border border-hairline bg-surface px-3 py-2">
-      <span className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{v.immatriculation}</span>
+    <div className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
+      <span className="font-mono text-[16px] font-bold text-ink" dir="ltr">{v.immatriculation}</span>
       <Badge variant="info">{t.lot} {v.lotNumero ?? "—"}</Badge>
       <span className="text-[12.5px] text-soft">{[e.typeVehicule[v.type], v.marque, v.couleur].filter(Boolean).join(" · ")}</span>
     </div>
@@ -205,8 +216,8 @@ export function RechercheVehiculeForm({ dict }: { dict: Dict }) {
       <FormAlert state={state} />
       {r ? (
         <div className="space-y-2">
-          {r.exact ? <><p className="text-[12px] font-medium uppercase tracking-wide text-faint">{t.resultatExact}</p><Ligne v={r.exact} /></> : <p className="text-sm text-danger">{t.aucunResultat}</p>}
-          {r.similaires.length ? <><p className="pt-1 text-[12px] font-medium uppercase tracking-wide text-faint">{t.resultatsSimilaires}</p>{r.similaires.map((v) => <Ligne key={v.id} v={v} />)}</> : null}
+          {r.exact ? <><p className="text-[13px] font-semibold text-soft">{t.resultatExact}</p><Ligne v={r.exact} /></> : <Banner variant="warn">{t.aucunResultat}</Banner>}
+          {r.similaires.length ? <><p className="pt-2 text-[13px] font-semibold text-soft">{t.resultatsSimilaires}</p>{r.similaires.map((v) => <Ligne key={v.id} v={v} />)}</> : null}
         </div>
       ) : null}
     </form>
@@ -223,7 +234,7 @@ export function BadgeModal({ dict, locale, lots, badge, grand }: { dict: Dict; l
     <>
       <Button variant={badge ? "ghost" : "primary"} size={grand ? "md" : "sm"} onClick={() => setOpen(true)}>{badge ? dict.common.modify : <><IconPlus width={16} height={16} />{t.remettreBadge}</>}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={badge ? t.modifierBadge : t.remettreBadge} subtitle={badge ? `${e.typeBadge[badge.type]} ${badge.identifiant}` : undefined} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={badge ? t.badgeModifie : t.badgeRemis} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={badge ? t.badgeModifie : t.badgeRemis} onClose={() => setOpen(false)} illustration={badge ? undefined : "ok-general"} /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             {badge ? <input type="hidden" name="badge_id" value={badge.id} /> : null}
@@ -319,7 +330,7 @@ export function PlaceVisiteurModal({ dict, locale, visite, places }: { dict: Dic
     <>
       <Button variant={visite.emplacementId ? "ghost" : "secondary"} size="sm" onClick={() => setOpen(true)}>{visite.emplacementId ? `${t.placeVisiteur} ${code ?? ""}` : t.attribuerPlace}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={t.attribuerPlace} subtitle={visite.visiteurNom} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={t.placeAttribuee} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={t.placeAttribuee} onClose={() => setOpen(false)} illustration="ok-visiteur" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="visite_id" value={visite.id} />
             <Field label={t.placeVisiteur} htmlFor="emplacement_id" hint={t.attribuerPlaceAide} error={fieldError(state, "emplacement_id")}>

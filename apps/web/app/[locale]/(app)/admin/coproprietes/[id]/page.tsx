@@ -149,19 +149,19 @@ export default async function FicheClientPage({
               <dl className="min-w-0 flex-1 space-y-1.5 text-sm">
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="text-soft">{ad.invitationsEnAttente}</dt>
-                  <dd className="tnum font-semibold text-ink">{s.invitations_en_attente}</dd>
+                  <dd className="tnum text-[16px] font-bold text-ink">{s.invitations_en_attente}</dd>
                 </div>
                 <div className="flex items-baseline justify-between gap-3">
                   <dt className="text-soft">{ad.invitationsAcceptees}</dt>
-                  <dd className="tnum font-semibold text-ink">{s.invitations_acceptees}</dd>
+                  <dd className="tnum text-[16px] font-bold text-ink">{s.invitations_acceptees}</dd>
                 </div>
               </dl>
             </div>
             {invitations.length > 0 ? (
-              <ul className="mt-4 divide-y divide-hairline border-t border-hairline">
+              <ul className="mt-4 divide-y divide-wash-strong rounded-[20px] bg-surface px-4">
                 {invitations.map((i) => (
-                  <li key={i.id} className="flex flex-wrap items-center gap-2 py-2.5 text-[13px]">
-                    <span className="font-medium text-ink">{dict.roles[i.roleCible]}</span>
+                  <li key={i.id} className="flex flex-wrap items-center gap-2 py-3 text-[13px]">
+                    <span className="text-[14px] font-semibold text-ink">{dict.roles[i.roleCible]}</span>
                     <Badge variant={invitationVariant[i.statut]}>
                       {dict.enums.statutInvitation[i.statut]}
                     </Badge>
@@ -186,7 +186,7 @@ export default async function FicheClientPage({
                   <CVote />
                 </IconCircle>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink">
+                  <p className="text-[15px] font-bold text-ink">
                     {formatDateHeure(s.prochaine_ag.date_ag, ctx.locale)}
                   </p>
                   <Badge
@@ -205,7 +205,7 @@ export default async function FicheClientPage({
 
           <Card>
             <SectionHeader title={ad.derniereActivite} />
-            <p className="mt-3 text-sm text-body">
+            <p className="mt-3 text-[15px] font-semibold text-ink">
               {s.derniere_activite
                 ? formatDateHeure(s.derniere_activite, ctx.locale)
                 : ad.aucuneActivite}

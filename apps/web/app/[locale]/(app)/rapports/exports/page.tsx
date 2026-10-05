@@ -8,6 +8,9 @@ import { formatDateHeure, nomComplet } from "../../../../../lib/format";
 import { PageHeader } from "../../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Banner } from "../../../../../components/ui/banner";
+import { Badge } from "../../../../../components/ui/badge";
+import { EmptyState } from "../../../../../components/ui/empty-state";
+import { CFile, IconCircle } from "../../../../../components/ui/color-icons";
 import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { RapportsTabs } from "../onglets";
@@ -42,11 +45,14 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
     <div className="page-root">
       <PageHeader title={r.exportsTitre} subtitle={r.exportsSubtitle} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="exports" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cartes.filter((c) => gestion || !c.syndicSeul).map((c) => (
-          <Card key={c.ressource} className="flex flex-col justify-between gap-3">
-            <div><p className="text-sm font-semibold text-ink">{c.titre}</p><p className="mt-1 text-[13px] text-soft">{c.aide}</p></div>
-            <ExportButtons ressource={c.ressource} filtres={c.filtres} labels={labels} size="sm" />
+          <Card key={c.ressource} className="flex flex-col justify-between gap-5">
+            <div className="flex items-start gap-3.5">
+              <IconCircle tone={c.syndicSeul ? "lilac" : "sage"} size={44}><CFile /></IconCircle>
+              <div className="min-w-0"><p className="text-[16px] font-bold text-ink">{c.titre}</p><p className="mt-1 text-[13px] leading-relaxed text-soft">{c.aide}</p></div>
+            </div>
+            <ExportButtons ressource={c.ressource} filtres={c.filtres} labels={labels} size="sm" className="self-start" />
           </Card>
         ))}
       </div>
@@ -56,9 +62,9 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
           <div className="mt-3"><FacturesToggle dict={dict} locale={ctx.locale} coproprieteId={ctx.coproprieteId} visible={copro?.ok ? copro.data.facturesVisiblesResidents === true : false} /></div>
         </Card>
       ) : null}
-      <div className="mt-6">
+      <div className="mt-10">
         <SectionHeader title={r.journal} subtitle={r.journalAide} className="mb-3" />
-        {!journal.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : journal.data.length === 0 ? <p className="text-sm text-soft">{r.journalVide}</p> : (
+        {!journal.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : journal.data.length === 0 ? <EmptyState title={r.journalVide} illustration="empty-documents" /> : (
           <TableCard>
             <Table>
               <THead><TH>{r.quand}</TH><TH>{r.qui}</TH><TH>{r.quoi}</TH><TH>{r.format}</TH><TH align="end">{r.nbLignesCol}</TH></THead>
@@ -68,7 +74,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
                     <TD className="tnum text-soft">{formatDateHeure(e.horodatage, ctx.locale)}</TD>
                     <TD className="text-body">{nomComplet(e.utilisateur) ?? "—"}</TD>
                     <TD className="font-medium text-ink">{e.type}{e.filtres && "exercice" in e.filtres && e.filtres.exercice ? <span className="ms-1 text-[12px] text-faint">· {String(e.filtres.exercice)}</span> : null}</TD>
-                    <TD className="text-body uppercase">{String(e.filtres?.format ?? "csv")}</TD>
+                    <TD><Badge variant="neutral"><span dir="ltr">{String(e.filtres?.format ?? "csv").toUpperCase()}</span></Badge></TD>
                     <TD align="end" className="tnum text-body">{e.nb_lignes}</TD>
                   </TR>
                 ))}

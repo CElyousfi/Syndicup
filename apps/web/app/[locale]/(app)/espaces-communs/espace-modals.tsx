@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Input, Select, Switch } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { celebrate } from "../../../../lib/success";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import { creerEspace, modifierEspace, reserverEspace } from "./actions";
 import type { EspaceCommun } from "../../../../lib/api/types";
@@ -26,7 +27,7 @@ export function CreerEspaceModal({ dict, locale }: { dict: Dict; locale: Locale 
       <Modal open={open} onClose={() => setOpen(false)} title={e.nouveau} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{dict.common.updated}</p>
+            <Banner variant="ok">{dict.common.updated}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}
@@ -87,11 +88,22 @@ export function ReserverModal({
 
   const succes =
     state.status === "success" ? (state.data as { statut: string }).statut : null;
+  // Réservation = action majeure : écran de succès plein (Wise).
+  const { reservationConfirmee, reservationEnAttente } = e;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    const s = (state.data as { statut: string }).statut;
+    setOpen(false);
+    celebrate({
+      titre: s === "CONFIRMEE" ? reservationConfirmee : reservationEnAttente,
+      illustration: "ok-reservation",
+    });
+  }, [state, reservationConfirmee, reservationEnAttente]);
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
-        <IconCalendar width={15} height={15} />
+      <Button className="w-full" onClick={() => setOpen(true)}>
+        <IconCalendar width={17} height={17} />
         {e.reserver}
       </Button>
       <Modal
@@ -185,7 +197,7 @@ export function ModifierEspaceModal({
       <Modal open={open} onClose={() => setOpen(false)} title={g.espaceModifier} subtitle={espace.nom} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{dict.common.updated}</p>
+            <Banner variant="ok">{dict.common.updated}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}

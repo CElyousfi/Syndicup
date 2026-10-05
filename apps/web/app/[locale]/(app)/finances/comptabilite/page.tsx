@@ -78,8 +78,8 @@ export default async function ComptabilitePage({
   const aDesPaiements = synthese.lignes.some((l) => l.montantPaye !== "0.00" && l.montantPaye !== "0");
   const etapes: EtapeParcours[] = [
     { cle: "budget", etat: budgetActif ? "fait" : budgetEnCours ? "en_cours" : "a_faire", href: p("/finances/budgets") },
-    { cle: "appel", etat: aDesAppels ? "fait" : "a_faire", href: p("/finances/appels") },
-    { cle: "paiement", etat: aDesPaiements ? "fait" : aDesAppels ? "en_cours" : "a_faire", href: p("/finances/appels") },
+    { cle: "appel", etat: aDesAppels ? "fait" : "a_faire", href: p("/finances/appels-de-fonds") },
+    { cle: "paiement", etat: aDesPaiements ? "fait" : aDesAppels ? "en_cours" : "a_faire", href: p("/finances/appels-de-fonds") },
   ];
   const parcoursComplet = etapes.every((e) => e.etat === "fait");
 
@@ -88,7 +88,7 @@ export default async function ComptabilitePage({
       <div className="page-root space-y-6">
         <PageHeader title={gestion ? c.titre : c.monReleve} subtitle={gestion ? c.subtitle : c.monReleveSubtitle} />
         {gestion ? <ParcoursCompta dict={dict} etapes={etapes} /> : <AideReleveResident dict={dict} />}
-        <EmptyState title={c.aucunExercice} />
+        <EmptyState title={c.aucunExercice} illustration="empty-appels" />
       </div>
     );
   }
@@ -112,13 +112,13 @@ export default async function ComptabilitePage({
         subtitle={gestion ? c.subtitle : c.monReleveSubtitle}
         actions={
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="me-1 text-[12px] font-medium uppercase tracking-[0.08em] text-faint">{c.exercice}</span>
+            <span className="me-1 text-[13px] font-semibold text-soft">{c.exercice}</span>
             {exercices.map((ex) => (
               <Link
                 key={ex}
                 href={p(`/finances/comptabilite?exercice=${ex}`)}
                 className={`tnum inline-flex h-9 items-center rounded-btn px-3.5 text-[13px] font-semibold transition-colors ${
-                  ex === annee ? "bg-ink text-white" : "bg-surface text-body ring-1 ring-inset ring-hairline-strong hover:bg-hover"
+                  ex === annee ? "bg-cta text-ink" : "bg-surface text-ink-strong ring-1 ring-inset ring-hairline-strong hover:bg-wash"
                 }`}
               >
                 {ex}
@@ -155,14 +155,14 @@ export default async function ComptabilitePage({
         ) : null}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-6 grid gap-4 lg:grid-cols-3">
         {/* Mois par mois */}
         <Card className="lg:col-span-2">
           <SectionHeader
             title={c.parMois}
             subtitle={lbl.parMoisAide}
             action={
-              <a href={csvHref("mois")} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-action hover:underline">
+              <a href={csvHref("mois")} className="link inline-flex items-center gap-1.5 text-[13px]">
                 <IconDownload width={14} height={14} />
                 CSV
               </a>
@@ -199,19 +199,19 @@ export default async function ComptabilitePage({
                   <TR key={r.periode}>
                     <TD className="font-medium text-ink">{formatPeriode(r.periode, ctx.locale)}</TD>
                     <TD align="center" className="tnum text-body">{r.nbAppels}</TD>
-                    <TD align="end" className="tnum text-body">{mad(r.du)}</TD>
-                    <TD align="end" className="tnum text-ink">{mad(r.paye)}</TD>
-                    <TD align="end" className={`tnum ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
-                    <TD align="end" className="tnum text-body">{Math.round(r.taux * 100)}%</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body">{mad(r.du)}</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(r.paye)}</TD>
+                    <TD align="end" className={`tnum whitespace-nowrap ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body">{Math.round(r.taux * 100)}%</TD>
                   </TR>
                 ))}
-                <TR className="bg-ground/60 font-semibold">
+                <TR className="bg-wash font-semibold">
                   <TD className="text-ink">{c.total}</TD>
                   <TD align="center" className="tnum text-ink">{mois.reduce((n, r) => n + r.nbAppels, 0)}</TD>
-                  <TD align="end" className="tnum text-ink">{mad(t.du)}</TD>
-                  <TD align="end" className="tnum text-ink">{mad(t.paye)}</TD>
-                  <TD align="end" className={`tnum ${t.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(t.restant)}</TD>
-                  <TD align="end" className="tnum text-ink">{Math.round(t.taux * 100)}%</TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(t.du)}</TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(t.paye)}</TD>
+                  <TD align="end" className={`tnum whitespace-nowrap ${t.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(t.restant)}</TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink">{Math.round(t.taux * 100)}%</TD>
                 </TR>
               </tbody>
             </Table>
@@ -274,12 +274,12 @@ export default async function ComptabilitePage({
           {/* Exports */}
           <Card>
             <div className="flex items-center gap-3">
-              <IconCircle tone="tosca" size={40}>
-                <CFile width={20} height={20} />
+              <IconCircle tone="tosca" size={44}>
+                <CFile width={22} height={22} />
               </IconCircle>
               <div className="min-w-0">
-                <h2 className="text-[15px] font-semibold text-ink">{c.exporter}</h2>
-                <p className="text-[12px] text-soft">{c.exportAide}</p>
+                <h2 className="text-[19px] font-bold tracking-tight text-ink">{c.exporter}</h2>
+                <p className="text-[13px] text-soft">{c.exportAide}</p>
               </div>
             </div>
             <div className="mt-4 flex flex-col gap-2">
@@ -291,9 +291,9 @@ export default async function ComptabilitePage({
                 <a
                   key={type}
                   href={csvHref(type!)}
-                  className="inline-flex h-10 items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover"
+                  className="su-btn inline-flex h-10 items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash"
                 >
-                  <IconDownload width={15} height={15} className="text-action" />
+                  <IconDownload width={15} height={15} />
                   {label}
                 </a>
               ))}
@@ -308,14 +308,14 @@ export default async function ComptabilitePage({
               title={gestion ? c.parLot : c.monReleve}
               subtitle={gestion ? c.parLotAide : c.parLotAideResident}
               action={
-                <a href={csvHref("lots")} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-action hover:underline">
+                <a href={csvHref("lots")} className="link inline-flex items-center gap-1.5 text-[13px]">
                   <IconDownload width={14} height={14} />
                   CSV
                 </a>
               }
             />
           </div>
-          <TableCard className="rounded-none border-0 shadow-none">
+          <TableCard className="px-3 pb-3">
             <Table>
               <THead>
                 <TH>{c.colLot}</TH>
@@ -330,13 +330,13 @@ export default async function ComptabilitePage({
                 {releve.map((r) => (
                   <TR key={r.lotId}>
                     <TD>
-                      <Link href={p(`/lots/${r.lotId}?onglet=finances`)} className="font-medium text-ink hover:text-action">
+                      <Link href={p(`/lots/${r.lotId}?onglet=finances`)} className="font-semibold text-ink hover:text-link">
                         {r.typeLot ? `${dict.enums.typeLot[r.typeLot]} ` : ""}{r.numero}
                       </Link>
                     </TD>
-                    <TD align="end" className="tnum text-body">{mad(r.du)}</TD>
-                    <TD align="end" className="tnum text-ink">{mad(r.paye)}</TD>
-                    <TD align="end" className={`tnum font-medium ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body">{mad(r.du)}</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(r.paye)}</TD>
+                    <TD align="end" className={`tnum whitespace-nowrap font-medium ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
                     <TD>
                       {r.restant > 0n ? (
                         <Badge variant={escaladeVariant(r.escalade)}>{dict.enums.escalade[r.escalade]}</Badge>
@@ -350,7 +350,7 @@ export default async function ComptabilitePage({
                         {r.restant > 0n ? (
                           <Link
                             href={p(`/lots/${r.lotId}?onglet=finances`)}
-                            className="inline-flex h-8 items-center whitespace-nowrap rounded-btn bg-action-tint px-3 text-[12px] font-semibold text-action transition-colors hover:bg-action hover:text-white"
+                            className="su-btn inline-flex h-8 items-center whitespace-nowrap rounded-btn border-[1.5px] border-link px-3 text-[12px] font-semibold text-link transition-colors hover:bg-action-wash"
                           >
                             {c.enregistrerPaiement}
                           </Link>
@@ -374,7 +374,7 @@ export default async function ComptabilitePage({
                 gestion ? (
                   <ExportButtons ressource="paiements" filtres={{ exercice: annee }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx, title: dict.rapports.exportPaiementsAide }} size="sm" />
                 ) : (
-                  <a href={csvHref("paiements")} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-action hover:underline">
+                  <a href={csvHref("paiements")} className="link inline-flex items-center gap-1.5 text-[13px]">
                     <IconDownload width={14} height={14} />
                     CSV
                   </a>
@@ -383,9 +383,9 @@ export default async function ComptabilitePage({
             />
           </div>
           {journal.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{lbl.aucunPaiement}</p>
+            <p className="px-6 pb-6 pt-2 text-sm text-soft">{lbl.aucunPaiement}</p>
           ) : (
-            <TableCard className="rounded-none border-0 shadow-none">
+            <TableCard className="px-3 pb-3">
               <Table>
                 <THead>
                   <TH>{c.colDate}</TH>
@@ -404,7 +404,7 @@ export default async function ComptabilitePage({
                         {r.typeAppel ? <span className="text-faint"> · {dict.enums.typeAppel[r.typeAppel]}</span> : null}
                       </TD>
                       <TD><Badge variant="outline">{dict.enums.methodePaiement[r.methode]}</Badge></TD>
-                      <TD align="end" className="tnum font-semibold text-ink">{mad(r.montantC)}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ink">{mad(r.montantC)}</TD>
                     </TR>
                   ))}
                 </tbody>

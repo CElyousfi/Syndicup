@@ -5,7 +5,6 @@ import { apiFetch } from "../../../../../lib/api/client";
 import type { ContactUtile } from "../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../lib/i18n";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
-import { Card } from "../../../../../components/ui/card";
 import { ContactsGestion } from "../affichage-client";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -22,7 +21,7 @@ export default async function ContactsPage({ params }: { params: Promise<{ local
   return (
     <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/affichage`} label={dict.communication.titre} />} title={dict.communication.contacts} subtitle={dict.communication.contactsAide} />
-      <Card><ContactsGestion dict={dict} locale={ctx.locale} contacts={res.ok ? res.data : []} /></Card>
+      <ContactsGestion dict={dict} locale={ctx.locale} contacts={res.ok ? res.data : []} />
     </div>
   );
 }

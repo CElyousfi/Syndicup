@@ -2,6 +2,8 @@
 
 /** Import (M24) — composants client : formulaire de fichier, mapping des colonnes, exécution avec progression, invitations en masse, démo. */
 import { useActionState, useEffect, useState } from "react";
+import { celebrate } from "../../../../lib/success";
+import { IconCheck } from "../../../../components/ui/icons";
 import { useRouter } from "next/navigation";
 import { Card } from "../../../../components/ui/card";
 import { Field, Input, Select, Checkbox } from "../../../../components/ui/field";
@@ -17,6 +19,32 @@ import type { ImportJob, TypeImport } from "../../../../lib/api/types";
 import { annulerImport, creerDemo, creerImport, envoyerInvitationsMasse, etatImport, executerImport, modifierMapping } from "./actions";
 
 const TYPES: TypeImport[] = ["LOTS_PROPRIETAIRES", "SOLDES_OUVERTURE", "PRESTATAIRES", "CONTRATS", "VEHICULES_BADGES", "PERSONNEL"];
+
+/** Fil d'étapes de l'import : fichier → colonnes → aperçu → exécution (`etape` = étape courante, 1..4). */
+export function EtapesImport({ dict, etape, termine = false }: { dict: Dict; etape: number; termine?: boolean }) {
+  const t = dict.importation;
+  const etapes = [t.etapes.fichier, t.etapes.mapping, t.etapes.apercu, t.etapes.execution];
+  return (
+    <ol className="mb-6 flex items-start gap-2">
+      {etapes.map((label, i) => {
+        const n = i + 1;
+        const fait = n < etape || termine;
+        const actif = n === etape && !termine;
+        return (
+          <li key={label} aria-current={actif ? "step" : undefined} className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition-colors ${fait ? "bg-ok text-white" : actif ? "bg-brand text-white ring-4 ring-cta" : "bg-tile text-soft"}`}>
+                {fait ? <IconCheck width={14} height={14} /> : n}
+              </span>
+              {n < etapes.length ? <span className={`h-0.5 min-w-2 flex-1 rounded-full ${fait ? "bg-ok/50" : "bg-wash-strong"}`} /> : null}
+            </div>
+            <p className={`mt-2 truncate text-[13px] font-semibold ${actif ? "text-ink" : "text-soft"}`}>{label}</p>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
 
 export function ImportForm({ dict, locale, typeInitial }: { dict: Dict; locale: Locale; typeInitial?: TypeImport }) {
   const [state, action, pending] = useActionState(creerImport, IDLE);
@@ -35,7 +63,7 @@ export function ImportForm({ dict, locale, typeInitial }: { dict: Dict; locale: 
           </> : null}
           {type === "SOLDES_OUVERTURE" ? <Field label={t.dateReference} htmlFor="date_reference" hint={t.dateReferenceAide} optionalLabel={dict.common.optional}><Input id="date_reference" name="date_reference" type="date" dir="ltr" className="tnum text-start" /></Field> : null}
         </div>
-        <p className="mt-4 text-[12px] text-soft">{t.modelesAide} <a className="text-action hover:underline" href={`/api/import-fichier?kind=modele&type=${type}&langue=fr`}>{t.modeleFr}</a> · <a className="text-action hover:underline" href={`/api/import-fichier?kind=modele&type=${type}&langue=ar`}>{t.modeleAr}</a></p>
+        <p className="mt-5 text-[13px] text-soft">{t.modelesAide} <a className="link" href={`/api/import-fichier?kind=modele&type=${type}&langue=fr`}>{t.modeleFr}</a> · <a className="link" href={`/api/import-fichier?kind=modele&type=${type}&langue=ar`}>{t.modeleAr}</a></p>
       </Card>
       <FormAlert state={state} />
       <div className="flex justify-end"><SubmitButton>{pending ? t.analyseEnCours : t.analyser}</SubmitButton></div>
@@ -112,7 +140,7 @@ export function ExecutionPanel({ dict, locale, job }: { dict: Dict; locale: Loca
       ) : null}
       {enCours || live.statut === "TERMINE" || live.statut === "ECHOUE" || live.statut === "ANNULE" ? (
         <div>
-          <div className="mb-1 flex items-center justify-between text-[13px]"><span className="font-medium text-ink-strong">{enCours ? t.enCours : live.statut === "TERMINE" ? t.termine : live.statut === "ECHOUE" ? t.echoue : t.annule}</span><span className="tnum text-soft">{live.nbTraitees}/{live.nbLignes}</span></div>
+          <div className="mb-1.5 flex items-center justify-between text-[13px]"><span className="font-semibold text-ink">{enCours ? t.enCours : live.statut === "TERMINE" ? t.termine : live.statut === "ECHOUE" ? t.echoue : t.annule}</span><span className="tnum text-soft">{live.nbTraitees}/{live.nbLignes}</span></div>
           <ProgressBar ratio={ratio} tone={live.statut === "ECHOUE" ? "danger" : live.statut === "TERMINE" ? "ok" : "action"} />
         </div>
       ) : null}
@@ -134,6 +162,13 @@ export function InvitationsMasseModal({ dict, locale, importJobId, nb }: { dict:
   const t = dict.importation;
   const r = state.status === "success" ? (state.data as { total: number; envoyees: number; sans_contact: number; echouees: number } | undefined) : undefined;
   const qs = importJobId ? `&import_job_id=${importJobId}` : "";
+  // Envoi en masse réussi : la modale se ferme sur l'écran de succès plein écran.
+  useEffect(() => {
+    if (!r) return;
+    setOpen(false);
+    celebrate({ titre: fill(t.envoyees, { n: r.envoyees, total: r.total, sans: r.sans_contact, echecs: r.echouees }), illustration: "ok-invitation" });
+  }, [r, t.envoyees]);
+  const lienCls = "su-btn inline-flex h-11 items-center rounded-btn border-[1.5px] border-link px-5 text-[15px] font-semibold text-link hover:bg-action-wash";
   return (
     <>
       <Button onClick={() => setOpen(true)} disabled={nb === 0}>{t.invitationsMasse}{nb ? ` (${nb})` : ""}</Button>
@@ -146,8 +181,8 @@ export function InvitationsMasseModal({ dict, locale, importJobId, nb }: { dict:
               <Field label={t.canal} htmlFor="canal_masse"><Select id="canal_masse" name="canal" defaultValue="SMS"><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option></Select></Field>
               <FormAlert state={state} />
               <div className="flex flex-wrap justify-end gap-2">
-                <a className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-[13.5px] font-medium text-ink hover:bg-hover" href={`/api/import-fichier?kind=invitations&canal=WHATSAPP${qs}`}>{t.canalWhatsapp}</a>
-                <a className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-[13.5px] font-medium text-ink hover:bg-hover" href={`/api/import-fichier?kind=invitations&canal=CSV${qs}`}>{t.canalCsv}</a>
+                <a className={lienCls} href={`/api/import-fichier?kind=invitations&canal=WHATSAPP${qs}`}>{t.canalWhatsapp}</a>
+                <a className={lienCls} href={`/api/import-fichier?kind=invitations&canal=CSV${qs}`}>{t.canalCsv}</a>
                 <SubmitButton>{t.invitationsMasse}</SubmitButton>
               </div>
             </form>
@@ -168,7 +203,7 @@ export function DemoModal({ dict, locale, coproprieteId }: { dict: Dict; locale:
     <>
       <Button variant="secondary" onClick={() => setOpen(true)}>{t.creerDemo}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={t.creerDemo} closeLabel={dict.common.close}>
-        {d ? <div className="space-y-4"><Banner variant="ok">{t.demoCreee}</Banner><div className="flex items-center gap-2"><code className="rounded-md bg-ground px-3 py-1.5 font-mono text-[15px] font-semibold tracking-wider" dir="ltr">{d.invitation_syndic.code}</code><CopyButton value={d.invitation_syndic.code} label={dict.common.copy} copiedLabel={dict.common.copied} /></div><p className="text-sm text-body">{d.nom}</p><div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button></div></div> : (
+        {d ? <div className="space-y-4"><Banner variant="ok">{t.demoCreee}</Banner><div className="flex items-center gap-2"><code className="rounded-xl bg-tile px-3.5 py-2 font-mono text-[18px] font-bold tracking-wider text-ink" dir="ltr">{d.invitation_syndic.code}</code><CopyButton value={d.invitation_syndic.code} label={dict.common.copy} copiedLabel={dict.common.copied} /></div><p className="text-sm text-body">{d.nom}</p><div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button></div></div> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproprieteId} />
             <p className="text-sm text-body">{t.creerDemoAide}</p>

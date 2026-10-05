@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
-import { Button } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
+import { celebrate } from "../../../../lib/success";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
@@ -16,8 +17,17 @@ import { modifierDossier, lireCnss, preparerFiche, validerFiche, payerFiche, dem
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
   return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
-function Succes({ dict, message, onClose, lien }: { dict: Dict; message: string; onClose: () => void; lien?: { href: string; label: string } }) {
-  return <div className="space-y-4"><p className="text-sm text-ink-strong">{message}</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button>{lien ? <a href={lien.href} className="inline-flex h-10 items-center rounded-btn bg-ink px-4 text-[13px] font-medium text-white">{lien.label}</a> : null}</div></div>;
+/** Retour de succès. Avec `illustration` (action majeure), l'écran de succès plein (Wise) prend le
+ *  relais et la modale se ferme ; sinon le message reste dans la modale. */
+function Succes({ dict, message, onClose, lien, illustration }: { dict: Dict; message: string; onClose: () => void; lien?: { href: string; label: string }; illustration?: string }) {
+  const fait = useRef(false);
+  useEffect(() => {
+    if (!illustration || fait.current) return;
+    fait.current = true;
+    celebrate({ titre: message, illustration, href: lien?.href, hrefLabel: lien?.label });
+    onClose();
+  }, [illustration, message, lien?.href, lien?.label, onClose]);
+  return <div className="space-y-4"><Banner variant="ok">{message}</Banner><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button>{lien ? <ButtonLink href={lien.href}>{lien.label}</ButtonLink> : null}</div></div>;
 }
 const JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"] as const;
 const POSTES: PostePersonnel[] = ["GARDIEN", "AGENT_ENTRETIEN", "JARDINIER", "AGENT_SECURITE", "AUTRE"];
@@ -92,7 +102,7 @@ export function PreparerFicheModal({ dict, locale, personnel, periodeDefaut }: {
     <>
       <Button onClick={() => setOpen(true)}><IconPlus width={16} height={16} />{pe.preparerFiche}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={pe.preparerFicheTitre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={pe.fichePreparee} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={pe.fichePreparee} onClose={() => setOpen(false)} illustration="ok-general" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="personnel_id" value={personnel.id} />
             <p className="text-sm text-body">{pe.preparerFicheAide}</p>
@@ -120,7 +130,7 @@ export function ValiderFicheModal({ dict, locale, fiche }: { dict: Dict; locale:
     <>
       <Button size="sm" onClick={() => setOpen(true)}>{pe.validerFiche}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={pe.validerFicheTitre} subtitle={`${fiche.periode} · ${formatMAD(fiche.net, locale)}`} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={pe.ficheValidee} onClose={() => setOpen(false)} lien={(state.data as { depense_id?: string })?.depense_id ? { href: `/${locale}/finances/depenses/${(state.data as { depense_id: string }).depense_id}`, label: pe.voirDepense } : undefined} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={pe.ficheValidee} onClose={() => setOpen(false)} lien={(state.data as { depense_id?: string })?.depense_id ? { href: `/${locale}/finances/depenses/${(state.data as { depense_id: string }).depense_id}`, label: pe.voirDepense } : undefined} illustration="ok-general" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="personnel_id" value={fiche.personnelId} /><input type="hidden" name="fiche_id" value={fiche.id} />
             <IrreversibleNotice>{pe.validerFicheCorps}</IrreversibleNotice>
@@ -142,7 +152,7 @@ export function PayerFicheModal({ dict, locale, fiche }: { dict: Dict; locale: L
     <>
       <Button size="sm" onClick={() => setOpen(true)}>{pe.payerFiche}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={pe.payerFicheTitre} subtitle={`${fiche.periode} · ${formatMAD(fiche.net, locale)}`} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={pe.fichePayee} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={pe.fichePayee} onClose={() => setOpen(false)} illustration="ok-paiement" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="personnel_id" value={fiche.personnelId} /><input type="hidden" name="fiche_id" value={fiche.id} />
             <p className="text-sm text-body">{pe.payerFicheCorps}</p>
@@ -170,7 +180,7 @@ export function DemanderCongeModal({ dict, locale, personnelId, remplacants, auN
     <>
       <Button variant={auNom ? "secondary" : "primary"} onClick={() => setOpen(true)}><IconPlus width={16} height={16} />{pe.demanderConge}</Button>
       <Modal open={open} onClose={() => setOpen(false)} title={pe.demanderCongeTitre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={pe.congeDemande} onClose={() => setOpen(false)} /> : (
+        {state.status === "success" ? <Succes dict={dict} message={pe.congeDemande} onClose={() => setOpen(false)} illustration="ok-general" /> : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />{personnelId ? <input type="hidden" name="personnel_id" value={personnelId} /> : null}
             <p className="text-sm text-body">{pe.demanderCongeAide}</p>
@@ -232,9 +242,9 @@ export function PresencesForm({ dict, locale, personnelId, jours, existantes }: 
       <p className="text-[13px] text-soft">{pe.saisirPresencesAide}</p>
       <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
         {jours.map((j) => (
-          <label key={j} className="flex items-center justify-between gap-2 rounded-field border border-hairline px-2.5 py-1.5 text-[13px]">
+          <label key={j} className="flex items-center justify-between gap-2 rounded-[14px] bg-surface px-3 py-1.5 text-[13px]">
             <span className="tnum text-body">{formatDate(j, locale)}</span>
-            <select name={`p_${j}`} defaultValue={existantes[j] ?? ""} className="h-8 rounded-btn border border-hairline-strong bg-surface px-2 text-[12.5px]">
+            <select name={`p_${j}`} defaultValue={existantes[j] ?? ""} className="h-8 rounded-full border border-hairline-strong bg-surface px-2.5 text-[12.5px] font-medium">
               <option value="">—</option>
               {statuts.map((s) => <option key={s} value={s}>{dict.enumsPersonnelRh.statutPresence[s]}</option>)}
             </select>
@@ -242,7 +252,7 @@ export function PresencesForm({ dict, locale, personnelId, jours, existantes }: 
         ))}
       </div>
       <FormAlert state={state} />
-      <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] text-ok">{pe.presencesEnregistrees}</span> : null}<SubmitButton>{pe.saisirPresences}</SubmitButton></div>
+      <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] font-semibold text-ok">{pe.presencesEnregistrees}</span> : null}<SubmitButton>{pe.saisirPresences}</SubmitButton></div>
     </form>
   );
 }

@@ -7,15 +7,16 @@ import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
-import { ButtonLink } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { Pagination } from "../../../../components/ui/pagination";
 import { Select } from "../../../../components/ui/field";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { CAlert, CShield, CWrench, IconCircle } from "../../../../components/ui/color-icons";
+import { CAlert, CShield, CWrench } from "../../../../components/ui/color-icons";
+import { CategorieIcon } from "../../../../components/incidents/categorie-icon";
 import { incidentVariant, urgenceVariant } from "../../../../lib/status";
-import { IconPlus } from "../../../../components/ui/icons";
+import { IconChevronEnd, IconPlus } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 
 export async function generateMetadata({
@@ -145,26 +146,20 @@ export default async function IncidentsPage({
             </option>
           ))}
         </Select>
-        <button
-          type="submit"
-          className="h-10 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover"
-        >
+        <Button type="submit" variant="secondary" size="sm" className="h-10">
           {dict.common.filter}
-        </button>
+        </Button>
       </form>
 
       {incidents.length === 0 ? (
         <EmptyState
           title={i.aucunIncident}
           hint={gestion ? i.aucunIncidentAide : undefined}
-          icon={
-            <IconCircle tone="tosca" size={64}>
-              <CWrench width={30} height={30} />
-            </IconCircle>
-          }
+          illustration={tous.length > 0 ? "empty-search" : "empty-incidents"}
           action={
             peutSignaler ? (
-              <ButtonLink href={p("/incidents/nouveau")} size="sm" variant="secondary">
+              <ButtonLink href={p("/incidents/nouveau")}>
+                <IconPlus width={16} height={16} />
                 {i.signaler}
               </ButtonLink>
             ) : undefined
@@ -191,18 +186,16 @@ export default async function IncidentsPage({
                   return (
                     <TR key={inc.id}>
                       <TD>
-                        <div className="flex items-center gap-3">
-                          <IconCircle tone={enRetard ? "danger" : "tosca"} size={36}>
-                            <CWrench width={18} height={18} />
-                          </IconCircle>
+                        <div className="flex items-center gap-3.5">
+                          <CategorieIcon categorie={inc.categorie} alerte={Boolean(enRetard)} />
                           <div className="min-w-0">
                             <Link
                               href={p(`/incidents/${inc.id}`)}
-                              className="block max-w-64 truncate font-medium text-ink hover:text-action"
+                              className="block max-w-64 truncate text-[15px] font-bold text-ink hover:text-link"
                             >
                               {inc.sousCategorie}
                             </Link>
-                            <p className="mt-0.5 truncate text-[12px] text-soft">
+                            <p className="mt-0.5 truncate text-[13px] text-soft">
                               {dict.enums.categorieIncident[inc.categorie]} ·{" "}
                               {dict.enums.partie[inc.partie]}
                             </p>
@@ -242,7 +235,12 @@ export default async function IncidentsPage({
                         </TD>
                       ) : null}
                       <TD className="text-[13px] text-soft">
-                        {formatDateHeure(inc.creeLe, ctx.locale)}
+                        <span className="flex items-center justify-between gap-3">
+                          <span className="tnum whitespace-nowrap">{formatDateHeure(inc.creeLe, ctx.locale)}</span>
+                          <Link href={p(`/incidents/${inc.id}`)} aria-label={inc.sousCategorie} className="hidden text-link md:inline-flex">
+                            <IconChevronEnd width={18} height={18} />
+                          </Link>
+                        </span>
                       </TD>
                     </TR>
                   );

@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
-import { Button } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
+import { celebrate } from "../../../../lib/success";
 import { Banner } from "../../../../components/ui/banner";
 import { FileViewerButton } from "../../../../components/documents/document-viewer";
 import { IDLE, fieldError } from "../../../../lib/forms";
@@ -24,6 +25,12 @@ export function GenererModal({ dict, locale, budgets, exerciceDefaut }: { dict: 
   const [exercice, setExercice] = useState(exerciceDefaut);
   const r = dict.rapports;
   const data = state.status === "success" ? (state.data as { id: string; regenere: boolean; pdf_erreur: string | null } | undefined) : undefined;
+  // Rapport produit sans erreur PDF : écran de succès plein (Wise) ; l'échec PDF reste dans la modale.
+  useEffect(() => {
+    if (state.status !== "success" || !data || data.pdf_erreur) return;
+    celebrate({ titre: data.regenere ? r.regenere : r.genere, corps: r.genereAide, illustration: "ok-general", href: `/${locale}/rapports/gestion/${data.id}`, hrefLabel: dict.common.see });
+    setOpen(false);
+  }, [state, data, r.regenere, r.genere, r.genereAide, locale, dict.common.see]);
   return (
     <>
       <Button onClick={() => setOpen(true)}><IconPlus width={16} height={16} />{r.generer}</Button>
@@ -33,7 +40,7 @@ export function GenererModal({ dict, locale, budgets, exerciceDefaut }: { dict: 
             <Banner variant={data.pdf_erreur ? "warn" : "ok"} title={data.regenere ? r.regenere : r.genere}>{data.pdf_erreur ? r.pdfEchec : r.genereAide}</Banner>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button>
-              <a href={`/${locale}/rapports/gestion/${data.id}`} className="inline-flex h-10 items-center rounded-btn bg-ink px-4 text-[13px] font-medium text-white">{dict.common.see}</a>
+              <ButtonLink href={`/${locale}/rapports/gestion/${data.id}`}>{dict.common.see}</ButtonLink>
             </div>
           </div>
         ) : (
@@ -63,6 +70,11 @@ export function SoumettreModal({ dict, locale, rapport, ags }: { dict: Dict; loc
   const [state, action] = useActionState(soumettreRapportAg, IDLE);
   const r = dict.rapports;
   const eligibles = ags.filter((a) => a.statut === "PLANIFIEE" || a.statut === "CONVOQUEE");
+  useEffect(() => {
+    if (state.status !== "success") return;
+    celebrate({ titre: r.soumis, corps: r.soumisAide, illustration: "ok-general" });
+    setOpen(false);
+  }, [state, r.soumis, r.soumisAide]);
   return (
     <>
       <Button onClick={() => setOpen(true)}>{r.soumettre}</Button>
@@ -70,7 +82,7 @@ export function SoumettreModal({ dict, locale, rapport, ags }: { dict: Dict; loc
         {state.status === "success" ? (
           <div className="space-y-4"><Banner variant="ok" title={r.soumis}>{r.soumisAide}</Banner><div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button></div></div>
         ) : eligibles.length === 0 ? (
-          <div className="space-y-4"><Banner variant="warn">{r.aucuneAgEligible}</Banner><div className="flex justify-end"><a href={`/${locale}/ag/nouvelle`} className="inline-flex h-10 items-center rounded-btn bg-ink px-4 text-[13px] font-medium text-white">{dict.nav.ag}</a></div></div>
+          <div className="space-y-4"><Banner variant="warn">{r.aucuneAgEligible}</Banner><div className="flex justify-end"><ButtonLink href={`/${locale}/ag/nouvelle`}>{dict.nav.ag}</ButtonLink></div></div>
         ) : (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="rapport_id" value={rapport.id} />
@@ -101,12 +113,12 @@ export function PdfRapportButtons({ dict, rapport, complet }: { dict: Dict; rapp
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   const src = (langue: "fr" | "ar", variante: "publique" | "complete") => `/api/rapport-pdf?id=${rapport.id}&langue=${langue}&variante=${variante}`;
   const Groupe = ({ variante, titre }: { variante: "publique" | "complete"; titre: string }) => (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-field border border-hairline p-3">
-      <span className="text-sm text-body">{titre}</span>
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] bg-surface p-4">
+      <span className="text-[14px] font-semibold text-ink">{titre}</span>
       <div className="flex flex-wrap gap-2">
         <FileViewerButton src={src("fr", variante)} nom={`${r.gestionTitre} ${rapport.exercice} — FR.pdf`} labels={viewer} label={r.pdfFr} />
         <FileViewerButton src={src("ar", variante)} nom={`${r.gestionTitre} ${rapport.exercice} — AR.pdf`} labels={viewer} label={r.pdfAr} />
-        <a href={`${src("fr", variante)}&download=1`} className="inline-flex h-9 items-center gap-1.5 rounded-btn border border-hairline-strong bg-surface px-3 text-[13px] font-medium text-ink-strong hover:bg-hover" title={dict.common.download}><IconDownload width={14} height={14} /></a>
+        <a href={`${src("fr", variante)}&download=1`} className="su-btn inline-flex size-9 items-center justify-center rounded-full border-[1.5px] border-link text-link transition-colors hover:bg-action-wash" title={dict.common.download} aria-label={dict.common.download}><IconDownload width={16} height={16} /></a>
       </div>
     </div>
   );
@@ -125,9 +137,9 @@ export function FacturesToggle({ dict, locale, coproprieteId, visible }: { dict:
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproprieteId} /><input type="hidden" name="visible" value={actuel ? "0" : "1"} />
-      <span className={`inline-flex h-6 w-11 items-center rounded-full p-0.5 transition-colors ${actuel ? "bg-ok" : "bg-hairline-strong"}`} aria-hidden><span className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${actuel ? "translate-x-5 rtl:-translate-x-5" : ""}`} /></span>
+      <span className={`inline-flex h-7 w-12 items-center rounded-full p-0.5 transition-colors ${actuel ? "bg-brand" : "bg-wash-strong"}`} aria-hidden><span className={`size-6 rounded-full transition-transform ${actuel ? "translate-x-5 bg-lime rtl:-translate-x-5" : "bg-surface"}`} /></span>
       <SubmitButton variant="secondary" size="sm">{actuel ? r.facturesMasquer : r.facturesActiver}</SubmitButton>
-      {state.status === "success" ? <span className="text-[12px] text-ok">{r.facturesMaj}</span> : null}
+      {state.status === "success" ? <span className="text-[13px] font-semibold text-ok">{r.facturesMaj}</span> : null}
       {state.status === "error" ? <FormAlert state={state} /> : null}
     </form>
   );

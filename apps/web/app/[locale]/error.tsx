@@ -28,15 +28,15 @@ export default function ErrorPage({
   }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ground px-6">
-      <div className="card w-full max-w-md animate-in-up px-8 py-12 text-center">
+    <div className="flex min-h-screen items-center justify-center bg-surface px-4">
+      <div className="w-full max-w-md animate-in-up py-12 text-center">
         <IconCircle tone="danger" size={72} className="mx-auto">
           <CAlert width={32} height={32} />
         </IconCircle>
-        <h1 className="mt-5 text-xl font-semibold tracking-tight text-ink">
+        <h1 className="mt-6 text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-ink">
           Une erreur est survenue
         </h1>
-        <p className="mx-auto mt-1.5 max-w-sm text-sm leading-relaxed text-soft">
+        <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-soft">
           Le problème vient de chez nous, pas de chez vous. Réessayez dans un instant.
         </p>
         {error.digest ? (
@@ -44,7 +44,7 @@ export default function ErrorPage({
             {error.digest}
           </p>
         ) : null}
-        <Button onClick={reset} className="mt-7">
+        <Button onClick={reset} size="lg" className="mt-8">
           Réessayer
         </Button>
       </div>

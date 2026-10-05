@@ -26,6 +26,7 @@ export function QrScannerButton({
   locale,
   labels,
   variant = "secondary",
+  size = "md",
   className = "",
 }: {
   locale: "fr" | "ar";
@@ -38,6 +39,7 @@ export function QrScannerButton({
     close: string;
   };
   variant?: "secondary" | "ghost";
+  size?: "md" | "lg";
   className?: string;
 }) {
   const router = useRouter();
@@ -126,7 +128,7 @@ export function QrScannerButton({
 
   return (
     <>
-      <Button type="button" variant={variant} size="md" className={className} onClick={() => setOpen(true)}>
+      <Button type="button" variant={variant} size={size} className={className} onClick={() => setOpen(true)}>
         <IconQr width={17} height={17} />
         {labels.scan}
       </Button>
@@ -137,7 +139,7 @@ export function QrScannerButton({
           {/* Viseur */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-[14%] rounded-2xl border-2 border-sage shadow-[0_0_0_9999px_rgb(18_18_18/0.35)]"
+            className="pointer-events-none absolute inset-[14%] rounded-2xl border-[3px] border-lime shadow-[0_0_0_9999px_rgb(18_18_18/0.35)]"
           />
         </div>
         {erreur ? <p className="mt-3 text-[13px] text-danger">{erreur}</p> : null}

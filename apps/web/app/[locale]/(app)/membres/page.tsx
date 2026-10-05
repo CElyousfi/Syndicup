@@ -7,14 +7,13 @@ import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDate, formatTelephone, nomComplet } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
-import { ButtonLink } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { Avatar } from "../../../../components/ui/avatar";
 import { Input, Select } from "../../../../components/ui/field";
 import { IconCircle, CUsers, CHome, CKey, CShield } from "../../../../components/ui/color-icons";
-import { IconSearch } from "../../../../components/ui/icons";
+import { IconChevronEnd, IconSearch } from "../../../../components/ui/icons";
 import { compteVariant } from "../../../../lib/status";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -104,7 +103,7 @@ export default async function MembresPage({
       <form className="filters mb-4 flex flex-wrap items-center gap-2" method="GET">
         <div className="relative">
           <IconSearch width={15} height={15} className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-faint" />
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder={m.rechercher} className="h-10 w-72 ps-9" />
+          <Input name="q" defaultValue={sp.q ?? ""} placeholder={m.rechercher} className="h-10 w-72 max-w-full ps-9" />
         </div>
         <Select name="role" defaultValue={roleFiltre} className="h-10 w-56">
           <option value="">{m.tousRoles}</option>
@@ -114,15 +113,16 @@ export default async function MembresPage({
             </option>
           ))}
         </Select>
-        <button type="submit" className="inline-flex h-10 items-center rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+        <Button type="submit" variant="secondary">
           {dict.common.filter}
-        </button>
+        </Button>
       </form>
 
       {membres.length === 0 ? (
         <EmptyState
           title={m.aucun}
           hint={tous.length === 0 ? m.aucunAide : undefined}
+          illustration={tous.length > 0 ? "empty-search" : undefined}
           icon={
             <IconCircle tone="sage" size={64}>
               <CUsers width={30} height={30} />
@@ -137,94 +137,74 @@ export default async function MembresPage({
           }
         />
       ) : (
-        <TableCard>
-          <Table>
-            <THead>
-              <TH>{m.colMembre}</TH>
-              <TH>{m.colRoles}</TH>
-              <TH>{m.colLots}</TH>
-              <TH>{m.colContact}</TH>
-              <TH>{m.colCompte}</TH>
-              <TH>{m.colDepuis}</TH>
-              <TH align="end">{dict.common.actions}</TH>
-            </THead>
-            <tbody>
-              {membres.map((u) => {
-                const nom = nomComplet(u) ?? u.raison_sociale ?? u.email ?? u.id.slice(0, 8);
-                return (
-                  <TR key={u.id}>
-                    <TD>
-                      <Link href={p(`/membres/${u.id}`)} className="inline-flex items-center gap-3">
-                        <Avatar nom={nom} size={36} />
-                        <span className="min-w-0">
-                          <span className="block truncate font-semibold text-ink">{nom}</span>
-                          {u.raison_sociale && nomComplet(u) ? (
-                            <span className="block truncate text-[12px] text-soft">{u.raison_sociale}</span>
-                          ) : null}
-                        </span>
-                      </Link>
-                    </TD>
-                    <TD>
-                      <span className="inline-flex flex-wrap gap-1">
-                        {u.roles.map((r) => (
-                          <Badge key={`${r.role}-${r.depuis}`} variant={r.actif ? "outline" : "neutral"}>
-                            {dict.roles[r.role]}
-                            {r.actif ? "" : ` · ${m.roleInactif}`}
-                          </Badge>
-                        ))}
-                      </span>
-                    </TD>
-                    <TD>
-                      {u.lots.length === 0 ? (
-                        <span className="text-[13px] text-faint">{m.sansLot}</span>
-                      ) : (
-                        <span className="inline-flex flex-wrap gap-1">
-                          {u.lots.map((l) => (
-                            <Link
-                              key={`${l.id}-${l.lien}`}
-                              href={p(`/lots/${l.id}`)}
-                              title={l.lien === "PROPRIETAIRE" ? m.proprietaireDe : m.occupantDe}
-                              className={`inline-flex h-6 items-center rounded-full px-2 text-[12px] font-semibold ${
-                                l.lien === "PROPRIETAIRE" ? "bg-sand-tint text-sand" : "bg-tosca-tint text-tosca-deep"
-                              }`}
-                            >
-                              {l.numero}
-                            </Link>
-                          ))}
-                        </span>
-                      )}
-                    </TD>
-                    <TD>
-                      <span className="block text-[13px] text-body">
-                        {u.email ? (
-                          <a href={`mailto:${u.email}`} className="hover:text-action">
-                            {u.email}
-                          </a>
-                        ) : (
-                          dict.common.none
-                        )}
-                      </span>
+        <ul className="stagger-grid -mx-3">
+          {membres.map((u) => {
+            const nom = nomComplet(u) ?? u.raison_sociale ?? u.email ?? u.id.slice(0, 8);
+            const fiche = p(`/membres/${u.id}`);
+            return (
+              <li key={u.id} className="flex items-center gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+                <Link href={fiche} tabIndex={-1} aria-hidden className="shrink-0 self-start sm:self-center">
+                  <Avatar nom={nom} size={44} />
+                </Link>
+                <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-4">
+                  <div className="min-w-0 sm:flex-1">
+                    <Link href={fiche} className="block truncate text-[15px] font-bold text-ink hover:text-link">
+                      {nom}
+                    </Link>
+                    <p className="truncate text-[13px] text-soft">
+                      {u.raison_sociale && nomComplet(u) ? <span>{u.raison_sociale} · </span> : null}
+                      {u.email ? (
+                        <a href={`mailto:${u.email}`} className="hover:text-link">
+                          {u.email}
+                        </a>
+                      ) : null}
+                      {u.email && u.telephone ? " · " : null}
                       {u.telephone ? (
-                        <a href={`tel:${u.telephone}`} dir="ltr" className="block text-[13px] text-soft hover:text-action">
+                        <a href={`tel:${u.telephone}`} dir="ltr" className="hover:text-link">
                           {formatTelephone(u.telephone)}
                         </a>
                       ) : null}
-                    </TD>
-                    <TD>
-                      <Badge variant={compteVariant[u.statut_compte]}>{dict.enums.statutCompte[u.statut_compte]}</Badge>
-                    </TD>
-                    <TD className="text-[13px] text-soft">{formatDate(u.membre_depuis, ctx.locale)}</TD>
-                    <TD align="end">
-                      <ButtonLink href={p(`/membres/${u.id}`)} variant="secondary" size="sm">
-                        {m.voirFiche}
-                      </ButtonLink>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </tbody>
-          </Table>
-        </TableCard>
+                      {!u.email && !u.telephone ? dict.common.none : null}
+                    </p>
+                  </div>
+                  <div className="mt-2 flex min-w-0 flex-wrap items-center gap-1.5 sm:mt-0 sm:justify-end">
+                    {u.roles.map((r) => (
+                      <Badge key={`${r.role}-${r.depuis}`} variant={r.actif ? "neutral" : "outline"}>
+                        {dict.roles[r.role]}
+                        {r.actif ? "" : ` · ${m.roleInactif}`}
+                      </Badge>
+                    ))}
+                    {u.lots.map((l) => (
+                      <Link
+                        key={`${l.id}-${l.lien}`}
+                        href={p(`/lots/${l.id}`)}
+                        title={l.lien === "PROPRIETAIRE" ? m.proprietaireDe : m.occupantDe}
+                        className={`inline-flex h-6 items-center rounded-full px-2.5 text-[12px] font-semibold ${
+                          l.lien === "PROPRIETAIRE" ? "bg-sand-tint text-sand" : "bg-tosca-tint text-tosca-deep"
+                        }`}
+                      >
+                        {l.numero}
+                      </Link>
+                    ))}
+                    {u.lots.length === 0 ? <span className="text-[12px] text-faint">{m.sansLot}</span> : null}
+                    <span className="hidden text-[12px] text-soft tnum lg:ms-2 lg:inline" title={m.colDepuis}>
+                      {formatDate(u.membre_depuis, ctx.locale)}
+                    </span>
+                    <Badge variant={compteVariant[u.statut_compte]}>{dict.enums.statutCompte[u.statut_compte]}</Badge>
+                  </div>
+                </div>
+                <Link
+                  href={fiche}
+                  aria-label={m.voirFiche}
+                  title={m.voirFiche}
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full text-link transition-colors hover:bg-wash"
+                >
+                  <IconChevronEnd width={18} height={18} className="icon-flip" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       )}
     </div>
   );

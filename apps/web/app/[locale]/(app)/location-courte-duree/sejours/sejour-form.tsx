@@ -9,6 +9,7 @@ import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import type { LcdSejour, TypePieceIdentite } from "../../../../../lib/api/types";
 import { dateInput } from "../../../../../lib/lcd";
 import { declarerSejour, modifierSejour } from "../actions";
+import { IconCamera, IconFile } from "../../../../../components/ui/icons";
 
 const PIECES: TypePieceIdentite[] = ["CIN", "PASSEPORT", "TITRE_SEJOUR", "AUTRE"];
 
@@ -37,12 +38,12 @@ export function SejourForm({
   const lotChoisi = lotInitial && lots.some((x) => x.id === lotInitial) ? lotInitial : lots[0]?.id;
 
   return (
-    <form action={action} className="card max-w-2xl space-y-6 p-5 sm:p-7">
+    <form action={action} className="max-w-2xl space-y-8">
       <input type="hidden" name="locale" value={locale} />
       {sejour ? <input type="hidden" name="sejour_id" value={sejour.id} /> : null}
 
       {sejour ? (
-        <div className="rounded-xl border border-hairline bg-ground px-4 py-3 text-sm text-body">
+        <div className="rounded-2xl bg-tile px-4 py-3 text-sm text-body">
           {l.lot} <span className="font-semibold text-ink">{sejour.lot?.numero ?? "—"}</span>
         </div>
       ) : (
@@ -70,7 +71,7 @@ export function SejourForm({
       </div>
 
       <fieldset className="space-y-4">
-        <legend className="text-[13px] font-semibold text-ink">{l.voyageurPrincipal}</legend>
+        <legend className="text-[17px] font-bold text-ink">{l.voyageurPrincipal}</legend>
         <div className="grid gap-4 sm:grid-cols-[1fr_9rem]">
           <Field label={l.voyageurNom} htmlFor="s_nom" required error={fieldError(state, "voyageur_principal_nom")}>
             <Input id="s_nom" name="voyageur_principal_nom" required maxLength={120} defaultValue={sejour?.voyageurPrincipalNom ?? ""} />
@@ -90,7 +91,7 @@ export function SejourForm({
       </fieldset>
 
       <fieldset className="space-y-4">
-        <legend className="text-[13px] font-semibold text-ink">{l.pieceIdentite}</legend>
+        <legend className="text-[17px] font-bold text-ink">{l.pieceIdentite}</legend>
         <Banner variant="legal">{l.pieceIdentiteAide}</Banner>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={l.pieceIdentiteType} htmlFor="s_piece" optionalLabel={dict.common.optional} error={fieldError(state, "piece_identite_type")}>
@@ -113,14 +114,16 @@ export function SejourForm({
       </fieldset>
 
       <fieldset className="space-y-3">
-        <legend className="text-[13px] font-semibold text-ink">{l.piecesJointes}</legend>
+        <legend className="text-[17px] font-bold text-ink">{l.piecesJointes}</legend>
         <p className="text-[13px] leading-relaxed text-soft">{l.piecesJointesAide}</p>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+          <label className="su-btn inline-flex h-11 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-5 text-[15px] font-semibold text-link hover:bg-action-wash has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
+            <IconCamera width={17} height={17} />
             {l.prendrePhoto}
             <input type="file" name="pieces_jointes" accept="image/*" capture="environment" className="sr-only" onChange={(e) => setNbFichiers((n) => n + (e.target.files?.length ?? 0))} />
           </label>
-          <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong hover:bg-hover">
+          <label className="su-btn inline-flex h-11 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-5 text-[15px] font-semibold text-link hover:bg-action-wash has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
+            <IconFile width={17} height={17} />
             {l.choisirFichier}
             <input type="file" name="pieces_jointes" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf" multiple className="sr-only" onChange={(e) => setNbFichiers((n) => n + (e.target.files?.length ?? 0))} />
           </label>
@@ -131,7 +134,7 @@ export function SejourForm({
 
       <FormAlert state={state} />
 
-      <div className="flex justify-end border-t border-hairline pt-5">
+      <div className="flex justify-end border-t border-hairline pt-6">
         <SubmitButton size="lg" className="w-full sm:w-auto">
           {sejour ? dict.common.save : l.declarerSejour}
         </SubmitButton>

@@ -45,7 +45,7 @@ export function PhotosForm({
 
   return (
     <div className="space-y-6">
-      <p className="text-[13px] leading-relaxed text-soft">{pa.photosAide}</p>
+      <p className="text-[14px] leading-relaxed text-soft">{pa.photosAide}</p>
       <div className="space-y-3">
         {CLES_PHOTO.map((cle) => (
           <PhotoSlot
@@ -63,7 +63,7 @@ export function PhotosForm({
       </div>
       {espaces.length > 0 ? (
         <div>
-          <h3 className="text-[15px] font-semibold text-ink">{pa.photosEspaces}</h3>
+          <h3 className="text-[17px] font-bold tracking-tight text-ink">{pa.photosEspaces}</h3>
           <p className="mb-3 mt-1 text-[13px] leading-relaxed text-soft">{pa.photosEspacesAide}</p>
           <div className="space-y-3">
             {espaces.map((e) => {
@@ -115,8 +115,8 @@ function PhotoSlot({
   const [nomFichier, setNomFichier] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-hairline bg-ground/60 p-3 sm:flex-row sm:items-start">
-      <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-2xl bg-ground sm:w-40">
+    <div className="flex flex-col gap-4 rounded-[20px] bg-surface p-3 sm:flex-row sm:items-start">
+      <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-2xl bg-wash sm:w-40">
         <img src={apercu ?? src} alt="" className="size-full object-cover" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
@@ -131,7 +131,7 @@ function PhotoSlot({
           <input type="hidden" name="cle" value={cle} />
           <input type="hidden" name="message_succes" value={pa.photoMiseAJour} />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong hover:bg-hover">
+            <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
               <input
                 type="file"

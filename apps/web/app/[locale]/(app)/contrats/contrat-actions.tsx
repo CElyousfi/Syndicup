@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
-import { Button } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { ContratDetail, ContratEcheance, TypeEcheance } from "../../../../lib/api/types";
@@ -16,7 +16,7 @@ function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => v
   return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 function Succes({ dict, message, onClose, lien }: { dict: Dict; message: string; onClose: () => void; lien?: { href: string; label: string } }) {
-  return <div className="space-y-4"><p className="text-sm text-ink-strong">{message}</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button>{lien ? <a href={lien.href} className="inline-flex h-10 items-center rounded-btn bg-ink px-4 text-[13px] font-medium text-white">{lien.label}</a> : null}</div></div>;
+  return <div className="space-y-4"><p className="text-sm text-ink-strong">{message}</p><div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button>{lien ? <ButtonLink href={lien.href}>{lien.label}</ButtonLink> : null}</div></div>;
 }
 
 type Props = { dict: Dict; locale: Locale; contrat: ContratDetail };

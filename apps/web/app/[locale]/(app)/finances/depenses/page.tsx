@@ -84,18 +84,18 @@ export default async function DepensesPage({
       />
 
       {rapport?.seuil_non_configure && gestion ? (
-        <Banner variant="legal" className="mb-4" title={d.seuilNonConfigure} action={<Link href={p("/parametres")} className="font-medium underline">{dict.nav.parametres}</Link>}>
+        <Banner variant="legal" className="mb-4" title={d.seuilNonConfigure} action={<Link href={p("/parametres")} className="link">{dict.nav.parametres}</Link>}>
           {d.seuilNonConfigureCorps}
         </Banner>
       ) : null}
       {!listeRes.ok ? <Banner variant="warn" className="mb-4">{d.chargementImpossible}</Banner> : null}
 
       {rapport ? (
-        <div className="stat mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard icon={<CAlert />} tone={rapport.nb_a_approuver > 0 ? "warn" : "sage"} label={d.aApprouver} value={String(rapport.nb_a_approuver)} hint={totaux?.par_statut.A_APPROUVER ? formatMAD(totaux.par_statut.A_APPROUVER.montant_ttc, ctx.locale) : undefined} href={p(`/finances/depenses${qs({ statut: "A_APPROUVER" })}`)} />
           <StatCard icon={<CCoins />} tone="tosca" label={d.engage} value={formatMAD(rapport.totaux.engage, ctx.locale)} hint={d.engageAide} />
           <StatCard icon={<CMoneyBag />} tone="sage" label={d.realise} value={formatMAD(rapport.totaux.realise, ctx.locale)} hint={rapport.totaux.montant_prevu ? `${d.prevu} : ${formatMAD(rapport.totaux.montant_prevu, ctx.locale)}` : d.aucunBudgetActif} trend={rapport.totaux.pourcentage_realise ? `${rapport.totaux.pourcentage_realise} %` : undefined} trendTone={rapport.totaux.depassement ? "danger" : "ok"} />
-          <StatCard icon={<CWallet />} tone="lilac" label={d.reserveSolde} value={formatMAD(rapport.fonds_reserve.solde, ctx.locale)} hint={rapport.budget ? <Link href={p(`/finances/budgets/${rapport.budget.id}`)} className="text-action hover:underline">{d.budgetVsRealise}</Link> : undefined} />
+          <StatCard icon={<CWallet />} tone="lilac" label={d.reserveSolde} value={formatMAD(rapport.fonds_reserve.solde, ctx.locale)} hint={rapport.budget ? <Link href={p(`/finances/budgets/${rapport.budget.id}`)} className="link">{d.budgetVsRealise}</Link> : undefined} />
         </div>
       ) : null}
 
@@ -114,6 +114,7 @@ export default async function DepensesPage({
       {depenses.length === 0 ? (
         <EmptyState
           title={sp.categorie || sp.source || sp.q || statut ? d.aucuneFiltre : d.aucune}
+          illustration={sp.categorie || sp.source || sp.q || statut ? "empty-search" : "empty-documents"}
           hint={gestion && !statut ? d.aucuneAide : undefined}
           action={gestion ? <ButtonLink href={p("/finances/depenses/nouvelle")}>{d.nouvelle}</ButtonLink> : undefined}
         />
@@ -133,13 +134,13 @@ export default async function DepensesPage({
                 {depenses.map((x) => (
                   <TR key={x.id}>
                     <TD className="tnum text-soft">{formatDate(x.dateDepense, ctx.locale)}</TD>
-                    <TD className="font-medium text-ink">
-                      <Link href={p(`/finances/depenses/${x.id}`)} className="hover:text-action">{x.libelle}</Link>
+                    <TD className="font-semibold text-ink">
+                      <Link href={p(`/finances/depenses/${x.id}`)} className="hover:text-link">{x.libelle}</Link>
                       {x.budgetPoste ? <span className="block text-[12px] font-normal text-faint">{x.budgetPoste.libelle}</span> : null}
                       {x.source === "FONDS_RESERVE" ? <Badge variant="info" className="ms-2">{e.sourceFinancement.FONDS_RESERVE}</Badge> : null}
                     </TD>
                     <TD className="text-body">{e.categorieDepense[x.categorie as CategorieDepense]}</TD>
-                    <TD className="text-body">{x.prestataire ? <Link href={p(`/prestataires/${x.prestataire.id}`)} className="hover:text-action">{x.prestataire.nom}</Link> : <span className="text-faint">{dict.common.none}</span>}</TD>
+                    <TD className="text-body">{x.prestataire ? <Link href={p(`/prestataires/${x.prestataire.id}`)} className="hover:text-link">{x.prestataire.nom}</Link> : <span className="text-faint">{dict.common.none}</span>}</TD>
                     <TD><Badge variant={depenseVariant[x.statut]}>{e.statutDepense[x.statut]}</Badge></TD>
                     <TD align="end" className="tnum font-medium text-ink">{formatMAD(x.montantTtc, ctx.locale)}</TD>
                   </TR>

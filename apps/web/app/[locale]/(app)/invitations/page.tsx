@@ -13,7 +13,6 @@ import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/t
 import { CopyButton } from "../../../../components/ui/copy";
 import { IconCircle, CKey } from "../../../../components/ui/color-icons";
 import { invitationVariant } from "../../../../lib/status";
-import { IconKey } from "../../../../components/ui/icons";
 import { CreerInvitationModal, RegenererModal } from "./invitation-modals";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { annulerInvitation } from "./actions";
@@ -79,7 +78,11 @@ export default async function InvitationsPage({
         <EmptyState
           title={inv.aucune}
           hint={inv.aucuneAide}
-          icon={<IconKey width={44} height={44} />}
+          icon={
+            <IconCircle tone="sand" size={64}>
+              <CKey width={30} height={30} />
+            </IconCircle>
+          }
         />
       ) : (
         <>
@@ -99,10 +102,10 @@ export default async function InvitationsPage({
                   <TR key={i.id}>
                     <TD>
                       <span className="inline-flex items-center gap-2.5">
-                        <IconCircle tone="sand" size={32}>
-                          <CKey width={17} height={17} />
+                        <IconCircle tone="sand" size={40}>
+                          <CKey width={20} height={20} />
                         </IconCircle>
-                        <code className="rounded-md bg-ground px-2 py-0.5 font-mono text-[13px] font-semibold tracking-wider text-ink" dir="ltr">
+                        <code className="rounded-lg bg-tile px-2.5 py-1 font-mono text-[14px] font-bold tracking-wider text-ink" dir="ltr">
                           {i.code}
                         </code>
                         {i.statut === "EN_ATTENTE" ? (
@@ -116,7 +119,7 @@ export default async function InvitationsPage({
                       </span>
                     </TD>
                     <TD>
-                      <Badge variant="outline">{dict.roles[i.roleCible]}</Badge>
+                      <Badge variant="neutral">{dict.roles[i.roleCible]}</Badge>
                     </TD>
                     <TD className="text-body">
                       {i.lotId ? (lotParId.get(i.lotId) ?? "—") : dict.common.none}
@@ -128,9 +131,9 @@ export default async function InvitationsPage({
                       </Badge>
                     </TD>
                     <TD className="text-[13px] text-soft">
-                      <span className="block">{fill(inv.expire, { date: formatDateCourte(i.expireLe, ctx.locale) })}</span>
+                      <span className="block whitespace-nowrap">{fill(inv.expire, { date: formatDateCourte(i.expireLe, ctx.locale) })}</span>
                       {i.statut === "EN_ATTENTE" ? (
-                        <span className={`mt-0.5 block text-[12px] ${i.ouverteLe ? "font-medium text-warn" : "text-faint"}`}>
+                        <span className={`mt-0.5 block whitespace-nowrap text-[12px] ${i.ouverteLe ? "font-medium text-warn" : "text-faint"}`}>
                           {i.ouverteLe ? fill(inv.ouverteLe, { date: formatDateCourte(i.ouverteLe, ctx.locale) }) : inv.nonOuverte}
                         </span>
                       ) : null}

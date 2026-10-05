@@ -60,7 +60,7 @@ export default async function ProfilPage({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 lg:self-start">
           <ProfilForm
             dict={dict}
             locale={ctx.locale}
@@ -77,20 +77,21 @@ export default async function ProfilPage({
           </Card>
           <Card>
             <SectionHeader title={pr.identifiants} subtitle={pr.identifiantsAide} />
-            <dl className="mt-4 space-y-3 text-sm">
-              <div className="flex items-baseline justify-between gap-4">
+            {/* Lignes clé/valeur sur sous-bloc blanc (jamais greige sur greige). */}
+            <dl className="mt-4 divide-y divide-hairline rounded-[18px] bg-surface px-4 text-[14px]">
+              <div className="flex items-center justify-between gap-4 py-3">
                 <dt className="text-soft">{dict.auth.emailLabel}</dt>
-                <dd className="font-medium text-ink" dir="ltr">
+                <dd className="min-w-0 truncate font-semibold text-ink" dir="ltr">
                   {profil.email ?? dict.common.none}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-4">
+              <div className="flex items-center justify-between gap-4 py-3">
                 <dt className="text-soft">{dict.auth.phoneLabel}</dt>
-                <dd className="tnum font-medium text-ink" dir="ltr">
+                <dd className="tnum font-semibold text-ink" dir="ltr">
                   {formatTelephone(profil.telephone)}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between gap-4">
+              <div className="flex items-center justify-between gap-4 py-3">
                 <dt className="text-soft">{dict.membres.compte}</dt>
                 <dd>
                   <Badge variant={compteVariant[profil.statut_compte]}>
@@ -103,15 +104,15 @@ export default async function ProfilPage({
 
           <Card>
             <SectionHeader title={pr.mesRoles} />
-            <ul className="mt-4 space-y-2.5">
+            <ul className="mt-4 divide-y divide-hairline rounded-[18px] bg-surface px-4">
               {(profil.roles ?? [])
                 .filter((r) => r.actif)
                 .map((r, i) => (
-                  <li key={i} className="flex items-center justify-between gap-3 text-sm">
-                    <span className="truncate text-body">
+                  <li key={i} className="flex items-center justify-between gap-3 py-3 text-[14px]">
+                    <span className="truncate font-semibold text-ink">
                       {coproParId.get(r.copropriete_id) ?? r.copropriete_id.slice(0, 8)}
                     </span>
-                    <Badge variant="outline">{dict.roles[r.role]}</Badge>
+                    <Badge variant="neutral">{dict.roles[r.role]}</Badge>
                   </li>
                 ))}
             </ul>
@@ -120,22 +121,23 @@ export default async function ProfilPage({
           {/* J2 — CNDP */}
           <Card>
             <div className="flex items-center gap-3">
-              <IconCircle tone="sage" size={40}>
-                <CShield width={20} height={20} />
+              <IconCircle tone="sage" size={44}>
+                <CShield width={22} height={22} />
               </IconCircle>
-              <h2 className="text-[15px] font-semibold text-ink">{pr.donneesTitre}</h2>
+              <h2 className="text-[19px] font-bold tracking-tight text-ink">{pr.donneesTitre}</h2>
             </div>
-            <p className="mt-2 text-[13px] leading-relaxed text-body">{pr.donneesCorps}</p>
-            <p className="mt-2 text-[12px] leading-relaxed text-faint">{pr.donneesConservation}</p>
+            <p className="mt-3 text-[14px] leading-relaxed text-body">{pr.donneesCorps}</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-soft">{pr.donneesConservation}</p>
+            {/* Téléchargement direct (route API) : pill secondaire Wise, pas un lien Next. */}
             <a
               href="/api/export-cndp"
               download
-              className="mt-4 inline-flex h-10 items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-sm font-medium text-ink-strong transition-colors hover:bg-hover"
+              className="su-btn mt-5 inline-flex h-10 items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[14px] font-semibold text-link transition-colors hover:bg-action-wash"
             >
               <IconDownload width={16} height={16} />
               {pr.exporter}
             </a>
-            <p className="mt-2 text-[12px] text-faint">{pr.exportFormat}</p>
+            <p className="mt-2 text-[13px] text-soft">{pr.exportFormat}</p>
           </Card>
         </div>
       </div>

@@ -9,6 +9,7 @@ import { IDLE, fieldError } from "../../../../../lib/forms";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { LcdReglement, RegimeLcd } from "../../../../../lib/api/types";
 import { mettreAJourReglement } from "../actions";
+import { IconCheck } from "../../../../../components/ui/icons";
 
 const REGIMES: RegimeLcd[] = ["NON_DEFINI", "AUTORISEE", "ENCADREE", "INTERDITE"];
 
@@ -36,7 +37,7 @@ export function ReglementForm({
 
       <Card>
         <SectionHeader title={l.choisirRegime} subtitle={l.regimeAide} />
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-5 grid gap-2.5 sm:grid-cols-2">
           {REGIMES.map((r) => {
             const actif = regime === r;
             const danger = r === "INTERDITE";
@@ -46,23 +47,29 @@ export function ReglementForm({
                 type="button"
                 onClick={() => setRegime(r)}
                 aria-pressed={actif}
-                className={`min-h-11 rounded-field border px-3 py-3 text-start transition-colors ${
+                className={`su-btn flex min-h-11 items-start gap-3 rounded-[18px] border-[1.5px] px-4 py-3.5 text-start transition-colors ${
                   actif
                     ? danger
                       ? "border-danger bg-danger-tint"
-                      : "border-action bg-action-wash"
-                    : "border-hairline hover:border-hairline-strong hover:bg-hover"
+                      : "border-cta bg-cta"
+                    : "border-transparent bg-surface hover:border-hairline-strong"
                 }`}
               >
                 <span
-                  className={`block text-[13px] font-semibold ${
-                    actif ? (danger ? "text-danger" : "text-action") : "text-ink-strong"
+                  aria-hidden
+                  className={`mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
+                    actif ? (danger ? "border-danger bg-danger text-white" : "border-ink bg-ink text-lime") : "border-hairline-strong"
                   }`}
                 >
-                  {dict.enums.regimeLcd[r]}
+                  {actif ? <IconCheck width={12} height={12} strokeWidth={3} /> : null}
                 </span>
-                <span className="mt-0.5 block text-[12px] leading-relaxed text-soft">
-                  {l.regimeDescriptions[r]}
+                <span className="min-w-0">
+                  <span className={`block text-[15px] font-bold ${actif && danger ? "text-danger" : "text-ink"}`}>
+                    {dict.enums.regimeLcd[r]}
+                  </span>
+                  <span className={`mt-0.5 block text-[13px] leading-relaxed ${actif && !danger ? "text-ink-strong" : "text-soft"}`}>
+                    {l.regimeDescriptions[r]}
+                  </span>
                 </span>
               </button>
             );
@@ -171,7 +178,7 @@ export function ReglementForm({
             </Field>
           )}
           {reglement.agResolution ? (
-            <p className="mt-2 text-[13px] text-soft">{reglement.agResolution.texte}</p>
+            <p className="mt-3 rounded-2xl bg-surface px-4 py-3 text-[13px] text-body">{reglement.agResolution.texte}</p>
           ) : null}
         </div>
       </Card>

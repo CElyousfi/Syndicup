@@ -7,6 +7,7 @@ import { choisirCopropriete, seDeconnecter } from "../../../lib/actions/session-
 import type { Copropriete, Profil } from "../../../lib/api/types";
 import { Brand } from "../../../components/brand";
 import { LocaleSwitch } from "../../../components/locale-switch";
+import { Button } from "../../../components/ui/button";
 import { IconChevronEnd } from "../../../components/ui/icons";
 import { IconCircle, CBuilding } from "../../../components/ui/color-icons";
 
@@ -44,16 +45,16 @@ export default async function ChoisirCoproPage({
   // faire (cookies modifiables uniquement dans une Server Action / Route Handler).
 
   return (
-    <div className="flex min-h-screen flex-col bg-ground">
-      <header className="flex h-20 items-center justify-between px-6 sm:px-10">
-        <Brand />
+    <div className="flex min-h-screen flex-col bg-surface">
+      <header className="flex h-[72px] items-center justify-between px-4 sm:h-20 sm:px-10">
+        <Brand size={36} />
         <Suspense>
           <LocaleSwitch locale={locale} />
         </Suspense>
       </header>
-      <main className="flex flex-1 items-start justify-center px-6 py-10">
+      <main className="flex flex-1 items-start justify-center px-4 py-8 sm:py-10">
         <div className="w-full max-w-lg animate-in-up">
-          <div className="relative mb-8 hidden h-40 overflow-hidden rounded-card shadow-lift sm:block">
+          <div className="relative mb-8 hidden h-44 overflow-hidden rounded-[28px] bg-tile sm:block">
             <Image
               src="/images/residence-courtyard.jpg"
               alt=""
@@ -62,32 +63,33 @@ export default async function ChoisirCoproPage({
               className="object-cover"
             />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink">
+          <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">
             {dict.auth.chooseCoproTitle}
           </h1>
-          <p className="mt-1 text-sm text-soft">{dict.auth.chooseCoproSubtitle}</p>
+          <p className="mt-2 text-[15px] text-soft">{dict.auth.chooseCoproSubtitle}</p>
 
-          <div className="mt-7 space-y-3">
+          {/* Liste Wise à plat : pastille, titre gras, sous-titre gris, chevron vert. */}
+          <div className="-mx-3 mt-6 space-y-1">
             {accessibles.map((c) => (
               <form key={c.id} action={choisirCopropriete}>
                 <input type="hidden" name="locale" value={locale} />
                 <input type="hidden" name="copropriete_id" value={c.id} />
                 <button
                   type="submit"
-                  className="card group flex w-full items-center gap-4 p-5 text-start transition-all hover:-translate-y-0.5 hover:border-action/40 hover:shadow-float"
+                  className="group flex w-full items-center gap-4 rounded-[20px] px-3 py-3 text-start transition-colors hover:bg-wash"
                 >
                   <IconCircle tone="sage" size={48}>
                     <CBuilding width={24} height={24} />
                   </IconCircle>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-[15px] font-semibold text-ink">
+                    <span className="block truncate text-[16px] font-bold text-ink">
                       {c.nom}
                     </span>
-                    <span className="mt-0.5 block text-[13px] text-soft">
+                    <span className="mt-0.5 block text-[14px] text-soft">
                       {c.ville} · {(rolesParCopro.get(c.id) ?? []).join(", ")}
                     </span>
                   </span>
-                  <IconChevronEnd className="shrink-0 text-faint transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
+                  <IconChevronEnd className="shrink-0 text-link transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
                 </button>
               </form>
             ))}
@@ -95,9 +97,9 @@ export default async function ChoisirCoproPage({
 
           <form action={seDeconnecter} className="mt-8 text-center">
             <input type="hidden" name="locale" value={locale} />
-            <button type="submit" className="text-[13px] font-medium text-soft hover:text-ink-strong">
+            <Button type="submit" variant="ghost">
               {dict.common.logout}
-            </button>
+            </Button>
           </form>
         </div>
       </main>

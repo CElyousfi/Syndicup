@@ -82,7 +82,7 @@ export function FileViewerButton({
         <div className="mt-4 flex flex-wrap justify-end gap-2">
           <a
             href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
-            className="inline-flex h-9 items-center gap-2 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover"
+            className="inline-flex h-9 items-center gap-2 rounded-full border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash"
           >
             <IconDownload width={15} height={15} />
             {labels.download}
@@ -180,7 +180,7 @@ function DocumentPreview({
 
   if (apercu.etat === "chargement") {
     return (
-      <div className="flex h-[50vh] items-center justify-center rounded-field bg-ground">
+      <div className="flex h-[50vh] items-center justify-center rounded-2xl bg-tile">
         <Spinner className="size-6 text-soft" />
       </div>
     );
@@ -188,7 +188,7 @@ function DocumentPreview({
 
   if (apercu.etat === "image") {
     return (
-      <div className="max-h-[68vh] overflow-y-auto rounded-field bg-ground p-3 scroll-thin">
+      <div className="max-h-[68vh] overflow-y-auto rounded-2xl bg-tile p-3 scroll-thin">
         {/* Aperçu d'un fichier utilisateur via URL d'objet locale — next/image inapplicable. */}
         <img src={apercu.url} alt={nom} className="mx-auto h-auto max-w-full rounded-[10px]" />
       </div>
@@ -197,11 +197,11 @@ function DocumentPreview({
 
   if (apercu.etat === "autre") {
     return (
-      <div className="flex h-[40vh] flex-col items-center justify-center gap-3 rounded-field bg-ground px-6 text-center">
+      <div className="flex h-[40vh] flex-col items-center justify-center gap-3 rounded-2xl bg-tile px-6 text-center">
         <p className="text-sm text-soft">{nom}</p>
         <a
           href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
-          className="inline-flex h-10 items-center gap-2 rounded-btn bg-ink px-5 text-sm font-medium text-white"
+          className="inline-flex h-11 items-center gap-2 rounded-full bg-cta px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-lime-hover"
         >
           <IconDownload width={15} height={15} />
           {downloadLabel}
@@ -213,7 +213,7 @@ function DocumentPreview({
   return (
     <div
       ref={conteneurRef}
-      className="max-h-[68vh] overflow-y-auto rounded-field bg-ground p-3 scroll-thin"
+      className="max-h-[68vh] overflow-y-auto rounded-2xl bg-tile p-3 scroll-thin"
     />
   );
 }

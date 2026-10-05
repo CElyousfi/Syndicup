@@ -36,14 +36,14 @@ export function AcceptForm({
       : null;
 
   return (
-    <form action={action} className="mt-6 space-y-4">
+    <form action={action} className="space-y-5">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="code" value={code} />
       <input type="hidden" name="langue_preferee" value={langue} />
 
       <div>
-        <p className="text-[13px] font-semibold text-ink">{dict.auth.inviteVosInfos}</p>
-        <p className="mt-0.5 text-[13px] text-soft">{dict.auth.inviteVosInfosAide}</p>
+        <h2 className="text-[19px] font-bold tracking-tight text-ink">{dict.auth.inviteVosInfos}</h2>
+        <p className="mt-1 text-[14px] text-soft">{dict.auth.inviteVosInfosAide}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={dict.profil.prenom} htmlFor="inv_prenom" required error={fieldError(state, "prenom")}>
@@ -54,7 +54,7 @@ export function AcceptForm({
         </Field>
       </div>
       <div>
-        <p className="mb-1.5 text-[13px] font-medium text-ink-strong">{dict.profil.langue}</p>
+        <p className="mb-1.5 text-[14px] font-semibold text-ink">{dict.profil.langue}</p>
         <Segmented
           value={langue}
           onChange={setLangue}
@@ -69,7 +69,7 @@ export function AcceptForm({
         <Banner variant={state.status === "error" && state.code === "CONFLICT" ? "info" : "danger"}>
           {messageErreur}
           {state.status === "error" && state.code === "CONFLICT" ? (
-            <Link href={`/${locale}/connexion`} className="mt-1 block font-medium text-action hover:underline">
+            <Link href={`/${locale}/connexion`} className="link mt-1 block w-fit">
               {dict.auth.signIn}
             </Link>
           ) : null}

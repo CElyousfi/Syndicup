@@ -7,8 +7,9 @@ import { formatDate, formatMAD, formatPeriode } from "../../../../../../lib/form
 import { ratio, sommeCentimes, versChaine, versCentimes } from "../../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { Badge } from "../../../../../../components/ui/badge";
-import { StatCard } from "../../../../../../components/ui/stat-card";
-import { CCoins, CMoneyBag, CWallet } from "../../../../../../components/ui/color-icons";
+import { Card, SectionHeader } from "../../../../../../components/ui/card";
+import { ProgressBar } from "../../../../../../components/ui/progress";
+import { CCoins, IconCircle } from "../../../../../../components/ui/color-icons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../../components/ui/table";
 import { appelVariant, escaladeVariant, ligneAppelVariant } from "../../../../../../lib/status";
 import { PaiementModal } from "../../../../../../components/finances/paiement-modal";
@@ -44,13 +45,7 @@ export default async function AppelDetailPage({
       <PageHeader
         back={<BackLink href={`/${ctx.locale}/finances/appels-de-fonds`} label={f.appels} />}
         title={formatPeriode(appel.periode, ctx.locale)}
-        badge={
-          <Badge variant={appelVariant[appel.statut]}>{dict.enums.statutAppel[appel.statut]}</Badge>
-        }
-        subtitle={`${dict.enums.typeAppel[appel.type]} · ${f.echeance} ${formatDate(
-          appel.dateEcheance,
-          ctx.locale
-        )}`}
+        subtitle={dict.enums.typeAppel[appel.type]}
         actions={
           gestion && lignesImpayees.length > 0 ? (
             <PaiementModal
@@ -68,35 +63,50 @@ export default async function AppelDetailPage({
         }
       />
 
-      {/* Résumé */}
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard
-          icon={<CWallet />}
-          tone="sage"
-          label={f.montantTotal}
-          value={formatMAD(appel.montantTotal, ctx.locale)}
-        />
-        <StatCard
-          icon={<CMoneyBag />}
-          tone="sage"
-          label={f.tauxPaiement}
-          value={formatMAD(versChaine(paye), ctx.locale)}
-          trend={`${Math.round(r * 100)}%`}
-          trendTone={r >= 1 ? "ok" : r >= 0.6 ? "warn" : "danger"}
-        />
-        <StatCard
-          icon={<CCoins />}
-          tone="sand"
-          label={f.restant}
-          value={formatMAD(versChaine(du - paye), ctx.locale)}
-          className="sm:col-span-2 xl:col-span-1"
-        />
-      </div>
+      {/* Résumé : montant, statut, échéance, encaissement — avant le détail par lot. */}
+      <Card className="mb-10 p-6 sm:p-8">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 items-start gap-4">
+            <IconCircle tone="sand" size={56}>
+              <CCoins width={28} height={28} />
+            </IconCircle>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-soft">{f.montantTotal}</p>
+              <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[44px]">
+                {formatMAD(appel.montantTotal, ctx.locale)}
+              </p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Badge variant={appelVariant[appel.statut]}>{dict.enums.statutAppel[appel.statut]}</Badge>
+              </div>
+            </div>
+          </div>
+          <dl className="w-full shrink-0 divide-y divide-wash-strong rounded-[20px] bg-surface px-5 py-1.5 text-sm lg:w-80">
+            <div className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="text-soft">{f.echeance}</dt>
+              <dd className="font-semibold text-ink">{formatDate(appel.dateEcheance, ctx.locale)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="text-soft">{f.paye}</dt>
+              <dd className="tnum font-semibold text-ok">{formatMAD(versChaine(paye), ctx.locale)}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-4 py-3">
+              <dt className="text-soft">{f.restant}</dt>
+              <dd className={`tnum font-semibold ${du - paye > 0n ? "text-danger" : "text-ink"}`}>
+                {formatMAD(versChaine(du - paye), ctx.locale)}
+              </dd>
+            </div>
+          </dl>
+        </div>
+        <div className="mt-7">
+          <div className="mb-2 flex items-baseline justify-between gap-3 text-[13px]">
+            <span className="font-semibold text-ink">{f.tauxPaiement}</span>
+            <span className="tnum font-semibold text-ink">{Math.round(r * 100)}%</span>
+          </div>
+          <ProgressBar ratio={r} tone={r >= 1 ? "ok" : r >= 0.6 ? "action" : "warn"} className="h-2.5" />
+        </div>
+      </Card>
 
-      <div className="mb-3">
-        <h2 className="text-[15px] font-semibold text-ink">{f.lignes}</h2>
-        <p className="text-[13px] text-soft">{f.lignesSubtitle}</p>
-      </div>
+      <SectionHeader title={f.lignes} subtitle={f.lignesSubtitle} className="mb-4" />
 
       <TableCard>
         <Table>
@@ -118,7 +128,7 @@ export default async function AppelDetailPage({
                     {lot ? (
                       <Link
                         href={`/${ctx.locale}/lots/${lot.id}?onglet=finances`}
-                        className="font-semibold text-ink hover:text-action"
+                        className="font-semibold text-ink hover:text-link"
                       >
                         {lot.numero}
                       </Link>

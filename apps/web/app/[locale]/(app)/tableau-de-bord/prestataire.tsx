@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { apiFetch } from "../../../../lib/api/client";
 import type { AppContext } from "../../../../lib/app-context";
 import type { Incident } from "../../../../lib/api/types";
@@ -7,11 +6,11 @@ import { formatDateHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
-import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { IconCircle, CAlert, CWrench } from "../../../../components/ui/color-icons";
+import { CAlert, CWrench } from "../../../../components/ui/color-icons";
+import { FlatList, Row, RowIcon, Section } from "./parts";
 import { incidentVariant, urgenceVariant } from "../../../../lib/status";
 
 /** Vue minimale : le prestataire ne voit QUE ses tickets assignés (Doc A §12.3). */
@@ -24,15 +23,15 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
 
   return (
     <div className="page-root">
-      <PageHeader
-        title={fill(dict.dash.greeting, { prenom })}
-        reveal
-        subtitle={dict.dash.mesTickets}
-      />
+      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6 shadow-none!" />
+      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={dict.dash.mesTickets} />
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6" />
       {tickets.length === 0 ? (
-        <EmptyState title={dict.incidents.aucunIncident} hint={dict.incidents.aucunIncidentAide} />
+        <EmptyState
+          title={dict.incidents.aucunIncident}
+          hint={dict.incidents.aucunIncidentAide}
+          illustration="empty-incidents"
+        />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
@@ -50,40 +49,32 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
             />
           </div>
 
-          <Card className="mt-4" padded={false}>
-            <div className="p-6 pb-3">
-              <SectionHeader title={dict.dash.mesTickets} />
-            </div>
-            <ul className="divide-y divide-hairline">
+          {/* Tickets — liste à plat */}
+          <Section className="mt-10" title={dict.dash.mesTickets}>
+            <FlatList>
               {tickets.map((i) => (
-                <li key={i.id}>
-                  <Link
-                    href={`/${locale}/incidents/${i.id}`}
-                    className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-hover"
-                  >
-                    <IconCircle tone="tosca" size={40}>
-                      <CWrench width={20} height={20} />
-                    </IconCircle>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-ink">{i.sousCategorie}</p>
-                      <p className="mt-0.5 text-[12px] text-soft">
-                        {dict.enums.categorieIncident[i.categorie]} ·{" "}
-                        {formatDateHeure(i.creeLe, locale)}
-                      </p>
-                    </div>
-                    <span className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
-                      <Badge variant={urgenceVariant[i.urgence]}>
+                <Row
+                  key={i.id}
+                  href={`/${locale}/incidents/${i.id}`}
+                  icon={
+                    <RowIcon tone="tosca">
+                      <CWrench />
+                    </RowIcon>
+                  }
+                  title={i.sousCategorie}
+                  subtitle={`${dict.enums.categorieIncident[i.categorie]} · ${formatDateHeure(i.creeLe, locale)}`}
+                  trailing={
+                    <span className="flex flex-wrap items-center justify-end gap-1.5">
+                      <Badge variant={urgenceVariant[i.urgence]} className="hidden sm:inline-flex">
                         {dict.enums.urgence[i.urgence]}
                       </Badge>
-                      <Badge variant={incidentVariant[i.statut]}>
-                        {dict.enums.statutIncident[i.statut]}
-                      </Badge>
+                      <Badge variant={incidentVariant[i.statut]}>{dict.enums.statutIncident[i.statut]}</Badge>
                     </span>
-                  </Link>
-                </li>
+                  }
+                />
               ))}
-            </ul>
-          </Card>
+            </FlatList>
+          </Section>
         </>
       )}
     </div>

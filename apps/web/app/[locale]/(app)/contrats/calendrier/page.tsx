@@ -49,28 +49,33 @@ export default async function CalendrierPage({ params, searchParams }: { params:
   const aujourdhui = iso(now);
   return (
     <div className="page-root">
-      <PageHeader back={<BackLink href={p("/contrats")} label={c.titre} />} title={c.calendrier} subtitle={c.calendrierSubtitle} actions={<div className="flex items-center gap-2"><ButtonLink href={p(`/contrats/calendrier?mois=${decal(-1)}`)} variant="secondary" size="sm">{c.moisPrecedent}</ButtonLink><span className="tnum px-2 text-sm font-semibold text-ink">{formatPeriode(mois, ctx.locale)}</span><ButtonLink href={p(`/contrats/calendrier?mois=${decal(1)}`)} variant="secondary" size="sm">{c.moisSuivant}</ButtonLink></div>} />
+      <PageHeader back={<BackLink href={p("/contrats")} label={c.titre} />} title={c.calendrier} subtitle={c.calendrierSubtitle} actions={<div className="flex items-center gap-2"><ButtonLink href={p(`/contrats/calendrier?mois=${decal(-1)}`)} variant="secondary" size="sm">{c.moisPrecedent}</ButtonLink><span className="tnum px-2 text-[15px] font-bold text-ink">{formatPeriode(mois, ctx.locale)}</span><ButtonLink href={p(`/contrats/calendrier?mois=${decal(1)}`)} variant="secondary" size="sm">{c.moisSuivant}</ButtonLink></div>} />
       {!res.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}
-      <Card padded={false}>
-        <div className="grid grid-cols-7 border-b border-hairline text-center text-[11px] font-semibold uppercase tracking-wide text-faint">{jours.map((j) => <div key={j} className="py-2">{j}</div>)}</div>
-        <div className="grid grid-cols-7">
+      {/* Grille du mois : défilement interne sur mobile (jamais la page). */}
+      <Card padded={false} className="overflow-hidden">
+        <div className="overflow-x-auto scroll-thin">
+        <div className="min-w-[680px] p-2">
+        <div className="grid grid-cols-7 text-center text-[12px] font-semibold text-soft">{jours.map((j) => <div key={j} className="py-2.5">{j}</div>)}</div>
+        <div className="grid grid-cols-7 gap-1">
           {cases.map((d, i) => {
             const k = d ? iso(d) : "";
             const ecs = d ? parJour.get(k) ?? [] : [];
             return (
-              <div key={i} className={`min-h-[92px] border-b border-e border-hairline p-1.5 ${d ? "" : "bg-ground/40"} ${k === aujourdhui ? "bg-action/5" : ""}`}>
-                {d ? <span className={`tnum text-[12px] ${k === aujourdhui ? "font-bold text-action" : "text-soft"}`}>{d.getUTCDate()}</span> : null}
+              <div key={i} className={`min-h-[96px] rounded-2xl p-1.5 ${d ? "bg-wash" : ""} ${k === aujourdhui ? "shadow-[inset_0_0_0_1.5px_var(--color-link)]" : ""}`}>
+                {d ? <span className={`tnum inline-flex size-6 items-center justify-center rounded-full text-[12px] ${k === aujourdhui ? "bg-cta font-bold text-ink" : "font-medium text-soft"}`}>{d.getUTCDate()}</span> : null}
                 <div className="mt-1 space-y-1">
                   {ecs.map((ec) => (
-                    <Link key={ec.id} href={p(`/contrats/${ec.contrat?.id ?? ec.contratId}`)} className="block rounded-md border border-hairline bg-surface px-1.5 py-1 text-[11px] leading-tight hover:bg-hover" title={`${ec.contrat?.libelle ?? ""} · ${e.typeEcheance[ec.type]}`}>
-                      <span className="block truncate font-medium text-ink">{ec.contrat?.libelle}</span>
-                      <span className="flex items-center justify-between gap-1 text-faint"><span className="truncate">{e.typeEcheance[ec.type]}</span>{ec.montant ? <span className="tnum">{mad(ec.montant)}</span> : null}</span>
+                    <Link key={ec.id} href={p(`/contrats/${ec.contrat?.id ?? ec.contratId}`)} className="block rounded-lg bg-surface px-1.5 py-1 text-[11px] leading-tight transition-colors hover:bg-hover" title={`${ec.contrat?.libelle ?? ""} · ${e.typeEcheance[ec.type]}`}>
+                      <span className="block truncate font-semibold text-ink">{ec.contrat?.libelle}</span>
+                      <span className="flex items-center justify-between gap-1 text-soft"><span className="truncate">{e.typeEcheance[ec.type]}</span>{ec.montant ? <span className="tnum shrink-0 whitespace-nowrap">{mad(ec.montant)}</span> : null}</span>
                     </Link>
                   ))}
                 </div>
               </div>
             );
           })}
+        </div>
+        </div>
         </div>
       </Card>
       {res.ok ? (

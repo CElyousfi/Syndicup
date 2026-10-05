@@ -11,7 +11,7 @@ import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
-import { ButtonLink } from "../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { Pagination } from "../../../../components/ui/pagination";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
@@ -172,21 +172,19 @@ export default async function LotsPage({
               </option>
             ))}
           </Select>
-          <button
-            type="submit"
-            className="h-10 rounded-btn border border-hairline-strong bg-surface px-4 text-[13px] font-medium text-ink-strong transition-colors hover:bg-hover"
-          >
+          <Button type="submit" variant="secondary">
             {dict.common.filter}
-          </button>
+          </Button>
         </form>
       ) : null}
 
       {lots.length === 0 ? (
         <EmptyState
           title={dict.lots.aucunLot}
-          hint={gestion ? dict.lots.aucunLotAide : undefined}
+          hint={gestion && tous.length === 0 ? dict.lots.aucunLotAide : undefined}
+          illustration={tous.length > 0 ? "empty-search" : "empty-lots"}
           action={
-            gestion ? (
+            gestion && tous.length === 0 ? (
               <ButtonLink href={p("/lots/nouveau")} size="sm">
                 {dict.lots.nouveau}
               </ButtonLink>
@@ -219,20 +217,20 @@ export default async function LotsPage({
                       <TD>
                         <Link
                           href={p(`/lots/${l.id}`)}
-                          className="inline-flex items-center gap-2.5 font-semibold text-ink hover:text-action"
+                          className="inline-flex items-center gap-3 text-[15px] font-bold text-ink hover:text-link"
                         >
-                          <IconCircle tone="sage" size={32}>
+                          <IconCircle tone="sage" size={40}>
                             {LOTS_HABITAT.includes(l.typeLot) ? (
-                              <CHome width={17} height={17} />
+                              <CHome width={20} height={20} />
                             ) : (
-                              <CBuilding width={17} height={17} />
+                              <CBuilding width={20} height={20} />
                             )}
                           </IconCircle>
                           <span className="max-w-28 truncate">{l.numero}</span>
                         </Link>
                       </TD>
                       <TD>
-                        <Badge variant="outline">{dict.enums.typeLot[l.typeLot]}</Badge>
+                        <span className="text-[14px] text-body">{dict.enums.typeLot[l.typeLot]}</span>
                       </TD>
                       <TD align="center" className="tnum text-body">
                         {l.etage === null ? dict.common.none : l.etage === 0 ? dict.lots.rdc : l.etage}
@@ -243,7 +241,7 @@ export default async function LotsPage({
                       <TD className="text-body">
                         {noms ? (
                           <span className="flex items-center gap-2">
-                            <Avatar nom={noms.split(" · ")[0] ?? noms} size={26} />
+                            <Avatar nom={noms.split(" · ")[0] ?? noms} size={30} />
                             <span className="max-w-44 truncate">{noms}</span>
                             {proprios.length > 1 ? (
                               <span className="shrink-0 text-[11px] text-faint">
@@ -267,7 +265,7 @@ export default async function LotsPage({
                           ) : solde <= 0n ? (
                             <Badge variant="ok">{dict.enums.statutLigne.PAYE}</Badge>
                           ) : (
-                            <span className="tnum font-semibold text-danger">
+                            <span className="tnum font-bold text-danger">
                               {formatMAD(versChaine(solde), ctx.locale)}
                             </span>
                           )}

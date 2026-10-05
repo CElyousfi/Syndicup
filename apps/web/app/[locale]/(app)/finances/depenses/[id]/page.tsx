@@ -12,6 +12,7 @@ import { Badge } from "../../../../../../components/ui/badge";
 import { Banner } from "../../../../../../components/ui/banner";
 import { ButtonLink } from "../../../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
+import { CMoneyBag, IconCircle } from "../../../../../../components/ui/color-icons";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { depenseVariant, factureVariant } from "../../../../../../lib/status";
 import { SoumettreModal, DeciderModals, PayerModal, AnnulerModal, AjouterFactureModal, StatutFactureForm } from "./depense-actions";
@@ -88,15 +89,23 @@ export default async function DepenseDetailPage({
       {x.statut === "REJETEE" && x.motifRejet ? <Banner variant="danger" className="mb-5" title={d.motifRejet}>{x.motifRejet}</Banner> : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Card>
-            <SectionHeader title={d.montantTtc} />
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div><p className="text-[12px] text-faint">{d.montantHt}</p><p className="tnum mt-0.5 text-sm text-ink">{x.montantHt ? formatMAD(x.montantHt, ctx.locale) : "—"}</p></div>
-              <div><p className="text-[12px] text-faint">{d.tva}</p><p className="tnum mt-0.5 text-sm text-ink">{x.tva ? formatMAD(x.tva, ctx.locale) : "—"}</p></div>
-              <div><p className="text-[12px] text-faint">{d.montantTtc}</p><p className="tnum mt-0.5 text-[22px] font-semibold tracking-tight text-ink">{formatMAD(x.montantTtc, ctx.locale)}</p></div>
+        <div className="min-w-0 space-y-4 lg:col-span-2">
+          {/* Résumé : le TTC en grand, puis HT / TVA et la description. */}
+          <Card className="p-6 sm:p-8">
+            <div className="flex items-center gap-4">
+              <IconCircle tone={x.statut === "PAYEE" ? "ok" : x.statut === "REJETEE" || x.statut === "ANNULEE" ? "danger" : "sand"} size={56}>
+                <CMoneyBag width={28} height={28} />
+              </IconCircle>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-soft">{d.montantTtc}</p>
+                <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">{formatMAD(x.montantTtc, ctx.locale)}</p>
+              </div>
             </div>
-            {x.description ? <p className="mt-4 whitespace-pre-wrap text-sm leading-relaxed text-body">{x.description}</p> : null}
+            <dl className="mt-6 grid gap-2 sm:grid-cols-2">
+              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.montantHt}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.montantHt ? formatMAD(x.montantHt, ctx.locale) : "—"}</dd></div>
+              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.tva}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.tva ? formatMAD(x.tva, ctx.locale) : "—"}</dd></div>
+            </dl>
+            {x.description ? <p className="mt-5 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{x.description}</p> : null}
           </Card>
 
           <Card>
@@ -104,14 +113,14 @@ export default async function DepenseDetailPage({
             {x.factures.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{d.aucuneFacture}</p>
             ) : (
-              <ul className="mt-4 divide-y divide-hairline">
+              <ul className="mt-4 divide-y divide-wash-strong">
                 {x.factures.map((f, n) => {
                   const jours = joursAvant(f.dateEcheance);
                   return (
                     <li key={f.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-semibold text-ink" dir="ltr">{f.numero ?? d.facture}</span>
+                          <span className="text-[15px] font-bold text-ink" dir="ltr">{f.numero ?? d.facture}</span>
                           <Badge variant={factureVariant[f.statut]}>{e.statutFacture[f.statut]}</Badge>
                         </div>
                         <p className="tnum mt-1 text-[13px] text-soft">
@@ -128,7 +137,7 @@ export default async function DepenseDetailPage({
                           {syndic ? <StatutFactureForm dict={dict} locale={ctx.locale} depenseId={id} factureId={f.id} statut={f.statut} /> : null}
                         </div>
                       </div>
-                      <span className="tnum shrink-0 text-base font-semibold text-ink">{formatMAD(f.montantTtc, ctx.locale)}</span>
+                      <span className="tnum shrink-0 text-[17px] font-bold text-ink">{formatMAD(f.montantTtc, ctx.locale)}</span>
                     </li>
                   );
                 })}
@@ -148,12 +157,12 @@ export default async function DepenseDetailPage({
                   const ko = log.type === "REJETEE" || log.type === "ANNULEE" || log.type === "FACTURE_CONTESTEE";
                   const details = log.detailsJson ?? {};
                   return (
-                    <li key={log.id} className={`relative ps-7 ${dernier ? "pb-0" : "border-s border-hairline pb-6"}`}>
-                      <span className={`absolute -start-[9px] top-0 flex size-[18px] items-center justify-center rounded-full ${ok ? "bg-ok-tint" : ko ? "bg-danger-tint" : "bg-tosca-tint"}`}>
+                    <li key={log.id} className={`relative ps-7 ${dernier ? "pb-0" : "border-s-2 border-wash-strong pb-6"}`}>
+                      <span className={`absolute -start-[10px] top-0 flex size-[18px] items-center justify-center rounded-full ${ok ? "bg-ok-tint" : ko ? "bg-danger-tint" : "bg-action-tint"}`}>
                         <span className={`size-2 rounded-full ${ok ? "bg-ok" : ko ? "bg-danger" : "bg-action"}`} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-ink">
+                        <p className="text-[15px] font-semibold text-ink">
                           {e.typeLog[log.type]}
                           {typeof details.niveau === "string" ? <span className="ms-2 text-[12px] font-normal text-soft">{e.niveauApprobation[details.niveau as "SYNDIC" | "CONSEIL"] ?? String(details.niveau)}</span> : null}
                         </p>
@@ -165,7 +174,7 @@ export default async function DepenseDetailPage({
                           </p>
                         ) : null}
                         {typeof details.numero === "string" ? <p className="mt-1 text-sm text-body" dir="ltr">{details.numero}</p> : null}
-                        <p className="mt-1 text-[12px] text-faint">
+                        <p className="mt-1 text-[13px] text-soft">
                           {log.acteur ? `${nom(log.acteur)} · ` : ""}
                           {formatDateHeure(log.horodatage, ctx.locale)}
                         </p>
@@ -178,19 +187,19 @@ export default async function DepenseDetailPage({
           </Card>
         </div>
 
-        <div className="space-y-4">
+        <div className="min-w-0 space-y-4">
           <Card>
             <SectionHeader title={d.paiement} />
             {x.statut === "PAYEE" ? (
-              <dl className="mt-3 space-y-2 text-sm">
-                <div className="flex justify-between gap-3"><dt className="text-soft">{d.payeLe}</dt><dd className="tnum text-ink">{x.payeLe ? formatDate(x.payeLe, ctx.locale) : "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-soft">{d.methode}</dt><dd className="text-ink">{x.methodePaiement ? e.methodePaiementDepense[x.methodePaiement] : "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-soft">{d.reference}</dt><dd className="tnum text-ink" dir="ltr">{x.referencePaiement ?? "—"}</dd></div>
-                <div className="flex justify-between gap-3"><dt className="text-soft">{d.source}</dt><dd className="text-ink">{e.sourceFinancement[x.source]}</dd></div>
+              <dl className="mt-3 divide-y divide-wash-strong text-sm">
+                <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.payeLe}</dt><dd className="tnum font-semibold text-ink">{x.payeLe ? formatDate(x.payeLe, ctx.locale) : "—"}</dd></div>
+                <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.methode}</dt><dd className="font-semibold text-ink">{x.methodePaiement ? e.methodePaiementDepense[x.methodePaiement] : "—"}</dd></div>
+                <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.reference}</dt><dd className="tnum font-semibold text-ink" dir="ltr">{x.referencePaiement ?? "—"}</dd></div>
+                <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.source}</dt><dd className="font-semibold text-ink">{e.sourceFinancement[x.source]}</dd></div>
                 {x.mouvementsFondsReserve.length > 0 ? (
-                  <div className="flex justify-between gap-3"><dt className="text-soft">{d.mouvementReserve}</dt><dd className="tnum text-danger">{formatMAD(x.mouvementsFondsReserve[0]!.montant, ctx.locale)}</dd></div>
+                  <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.mouvementReserve}</dt><dd className="tnum font-semibold text-danger">{formatMAD(x.mouvementsFondsReserve[0]!.montant, ctx.locale)}</dd></div>
                 ) : null}
-                <div className="pt-2">
+                <div className="pt-3">
                   {x.justificatifPaiementDocument ? (
                     <FileViewerButton src={`/api/depense-document?id=${id}&type=justificatif`} nom={x.justificatifPaiementDocument.nom} labels={viewerLabels} label={d.voirPreuve} variant="primary" size="md" />
                   ) : (
@@ -207,7 +216,7 @@ export default async function DepenseDetailPage({
             <SectionHeader title={d.prestataire} />
             {x.prestataire ? (
               <p className="mt-3 text-sm">
-                <Link href={p(`/prestataires/${x.prestataire.id}`)} className="font-semibold text-ink hover:text-action">{x.prestataire.nom}</Link>
+                <Link href={p(`/prestataires/${x.prestataire.id}`)} className="text-[15px] font-bold text-ink hover:text-link">{x.prestataire.nom}</Link>
                 <span className="block text-[13px] text-soft">{x.prestataire.specialite}</span>
               </p>
             ) : (
@@ -215,25 +224,25 @@ export default async function DepenseDetailPage({
             )}
             {x.incident ? (
               <p className="mt-3 text-sm">
-                <span className="text-[12px] text-faint">{d.incidentLie}</span>
-                <Link href={p(`/incidents/${x.incident.id}`)} className="block font-medium text-action hover:underline">{x.incident.sousCategorie}</Link>
+                <span className="text-[13px] text-soft">{d.incidentLie}</span>
+                <Link href={p(`/incidents/${x.incident.id}`)} className="link block">{x.incident.sousCategorie}</Link>
               </p>
             ) : null}
             {x.resolutionAg ? (
               <p className="mt-3 text-sm">
-                <span className="text-[12px] text-faint">{d.resolutionAg}</span>
-                <Link href={p(`/ag/${x.resolutionAg.agId}`)} className="block text-action hover:underline">{x.resolutionAg.texte}</Link>
+                <span className="text-[13px] text-soft">{d.resolutionAg}</span>
+                <Link href={p(`/ag/${x.resolutionAg.agId}`)} className="link block">{x.resolutionAg.texte}</Link>
               </p>
             ) : null}
           </Card>
 
           <Card>
             <SectionHeader title={d.statut} />
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-soft">{d.creePar}</dt><dd className="text-ink">{nom(x.creePar)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{d.approuvePar}</dt><dd className="text-ink">{x.approuvePar ? nom(x.approuvePar) : "—"}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{d.approuveLe}</dt><dd className="tnum text-ink">{x.approuveLe ? formatDateHeure(x.approuveLe, ctx.locale) : "—"}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-soft">{d.niveau}</dt><dd className="text-ink">{e.niveauApprobation[x.niveau_approbation_requis]}</dd></div>
+            <dl className="mt-3 divide-y divide-wash-strong text-sm">
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.creePar}</dt><dd className="font-semibold text-ink">{nom(x.creePar)}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.approuvePar}</dt><dd className="font-semibold text-ink">{x.approuvePar ? nom(x.approuvePar) : "—"}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.approuveLe}</dt><dd className="tnum font-semibold text-ink">{x.approuveLe ? formatDateHeure(x.approuveLe, ctx.locale) : "—"}</dd></div>
+              <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.niveau}</dt><dd className="font-semibold text-ink">{e.niveauApprobation[x.niveau_approbation_requis]}</dd></div>
             </dl>
           </Card>
         </div>

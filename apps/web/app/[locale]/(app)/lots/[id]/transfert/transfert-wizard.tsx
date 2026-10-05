@@ -1,10 +1,9 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import Link from "next/link";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { Field, Input, Checkbox } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
-import { Button } from "../../../../../../components/ui/button";
+import { Button, ButtonLink } from "../../../../../../components/ui/button";
 import { Banner } from "../../../../../../components/ui/banner";
 import { IrreversibleNotice } from "../../../../../../components/ui/modal";
 import { CopyButton } from "../../../../../../components/ui/copy";
@@ -14,6 +13,7 @@ import { formatMAD } from "../../../../../../lib/format";
 import { transfererPropriete } from "../../actions";
 import { IconCheck } from "../../../../../../components/ui/icons";
 import { IconCircle } from "../../../../../../components/ui/color-icons";
+import { celebrate } from "../../../../../../lib/success";
 
 /** C5 — assistant en 3 étapes, ConfirmDialog intégré à la dernière étape (irréversible). */
 export function TransfertWizard({
@@ -48,19 +48,23 @@ export function TransfertWizard({
         : null,
     [state]
   );
+  // Transfert enregistré : moment majeur, annoncé en plein écran (le code reste affiché dessous).
+  useEffect(() => {
+    if (resultat) celebrate({ titre: t.transfertReussi, illustration: "ok-general" });
+  }, [resultat, t.transfertReussi]);
 
   if (resultat) {
     return (
-      <div className="card max-w-xl space-y-5 p-7">
+      <div className="card max-w-xl space-y-5 p-6 sm:p-7">
         <div className="flex items-center gap-3.5">
-          <IconCircle tone="ok" size={44}>
+          <IconCircle tone="ok" size={48}>
             <IconCheck className="text-ok" />
           </IconCircle>
-          <h2 className="text-lg font-semibold text-ink">{t.transfertReussi}</h2>
+          <h2 className="text-[19px] font-bold tracking-tight text-ink">{t.transfertReussi}</h2>
         </div>
-        <p className="text-sm text-body">{t.transfertCodeInvitation}</p>
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-field border border-hairline bg-ground px-4 py-3">
-          <span className="font-mono text-xl font-semibold tracking-[0.3em] text-ink" dir="ltr">
+        <p className="text-[14px] text-body">{t.transfertCodeInvitation}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-surface px-5 py-4">
+          <span className="font-mono text-[26px] font-bold tracking-[0.25em] text-ink" dir="ltr">
             {resultat.code}
           </span>
           <CopyButton
@@ -71,19 +75,14 @@ export function TransfertWizard({
         </div>
         <Banner variant="info">{t.transfertRappel}</Banner>
         <div className="flex justify-end">
-          <Link
-            href={`/${locale}/lots/${lotId}`}
-            className="inline-flex h-10 items-center rounded-btn bg-action px-4 text-sm font-medium text-white hover:bg-action-deep"
-          >
-            {t.voirFiche}
-          </Link>
+          <ButtonLink href={`/${locale}/lots/${lotId}`}>{t.voirFiche}</ButtonLink>
         </div>
       </div>
     );
   }
 
   return (
-    <form action={action} className="card max-w-xl space-y-6 p-7">
+    <form action={action} className="card max-w-xl space-y-6 p-6 sm:p-7">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="lot_id" value={lotId} />
 
@@ -96,18 +95,18 @@ export function TransfertWizard({
           return (
             <li key={n} className="flex min-w-0 flex-1 items-center gap-2.5">
               <span
-                className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[12px] font-semibold transition-colors ${
+                className={`flex size-8 shrink-0 items-center justify-center rounded-full text-[13px] font-bold transition-colors ${
                   fait
                     ? "bg-ok text-white"
                     : actif
-                      ? "bg-action text-white shadow-lift ring-4 ring-action/15"
-                      : "bg-ground text-soft"
+                      ? "bg-brand text-white ring-4 ring-cta"
+                      : "bg-surface text-soft"
                 }`}
               >
                 {fait ? <IconCheck width={14} height={14} /> : n}
               </span>
               <span
-                className={`hidden truncate text-[12px] font-medium sm:block ${
+                className={`hidden truncate text-[13px] font-semibold sm:block ${
                   actif ? "text-ink" : "text-soft"
                 }`}
               >
@@ -115,13 +114,18 @@ export function TransfertWizard({
               </span>
               {n < 3 ? (
                 <span
-                  className={`h-0.5 min-w-3 flex-1 rounded-full ${fait ? "bg-ok/50" : "bg-hairline"}`}
+                  className={`h-0.5 min-w-3 flex-1 rounded-full ${fait ? "bg-ok/50" : "bg-wash-strong"}`}
                 />
               ) : null}
             </li>
           );
         })}
       </ol>
+
+      {/* Titre de l'étape courante (lisible aussi sur mobile, où le fil masque les libellés) */}
+      <h2 className="text-[19px] font-bold tracking-tight text-ink">
+        {[t.transfertEtape1, t.transfertEtape2, t.transfertEtape3][etape - 1]}
+      </h2>
 
       {/* Étape 1 — solde */}
       <div className={etape === 1 ? "space-y-4" : "hidden"}>
@@ -152,7 +156,7 @@ export function TransfertWizard({
 
       {/* Étape 2 — coordonnées */}
       <div className={etape === 2 ? "space-y-4" : "hidden"}>
-        <p className="text-sm text-body">{t.transfertCoordonneesAide}</p>
+        <p className="text-[14px] text-body">{t.transfertCoordonneesAide}</p>
         <Field label={dict.auth.emailLabel} htmlFor="email" optionalLabel={dict.common.optional}>
           <Input
             id="email"

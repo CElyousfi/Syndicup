@@ -27,7 +27,7 @@ export function InscriptionForm({
   const a = dict.auth;
 
   return (
-    <form action={action} className="mt-5 space-y-4">
+    <form action={action} className="mt-6 space-y-5">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="code" value={code} />
       <input type="hidden" name="langue_preferee" value={langue} />
@@ -53,7 +53,7 @@ export function InscriptionForm({
         <Input id="ins_mdp" name="mot_de_passe" type="password" dir="ltr" required minLength={8} autoComplete="new-password" className="h-12 text-start" />
       </Field>
       <div>
-        <p className="mb-1.5 text-[13px] font-medium text-ink-strong">{dict.profil.langue}</p>
+        <p className="mb-1.5 text-[14px] font-semibold text-ink">{dict.profil.langue}</p>
         <Segmented
           value={langue}
           onChange={setLangue}
@@ -69,11 +69,11 @@ export function InscriptionForm({
       <SubmitButton size="lg" className="w-full">
         {a.inviteCreerCompte}
       </SubmitButton>
-      <p className="text-center text-[13px] text-soft">
+      <p className="text-center text-[14px] text-soft">
         {a.inviteDejaCompte}{" "}
         <Link
           href={`/${locale}/connexion?next=${encodeURIComponent(`/invitation/${code}`)}`}
-          className="font-medium text-action hover:underline"
+          className="link"
         >
           {a.signIn}
         </Link>

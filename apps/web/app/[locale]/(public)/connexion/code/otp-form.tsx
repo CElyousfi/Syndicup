@@ -95,12 +95,12 @@ export function OtpForm({
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold tracking-tight text-ink">{dict.auth.otpTitle}</h1>
-      <p className="mt-1 text-sm text-soft">
+      <h1 className="text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">{dict.auth.otpTitle}</h1>
+      <p className="mt-2 text-[15px] text-soft">
         {fill(dict.auth.otpSubtitle, { telephone: formatTelephone(telephone) })}
       </p>
 
-      <form ref={formRef} action={action} className="card mt-6 space-y-5 p-5 sm:p-6" suppressHydrationWarning>
+      <form ref={formRef} action={action} className="mt-8 space-y-6" suppressHydrationWarning>
         <input type="hidden" name="locale" value={locale} />
         <input type="hidden" name="telephone" value={telephone} />
         <input type="hidden" name="code" value={code} />
@@ -121,7 +121,7 @@ export function OtpForm({
               autoComplete={i === 0 ? "one-time-code" : "off"}
               aria-label={fill(dict.a11y.otpDigit, { n: i + 1 })}
               data-filled={d ? "" : undefined}
-              className="otp-box tnum h-14 w-full min-w-0 rounded-field border border-hairline-strong bg-surface text-center text-xl font-semibold text-ink transition-[border-color,box-shadow] focus:border-action focus:outline-none focus:ring-4 focus:ring-action/15"
+              className="otp-box tnum h-16 w-full min-w-0 rounded-field border-2 border-transparent bg-tile text-center text-[24px] font-bold text-ink transition-[border-color,background-color] focus:border-ink focus:bg-surface focus:outline-none"
               maxLength={LONGUEUR}
             />
           ))}
@@ -140,12 +140,12 @@ export function OtpForm({
         </SubmitButton>
       </form>
 
-      <form action={resendAction} className="mt-5 text-center">
+      <form action={resendAction} className="mt-6 text-center">
         <input type="hidden" name="telephone" value={telephone} />
         {countdown > 0 ? (
-          <p className="text-[13px] text-faint">{fill(dict.auth.otpResendIn, { s: countdown })}</p>
+          <p className="tnum text-[14px] text-soft">{fill(dict.auth.otpResendIn, { s: countdown })}</p>
         ) : (
-          <button type="submit" className="text-[13px] font-medium text-action hover:underline">
+          <button type="submit" className="link text-[14px]">
             {dict.auth.otpResend}
           </button>
         )}
@@ -157,7 +157,7 @@ export function OtpForm({
       <p className="mt-6 text-center">
         <Link
           href={`/${locale}/connexion`}
-          className="text-[13px] font-medium text-soft hover:text-ink-strong"
+          className="text-[14px] font-semibold text-soft underline-offset-4 hover:text-ink hover:underline"
         >
           {dict.auth.otpChangeNumber}
         </Link>
@@ -175,7 +175,7 @@ function OtpGrid({ echecs, children }: { echecs: number; children: React.ReactNo
   return (
     <div
       key={echecs}
-      className={`otp-wave grid grid-cols-6 gap-1.5 sm:gap-2 ${echecs > 0 ? "animate-shake" : ""}`}
+      className={`otp-wave grid grid-cols-6 gap-2 ${echecs > 0 ? "animate-shake" : ""}`}
       data-pending={pending ? "" : undefined}
       dir="ltr"
     >

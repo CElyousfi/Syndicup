@@ -10,17 +10,21 @@
  *    valeurs et légende — chaque barre raconte combien a été appelé ET combien est
  *    réellement rentré.
  *
- * Série de couleurs : la palette du produit (sauge, sable, tosca, lilas, mousse, encre).
+ * Langage Wise aux couleurs du logo : série principale en vert marque, accent lime, puis
+ * lilas / sable / tosca / sauge pour les séries secondaires ; aplats sans dégradé, repères en
+ * voile d'encre (lisibles sur la toile blanche comme dans une tuile greige), barres arrondies.
  */
 import { useEffect, useState, type ReactNode } from "react";
 
 export const SERIES = [
-  "var(--color-sage)",
-  "var(--color-sand-mid)",
-  "var(--color-tosca-mid)",
-  "var(--color-lilac-mid)",
-  "var(--color-moss)",
+  "var(--color-brand)",
+  "var(--color-lime)",
   "var(--color-lilac)",
+  "var(--color-sand-mid)",
+  "var(--color-tosca-deep)",
+  "var(--color-sage)",
+  "var(--color-sand)",
+  "var(--color-lilac-mid)",
 ] as const;
 
 export interface DonutItem {
@@ -104,7 +108,7 @@ export function Donut({
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <svg width={size} height={size} aria-hidden>
           {total <= 0 ? (
-            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-ground)" strokeWidth={stroke} />
+            <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--color-wash-strong)" strokeWidth={stroke} />
           ) : (
             segments
           )}
@@ -115,19 +119,19 @@ export function Donut({
         >
           {survole ? (
             <>
-              <span className="tnum text-[17px] font-semibold leading-tight tracking-tight text-ink">
+              <span className="tnum text-[17px] font-bold leading-tight tracking-tight text-ink">
                 {survole.display ?? survole.value}
               </span>
               <span className="mt-0.5 max-w-full truncate text-[11px] font-medium text-soft">
                 {survole.label}
               </span>
-              <span className="tnum mt-1 rounded-full bg-ink px-2 py-0.5 text-[11px] font-semibold text-white">
+              <span className="tnum mt-1.5 rounded-full bg-cta px-2 py-0.5 text-[11px] font-bold text-ink">
                 {pct(survole.value)}%
               </span>
             </>
           ) : (
             <>
-              <span className="tnum max-w-full text-[17px] font-semibold leading-tight tracking-tight text-ink">
+              <span className="tnum max-w-full text-[17px] font-bold leading-tight tracking-tight text-ink">
                 {centerLabel}
               </span>
               {centerSub ? (
@@ -146,12 +150,12 @@ export function Donut({
               onMouseEnter={() => setHover(i)}
               onMouseLeave={() => setHover(null)}
               onClick={() => setHover(estHover ? null : i)}
-              className={`flex cursor-default items-center gap-2.5 rounded-full px-2.5 py-1.5 text-[13px] transition-colors duration-200 ${
-                estHover ? "bg-ground" : ""
+              className={`flex cursor-default items-center gap-2.5 rounded-[14px] px-2.5 py-1.5 text-[13px] transition-colors duration-200 ${
+                estHover ? "bg-wash" : ""
               }`}
             >
               <span
-                className="mt-1 size-2.5 shrink-0 self-start rounded-full transition-transform duration-200"
+                className="mt-1 size-3 shrink-0 self-start rounded-full transition-transform duration-200"
                 style={{
                   background: it.color ?? SERIES[i % SERIES.length],
                   transform: estHover ? "scale(1.35)" : undefined,
@@ -161,12 +165,12 @@ export function Donut({
               <span className="min-w-0 flex-1">
                 <span className="flex items-baseline justify-between gap-2">
                   <span className="min-w-0 truncate text-body">{it.label}</span>
-                  <span className="tnum shrink-0 text-[11px] font-medium text-soft">
+                  <span className="tnum shrink-0 text-[11px] font-semibold text-soft">
                     {pct(it.value)}%
                   </span>
                 </span>
                 {it.display ? (
-                  <span className="tnum block text-[13px] font-semibold text-ink">{it.display}</span>
+                  <span className="tnum block text-[13px] font-bold text-ink">{it.display}</span>
                 ) : null}
               </span>
             </li>
@@ -190,8 +194,8 @@ export interface BarItem {
 }
 
 /**
- * Barres superposées « appelé / encaissé » : la barre claire est le montant émis,
- * la barre sombre (hachurée si active) la part réellement encaissée. Lignes de
+ * Barres superposées « appelé / encaissé » : la barre lime est le montant émis,
+ * la barre vert marque (hachurée si active) la part réellement encaissée. Lignes de
  * repère + axe de valeurs + légende. Survol/tap : détail des deux montants.
  */
 export function Bars({
@@ -242,9 +246,9 @@ export function Bars({
         {/* Zone de tracé */}
         <div className="relative min-w-0 flex-1" style={{ height }}>
           {/* Lignes de repère */}
-          <div aria-hidden className="absolute inset-x-0 top-0 border-t border-dashed border-hairline" />
-          <div aria-hidden className="absolute inset-x-0 top-1/2 border-t border-dashed border-hairline" />
-          <div aria-hidden className="absolute inset-x-0 bottom-0 border-t border-hairline-strong" />
+          <div aria-hidden className="absolute inset-x-0 top-0 h-px bg-wash" />
+          <div aria-hidden className="absolute inset-x-0 top-1/2 h-px bg-wash" />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-px bg-wash-strong" />
 
           <div className="absolute inset-0 flex items-end justify-center gap-3 px-1 sm:gap-6">
             {items.map((it, i) => {
@@ -262,35 +266,35 @@ export function Bars({
                 >
                   {/* Infobulle : encaissé / appelé */}
                   {estFocus && (it.displayPaid || it.displayTotal) ? (
-                    <div className="tnum absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-xl bg-ink px-3 py-1.5 text-center shadow-pop animate-zoom-in">
-                      <span className="block text-[12px] font-semibold text-white">
+                    <div className="tnum absolute -top-2 z-10 -translate-y-full whitespace-nowrap rounded-[14px] bg-ink px-3 py-1.5 text-center shadow-pop animate-zoom-in">
+                      <span className="block text-[12px] font-bold text-lime">
                         {it.displayPaid}
                       </span>
                       <span className="block text-[10px] text-white/60">/ {it.displayTotal}</span>
                     </div>
                   ) : null}
 
-                  {/* Montant appelé (clair) */}
+                  {/* Montant appelé (lime) */}
                   <div
-                    className={`relative w-full origin-bottom overflow-hidden rounded-t-[10px] bg-action-tint transition-[height,filter,scale] duration-700 ease-out ${
+                    className={`relative w-full origin-bottom overflow-hidden rounded-[12px] bg-lime transition-[height,filter,scale] duration-700 ease-out ${
                       estFocus ? "scale-x-[1.08] brightness-[0.97]" : ""
                     }`}
                     style={{ height: monte ? `${total * 100}%` : "0%" }}
                     aria-hidden
                   >
-                    {/* Part encaissée (sombre, hachurée si active) */}
+                    {/* Part encaissée (vert marque, hachurée si active) */}
                     <div
-                      className={`absolute inset-x-0 bottom-0 bg-action transition-[height] duration-700 ease-out ${
+                      className={`absolute inset-x-0 bottom-0 rounded-[12px] bg-brand transition-[height] duration-700 ease-out ${
                         it.active ? "bar-stripes" : ""
-                      } ${paye >= 1 ? "rounded-t-[10px]" : ""}`}
+                      }`}
                       style={{ height: monte ? `${paye * 100}%` : "0%", transitionDelay: `${i * 60}ms` }}
                     />
                   </div>
 
                   {/* % encaissé au sommet de la barre */}
                   <span
-                    className={`tnum absolute w-full text-center text-[10px] font-semibold transition-opacity duration-300 ${
-                      estFocus ? "text-ink" : "text-faint"
+                    className={`tnum absolute w-full text-center text-[10px] font-bold transition-opacity duration-300 ${
+                      estFocus ? "text-ink" : "text-soft"
                     }`}
                     style={{ bottom: `calc(${total * 100}% + 4px)`, opacity: monte ? 1 : 0 }}
                     aria-hidden
@@ -311,7 +315,7 @@ export function Bars({
           {items.map((it, i) => (
             <span
               key={i}
-              className={`w-full max-w-20 truncate pt-2 text-center text-[11px] font-medium transition-colors ${
+              className={`w-full max-w-20 truncate pt-2 text-center text-[11px] font-semibold transition-colors ${
                 focus === i ? "text-ink" : "text-soft"
               }`}
             >
@@ -323,16 +327,16 @@ export function Bars({
 
       {/* Légende */}
       {legendPaid || legendTotal ? (
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-[12px] text-body">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-1.5 text-[12px] font-medium text-body">
           {legendPaid ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[4px] bg-action" aria-hidden />
+              <span className="size-3 rounded-full bg-brand" aria-hidden />
               {legendPaid}
             </span>
           ) : null}
           {legendTotal ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-2.5 rounded-[4px] bg-action-tint ring-1 ring-inset ring-action/20" aria-hidden />
+              <span className="size-3 rounded-full bg-lime" aria-hidden />
               {legendTotal}
             </span>
           ) : null}

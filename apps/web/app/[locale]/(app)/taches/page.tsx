@@ -14,7 +14,7 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { LinkTabs } from "../../../../components/ui/link-tabs";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
-import { IconPlus, IconTasks } from "../../../../components/ui/icons";
+import { IconPlus } from "../../../../components/ui/icons";
 import { CAlert, CCalendar, CWrench } from "../../../../components/ui/color-icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { prioriteVariant, tacheVariant } from "../../../../lib/status";
@@ -53,10 +53,10 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
   const qs = (o: { statut?: string; priorite?: string; origine?: string; retard?: string; vue?: string }) => { const u = new URLSearchParams(); for (const [k, v] of Object.entries({ vue: vue === "kanban" ? "kanban" : undefined, statut, priorite, origine, retard: retard ? "1" : undefined, ...o })) if (v) u.set(k, v); const q = u.toString(); return `${p("/taches")}${q ? `?${q}` : ""}`; };
   const ouverts = (parStatut.A_FAIRE ?? 0) + (parStatut.EN_COURS ?? 0) + (parStatut.BLOQUEE ?? 0);
   const ligne = (x: Tache) => (
-    <Link key={x.id} href={p(`/taches/${x.id}`)} className={`block rounded-field border bg-surface p-3 transition-colors hover:bg-hover ${x.enRetard ? "border-danger/40" : "border-hairline"}`}>
+    <Link key={x.id} href={p(`/taches/${x.id}`)} className={`block rounded-2xl bg-surface p-3.5 transition-colors hover:bg-hover ${x.enRetard ? "shadow-[inset_0_0_0_1.5px_var(--color-danger)]" : ""}`}>
       <div className="flex flex-wrap items-center gap-1.5"><Badge variant={prioriteVariant[x.priorite]}>{e.priorite[x.priorite]}</Badge><span className="text-[11px] text-faint">{e.origine[x.origine]}</span></div>
-      <p className="mt-1.5 text-[13.5px] font-medium text-ink-strong">{x.titre}</p>
-      <p className="mt-1 text-[12px] text-soft">{x.dateEcheance ? formatDate(x.dateEcheance, ctx.locale) : t.sansEcheance}{x.assignee ? ` · ${nomComplet(x.assignee) ?? ""}` : ""}{x.checklist?.length ? ` · ${fill(t.checklistProgres, { n: x.checklistFaits, total: x.checklist.length })}` : ""}</p>
+      <p className="mt-2 text-[15px] font-bold leading-snug text-ink">{x.titre}</p>
+      <p className="tnum mt-1 text-[12.5px] text-soft">{x.dateEcheance ? formatDate(x.dateEcheance, ctx.locale) : t.sansEcheance}{x.assignee ? ` · ${nomComplet(x.assignee) ?? ""}` : ""}{x.checklist?.length ? ` · ${fill(t.checklistProgres, { n: x.checklistFaits, total: x.checklist.length })}` : ""}</p>
       {x.enRetard ? <Badge variant="danger" className="mt-1.5">{t.enRetard}</Badge> : null}
     </Link>
   );
@@ -84,18 +84,18 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
       {!gardien && vue === "liste" ? (
         <div className="mb-4 flex flex-wrap items-center gap-2">
           <LinkTabs tabs={[{ href: qs({ statut: undefined, retard: undefined }), label: t.ouvertes, active: !statut && !retard }, { href: qs({ retard: "1", statut: undefined }), label: t.enRetard, active: retard, count: nbRetard || undefined }, ...STATUTS.map((s) => ({ href: qs({ statut: s, retard: undefined }), label: e.statut[s], active: statut === s, count: parStatut[s] }))]} />
-          <div className="ms-auto flex gap-1.5 text-[12px]">
-            {(["MANUELLE", "RESOLUTION_AG", "CONTRAT", "INCIDENT", "RAPPORT", "SYSTEME"] as OrigineTache[]).map((o) => <Link key={o} href={qs({ origine: origine === o ? undefined : o })} className={`rounded-full border px-2.5 py-1 ${origine === o ? "border-ink bg-ink text-white" : "border-hairline text-soft"}`}>{e.origine[o]}</Link>)}
+          <div className="flex flex-wrap gap-1.5 text-[12.5px] lg:ms-auto">
+            {(["MANUELLE", "RESOLUTION_AG", "CONTRAT", "INCIDENT", "RAPPORT", "SYSTEME"] as OrigineTache[]).map((o) => <Link key={o} href={qs({ origine: origine === o ? undefined : o })} className={`rounded-full border px-3 py-1.5 font-semibold transition-colors ${origine === o ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-hover"}`}>{e.origine[o]}</Link>)}
           </div>
         </div>
       ) : null}
-      {rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} icon={<IconTasks width={44} height={44} />} action={gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
+      {rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} illustration={statut || retard || origine ? "empty-search" : "empty-taches"} action={gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {COLONNES.map((col) => {
             const items = rows.filter((x) => x.statut === col);
             return (
-              <div key={col} className="rounded-card bg-ground p-3">
-                <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-semibold text-ink-strong">{e.statut[col]}</span><Badge variant={tacheVariant[col]}>{items.length}</Badge></div>
+              <div key={col} className="card p-3">
+                <div className="mb-3 flex items-center justify-between px-1 pt-1"><span className="text-[15px] font-bold text-ink">{e.statut[col]}</span><Badge variant={tacheVariant[col]}>{items.length}</Badge></div>
                 <div className="space-y-2">{items.map(ligne)}</div>
               </div>
             );
@@ -108,7 +108,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
             <tbody>
               {rows.map((x) => (
                 <TR key={x.id}>
-                  <TD><Link href={p(`/taches/${x.id}`)} className="font-medium text-ink-strong hover:text-action">{x.titre}</Link>{x.checklist?.length ? <span className="ms-2 text-[12px] text-soft">{fill(t.checklistProgres, { n: x.checklistFaits, total: x.checklist.length })}</span> : null}</TD>
+                  <TD><Link href={p(`/taches/${x.id}`)} className="font-semibold text-ink hover:text-link">{x.titre}</Link>{x.checklist?.length ? <span className="ms-2 text-[12px] text-soft">{fill(t.checklistProgres, { n: x.checklistFaits, total: x.checklist.length })}</span> : null}</TD>
                   <TD className="text-soft">{e.origine[x.origine]}</TD>
                   <TD><Badge variant={prioriteVariant[x.priorite]}>{e.priorite[x.priorite]}</Badge></TD>
                   <TD>{x.assignee ? nomComplet(x.assignee) ?? "—" : <span className="text-faint">{t.nonAssignee}</span>}</TD>

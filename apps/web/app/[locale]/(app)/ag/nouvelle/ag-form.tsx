@@ -12,7 +12,7 @@ export function AgForm({ dict, locale }: { dict: Dict; locale: Locale }) {
   const [state, action] = useActionState(creerAg, IDLE);
 
   return (
-    <form action={action} className="card max-w-xl space-y-5 p-5 sm:p-7">
+    <form action={action} className="card max-w-xl space-y-5 p-5 sm:p-8">
       <input type="hidden" name="locale" value={locale} />
       <Field label={dict.ag.type} htmlFor="type" required>
         <Select id="type" name="type" defaultValue="ORDINAIRE" required>
@@ -28,7 +28,7 @@ export function AgForm({ dict, locale }: { dict: Dict; locale: Locale }) {
       </Field>
       <p className="text-[13px] leading-relaxed text-soft">{dict.ag.aucuneResolutionAide}</p>
       <FormAlert state={state} />
-      <div className="flex justify-end border-t border-hairline pt-5">
+      <div className="flex justify-end pt-2">
         <SubmitButton className="w-full sm:w-auto">{dict.common.create}</SubmitButton>
       </div>
     </form>

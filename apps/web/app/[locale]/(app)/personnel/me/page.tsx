@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { PersonnelRh } from "../../../../../lib/api/types";
-import { Banner } from "../../../../../components/ui/banner";
+import { EmptyState } from "../../../../../components/ui/empty-state";
 
 export default async function MonDossierPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -13,7 +13,7 @@ export default async function MonDossierPage({ params }: { params: Promise<{ loc
   if (mienne) redirect(`/${ctx.locale}/personnel/${mienne.id}`);
   return (
     <div className="page-root">
-      <Banner variant="info">{ctx.dict.personnel.aucuneFiche}</Banner>
+      <EmptyState title={ctx.dict.personnel.aucuneFiche} illustration="empty-personnel" />
     </div>
   );
 }

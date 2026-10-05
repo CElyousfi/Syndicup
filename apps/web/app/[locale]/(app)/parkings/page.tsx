@@ -20,6 +20,9 @@ import { badgeAccesVariant, emplacementVariant } from "../../../../lib/status";
 import { BadgeDesactiverModal, BadgeModal, BadgePerduModal, BadgeRestituerModal, EmplacementModal, RechercheVehiculeForm, RetirerVehiculeModal, VehiculeModal, type LotOption } from "./parkings-client";
 
 type Onglet = "plan" | "emplacements" | "vehicules" | "badges" | "visiteurs";
+const PILL = "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[14px] font-semibold transition-colors";
+const PILL_ON = "border-cta bg-cta text-ink";
+const PILL_OFF = "border-hairline-strong bg-surface text-ink-strong hover:bg-wash";
 const TYPES: TypeEmplacement[] = ["PARKING_COMMUN", "PARKING_VISITEUR", "PARKING_PMR", "MOTO", "VELO", "CAVE_COMMUNE"];
 const STATUTS: StatutEmplacement[] = ["DISPONIBLE", "ATTRIBUE", "HORS_SERVICE"];
 
@@ -73,11 +76,13 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
 
   const CaseEmplacement = ({ x }: { x: Emplacement }) => {
     const occupee = x.statut === "ATTRIBUE" || Boolean(x.visiteurOccupee);
-    const tone = x.statut === "HORS_SERVICE" ? "border-hairline bg-muted text-faint" : occupee ? "border-info/40 bg-info/10 text-ink-strong" : x.type === "PARKING_VISITEUR" ? "border-ok/40 bg-ok/10 text-ink-strong" : "border-ok/30 bg-surface text-ink-strong";
+    // Case de plan (dans une tuile greige) : libre = blanche, occupée = vert marque, visiteur libre = lime, hors service = voile.
+    const tone = x.statut === "HORS_SERVICE" ? "bg-wash text-faint" : occupee ? "bg-brand text-white" : x.type === "PARKING_VISITEUR" ? "bg-cta text-ink" : "bg-surface text-ink";
+    const sous = x.statut === "HORS_SERVICE" ? "text-faint" : occupee ? "text-white/70" : "text-soft";
     const corps = (
-      <div className={`flex h-full min-h-[84px] flex-col justify-between rounded-field border p-2.5 transition-colors ${tone} ${resident ? "" : "hover:bg-hover"}`}>
-        <div className="flex items-start justify-between gap-1"><span className="font-mono text-[14px] font-semibold" dir="ltr">{x.code}</span><span className="text-[10px] uppercase tracking-wide text-faint">{e.typeEmplacement[x.type]}</span></div>
-        <div className="text-[12px]">
+      <div className={`flex h-full min-h-[88px] flex-col justify-between rounded-[16px] p-3 transition-[filter,transform] ${tone} ${resident ? "" : "hover:brightness-95 active:scale-[0.98]"}`}>
+        <div className="flex items-start justify-between gap-1"><span className="font-mono text-[15px] font-bold" dir="ltr">{x.code}</span><span className={`text-end text-[10.5px] font-medium leading-tight ${sous}`}>{e.typeEmplacement[x.type]}</span></div>
+        <div className={`text-[12px] font-semibold ${occupee ? "text-lime" : ""}`}>
           {x.statut === "HORS_SERVICE" ? e.statutEmplacement.HORS_SERVICE : x.attributionCourante ? `${t.lot} ${x.attributionCourante.lotNumero ?? "—"}` : x.statut === "ATTRIBUE" ? e.statutEmplacement.ATTRIBUE : x.type === "PARKING_VISITEUR" ? (x.visiteurOccupee ? t.visiteurOccupee : t.visiteurLibre) : x.type === "PARKING_PMR" || !x.attribuable ? t.nonAttribuable : e.statutEmplacement.DISPONIBLE}
         </div>
       </div>
@@ -104,7 +109,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
       {onglet === "plan" ? (
         <div className="space-y-5">
           {!resident ? (
-            <div className="grid gap-4 sm:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <StatCard icon={<CBuilding />} tone="sage" label={t.total} value={String(plan.totaux.total)} />
               <StatCard icon={<CKey />} tone="tosca" label={t.attribues} value={String(plan.totaux.attribues)} hint={`${plan.totaux.disponibles} ${t.disponibles.toLowerCase()}`} />
               <StatCard icon={<CDoor />} tone={plan.totaux.visiteurs_occupees >= plan.totaux.visiteurs && plan.totaux.visiteurs > 0 ? "warn" : "sand"} label={t.visiteurs} value={`${plan.totaux.visiteurs_occupees}/${plan.totaux.visiteurs}`} hint={t.visiteursOccupees} />
@@ -115,23 +120,23 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
             <Card>
               <SectionHeader title={t.onglets.mesAttributions} />
               {mesAttributions.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunEmplacementResident}</p> : (
-                <ul className="mt-3 divide-y divide-hairline">
+                <ul className="mt-4 space-y-2">
                   {mesAttributions.map((a) => (
-                    <li key={a.id} className="flex flex-wrap items-center gap-3 py-2.5">
-                      <span className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{a.emplacement?.code ?? "—"}</span>
-                      <span className="text-[13px] text-body">{a.emplacement ? e.typeEmplacement[a.emplacement.type] : ""}{a.emplacement?.niveau ? ` · ${t.niveau} ${a.emplacement.niveau}` : ""} · {t.lot} {a.lotNumero ?? "—"}</span>
+                    <li key={a.id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
+                      <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand px-3 font-mono text-[14px] font-bold text-lime" dir="ltr">{a.emplacement?.code ?? "—"}</span>
+                      <span className="text-[14px] font-medium text-ink">{a.emplacement ? e.typeEmplacement[a.emplacement.type] : ""}{a.emplacement?.niveau ? ` · ${t.niveau} ${a.emplacement.niveau}` : ""} · {t.lot} {a.lotNumero ?? "—"}</span>
                       <Badge variant={a.active ? "ok" : a.dateFin && a.dateFin < new Date().toISOString().slice(0, 10) ? "neutral" : "outline"}>{a.active ? t.active : a.dateFin && a.dateFin < new Date().toISOString().slice(0, 10) ? t.terminee : t.aVenir}</Badge>
-                      <span className="ms-auto text-[12px] text-soft tnum">{formatDate(a.dateDebut, ctx.locale)} → {a.dateFin ? formatDate(a.dateFin, ctx.locale) : t.sansFin}{a.redevanceMensuelle ? ` · ${formatMontant(a.redevanceMensuelle)} MAD` : ""}</span>
+                      <span className="tnum w-full text-[12.5px] text-soft sm:ms-auto sm:w-auto">{formatDate(a.dateDebut, ctx.locale)} → {a.dateFin ? formatDate(a.dateFin, ctx.locale) : t.sansFin}{a.redevanceMensuelle ? ` · ${formatMontant(a.redevanceMensuelle)} MAD` : ""}</span>
                     </li>
                   ))}
                 </ul>
               )}
             </Card>
           ) : null}
-          {plan.niveaux.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} /> : plan.niveaux.map((n) => (
+          {plan.niveaux.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration="empty-parkings" /> : plan.niveaux.map((n) => (
             <Card key={n.niveau}>
               <SectionHeader title={n.niveau === "—" ? t.sansNiveau : `${t.niveau} ${n.niveau}`} subtitle={`${n.emplacements.length} · ${n.emplacements.filter((x) => x.statut === "ATTRIBUE" || x.visiteurOccupee).length} ${t.attribues.toLowerCase()}`} />
-              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-6">{n.emplacements.map((x) => <CaseEmplacement key={x.id} x={x} />)}</div>
+              <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">{n.emplacements.map((x) => <CaseEmplacement key={x.id} x={x} />)}</div>
             </Card>
           ))}
         </div>
@@ -139,17 +144,18 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
 
       {onglet === "emplacements" ? (
         <div className="space-y-4">
-          <div className="flex flex-wrap gap-1.5">
-            <Link href={href("emplacements")} className={`rounded-full border px-3 py-1 text-[12.5px] ${!type && !statut ? "border-ink bg-ink text-white" : "border-hairline text-body hover:bg-hover"}`}>{dict.common.all}</Link>
-            {TYPES.map((x) => <Link key={x} href={href("emplacements", { type: x, statut })} className={`rounded-full border px-3 py-1 text-[12.5px] ${type === x ? "border-ink bg-ink text-white" : "border-hairline text-body hover:bg-hover"}`}>{e.typeEmplacement[x]}</Link>)}
-            {STATUTS.map((x) => <Link key={x} href={href("emplacements", { type, statut: x })} className={`rounded-full border px-3 py-1 text-[12.5px] ${statut === x ? "border-ink bg-ink text-white" : "border-hairline text-body hover:bg-hover"}`}>{e.statutEmplacement[x]} · {parStatut[x] ?? 0}</Link>)}
+          <div className="flex flex-wrap gap-2">
+            <Link href={href("emplacements")} className={`${PILL} ${!type && !statut ? PILL_ON : PILL_OFF}`}>{dict.common.all}</Link>
+            {TYPES.map((x) => <Link key={x} href={href("emplacements", { type: x, statut })} className={`${PILL} ${type === x ? PILL_ON : PILL_OFF}`}>{e.typeEmplacement[x]}</Link>)}
+            <span aria-hidden className="mx-1 hidden w-px self-stretch bg-hairline-strong sm:block" />
+            {STATUTS.map((x) => <Link key={x} href={href("emplacements", { type, statut: x })} className={`${PILL} ${statut === x ? PILL_ON : PILL_OFF}`}>{e.statutEmplacement[x]}<span className={`tnum rounded-full px-1.5 py-0.5 text-[11px] font-bold ${statut === x ? "bg-ink/10" : "bg-wash"}`}>{parStatut[x] ?? 0}</span></Link>)}
           </div>
-          {emplacements.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} /> : (
+          {emplacements.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration={type || statut ? "empty-search" : "empty-parkings"} /> : (
             <TableCard><Table>
               <THead><TH>{t.code}</TH><TH>{t.type}</TH><TH>{t.niveau}</TH><TH>{t.statut}</TH><TH>{t.lotBeneficiaire}</TH><TH>{t.periode}</TH><TH align="end">{t.redevance}</TH></THead>
               <tbody>{emplacements.map((x) => (
                 <TR key={x.id}>
-                  <TD><Link href={p(`/parkings/${x.id}`)} className="font-mono font-semibold text-action hover:underline" dir="ltr">{x.code}</Link></TD>
+                  <TD><Link href={p(`/parkings/${x.id}`)} className="link font-mono" dir="ltr">{x.code}</Link></TD>
                   <TD className="text-body">{e.typeEmplacement[x.type]}{!x.attribuable ? <span className="ms-1 text-[11px] text-faint">· {t.nonAttribuable}</span> : null}</TD>
                   <TD className="text-body">{x.niveau ?? "—"}</TD>
                   <TD><Badge variant={emplacementVariant[x.statut]}>{e.statutEmplacement[x.statut]}</Badge></TD>
@@ -166,7 +172,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
       {onglet === "vehicules" ? (
         <div className="space-y-4">
           {gestion || gardien ? <Card><RechercheVehiculeForm dict={dict} /></Card> : null}
-          {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} /> : (
+          {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} illustration="empty-parkings" /> : (
             <TableCard><Table>
               <THead><TH>{t.immatriculation}</TH><TH>{t.lot}</TH><TH>{t.typeVehicule}</TH><TH>{t.marque}</TH><TH>{t.couleur}</TH><TH>{t.statut}</TH>{gestion || resident ? <TH align="end">{dict.common.actions}</TH> : null}</THead>
               <tbody>{vehicules.map((v) => (
@@ -186,7 +192,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
       ) : null}
 
       {onglet === "badges" ? (
-        badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} /> : (
+        badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} illustration="empty-parkings" /> : (
           <TableCard><Table>
             <THead><TH>{t.identifiant}</TH><TH>{t.type}</TH><TH>{t.lot}</TH><TH>{t.statut}</TH><TH>{t.remisLe}</TH><TH align="end">{t.caution}</TH><TH align="end">{dict.common.actions}</TH></THead>
             <tbody>{badges.map((b) => (
@@ -215,18 +221,18 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
             <Card>
               <SectionHeader title={t.visiteursJour} subtitle={t.visiteursJourAide} />
               {visiteurs.visites.length === 0 && visiteurs.sejours.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunVisiteur}</p> : (
-                <ul className="mt-3 divide-y divide-hairline">
+                <ul className="mt-4 space-y-2">
                   {visiteurs.visites.map((v) => (
-                    <li key={v.visite_id} className="flex flex-wrap items-center gap-3 py-2.5">
-                      <span className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{v.emplacement?.code ?? "—"}</span>
-                      <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink">{v.visiteur_nom} · {t.lot} {v.lot ?? "—"}</p><p className="text-[12px] text-soft tnum" dir="ltr">{v.immatriculation ?? "—"} · {formatDateHeure(v.horodatage, ctx.locale)}</p></div>
+                    <li key={v.visite_id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
+                      <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-cta px-3 font-mono text-[14px] font-bold text-ink" dir="ltr">{v.emplacement?.code ?? "—"}</span>
+                      <div className="min-w-0 flex-1"><p className="text-[15px] font-bold text-ink">{v.visiteur_nom} · {t.lot} {v.lot ?? "—"}</p><p className="text-[12px] text-soft tnum" dir="ltr">{v.immatriculation ?? "—"} · {formatDateHeure(v.horodatage, ctx.locale)}</p></div>
                       {v.heure_limite ? <Badge variant={v.depassee ? "danger" : "outline"}>{t.heureLimite} {new Date(v.heure_limite).toLocaleTimeString(ctx.locale === "ar" ? "ar-MA" : "fr-MA", { hour: "2-digit", minute: "2-digit" })}{v.depassee ? ` · ${t.depassee}` : ""}</Badge> : null}
                     </li>
                   ))}
                   {visiteurs.sejours.map((s) => (
-                    <li key={s.sejour_id} className="flex flex-wrap items-center gap-3 py-2.5">
-                      <span className="font-mono text-[15px] font-semibold text-ink-strong" dir="ltr">{s.emplacement?.code ?? "—"}</span>
-                      <div className="min-w-0 flex-1"><p className="text-sm font-medium text-ink">{s.voyageur} · {t.lot} {s.lot ?? "—"}</p><p className="text-[12px] text-soft tnum" dir="ltr">{s.immatriculation ?? "—"} · {t.depart} {formatDate(s.date_depart, ctx.locale)}</p></div>
+                    <li key={s.sejour_id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
+                      <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-tosca-tint px-3 font-mono text-[14px] font-bold text-tosca-deep" dir="ltr">{s.emplacement?.code ?? "—"}</span>
+                      <div className="min-w-0 flex-1"><p className="text-[15px] font-bold text-ink">{s.voyageur} · {t.lot} {s.lot ?? "—"}</p><p className="text-[12px] text-soft tnum" dir="ltr">{s.immatriculation ?? "—"} · {t.depart} {formatDate(s.date_depart, ctx.locale)}</p></div>
                       <Badge variant="info">{t.sejourLcd}</Badge>
                     </li>
                   ))}
@@ -236,8 +242,8 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
           </div>
           <Card>
             <SectionHeader title={t.placesLibres} />
-            {visiteurs.places_libres.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunePlace}</p> : <div className="mt-3 flex flex-wrap gap-2">{visiteurs.places_libres.map((x) => <span key={x.id} className="rounded-field border border-ok/40 bg-ok/10 px-2.5 py-1 font-mono text-[13px] font-semibold text-ink-strong" dir="ltr">{x.code}</span>)}</div>}
-            <p className="mt-4 text-[12px] text-soft"><Link href={p("/visites")} className="text-action hover:underline">{dict.nav.visites}</Link></p>
+            {visiteurs.places_libres.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunePlace}</p> : <div className="mt-4 flex flex-wrap gap-2">{visiteurs.places_libres.map((x) => <span key={x.id} className="rounded-full bg-cta px-3.5 py-1.5 font-mono text-[14px] font-bold text-ink" dir="ltr">{x.code}</span>)}</div>}
+            <p className="mt-5"><Link href={p("/visites")} className="link text-[14px]">{dict.nav.visites}</Link></p>
           </Card>
         </div>
       ) : null}

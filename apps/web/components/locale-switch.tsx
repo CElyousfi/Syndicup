@@ -16,13 +16,14 @@ export function LocaleSwitch({ locale, subtle = false }: { locale: "fr" | "ar"; 
   return (
     <Link
       href={href}
-      className={`inline-flex h-9 items-center gap-2 rounded-btn px-3 text-[13px] font-medium transition-colors ${
+      className={`inline-flex items-center gap-2 rounded-btn font-semibold transition-colors ${
         subtle
-          ? "text-soft hover:bg-ground hover:text-ink-strong"
-          : "border border-hairline-strong bg-surface text-ink-strong hover:bg-hover"
+          ? "h-9 px-3 text-[13px] text-soft hover:bg-wash hover:text-ink"
+          : "h-10 bg-tile px-4 text-[14px] text-ink hover:bg-hairline-strong"
       }`}
     >
-      <IconGlobe width={16} height={16} />
+      {/* Pill Wise : greige plate, globe vert marque. */}
+      <IconGlobe width={17} height={17} className={subtle ? "" : "text-link"} />
       <span lang={other} dir={other === "ar" ? "rtl" : "ltr"}>
         {other === "ar" ? "العربية" : "Français"}
       </span>

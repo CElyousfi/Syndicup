@@ -128,7 +128,7 @@ export function DesignerGestionnaireModal({
             {invitation ? (
               <>
                 <Banner variant="ok">{l.gestionnaireInvite}</Banner>
-                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-hairline bg-ground px-4 py-3">
+                <div className="flex flex-wrap items-center gap-3 rounded-2xl bg-tile px-4 py-3">
                   <span className="font-mono text-lg font-semibold tracking-wider text-ink" dir="ltr">
                     {invitation.code}
                   </span>

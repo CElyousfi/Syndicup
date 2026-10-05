@@ -6,10 +6,11 @@ import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure, formatHeure, nomComplet } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
-import { Card, SectionHeader } from "../../../../components/ui/card";
+import { SectionHeader } from "../../../../components/ui/card";
+import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { CBell, CCalendar, CHandshake, IconCircle } from "../../../../components/ui/color-icons";
+import { CBell, CCalendar, CHandshake } from "../../../../components/ui/color-icons";
 import { reservationVariant } from "../../../../lib/status";
 import { AnnulerModal, RejeterModal, ValiderForm } from "./reservation-actions";
 
@@ -59,31 +60,34 @@ export default async function ReservationsPage({
   const confirmees = autres.filter((r) => r.statut === "CONFIRMEE");
 
   const CarteReservation = ({ r, actions }: { r: Reservation; actions?: React.ReactNode }) => (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-4 sm:gap-4 sm:px-6">
-      <IconCircle tone={r.statut === "EN_ATTENTE" ? "warn" : "tosca"} size={40}>
-        <CCalendar width={20} height={20} />
-      </IconCircle>
-      <div className="min-w-0 flex-1">
-        <p className="text-sm font-semibold text-ink">
-          {espaceParId.get(r.espaceId) ?? e.espace}
-        </p>
-        <p className="mt-0.5 text-[13px] text-soft">
-          {formatDateHeure(r.dateDebut, ctx.locale)} → {formatHeure(r.dateFin, ctx.locale)}
+    <Ligne
+      icon={<CCalendar width={22} height={22} />}
+      tone={r.statut === "EN_ATTENTE" ? "warn" : r.statut === "CONFIRMEE" ? "sage" : "tosca"}
+      title={espaceParId.get(r.espaceId) ?? e.espace}
+      subtitle={
+        <>
+          <span className="tnum">
+            {formatDateHeure(r.dateDebut, ctx.locale)} → {formatHeure(r.dateFin, ctx.locale)}
+          </span>
           {gestion
             ? ` · ${dict.invitations.lot} ${lotParId.get(r.lotId)?.numero ?? "—"} · ${e.demandePar} ${nomDemandeur(r)}`
             : ""}
-        </p>
-        {r.motifRejet ? (
+        </>
+      }
+      extra={
+        r.motifRejet ? (
           <p className="mt-1 text-[13px] text-danger">
             {e.motifRejet} : {r.motifRejet}
           </p>
-        ) : null}
-      </div>
-      <Badge variant={reservationVariant[r.statut]} pulse={r.statut === "EN_ATTENTE"}>
-        {dict.enums.statutReservation[r.statut]}
-      </Badge>
-      {actions}
-    </div>
+        ) : undefined
+      }
+      end={
+        <Badge variant={reservationVariant[r.statut]} pulse={r.statut === "EN_ATTENTE"}>
+          {dict.enums.statutReservation[r.statut]}
+        </Badge>
+      }
+      actions={actions}
+    />
   );
 
   return (
@@ -91,7 +95,7 @@ export default async function ReservationsPage({
       <PageHeader title={gestion ? e.reservations : e.mesReservations} />
 
       {gestion && reservations.length > 0 ? (
-        <div className="mb-5 grid gap-4 sm:grid-cols-3">
+        <div className="mb-10 grid gap-4 sm:grid-cols-3">
           <StatCard
             icon={<CCalendar />}
             tone="tosca"
@@ -118,18 +122,14 @@ export default async function ReservationsPage({
         <EmptyState
           title={e.aucuneReservation}
           hint={e.aucuneReservationAide}
-          icon={
-            <IconCircle tone="tosca" size={64}>
-              <CCalendar width={30} height={30} />
-            </IconCircle>
-          }
+          illustration="empty-reservations"
         />
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-10">
           {gestion && enAttente.length > 0 ? (
             <div>
               <SectionHeader title={e.fileAttente} className="mb-3" />
-              <Card padded={false} className="divide-y divide-hairline">
+              <Lignes>
                 {enAttente.map((r) => (
                   <CarteReservation
                     key={r.id}
@@ -142,12 +142,12 @@ export default async function ReservationsPage({
                     }
                   />
                 ))}
-              </Card>
+              </Lignes>
             </div>
           ) : null}
 
           {!gestion && enAttente.length > 0 ? (
-            <Card padded={false} className="divide-y divide-hairline">
+            <Lignes>
               {enAttente.map((r) => (
                 <CarteReservation
                   key={r.id}
@@ -155,7 +155,7 @@ export default async function ReservationsPage({
                   actions={<AnnulerModal dict={dict} locale={ctx.locale} reservationId={r.id} />}
                 />
               ))}
-            </Card>
+            </Lignes>
           ) : null}
 
           {autres.length > 0 ? (
@@ -163,7 +163,7 @@ export default async function ReservationsPage({
               {gestion || enAttente.length > 0 ? (
                 <SectionHeader title={e.planning} className="mb-3" />
               ) : null}
-              <Card padded={false} className="divide-y divide-hairline">
+              <Lignes>
                 {autres.map((r) => {
                   const annulable =
                     r.statut === "CONFIRMEE" &&
@@ -181,7 +181,7 @@ export default async function ReservationsPage({
                     />
                   );
                 })}
-              </Card>
+              </Lignes>
             </div>
           ) : null}
         </div>

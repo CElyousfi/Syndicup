@@ -3,7 +3,7 @@ import { getAppContext } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
 import type { DocumentCopro } from "../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../lib/i18n";
-import { formatDate } from "../../../../lib/format";
+import { formatDateCourte } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { PageHeader } from "../../../../components/page-header";
@@ -54,12 +54,13 @@ export default async function DocumentsPage({
         actions={gestion ? <DocumentModal dict={dict} locale={ctx.locale} /> : undefined}
       />
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} className="mb-4" />
+      <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} className="mb-6" />
 
       {documents.length === 0 ? (
         <EmptyState
           title={d.aucunDocument}
           hint={gestion ? d.aucunDocumentAide : undefined}
+          illustration="empty-documents"
           action={gestion ? <DocumentModal dict={dict} locale={ctx.locale} /> : undefined}
         />
       ) : (
@@ -77,15 +78,15 @@ export default async function DocumentsPage({
                 {documents.map((doc) => (
                   <TR key={doc.id}>
                     <TD>
-                      <span className="inline-flex items-center gap-3 font-medium text-ink">
-                        <IconCircle tone="tosca" size={36}>
-                          <CFile width={18} height={18} />
+                      <span className="inline-flex min-w-0 items-center gap-3 text-[15px] font-bold text-ink">
+                        <IconCircle tone="tosca" size={44}>
+                          <CFile width={20} height={20} />
                         </IconCircle>
                         <span className="min-w-0 truncate">{doc.nom}</span>
                       </span>
                     </TD>
                     <TD>
-                      <Badge variant="outline">{doc.type}</Badge>
+                      <Badge variant="outline">{d.typesConnus[doc.type] ?? doc.type}</Badge>
                     </TD>
                     {gestion ? (
                       <TD>
@@ -94,11 +95,11 @@ export default async function DocumentsPage({
                         </Badge>
                       </TD>
                     ) : null}
-                    <TD className="text-[13px] text-soft">
-                      {formatDate(doc.creeLe, ctx.locale)}
+                    <TD className="tnum whitespace-nowrap text-[13px] text-soft">
+                      {formatDateCourte(doc.creeLe, ctx.locale)}
                     </TD>
                     <TD align="end">
-                      <span className="inline-flex items-center gap-1.5">
+                      <span className="inline-flex items-center gap-1 whitespace-nowrap">
                         <DocumentViewerButton
                           documentId={doc.id}
                           nom={doc.nom}
@@ -114,10 +115,11 @@ export default async function DocumentsPage({
                             type="submit"
                             formTarget="_blank"
                             title={d.telechargement}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-btn px-2.5 text-[13px] font-medium text-action transition-colors hover:bg-action-tint"
+                            aria-label={`${dict.common.download} · ${doc.nom}`}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash"
                           >
                             <IconDownload width={15} height={15} />
-                            {dict.common.download}
+                            <span className="hidden 2xl:inline">{dict.common.download}</span>
                           </button>
                         </form>
                         {gestion && doc.storagePath?.includes("/documents/") ? (
@@ -138,7 +140,7 @@ export default async function DocumentsPage({
               </tbody>
             </Table>
           </TableCard>
-          <p className="mt-3 text-[12px] text-faint">{d.telechargement}</p>
+          <p className="mt-4 text-[13px] text-soft">{d.telechargement}</p>
         </>
       )}
     </div>

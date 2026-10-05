@@ -35,30 +35,30 @@ export async function LotLcdCard({
         action={
           <Link
             href={p("/location-courte-duree")}
-            className="text-[13px] font-medium text-action hover:underline"
+            className="link text-[14px]"
           >
             {l.ouvrirModule}
           </Link>
         }
       />
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
-        <div className="flex items-center gap-3">
-          <IconCircle tone={s.regimeLcd === "INTERDITE" ? "danger" : "sage"} size={40}>
+      <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="flex items-center gap-3 rounded-2xl bg-surface p-4">
+          <IconCircle tone={s.regimeLcd === "INTERDITE" ? "danger" : "sage"} size={44}>
             <CKey width={20} height={20} />
           </IconCircle>
           <div className="min-w-0">
-            <p className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.regime}</p>
+            <p className="text-[13px] text-soft">{l.regime}</p>
             <Badge variant={regimeLcdVariant[s.regimeLcd]} className="mt-1">
               {dict.enums.regimeLcd[s.regimeLcd]}
             </Badge>
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <IconCircle tone={s.declaration?.statut === "VALIDEE" ? "ok" : "sand"} size={40}>
+        <div className="flex items-center gap-3 rounded-2xl bg-surface p-4">
+          <IconCircle tone={s.declaration?.statut === "VALIDEE" ? "ok" : "sand"} size={44}>
             <CCalendar width={20} height={20} />
           </IconCircle>
           <div className="min-w-0">
-            <p className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.declaration}</p>
+            <p className="text-[13px] text-soft">{l.declaration}</p>
             {s.declaration ? (
               <Link href={p(`/location-courte-duree/declarations/${s.declaration.id}`)} className="mt-1 inline-block">
                 <Badge variant={declarationLcdVariant[s.declaration.statut]}>
@@ -70,15 +70,15 @@ export async function LotLcdCard({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-3">
-          <IconCircle tone={s.incidentsLies > 0 ? "warn" : "tosca"} size={40}>
+        <div className="flex items-center gap-3 rounded-2xl bg-surface p-4">
+          <IconCircle tone={s.incidentsLies > 0 ? "warn" : "tosca"} size={44}>
             <CWrench width={20} height={20} />
           </IconCircle>
           <div className="min-w-0">
-            <p className="text-[12px] uppercase tracking-[0.06em] text-soft">
+            <p className="text-[13px] text-soft">
               {fill(l.nuitsUtilisees, { annee: s.annee })}
             </p>
-            <p className="tnum mt-1 text-sm font-semibold text-ink">
+            <p className="tnum mt-1 text-[15px] font-bold text-ink">
               {s.nuitsQuota !== null
                 ? fill(l.nuitsSurQuota, { utilisees: s.nuitsUtilisees, quota: s.nuitsQuota })
                 : `${s.nuitsUtilisees} · ${l.sansQuota}`}
@@ -91,8 +91,8 @@ export async function LotLcdCard({
       </div>
       {s.derniersSejours.length > 0 ? (
         <div className="mt-5">
-          <p className="mb-2 text-[11px] font-medium uppercase tracking-[0.08em] text-soft">{l.derniersSejours}</p>
-          <SejourListe sejours={s.derniersSejours.slice(0, 5)} dict={dict} locale={locale} className="shadow-none border border-hairline" />
+          <p className="mb-2 text-[13px] font-semibold text-soft">{l.derniersSejours}</p>
+          <SejourListe sejours={s.derniersSejours.slice(0, 5)} dict={dict} locale={locale} />
         </div>
       ) : null}
     </Card>

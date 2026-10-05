@@ -1,11 +1,12 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal, IrreversibleNotice } from "../../../../../components/ui/modal";
 import { Field, Input, Select, Textarea, Checkbox } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { IDLE } from "../../../../../lib/forms";
+import { celebrate } from "../../../../../lib/success";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import {
   ajouterResolution,
@@ -90,7 +91,7 @@ export function AnnulerModal({
   const [state, action] = useActionState(annulerAg, IDLE);
   return (
     <>
-      <Button variant="dangerGhost" onClick={() => setOpen(true)}>
+      <Button variant="dangerGhost" className="w-full" onClick={() => setOpen(true)}>
         {dict.ag.annuler}
       </Button>
       <Modal open={open} onClose={() => setOpen(false)} title={dict.ag.annuler} closeLabel={dict.common.close}>
@@ -217,6 +218,13 @@ export function ProcurationModal({
 }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState(donnerProcuration, IDLE);
+  // Procuration donnée = geste de vote : écran de succès plein (Wise).
+  const procurationDonnee = dict.ag.procurationDonnee;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: procurationDonnee, illustration: "ok-vote" });
+  }, [state, procurationDonnee]);
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>

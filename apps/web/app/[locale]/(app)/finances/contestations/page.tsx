@@ -64,11 +64,11 @@ export default async function ContestationsPage({
       />
 
       {contestations.length === 0 ? (
-        <EmptyState title={f.aucuneContestation} />
+        <EmptyState title={f.aucuneContestation} illustration="empty-litiges" />
       ) : (
         <>
           {/* Indicateurs — comptes dérivés de la liste déjà chargée. */}
-          <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <StatCard
               icon={<CScale />}
               tone="lilac"
@@ -92,10 +92,10 @@ export default async function ContestationsPage({
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="flex min-w-0 flex-1 items-start gap-3.5">
                     {nomMembre ? (
-                      <Avatar nom={nomMembre} size={40} className="mt-0.5" />
+                      <Avatar nom={nomMembre} size={44} className="mt-0.5" />
                     ) : (
-                      <IconCircle tone="lilac" size={40} className="mt-0.5">
-                        <CScale width={20} height={20} />
+                      <IconCircle tone="lilac" size={44} className="mt-0.5">
+                        <CScale width={22} height={22} />
                       </IconCircle>
                     )}
                     <div className="min-w-0 flex-1">
@@ -104,14 +104,14 @@ export default async function ContestationsPage({
                           {dict.enums.statutContestation[c.statut]}
                         </Badge>
                         {cx ? (
-                          <span className="truncate text-[13px] font-medium text-ink">
+                          <span className="truncate text-[15px] font-bold text-ink">
                             {cx.lotNumero ? `${dict.invitations.lot} ${cx.lotNumero} · ` : ""}
                             {formatPeriode(cx.periode, ctx.locale)}
                           </span>
                         ) : null}
                       </div>
-                      <p className="mt-2 text-sm leading-relaxed text-body">{c.motif}</p>
-                      <p className="mt-2 text-[12px] text-faint">
+                      <p className="mt-2 text-[15px] leading-relaxed text-body">{c.motif}</p>
+                      <p className="mt-2 text-[13px] text-soft">
                         {nomMembre ? `${f.deposeePar} ${nomMembre} · ` : ""}
                         {formatDateHeure(c.creeLe, ctx.locale)}
                       </p>
@@ -127,8 +127,8 @@ export default async function ContestationsPage({
                   ) : null}
                 </div>
                 {c.reponseSyndic ? (
-                  <div className="mt-4 rounded-field bg-ground px-4 py-3 sm:ms-[54px]">
-                    <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-faint">
+                  <div className="mt-4 rounded-[18px] bg-surface px-4 py-3 sm:ms-[58px]">
+                    <p className="text-[13px] font-semibold text-soft">
                       {f.reponseSyndic}
                     </p>
                     <p className="mt-1 text-sm leading-relaxed text-body">{c.reponseSyndic}</p>

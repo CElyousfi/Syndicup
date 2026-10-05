@@ -5,6 +5,7 @@ import { Modal } from "../../../../components/ui/modal";
 import { Field, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
+import { Banner } from "../../../../components/ui/banner";
 import { IDLE } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import {
@@ -55,7 +56,7 @@ export function RejeterModal({
       <Modal open={open} onClose={() => setOpen(false)} title={e.rejeter} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{e.reservationRejetee}</p>
+            <Banner variant="ok">{e.reservationRejetee}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}
@@ -103,7 +104,7 @@ export function AnnulerModal({
       <Modal open={open} onClose={() => setOpen(false)} title={e.annulerReservation} closeLabel={dict.common.close}>
         {state.status === "success" ? (
           <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{e.reservationAnnulee}</p>
+            <Banner variant="ok">{e.reservationAnnulee}</Banner>
             <div className="flex justify-end">
               <Button variant="secondary" onClick={() => setOpen(false)}>
                 {dict.common.close}

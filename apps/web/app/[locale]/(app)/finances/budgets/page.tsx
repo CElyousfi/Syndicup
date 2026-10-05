@@ -10,7 +10,7 @@ import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
 import { EmptyState } from "../../../../../components/ui/empty-state";
 import { Pagination } from "../../../../../components/ui/pagination";
-import { StatCard } from "../../../../../components/ui/stat-card";
+import { IconChevronEnd } from "../../../../../components/ui/icons";
 import { CWallet, IconCircle } from "../../../../../components/ui/color-icons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { budgetVariant } from "../../../../../lib/status";
@@ -78,7 +78,7 @@ export default async function BudgetsPage({
       />
 
       {!actifCourant && budgets.length > 0 ? (
-        <Banner variant="warn" className="mb-4" title={f.budgetActifRequis}>
+        <Banner variant="warn" className="mb-6" title={f.budgetActifRequis}>
           {f.budgetsSubtitle}
         </Banner>
       ) : null}
@@ -86,6 +86,7 @@ export default async function BudgetsPage({
       {budgets.length === 0 ? (
         <EmptyState
           title={f.aucunBudget}
+          illustration="empty-appels"
           hint={gestion ? f.aucunBudgetAide : undefined}
           action={
             gestion ? (
@@ -100,18 +101,26 @@ export default async function BudgetsPage({
         />
       ) : (
         <>
+          {/* Budget actif : le montant voté en grand, l'exercice et le statut. */}
           {budgetActif ? (
-            <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              <StatCard
-                icon={<CWallet />}
-                tone="sage"
-                label={dict.dash.depensesBudget}
-                value={formatMAD(budgetActif.montantTotal, ctx.locale)}
-                trend={dict.enums.statutBudget.ACTIF}
-                trendTone="ok"
-                hint={budgetActif.exercice}
-              />
-            </div>
+            <Link
+              href={`/${ctx.locale}/finances/budgets/${budgetActif.id}`}
+              className="card card-interactive group mb-10 flex items-center gap-4 p-6 sm:gap-5 sm:p-8"
+            >
+              <IconCircle tone="sage" size={56} className="hidden sm:inline-flex">
+                <CWallet width={28} height={28} />
+              </IconCircle>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-soft">
+                  {dict.dash.depensesBudget} · <span className="tnum">{f.exercice} {budgetActif.exercice}</span>
+                </p>
+                <p className="tnum mt-1.5 text-[28px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">
+                  {formatMAD(budgetActif.montantTotal, ctx.locale)}
+                </p>
+                <Badge variant="ok" className="mt-3">{dict.enums.statutBudget.ACTIF}</Badge>
+              </div>
+              <IconChevronEnd width={22} height={22} className="shrink-0 text-link" />
+            </Link>
           ) : null}
           <TableCard>
             <Table>
@@ -127,10 +136,10 @@ export default async function BudgetsPage({
                   <TR key={b.id}>
                     <TD>
                       <span className="flex items-center gap-3">
-                        <IconCircle tone="sage" size={36} className="hidden sm:inline-flex">
-                          <CWallet width={18} height={18} />
+                        <IconCircle tone="sage" size={40} className="hidden sm:inline-flex">
+                          <CWallet width={20} height={20} />
                         </IconCircle>
-                        <Link href={`/${ctx.locale}/finances/budgets/${b.id}`} className="tnum font-semibold text-ink hover:text-action">
+                        <Link href={`/${ctx.locale}/finances/budgets/${b.id}`} className="tnum font-semibold text-ink hover:text-link">
                           {b.exercice}
                         </Link>
                       </span>
@@ -147,7 +156,7 @@ export default async function BudgetsPage({
                       {b.agId ? (
                         <Link
                           href={`/${ctx.locale}/ag/${b.agId}`}
-                          className="text-[13px] font-medium text-action hover:underline"
+                          className="link text-[13px]"
                         >
                           {dict.nav.ag}
                         </Link>

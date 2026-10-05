@@ -7,8 +7,9 @@ import { Field, Input, Select, Checkbox } from "../ui/field";
 import { FormAlert, SubmitButton } from "../ui/form";
 import { Button, ButtonLink } from "../ui/button";
 import { Badge } from "../ui/badge";
-import { Banner } from "../ui/banner";
+import { Illustration } from "../ui/illustration";
 import { IDLE } from "../../lib/forms";
+import { celebrate } from "../../lib/success";
 import type { Dict, Locale } from "../../lib/i18n";
 import type { MethodePaiement, StatutLigneAppel } from "../../lib/api/types";
 import { formatMAD } from "../../lib/format";
@@ -63,16 +64,32 @@ export function PaiementModal({
   const [state, action] = useActionState(enregistrerPaiement, IDLE);
   const [resultat, setResultat] = useState<ResultatPaiement | null>(null);
 
+  const f = dict.finances;
+
+  // Paiement = action majeure : écran de succès plein (Wise). La répartition FIFO, elle, reste
+  // affichée dans la modale (information utile), avec la même illustration.
+  const { paiementEnregistre, quittanceGeneree, voirQuittance } = f;
   useEffect(() => {
-    if (state.status === "success") setResultat(state.data as ResultatPaiement);
-  }, [state]);
+    if (state.status !== "success") return;
+    const r = state.data as ResultatPaiement;
+    if (r.mode === "fifo" && r.affectations && r.affectations.length > 0) {
+      setResultat(r);
+      return;
+    }
+    setOpen(false);
+    celebrate({
+      titre: paiementEnregistre,
+      corps: r.quittanceId ? quittanceGeneree : undefined,
+      illustration: "ok-paiement",
+      href: r.quittanceId ? `/${locale}/finances/quittances/${r.quittanceId}` : undefined,
+      hrefLabel: r.quittanceId ? voirQuittance : undefined,
+    });
+  }, [state, locale, paiementEnregistre, quittanceGeneree, voirQuittance]);
 
   const fermer = () => {
     setOpen(false);
     setResultat(null);
   };
-
-  const f = dict.finances;
 
   return (
     <>
@@ -87,19 +104,21 @@ export function PaiementModal({
         closeLabel={dict.common.close}
       >
         {resultat ? (
-          <div className="space-y-4">
-            <Banner variant="ok" title={f.paiementEnregistre}>
-              {resultat.quittanceId ? f.quittanceGeneree : null}
-            </Banner>
+          <div className="space-y-5">
+            <div className="flex flex-col items-center text-center">
+              <Illustration name="ok-paiement" size={120} fallback={<PaiementOk />} />
+              <p className="mt-3 text-[20px] font-bold tracking-tight text-ink">{f.paiementEnregistre}</p>
+              {resultat.quittanceId ? (
+                <p className="mt-1 max-w-sm text-[14px] leading-relaxed text-soft">{f.quittanceGeneree}</p>
+              ) : null}
+            </div>
             {resultat.mode === "fifo" && resultat.affectations ? (
-              <div className="rounded-xl border border-hairline">
-                <p className="border-b border-hairline px-4 py-2.5 text-[13px] font-semibold text-ink">
-                  {f.fifoRepartition}
-                </p>
-                <ul className="divide-y divide-hairline">
+              <div className="rounded-[20px] bg-tile px-4 py-3">
+                <p className="pb-2 text-[13px] font-semibold text-ink">{f.fifoRepartition}</p>
+                <ul className="divide-y divide-wash-strong">
                   {resultat.affectations.map((a, i) => (
-                    <li key={i} className="flex items-center justify-between gap-3 px-4 py-2.5">
-                      <span className="tnum text-sm font-medium text-ink">
+                    <li key={i} className="flex items-center justify-between gap-3 py-2.5">
+                      <span className="tnum text-[15px] font-semibold text-ink">
                         {formatMAD(a.montant, locale)}
                       </span>
                       <Badge variant={ligneAppelVariant[a.statut]}>
@@ -110,15 +129,15 @@ export function PaiementModal({
                 </ul>
               </div>
             ) : null}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button variant="secondary" onClick={fermer}>
+                {dict.common.close}
+              </Button>
               {resultat.quittanceId ? (
                 <ButtonLink href={`/${locale}/finances/quittances/${resultat.quittanceId}`}>
                   {f.voirQuittance}
                 </ButtonLink>
               ) : null}
-              <Button variant="secondary" onClick={fermer}>
-                {dict.common.close}
-              </Button>
             </div>
           </div>
         ) : (
@@ -211,5 +230,16 @@ export function PaiementModal({
         )}
       </Modal>
     </>
+  );
+}
+
+/** Repli dessiné du succès de paiement (tant que l'illustration 2D manque). */
+function PaiementOk() {
+  return (
+    <svg width="112" height="112" viewBox="0 0 112 112" aria-hidden>
+      <circle cx="56" cy="56" r="50" fill="var(--color-sage-tint)" />
+      <circle cx="56" cy="56" r="34" fill="var(--color-lime)" />
+      <path d="M41 57l10 10 21-22" fill="none" stroke="var(--color-ink)" strokeWidth="7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }

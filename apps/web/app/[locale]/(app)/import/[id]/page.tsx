@@ -14,7 +14,7 @@ import { StatCard } from "../../../../../components/ui/stat-card";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { CFile, CAlert, CShield } from "../../../../../components/ui/color-icons";
 import { importVariant } from "../../../../../lib/status";
-import { ExecutionPanel, InvitationsMasseModal, MappingForm } from "../import-client";
+import { EtapesImport, ExecutionPanel, InvitationsMasseModal, MappingForm } from "../import-client";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -35,7 +35,6 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
   const nonEnvoyees = invitations.filter((i) => i.statut === "EN_ATTENTE" && !i.envoyeeLe);
   const apercu = j.apercu;
   const etape = j.statut === "ANALYSE" ? 2 : j.statut === "PRET" ? 3 : 4;
-  const etapes = [t.etapes.fichier, t.etapes.mapping, t.etapes.apercu, t.etapes.execution];
 
   return (
     <div className="page-root">
@@ -45,11 +44,11 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
         badge={<Badge variant={importVariant[j.statut as StatutImport]}>{t.statuts[j.statut]}</Badge>}
         subtitle={<>{t.typesImport[j.type]} · {j.lancePar ? nomComplet(j.lancePar) ?? "" : ""} · {formatDateHeure(j.creeLe, ctx.locale)}</>}
         actions={<div className="flex flex-wrap gap-2">
-          {["TERMINE", "ECHOUE", "ANNULE"].includes(j.statut) ? <a className="inline-flex h-10 items-center rounded-full border border-hairline px-4 text-[13.5px] font-medium text-ink hover:bg-hover" href={`/api/import-fichier?kind=rapport&id=${j.id}`}>{t.rapport}</a> : null}
+          {["TERMINE", "ECHOUE", "ANNULE"].includes(j.statut) ? <a className="su-btn inline-flex h-11 items-center rounded-btn border-[1.5px] border-link px-5 text-[15px] font-semibold text-link hover:bg-action-wash" href={`/api/import-fichier?kind=rapport&id=${j.id}`}>{t.rapport}</a> : null}
           {gestion && nonEnvoyees.length ? <InvitationsMasseModal dict={dict} locale={ctx.locale} importJobId={j.id} nb={nonEnvoyees.length} /> : null}
         </div>}
       />
-      <ol className="mb-5 flex flex-wrap gap-2">{etapes.map((e, i) => <li key={e} className={`rounded-full border px-3 py-1 text-[12.5px] ${i + 1 <= etape ? "border-ink bg-ink text-white" : "border-hairline text-soft"}`}>{i + 1}. {e}</li>)}</ol>
+      <EtapesImport dict={dict} etape={etape} termine={j.statut === "TERMINE"} />
       <div className="mb-5 grid gap-4 sm:grid-cols-3">
         <StatCard icon={<CFile />} tone="sage" label={t.nbLignes} value={String(j.nbLignes)} />
         <StatCard icon={<CAlert />} tone={j.nbErreurs > 0 ? "warn" : "sage"} label={t.nbErreurs} value={String(j.nbErreurs)} hint={j.nbErreurs > 0 ? t.nbErreursAide : undefined} />
@@ -60,19 +59,21 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
         <div className="space-y-4 lg:col-span-2">
           {gestion || apercu ? <Card><SectionHeader title={t.colonnesDetectees} />{gestion ? <div className="mt-3"><MappingForm dict={dict} locale={ctx.locale} job={j} /></div> : null}</Card> : null}
           {apercu ? (
-            <TableCard>
-              <div className="p-5 pb-2"><SectionHeader title={t.apercu} subtitle={apercu.lignes.every((l) => l.erreurs.length === 0) ? t.aucuneErreur : undefined} /></div>
+            <section>
+              <SectionHeader className="mb-3" title={t.apercu} subtitle={apercu.lignes.every((l) => l.erreurs.length === 0) ? t.aucuneErreur : undefined} />
+              <TableCard>
               <Table>
                 <THead><TH>{t.ligne}</TH>{apercu.colonnes.filter((c) => c.champ).map((c) => <TH key={c.index}>{apercu.champs.find((f) => f.cle === c.champ)?.libelle[ctx.locale === "ar" ? "AR" : "FR"] ?? c.champ}</TH>)}<TH>{t.erreursLigne}</TH></THead>
                 <tbody>{apercu.lignes.map((l) => (
-                  <TR key={l.n} className={l.erreurs.length ? "bg-danger/5" : ""}>
+                  <TR key={l.n} className={l.erreurs.length ? "bg-danger-tint" : ""}>
                     <TD className="tnum text-soft">{l.n}</TD>
                     {apercu.colonnes.filter((c) => c.champ).map((c) => <TD key={c.index} className="text-body">{l.valeurs[c.index] || "—"}</TD>)}
                     <TD>{l.erreurs.length ? <span className="text-[12.5px] text-danger">{l.erreurs.join(" ")}</span> : l.avertissements.length ? <span className="text-[12.5px] text-warn">{l.avertissements.join(" ")}</span> : <Badge variant="ok">OK</Badge>}</TD>
                   </TR>
                 ))}</tbody>
               </Table>
-            </TableCard>
+              </TableCard>
+            </section>
           ) : null}
         </div>
         <div className="space-y-4">
@@ -83,12 +84,12 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
           {j.resultat ? (
             <Card>
               <SectionHeader title={t.resultat} />
-              <dl className="mt-3 grid grid-cols-2 gap-3">
-                <div><dt className="text-[12px] text-faint">{t.crees}</dt><dd className="text-lg font-semibold text-ink-strong tnum">{j.resultat.crees}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.misAJour}</dt><dd className="text-lg font-semibold text-ink-strong tnum">{j.resultat.mis_a_jour}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.ignorees}</dt><dd className="text-lg font-semibold text-ink-strong tnum">{j.resultat.ignorees}</dd></div>
-                <div><dt className="text-[12px] text-faint">{t.dejaAppliquees}</dt><dd className="text-lg font-semibold text-ink-strong tnum">{j.resultat.deja_appliquees ?? 0}</dd></div>
-                <div className="col-span-2"><dt className="text-[12px] text-faint">{t.erreurs}</dt><dd className={`text-lg font-semibold tnum ${j.resultat.erreurs.length ? "text-danger" : "text-ink-strong"}`}>{j.resultat.erreurs.length}</dd></div>
+              <dl className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.crees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.crees}</dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.misAJour}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.mis_a_jour}</dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.ignorees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.ignorees}</dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.dejaAppliquees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.deja_appliquees ?? 0}</dd></div>
+                <div className="col-span-2 rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.erreurs}</dt><dd className={`mt-1 text-[22px] font-bold leading-none tnum ${j.resultat.erreurs.length ? "text-danger" : "text-ink"}`}>{j.resultat.erreurs.length}</dd></div>
               </dl>
               {j.resultat.erreurs.length ? <ul className="mt-3 max-h-64 space-y-1 overflow-auto text-[12.5px] text-body">{j.resultat.erreurs.slice(0, 50).map((e) => <li key={e.n}><span className="font-mono text-faint">#{e.n}</span> {e.message}</li>)}</ul> : null}
               {j.resultat.echec ? <p className="mt-2 text-[12.5px] text-danger">{j.resultat.echec}</p> : null}

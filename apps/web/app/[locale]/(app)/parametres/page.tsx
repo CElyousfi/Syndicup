@@ -81,13 +81,13 @@ export default async function ParametresPage({
         </Card>
 
         {/* Section légale — visuellement distincte (brief J5) */}
-        <Card id="legaux" className="border-ink/20">
+        <Card id="legaux">
           <SectionHeader title={`⚖ ${pa.legaux}`} className="mb-5" />
           <LegauxForm dict={dict} locale={ctx.locale} copro={copropriete} />
         </Card>
 
         {/* M20 — paie du personnel (paramètres PROVISOIRES, brief §11) */}
-        <Card id="paie" className="border-ink/20">
+        <Card id="paie">
           <SectionHeader title={`⚖ ${pa.paie}`} className="mb-5" />
           <PaieForm dict={dict} locale={ctx.locale} parametres={paie?.ok ? paie.data.parametres_paie : null} />
         </Card>

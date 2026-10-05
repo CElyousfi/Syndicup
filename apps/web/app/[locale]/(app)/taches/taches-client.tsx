@@ -44,12 +44,12 @@ export function TacheForm({ dict, locale, assignees, tache }: { dict: Dict; loca
         </div>
         <div className="mt-4"><Field label={t.description} htmlFor="description" optionalLabel={dict.common.optional}><Textarea id="description" name="description" rows={4} maxLength={8000} defaultValue={tache?.description ?? ""} /></Field></div>
         <div className="mt-4">
-          <p className="text-sm font-medium text-ink-strong">{t.checklist}</p>
+          <p className="text-[14px] font-semibold text-ink">{t.checklist}</p>
           <p className="mb-2 text-[12px] text-soft">{t.checklistAide}</p>
           <div className="space-y-2">
             {etapes.map((it, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="checkbox" name={`etape_fait_${i + 1}`} defaultChecked={it.fait} className="size-4 accent-[#4c6c5a]" />
+                <input type="checkbox" name={`etape_fait_${i + 1}`} defaultChecked={it.fait} className="size-[18px] shrink-0 accent-brand" />
                 <Input name={`etape_${i + 1}`} defaultValue={it.libelle} maxLength={200} className="!h-9" />
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEtapes(etapes.filter((_, k) => k !== i))}>✕</Button>
               </div>
@@ -146,13 +146,13 @@ export function Checklist({ dict, locale, tache, editable }: { dict: Dict; local
   const faits = items.filter((i) => i.fait).length;
   return (
     <div>
-      <p className="mb-2 text-[13px] text-soft">{fill(dict.taches.checklistProgres, { n: faits, total: items.length })}</p>
+      <p className="tnum mb-3 mt-1 text-[13px] text-soft">{fill(dict.taches.checklistProgres, { n: faits, total: items.length })}</p>
       <ul className="space-y-1.5">
         {items.map((it) => (
           <li key={it.id}>
-            <label className={`flex items-center gap-3 rounded-field border border-hairline px-3 py-2 text-[14px] ${editable ? "cursor-pointer hover:bg-hover" : ""}`}>
-              <input type="checkbox" checked={it.fait} disabled={!editable || pending} onChange={(ev) => start(() => basculerEtape(locale, tache.id, it.id, ev.target.checked))} className="size-4 accent-[#4c6c5a]" />
-              <span className={it.fait ? "text-soft line-through" : "text-ink-strong"}>{it.libelle}</span>
+            <label className={`flex items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-[15px] transition-colors ${editable ? "cursor-pointer hover:bg-hover" : ""}`}>
+              <input type="checkbox" checked={it.fait} disabled={!editable || pending} onChange={(ev) => start(() => basculerEtape(locale, tache.id, it.id, ev.target.checked))} className="size-[18px] shrink-0 accent-brand" />
+              <span className={it.fait ? "text-soft line-through" : "font-medium text-ink"}>{it.libelle}</span>
             </label>
           </li>
         ))}
@@ -171,7 +171,7 @@ export function CommentaireForm({ dict, locale, tacheId }: { dict: Dict; locale:
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="tache_id" value={tacheId} />
       <Field label={t.votreCommentaire} htmlFor="contenu_t" error={fieldError(state, "contenu")}><Textarea id="contenu_t" name="contenu" rows={2} required maxLength={4000} /></Field>
       <FormAlert state={state} />
-      <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] text-ok">{t.commentaireEnvoye}</span> : null}<SubmitButton size="sm">{t.commenter}</SubmitButton></div>
+      <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] font-semibold text-ok">{t.commentaireEnvoye}</span> : null}<SubmitButton size="sm">{t.commenter}</SubmitButton></div>
     </form>
   );
 }

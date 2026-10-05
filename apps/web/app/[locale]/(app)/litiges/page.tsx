@@ -95,11 +95,7 @@ export default async function LitigesPage({
         <EmptyState
           title={li.aucun}
           hint={gestion ? li.aucunAide : undefined}
-          icon={
-            <IconCircle tone="lilac" size={64}>
-              <CScale width={30} height={30} />
-            </IconCircle>
-          }
+          illustration="empty-litiges"
           action={peutDeclarer ? <DeclarerLitigeModal dict={dict} locale={ctx.locale} /> : undefined}
         />
       ) : (
@@ -108,20 +104,22 @@ export default async function LitigesPage({
             <Card key={l.id}>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 items-start gap-3.5">
-                  <IconCircle tone="lilac" size={44} className="hidden sm:inline-flex">
-                    <CScale />
-                  </IconCircle>
+                  <span className="hidden sm:block">
+                    <IconCircle tone="lilac" size={48}>
+                      <CScale />
+                    </IconCircle>
+                  </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2.5">
                       <Badge variant={litigeVariant[l.statut]}>
                         {dict.enums.statutLitige[l.statut]}
                       </Badge>
-                      <h2 className="min-w-0 truncate text-[15px] font-semibold text-ink">{l.type}</h2>
+                      <h2 className="min-w-0 truncate text-[17px] font-bold text-ink">{l.type}</h2>
                     </div>
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-body">
+                    <p className="mt-2 whitespace-pre-wrap text-[15px] leading-relaxed text-body">
                       {l.description}
                     </p>
-                    <p className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-faint">
+                    <p className="mt-2.5 flex flex-wrap items-center gap-1.5 text-[13px] text-soft">
                       {gestion && membreParId.get(l.creePar) ? (
                         <>
                           <Avatar nom={membreParId.get(l.creePar) ?? ""} size={18} />
@@ -164,19 +162,19 @@ export default async function LitigesPage({
 function StepperEscalade({ dict, niveau }: { dict: Dict; niveau: 0 | 1 | 2 }) {
   const etapes = ["0", "1", "2"] as const;
   return (
-    <ol className="mt-5 flex items-center gap-2 border-t border-hairline pt-4">
+    <ol className="mt-5 flex items-center gap-2 border-t border-wash-strong pt-4">
       {etapes.map((e, i) => {
         const atteint = niveau >= i;
         const courant = niveau === i;
         return (
           <li key={e} className="flex min-w-0 flex-1 items-center gap-2">
             <span
-              className={`flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+              className={`tnum flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
                 courant
-                  ? "bg-ink text-white"
+                  ? "bg-brand text-white"
                   : atteint
-                    ? "bg-ground text-ink"
-                    : "bg-ground text-faint"
+                    ? "bg-cta text-ink"
+                    : "bg-surface text-faint"
               }`}
             >
               {atteint && !courant ? <IconCheck width={12} height={12} /> : i}
@@ -188,7 +186,7 @@ function StepperEscalade({ dict, niveau }: { dict: Dict; niveau: 0 | 1 | 2 }) {
             >
               {dict.enums.escaladeLitige[e]}
             </span>
-            {i < 2 ? <span className="h-px flex-1 bg-hairline" /> : null}
+            {i < 2 ? <span className="h-0.5 min-w-3 flex-1 rounded-full bg-wash-strong" /> : null}
           </li>
         );
       })}

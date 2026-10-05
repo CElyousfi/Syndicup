@@ -43,27 +43,26 @@ export default async function PaieMoisPage({ params, searchParams }: { params: P
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
   const nonConfigure = paramsRes?.ok ? paramsRes.data.parametres_paie === null : false;
   return (
-    <div className="page-root space-y-5">
-      <BackLink href={p("/personnel")} label={dict.nav.personnel} />
-      <PageHeader title={`${pe.paieMois} · ${periode}`} subtitle={pe.paieMoisSubtitle} actions={<div className="flex gap-1.5"><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, -1)}`)} variant="secondary" size="sm">{pe.moisPrecedent}</ButtonLink><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, 1)}`)} variant="secondary" size="sm">{pe.moisSuivant}</ButtonLink></div>} />
-      {nonConfigure ? <Banner variant="warn"><span className="font-medium">{pe.paieNonConfiguree}.</span> {pe.paieNonConfigureeCorps} <a href={p("/parametres#paie")} className="underline">{dict.nav.parametres}</a></Banner> : null}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard icon={<IconUsers width={18} height={18} />} label={pe.fichesPaie} value={String(x.totaux.nb)} hint={`${x.sans_fiche.length} ${pe.sansFiche.toLowerCase()}`} />
-        <StatCard icon={<IconCoins width={18} height={18} />} tone="ink" label={pe.totalNet} value={formatMAD(x.totaux.net, ctx.locale)} />
-        <StatCard icon={<IconCoins width={18} height={18} />} tone="sage" label={pe.coutEmployeur} value={formatMAD(x.totaux.cout_total_employeur, ctx.locale)} />
+    <div className="page-root space-y-6">
+      <PageHeader back={<BackLink href={p("/personnel")} label={dict.nav.personnel} />} title={<>{pe.paieMois} · <span className="tnum" dir="ltr">{periode}</span></>} subtitle={pe.paieMoisSubtitle} actions={<div className="flex gap-1.5"><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, -1)}`)} variant="secondary" size="sm">{pe.moisPrecedent}</ButtonLink><ButtonLink href={p(`/personnel/paie?periode=${decalerMois(periode, 1)}`)} variant="secondary" size="sm">{pe.moisSuivant}</ButtonLink></div>} />
+      {nonConfigure ? <Banner variant="warn"><span className="font-medium">{pe.paieNonConfiguree}.</span> {pe.paieNonConfigureeCorps} <a href={p("/parametres#paie")} className="link">{dict.nav.parametres}</a></Banner> : null}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <StatCard icon={<IconUsers width={20} height={20} className="text-brand" />} label={pe.fichesPaie} value={String(x.totaux.nb)} hint={`${x.sans_fiche.length} ${pe.sansFiche.toLowerCase()}`} />
+        <StatCard icon={<IconCoins width={20} height={20} className="text-lime" />} tone="ink" label={pe.totalNet} value={formatMAD(x.totaux.net, ctx.locale)} />
+        <StatCard icon={<IconCoins width={20} height={20} className="text-brand" />} tone="sage" label={pe.coutEmployeur} value={formatMAD(x.totaux.cout_total_employeur, ctx.locale)} />
       </div>
       <Card>
         <SectionHeader title={pe.fichesPaie} />
-        {x.fiches.length === 0 ? <EmptyState title={pe.aucuneFichePaie} /> : (
-          <Table>
+        {x.fiches.length === 0 ? <EmptyState title={pe.aucuneFichePaie} illustration="empty-personnel" /> : (
+          <div className="mt-4"><Table>
             <THead><TH>{pe.titre}</TH><TH align="end">{pe.brut}</TH><TH align="end">{pe.net}</TH><TH align="end">{pe.coutEmployeur}</TH><TH>{dict.incidents.statut}</TH><TH></TH></THead>
             <tbody>
               {x.fiches.map((f) => (
                 <TR key={f.id}>
-                  <TD><a href={p(`/personnel/${f.personnelId}?onglet=paie`)} className="font-medium text-ink-strong hover:text-action">{f.personnel.nom ?? en.poste[f.personnel.poste]}</a><span className="block text-[12px] text-soft">{en.poste[f.personnel.poste]}</span></TD>
-                  <TD className="text-end tnum">{formatMAD(f.brut, ctx.locale)}</TD>
-                  <TD className="text-end tnum font-medium text-ink-strong">{formatMAD(f.net, ctx.locale)}</TD>
-                  <TD className="text-end tnum">{formatMAD(f.coutTotalEmployeur, ctx.locale)}</TD>
+                  <TD><a href={p(`/personnel/${f.personnelId}?onglet=paie`)} className="font-bold text-ink hover:text-link">{f.personnel.nom ?? en.poste[f.personnel.poste]}</a><span className="block text-[12px] text-soft">{en.poste[f.personnel.poste]}</span></TD>
+                  <TD className="text-end tnum whitespace-nowrap">{formatMAD(f.brut, ctx.locale)}</TD>
+                  <TD className="text-end tnum whitespace-nowrap font-bold text-ink">{formatMAD(f.net, ctx.locale)}</TD>
+                  <TD className="text-end tnum whitespace-nowrap">{formatMAD(f.coutTotalEmployeur, ctx.locale)}</TD>
                   <TD><div className="flex flex-wrap items-center gap-1"><Badge variant={fichePaieVariant[f.statut]}>{en.statutFichePaie[f.statut]}</Badge>{f.depense ? <a href={p(`/finances/depenses/${f.depense.id}`)}><Badge variant={depenseVariant[f.depense.statut]}>{dict.enumsDepenses.statutDepense[f.depense.statut]}</Badge></a> : null}</div></TD>
                   <TD className="text-end"><div className="flex flex-wrap justify-end gap-1.5">
                     <FileViewerButton src={p(`/api/fiche-paie-pdf?personnel=${f.personnelId}&fiche=${f.id}&langue=${ctx.locale}`)} nom={`fiche-paie-${f.periode}.pdf`} labels={viewer} label={pe.pdfFiche} />
@@ -73,14 +72,14 @@ export default async function PaieMoisPage({ params, searchParams }: { params: P
                 </TR>
               ))}
             </tbody>
-          </Table>
+          </Table></div>
         )}
       </Card>
       {x.sans_fiche.length ? (
         <Card>
           <SectionHeader title={pe.sansFiche} />
-          <ul className="divide-y divide-hairline">
-            {x.sans_fiche.map((s) => <li key={s.id} className="flex items-center justify-between gap-2 py-2 text-[13.5px]"><span><a href={p(`/personnel/${s.id}?onglet=paie`)} className="font-medium text-ink-strong hover:text-action">{s.nom}</a> <span className="text-soft">· {en.poste[s.poste]}</span></span><span className="tnum text-soft">{s.salaire_brut_mensuel ? formatMAD(s.salaire_brut_mensuel, ctx.locale) : "—"}</span></li>)}
+          <ul className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
+            {x.sans_fiche.map((s) => <li key={s.id} className="flex items-center justify-between gap-2 py-3 text-[14px]"><span><a href={p(`/personnel/${s.id}?onglet=paie`)} className="font-semibold text-ink hover:text-link">{s.nom}</a> <span className="text-soft">· {en.poste[s.poste]}</span></span><span className="tnum text-soft">{s.salaire_brut_mensuel ? formatMAD(s.salaire_brut_mensuel, ctx.locale) : "—"}</span></li>)}
           </ul>
         </Card>
       ) : null}

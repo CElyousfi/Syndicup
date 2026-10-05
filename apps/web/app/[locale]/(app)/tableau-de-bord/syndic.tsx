@@ -36,10 +36,11 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { Banner } from "../../../../components/ui/banner";
 import { Bars, Donut } from "../../../../components/ui/charts";
-import { IconCircle, CBuilding, CCalendar, CCoins, CMoneyBag, CVote, CWrench } from "../../../../components/ui/color-icons";
-import { agVariant, urgenceVariant } from "../../../../lib/status";
-import { OnboardingCard, chargerOnboarding } from "../import/onboarding-card";
-import { IconArrowEnd, IconCoins, IconKey } from "../../../../components/ui/icons";
+import { CBuilding, CCalendar, CCoins, CMoneyBag, CScale, CWrench } from "../../../../components/ui/color-icons";
+import { urgenceVariant } from "../../../../lib/status";
+import { chargerOnboarding } from "../import/onboarding-card";
+import { IconCalendar, IconScale, IconVote, IconWrench } from "../../../../components/ui/icons";
+import { AgPoster, ChecklistTile, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
 
 export async function DashboardSyndic({
   ctx,
@@ -121,6 +122,8 @@ export async function DashboardSyndic({
 
   return (
     <div className="page-root">
+      {/* Accueil Wise : la résidence en bandeau, puis le GRAND bonjour. */}
+      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6 shadow-none!" />
       <PageHeader
         title={fill(dict.dash.greeting, { prenom })}
         reveal
@@ -132,28 +135,38 @@ export async function DashboardSyndic({
                 tantiemes: ctx.copropriete?.totalTantiemes ?? "—",
               })}`
         }
-        actions={
-          lectureSeule ? undefined : (
-            <>
-              <ButtonLink href={p("/invitations?nouvelle=1")} variant="secondary" size="md">
-                <IconKey width={16} height={16} />
-                {dict.dash.inviterResident}
-              </ButtonLink>
-              <ButtonLink href={p("/finances/appels-de-fonds?generer=1")} variant="primary" size="md">
-                <IconCoins width={16} height={16} />
-                {dict.dash.genererAppel}
-              </ButtonLink>
-            </>
-          )
-        }
       />
-      {onboarding && !onboarding.complet ? <div className="mb-5"><OnboardingCard dict={dict} locale={locale} checklist={onboarding} compact /></div> : null}
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6" />
+      {tachesRetard > 0 ? (
+        <Banner
+          variant="warn"
+          className="mb-5"
+          action={
+            <Link href={p("/taches?retard=1")} className="link text-[13px]">
+              {dict.taches.titre}
+            </Link>
+          }
+        >
+          {fill(dict.taches.retardN, { n: tachesRetard })}
+        </Banner>
+      ) : null}
 
-      {tachesRetard > 0 ? <Banner variant="warn" className="mb-4" action={<Link href={p("/taches?retard=1")} className="font-medium underline">{dict.taches.titre}</Link>}>{fill(dict.taches.retardN, { n: tachesRetard })}</Banner> : null}
-      {/* Indicateurs clés */}
+      {/* M24 — checklist de démarrage, tant que tout n'est pas en place. */}
+      {onboarding && !onboarding.complet ? (
+        <div className="mb-5">
+          <ChecklistTile checklist={onboarding} dict={dict} locale={locale} />
+        </div>
+      ) : null}
+
+      {/* Soldes Wise : tuiles chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
+        <StatCard
+          icon={<CCoins />}
+          tone="sand"
+          label={dict.dash.impayes}
+          value={formatMAD(versChaine(impaye), locale)}
+          href={p("/finances/appels-de-fonds")}
+        />
         <StatCard
           icon={<CMoneyBag />}
           tone="sage"
@@ -161,15 +174,6 @@ export async function DashboardSyndic({
           value={`${Math.round(tauxRecouvrement * 100)}%`}
           trendTone={tauxRecouvrement >= 0.85 ? "ok" : tauxRecouvrement >= 0.6 ? "warn" : "danger"}
           trend={<TrendArrow up={tauxRecouvrement >= 0.6} />}
-          hint={dict.dash.recouvrementHint}
-          href={p("/finances/appels-de-fonds")}
-        />
-        <StatCard
-          icon={<CCoins />}
-          tone="sand"
-          label={dict.dash.impayes}
-          value={formatMAD(versChaine(impaye), locale)}
-          trendTone={impaye > 0n ? "danger" : "ok"}
           href={p("/finances/appels-de-fonds")}
         />
         <StatCard
@@ -190,19 +194,45 @@ export async function DashboardSyndic({
         />
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      {/* Actions rondes — mêmes entrées et mêmes droits que le bouton « Actions ». */}
+      {lectureSeule ? null : <RoundActions ctx={ctx} />}
+
+      {/* Prochaine AG : LE fait marquant, en carte-affiche. */}
+      <div className="mt-10">
+        {prochaineAg ? (
+          <AgPoster
+            ag={prochaineAg}
+            dict={dict}
+            locale={locale}
+            href={p(`/ag/${prochaineAg.id}`)}
+            ctaLabel={dict.common.details}
+          />
+        ) : (
+          <Section title={dict.dash.prochaineAg}>
+            <EmptyLine
+              text={dict.dash.aucuneAg}
+              icon={<IconVote width={20} height={20} />}
+              action={
+                lectureSeule ? undefined : (
+                  <ButtonLink href={p("/ag/nouvelle")} variant="secondary" size="sm">
+                    {dict.dash.creerAg}
+                  </ButtonLink>
+                )
+              }
+            />
+          </Section>
+        )}
+      </div>
+
+      <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-3">
         {/* Encaissement par appel — barres */}
         <Card className="lg:col-span-2">
           <SectionHeader
             title={dict.dash.recouvrement}
             subtitle={dict.dash.recouvrementHint}
             action={
-              <Link
-                href={p("/finances/appels-de-fonds")}
-                className="inline-flex items-center gap-1 text-[13px] font-medium text-action hover:underline"
-              >
+              <Link href={p("/finances/appels-de-fonds")} className="link text-[14px]">
                 {dict.common.seeAll}
-                <IconArrowEnd width={14} height={14} />
               </Link>
             }
           />
@@ -210,6 +240,7 @@ export async function DashboardSyndic({
             <EmptyState
               title={dict.finances.aucunAppel}
               hint={dict.finances.aucunAppelAide}
+              illustration="empty-appels"
               action={
                 lectureSeule ? undefined : (
                   <ButtonLink href={p("/finances/appels-de-fonds?generer=1")} size="sm">
@@ -217,7 +248,7 @@ export async function DashboardSyndic({
                   </ButtonLink>
                 )
               }
-              className="mt-4 border-0 shadow-none"
+              className="mt-2"
             />
           ) : (
             <Bars
@@ -273,223 +304,139 @@ export async function DashboardSyndic({
           </div>
         </Card>
 
-        {/* Incidents ouverts */}
-        <Card className="lg:col-span-2" padded={false}>
-          <div className="p-6 pb-3">
-            <SectionHeader
-              title={dict.dash.incidentsOuverts}
-              subtitle={
-                slaDepasses.length > 0
-                  ? `${slaDepasses.length} · ${dict.dash.slaDepasse}`
-                  : undefined
-              }
-              action={
-                <Link
-                  href={p("/incidents")}
-                  className="inline-flex items-center gap-1 text-[13px] font-medium text-action hover:underline"
-                >
-                  {dict.common.seeAll}
-                  <IconArrowEnd width={14} height={14} />
-                </Link>
-              }
-            />
-          </div>
+        {/* Incidents ouverts — liste à plat */}
+        <Section
+          className="lg:col-span-2"
+          title={dict.dash.incidentsOuverts}
+          subtitle={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
+          href={p("/incidents")}
+          linkLabel={dict.common.seeAll}
+        >
           {incidents.length === 0 ? (
-            <p className="px-6 pb-6 text-sm text-soft">{dict.incidents.aucunIncident}</p>
+            <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />
           ) : (
-            <ul className="divide-y divide-hairline">
+            <FlatList>
               {incidents.slice(0, 5).map((i) => {
-                const enRetard =
-                  i.slaDeadline && new Date(i.slaDeadline).getTime() < Date.now();
+                const enRetard = i.slaDeadline && new Date(i.slaDeadline).getTime() < Date.now();
                 return (
-                  <li key={i.id}>
-                    <Link
-                      href={p(`/incidents/${i.id}`)}
-                      className="flex items-center gap-4 px-6 py-3 transition-colors hover:bg-hover"
-                    >
-                      <IconCircle tone={enRetard ? "danger" : "tosca"} size={40}>
-                        <CWrench width={20} height={20} />
-                      </IconCircle>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-ink">
-                          {i.sousCategorie}
-                        </p>
-                        <p className="mt-0.5 text-[12px] text-soft">
-                          {dict.enums.categorieIncident[i.categorie]} ·{" "}
-                          {dict.enums.partie[i.partie]}
-                        </p>
-                      </div>
-                      {enRetard ? (
+                  <Row
+                    key={i.id}
+                    href={p(`/incidents/${i.id}`)}
+                    icon={
+                      <RowIcon tone={enRetard ? "danger" : "tosca"}>
+                        <CWrench />
+                      </RowIcon>
+                    }
+                    title={i.sousCategorie}
+                    subtitle={`${dict.enums.categorieIncident[i.categorie]} · ${dict.enums.partie[i.partie]}`}
+                    trailing={
+                      enRetard ? (
                         <Badge variant="danger" pulse>
                           {dict.incidents.slaDepasse}
                         </Badge>
                       ) : (
-                        <Badge variant={urgenceVariant[i.urgence]}>
-                          {dict.enums.urgence[i.urgence]}
-                        </Badge>
-                      )}
-                    </Link>
-                  </li>
+                        <Badge variant={urgenceVariant[i.urgence]}>{dict.enums.urgence[i.urgence]}</Badge>
+                      )
+                    }
+                  />
                 );
               })}
-            </ul>
+            </FlatList>
           )}
-        </Card>
+        </Section>
 
-        {/* Prochaine AG + réservations / litiges */}
-        <div className="min-w-0 space-y-4">
-          <Card>
-            <SectionHeader title={dict.dash.prochaineAg} />
-            {prochaineAg ? (
-              <Link href={p(`/ag/${prochaineAg.id}`)} className="group mt-4 block">
-                <div className="flex items-center gap-3.5">
-                  <IconCircle tone="lilac" size={44}>
-                    <CVote />
-                  </IconCircle>
-                  <div className="min-w-0">
-                    <p className="truncate text-[15px] font-semibold text-ink group-hover:text-action">
-                      {dict.enums.typeAg[prochaineAg.type]}
-                    </p>
-                    <p className="mt-0.5 text-[13px] text-soft">
-                      {formatDateHeure(prochaineAg.dateAg, locale)}
-                    </p>
-                  </div>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-2">
-                  <Badge variant={agVariant[prochaineAg.statut]}>
-                    {dict.enums.statutAg[prochaineAg.statut]}
-                  </Badge>
-                  <EcheanceRelative iso={prochaineAg.dateAg} dict={dict} />
-                </div>
-              </Link>
+        {/* Réservations à valider (syndic) / litiges ouverts (conseil) */}
+        <Section
+          title={lectureSeule ? dict.dash.litigesOuverts : dict.dash.reservationsAValider}
+          href={p(lectureSeule ? "/litiges" : "/reservations")}
+          linkLabel={dict.common.seeAll}
+        >
+          {lectureSeule ? (
+            litigesOuverts.length === 0 ? (
+              <EmptyLine text={dict.litiges.aucun} icon={<IconScale width={20} height={20} />} />
             ) : (
-              <div className="mt-4 flex items-start gap-3.5">
-                <IconCircle tone="lilac" size={44}>
-                  <CVote />
-                </IconCircle>
-                <div className="min-w-0">
-                  <p className="text-sm text-soft">{dict.dash.aucuneAg}</p>
-                  {!lectureSeule ? (
-                    <ButtonLink href={p("/ag/nouvelle")} variant="secondary" size="sm" className="mt-3">
-                      {dict.dash.creerAg}
-                    </ButtonLink>
-                  ) : null}
-                </div>
-              </div>
-            )}
-          </Card>
-
-          <Card padded={false}>
-            <div className="p-6 pb-3">
-              <SectionHeader
-                title={
-                  lectureSeule ? dict.dash.litigesOuverts : dict.dash.reservationsAValider
-                }
-                action={
-                  <Link
-                    href={p(lectureSeule ? "/litiges" : "/reservations")}
-                    className="inline-flex items-center gap-1 text-[13px] font-medium text-action hover:underline"
-                  >
-                    {dict.common.seeAll}
-                    <IconArrowEnd width={14} height={14} />
-                  </Link>
-                }
-              />
-            </div>
-            {lectureSeule ? (
-              litigesOuverts.length === 0 ? (
-                <p className="px-6 pb-6 text-sm text-soft">{dict.litiges.aucun}</p>
-              ) : (
-                <ul className="divide-y divide-hairline">
-                  {litigesOuverts.slice(0, 4).map((l) => (
-                    <li key={l.id} className="px-6 py-3">
-                      <p className="truncate text-sm font-medium text-ink">{l.type}</p>
-                      <p className="mt-0.5 text-[12px] text-soft">
-                        {
-                          dict.enums.escaladeLitige[
-                            String(l.escaladeNiveau) as "0" | "1" | "2"
-                          ]
-                        }
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )
-            ) : reservationsEnAttente.length === 0 ? (
-              <p className="px-6 pb-6 text-sm text-soft">{dict.espaces.aucuneReservation}</p>
-            ) : (
-              <ul className="divide-y divide-hairline">
-                {reservationsEnAttente.slice(0, 4).map((r) => (
-                  <li key={r.id}>
-                    <Link
-                      href={p("/reservations")}
-                      className="flex items-center gap-3 px-6 py-3 transition-colors hover:bg-hover"
-                    >
-                      <IconCircle tone="tosca" size={36}>
-                        <CCalendar width={18} height={18} />
-                      </IconCircle>
-                      <p className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
-                        {formatDateHeure(r.dateDebut, locale)}
-                      </p>
-                      <Badge variant="warn" pulse>
-                        {dict.enums.statutReservation.EN_ATTENTE}
-                      </Badge>
-                    </Link>
-                  </li>
+              <FlatList>
+                {litigesOuverts.slice(0, 4).map((l) => (
+                  <Row
+                    key={l.id}
+                    icon={
+                      <RowIcon tone="lilac">
+                        <CScale />
+                      </RowIcon>
+                    }
+                    title={l.type}
+                    subtitle={dict.enums.escaladeLitige[String(l.escaladeNiveau) as "0" | "1" | "2"]}
+                  />
                 ))}
-              </ul>
-            )}
-          </Card>
+              </FlatList>
+            )
+          ) : reservationsEnAttente.length === 0 ? (
+            <EmptyLine text={dict.espaces.aucuneReservation} icon={<IconCalendar width={20} height={20} />} />
+          ) : (
+            <FlatList>
+              {reservationsEnAttente.slice(0, 4).map((r) => (
+                <Row
+                  key={r.id}
+                  href={p("/reservations")}
+                  icon={
+                    <RowIcon tone="tosca">
+                      <CCalendar />
+                    </RowIcon>
+                  }
+                  title={formatDateHeure(r.dateDebut, locale)}
+                  trailing={
+                    <Badge variant="warn" pulse>
+                      {dict.enums.statutReservation.EN_ATTENTE}
+                    </Badge>
+                  }
+                />
+              ))}
+            </FlatList>
+          )}
+        </Section>
 
-          <DocumentsCard documents={documents} dict={dict} locale={locale} />
-        </div>
-
-        {/* Détail des appels de fonds */}
+        {/* Appels de fonds — liste à plat, jauge d'encaissement */}
         {appels.length > 0 ? (
-          <Card className="lg:col-span-3" padded={false}>
-            <div className="p-6 pb-3">
-              <SectionHeader title={dict.finances.appels} subtitle={dict.finances.appelsSubtitle} />
-            </div>
-            <ul className="divide-y divide-hairline">
+          <Section
+            className="lg:col-span-2"
+            title={dict.finances.appels}
+            subtitle={dict.finances.appelsSubtitle}
+            href={p("/finances/appels-de-fonds")}
+            linkLabel={dict.common.seeAll}
+          >
+            <FlatList>
               {appels.slice(0, 6).map((a) => {
                 const t = totaux.get(a.id) ?? { du: 0n, paye: 0n, ratio: 0 };
                 return (
-                  <li key={a.id}>
-                    <Link
-                      href={p(`/finances/appels-de-fonds/${a.id}`)}
-                      className="flex items-center gap-4 px-6 py-3.5 transition-colors hover:bg-hover sm:gap-6"
-                    >
-                      <IconCircle tone="sand" size={40} className="hidden sm:inline-flex">
-                        <CCoins width={20} height={20} />
-                      </IconCircle>
-                      <div className="min-w-0 flex-1 sm:w-40 sm:flex-none">
-                        <p className="truncate text-sm font-medium text-ink">
-                          {formatPeriode(a.periode, locale)}
-                        </p>
-                        <p className="mt-0.5 truncate text-[12px] text-soft">
-                          {dict.enums.typeAppel[a.type]}
-                        </p>
-                      </div>
-                      <MiniJauge ratio={t.ratio} />
-                      <div className="ms-auto min-w-0 text-end">
-                        <p className="tnum text-sm font-semibold text-ink">
+                  <Row
+                    key={a.id}
+                    href={p(`/finances/appels-de-fonds/${a.id}`)}
+                    icon={
+                      <RowIcon tone="sand">
+                        <CCoins />
+                      </RowIcon>
+                    }
+                    title={formatPeriode(a.periode, locale)}
+                    subtitle={`${dict.enums.typeAppel[a.type]} · ${dict.finances.echeance} ${formatDate(a.dateEcheance, locale)}`}
+                    trailing={
+                      <div className="w-32 sm:w-60">
+                        <p className="tnum truncate text-[14px] font-bold text-ink">
                           {formatMAD(versChaine(t.paye), locale)}
-                          <span className="font-normal text-faint">
-                            {" "}
-                            / {formatMAD(a.montantTotal, locale)}
-                          </span>
+                          <span className="hidden font-normal text-soft sm:inline"> / {formatMAD(a.montantTotal, locale)}</span>
                         </p>
-                        <p className="mt-0.5 text-[12px] text-soft">
-                          {dict.finances.echeance} · {formatDate(a.dateEcheance, locale)}
-                        </p>
+                        <MiniJauge ratio={t.ratio} />
                       </div>
-                    </Link>
-                  </li>
+                    }
+                  />
                 );
               })}
-            </ul>
-          </Card>
+            </FlatList>
+          </Section>
         ) : null}
+
+        <div className={`min-w-0 ${appels.length > 0 ? "" : "lg:col-span-3"}`}>
+          <DocumentsCard documents={documents} dict={dict} locale={locale} />
+        </div>
       </div>
     </div>
   );
@@ -507,7 +454,7 @@ function MiniJauge({ ratio: r }: { ratio: number }) {
   const pct = Math.max(0, Math.min(1, r)) * 100;
   const tone = r >= 1 ? "bg-ok" : r >= 0.6 ? "bg-action" : "bg-warn";
   return (
-    <div className="hidden h-2 flex-1 overflow-hidden rounded-full bg-ground sm:block">
+    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-wash">
       <div className={`h-full rounded-full ${tone}`} style={{ width: `${pct}%` }} />
     </div>
   );

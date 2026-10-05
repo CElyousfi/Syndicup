@@ -49,6 +49,7 @@ export default async function PrestatairesPage({
         <EmptyState
           title={i.aucunPrestataire}
           hint={gestion ? i.aucunPrestataireAide : undefined}
+          illustration="empty-personnel"
           action={gestion ? <PrestataireModal dict={dict} locale={ctx.locale} /> : undefined}
         />
       ) : (
@@ -65,14 +66,14 @@ export default async function PrestatairesPage({
               {prestataires.map((p) => (
                 <TR key={p.id}>
                   <TD className="font-semibold text-ink">
-                    <Link href={`/${ctx.locale}/prestataires/${p.id}`} className="inline-flex items-center gap-3 hover:text-action">
-                      <Avatar nom={p.nom} size={36} />
+                    <Link href={`/${ctx.locale}/prestataires/${p.id}`} className="inline-flex items-center gap-3 text-[15px] font-bold hover:text-link">
+                      <Avatar nom={p.nom} size={44} />
                       <span className="min-w-0 truncate">{p.nom}</span>
                     </Link>
                   </TD>
                   <TD className="text-body">
                     {p.specialite}
-                    {p.noteMoyenne ? <span className="tnum ms-2 text-[12px] text-warn">★ {Number(p.noteMoyenne).toFixed(1)}</span> : null}
+                    {p.noteMoyenne ? <span className="tnum ms-2 text-[12px] font-semibold text-warn">★ {Number(p.noteMoyenne).toFixed(1)}</span> : null}
                   </TD>
                   <TD className="text-body">
                     <span dir="ltr">{p.telephone ?? p.email ?? p.contact}</span>

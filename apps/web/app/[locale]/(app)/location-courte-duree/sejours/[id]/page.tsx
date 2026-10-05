@@ -20,6 +20,8 @@ import { ButtonLink } from "../../../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { CCalendar, CUsers, CWrench, IconCircle } from "../../../../../../components/ui/color-icons";
 import { incidentVariant, sejourVariant } from "../../../../../../lib/status";
+import { IconChevronEnd } from "../../../../../../components/ui/icons";
+import { Ligne, Lignes } from "../../../../../../components/espaces/ligne-liste";
 import { ConfirmerArriveeForm, ConfirmerDepartForm } from "../../lcd-modals";
 import { AnnulerSejourModal, PiecesJointesCard } from "./sejour-actions";
 import type { LcdPieceJointe } from "../../../../../../lib/api/types";
@@ -44,6 +46,16 @@ const TONE_EVENEMENT: Record<LcdSejourEvenement["type"], { fond: string; point: 
   INCIDENT_LIE: { fond: "bg-warn-tint", point: "bg-warn" },
   ANNULE: { fond: "bg-danger-tint", point: "bg-danger" },
 };
+
+/** Ligne clé/valeur : libellé discret au début, valeur affirmée à l'extrémité. */
+function Kv({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 py-2.5">
+      <dt className="shrink-0 text-soft">{label}</dt>
+      <dd className="min-w-0 text-end font-semibold text-ink">{children}</dd>
+    </div>
+  );
+}
 
 export default async function SejourDetailPage({
   params,
@@ -161,50 +173,40 @@ export default async function SejourDetailPage({
         <div className="space-y-4 lg:col-span-2">
           <Card>
             <SectionHeader title={l.voyageurPrincipal} />
-            <dl className="mt-4 grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.voyageurNom}</dt>
-                <dd className="mt-1 font-medium text-ink">{s.voyageurPrincipalNom}</dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.nbVoyageurs}</dt>
-                <dd className="tnum mt-1 text-body">{s.nbVoyageurs}</dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.voyageurTelephone}</dt>
-                <dd className="mt-1 text-body">
-                  {s.voyageurTelephone ? (
-                    <a href={`tel:${s.voyageurTelephone}`} className="tnum text-action hover:underline" dir="ltr">
-                      {formatTelephone(s.voyageurTelephone)}
-                    </a>
-                  ) : (
-                    <span className="text-faint">{dict.common.none}</span>
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.voyageurNationalite}</dt>
-                <dd className="mt-1 text-body" dir="ltr">
-                  {s.voyageurNationalite ?? <span className="text-faint">{dict.common.none}</span>}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.pieceIdentite}</dt>
-                <dd className="mt-1 text-body">
-                  {s.pieceIdentiteType ? dict.enums.typePieceIdentite[s.pieceIdentiteType] : <span className="text-faint">{dict.common.none}</span>}
-                  {s.pieceIdentiteFin ? (
-                    <span className="ms-2 font-mono text-[13px] text-soft" dir="ltr">
-                      ····{s.pieceIdentiteFin}
-                    </span>
-                  ) : null}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[12px] uppercase tracking-[0.06em] text-soft">{l.plaqueVehicule}</dt>
-                <dd className="mt-1 font-mono text-body" dir="ltr">
-                  {s.plaqueVehicule ?? <span className="font-sans text-faint">{dict.common.none}</span>}
-                </dd>
-              </div>
+            <dl className="mt-3 divide-y divide-wash-strong text-sm">
+              <Kv label={l.voyageurNom}>{s.voyageurPrincipalNom}</Kv>
+              <Kv label={l.nbVoyageurs}>
+                <span className="tnum">{s.nbVoyageurs}</span>
+              </Kv>
+              <Kv label={l.voyageurTelephone}>
+                {s.voyageurTelephone ? (
+                  <a href={`tel:${s.voyageurTelephone}`} className="link tnum" dir="ltr">
+                    {formatTelephone(s.voyageurTelephone)}
+                  </a>
+                ) : (
+                  <span className="font-normal text-faint">{dict.common.none}</span>
+                )}
+              </Kv>
+              <Kv label={l.voyageurNationalite}>
+                {s.voyageurNationalite ? <span dir="ltr">{s.voyageurNationalite}</span> : <span className="font-normal text-faint">{dict.common.none}</span>}
+              </Kv>
+              <Kv label={l.pieceIdentite}>
+                {s.pieceIdentiteType ? dict.enums.typePieceIdentite[s.pieceIdentiteType] : <span className="font-normal text-faint">{dict.common.none}</span>}
+                {s.pieceIdentiteFin ? (
+                  <span className="ms-2 font-mono text-[13px] font-normal text-soft" dir="ltr">
+                    ····{s.pieceIdentiteFin}
+                  </span>
+                ) : null}
+              </Kv>
+              <Kv label={l.plaqueVehicule}>
+                {s.plaqueVehicule ? (
+                  <span className="font-mono" dir="ltr">
+                    {s.plaqueVehicule}
+                  </span>
+                ) : (
+                  <span className="font-normal text-faint">{dict.common.none}</span>
+                )}
+              </Kv>
             </dl>
           </Card>
 
@@ -226,12 +228,12 @@ export default async function SejourDetailPage({
                   const motif =
                     ev.detailsJson && typeof ev.detailsJson.motif === "string" ? (ev.detailsJson.motif as string) : null;
                   return (
-                    <li key={ev.id} className={`relative ps-7 ${dernier ? "pb-0" : "border-s border-hairline pb-7"}`}>
-                      <span className={`absolute -start-[9px] top-0 flex size-[18px] items-center justify-center rounded-full ${tone.fond}`}>
+                    <li key={ev.id} className={`relative ps-7 border-s-2 ${dernier ? "border-transparent pb-0" : "border-wash-strong pb-7"}`}>
+                      <span className={`absolute -start-[10px] top-0 flex size-[18px] items-center justify-center rounded-full ${tone.fond}`}>
                         <span className={`size-2 rounded-full ${tone.point}`} />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-ink">{dict.enums.typeEvenementSejour[ev.type]}</p>
+                        <p className="text-[15px] font-semibold text-ink">{dict.enums.typeEvenementSejour[ev.type]}</p>
                         {constate !== null ? (
                           <p className="mt-0.5 text-[13px] text-body">
                             {l.nbVoyageursConstate} : <span className="tnum">{constate}</span>
@@ -251,49 +253,64 @@ export default async function SejourDetailPage({
           </Card>
         </div>
 
-        <div className="space-y-4">
+        {/* Mobile : le résumé du séjour passe en tête. */}
+        <div className="order-first space-y-4 lg:order-none">
           <Card>
-            <SectionHeader title={l.sejour} />
-            <div className="mt-3 flex items-start gap-3">
-              <IconCircle tone={s.statut === "EN_COURS" ? "ok" : "tosca"} size={40}>
-                <CCalendar width={20} height={20} />
+            <div className="flex items-start justify-between gap-3">
+              <IconCircle tone={s.statut === "EN_COURS" ? "ok" : s.statut === "ANNULE" ? "danger" : "tosca"} size={52}>
+                <CCalendar width={26} height={26} />
               </IconCircle>
-              <div className="min-w-0 text-sm">
-                <p className="tnum font-medium text-ink">
+              <Badge variant={sejourVariant[s.statut]} pulse={s.statut === "EN_COURS"}>
+                {dict.enums.statutSejour[s.statut]}
+              </Badge>
+            </div>
+            <p className="mt-4 text-[13px] text-soft">{l.sejour}</p>
+            <p className="tnum mt-0.5 text-[26px] font-bold leading-tight tracking-[-0.02em] text-ink">
+              {nuits === 1 ? l.nuit : fill(l.nuits, { n: nuits })}
+            </p>
+            <dl className="mt-3 divide-y divide-wash-strong text-sm">
+              <Kv label={l.dateArrivee}>
+                <span className="tnum">
                   {formatDate(s.dateArrivee, ctx.locale)}
                   {s.heureArriveePrevue ? ` · ${s.heureArriveePrevue}` : ""}
-                </p>
-                <p className="tnum mt-0.5 text-body">→ {formatDate(s.dateDepart, ctx.locale)}</p>
-                <p className="mt-1.5 text-[13px] text-soft">
-                  {s.gardienInformeLe
-                    ? fill(l.gardienInforme, { date: formatDateHeure(s.gardienInformeLe, ctx.locale) })
-                    : l.gardienNonInforme}
-                </p>
-              </div>
-            </div>
+                </span>
+              </Kv>
+              <Kv label={l.dateDepart}>
+                <span className="tnum">{formatDate(s.dateDepart, ctx.locale)}</span>
+              </Kv>
+            </dl>
+            <p className="mt-3 rounded-2xl bg-surface px-4 py-3 text-[13px] text-body">
+              {s.gardienInformeLe
+                ? fill(l.gardienInforme, { date: formatDateHeure(s.gardienInformeLe, ctx.locale) })
+                : l.gardienNonInforme}
+            </p>
           </Card>
           {declaration ? (
             <Card>
               <SectionHeader title={l.declaration} />
-              <div className="mt-3 flex items-start gap-3">
-                <IconCircle tone="sage" size={40}>
-                  <CUsers width={20} height={20} />
+              <div className="relative mt-3 flex items-center gap-3 rounded-2xl bg-surface p-3">
+                <IconCircle tone="sage" size={44}>
+                  <CUsers width={22} height={22} />
                 </IconCircle>
-                <div className="min-w-0 text-sm">
-                  <Link href={p(`/location-courte-duree/declarations/${declaration.id}`)} className="font-medium text-ink hover:text-action">
+                <div className="min-w-0 flex-1 text-sm">
+                  <Link
+                    href={p(`/location-courte-duree/declarations/${declaration.id}`)}
+                    className="block text-[15px] font-bold text-ink after:absolute after:inset-0 after:rounded-2xl after:content-['']"
+                  >
                     {l.lot} {declaration.lot?.numero ?? s.lot?.numero ?? "—"}
                   </Link>
                   {declaration.contactUrgenceNom ? (
                     <p className="mt-0.5 text-[13px] text-body">
                       {l.contactUrgence} : {declaration.contactUrgenceNom}
                       {declaration.contactUrgenceTelephone ? (
-                        <a href={`tel:${declaration.contactUrgenceTelephone}`} className="tnum ms-1 text-action hover:underline" dir="ltr">
+                        <a href={`tel:${declaration.contactUrgenceTelephone}`} className="link tnum relative z-10 mt-0.5 block w-fit" dir="ltr">
                           {formatTelephone(declaration.contactUrgenceTelephone)}
                         </a>
                       ) : null}
                     </p>
                   ) : null}
                 </div>
+                <IconChevronEnd width={18} height={18} className="shrink-0 text-link" />
               </div>
             </Card>
           ) : null}
@@ -303,19 +320,18 @@ export default async function SejourDetailPage({
               {incidents.length === 0 ? (
                 <p className="mt-3 text-sm text-soft">{dict.common.none}</p>
               ) : (
-                <ul className="mt-3 space-y-2">
+                <Lignes className="mt-2">
                   {incidents.map((inc) => (
-                    <li key={inc.id} className="flex items-center gap-3">
-                      <IconCircle tone="tosca" size={32}>
-                        <CWrench width={16} height={16} />
-                      </IconCircle>
-                      <Link href={p(`/incidents/${inc.id}`)} className="min-w-0 flex-1 truncate text-sm font-medium text-ink hover:text-action">
-                        {inc.sousCategorie}
-                      </Link>
-                      <Badge variant={incidentVariant[inc.statut]}>{dict.enums.statutIncident[inc.statut]}</Badge>
-                    </li>
+                    <Ligne
+                      key={inc.id}
+                      icon={<CWrench width={20} height={20} />}
+                      tone="tosca"
+                      href={p(`/incidents/${inc.id}`)}
+                      title={inc.sousCategorie}
+                      end={<Badge variant={incidentVariant[inc.statut]}>{dict.enums.statutIncident[inc.statut]}</Badge>}
+                    />
                   ))}
-                </ul>
+                </Lignes>
               )}
             </Card>
           ) : null}

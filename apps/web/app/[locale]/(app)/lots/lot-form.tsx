@@ -23,7 +23,7 @@ export function LotForm({
   const [state, action] = useActionState(lot ? modifierLot : creerLot, IDLE);
 
   return (
-    <form action={action} className="card max-w-2xl space-y-5 p-7">
+    <form action={action} className="card max-w-2xl space-y-5 p-6 sm:p-7">
       <input type="hidden" name="locale" value={locale} />
       {lot ? <input type="hidden" name="lot_id" value={lot.id} /> : null}
 
@@ -133,7 +133,7 @@ export function LotForm({
 
       <FormAlert state={state} />
 
-      <div className="flex justify-end gap-2 border-t border-hairline pt-5">
+      <div className="flex justify-end gap-2 border-t border-wash-strong pt-5">
         <SubmitButton>{lot ? dict.common.save : dict.common.create}</SubmitButton>
       </div>
     </form>

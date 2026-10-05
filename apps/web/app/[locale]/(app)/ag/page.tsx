@@ -13,7 +13,7 @@ import { ButtonLink } from "../../../../components/ui/button";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { Pagination } from "../../../../components/ui/pagination";
 import { agVariant } from "../../../../lib/status";
-import { IconArrowEnd, IconPlus } from "../../../../components/ui/icons";
+import { IconChevronEnd, IconPlus } from "../../../../components/ui/icons";
 import { CCalendar, CVote, IconCircle } from "../../../../components/ui/color-icons";
 import { EcheanceRelative } from "../tableau-de-bord/syndic";
 
@@ -58,15 +58,17 @@ export default async function AgListPage({
         }
       />
 
-      <PhotoBanner src={photoSrc(ctx.copropriete, "salle")} title={ctx.copropriete?.nom} className="mb-4" />
+      <PhotoBanner src={photoSrc(ctx.copropriete, "salle")} title={ctx.copropriete?.nom} className="mb-6" />
 
       {ags.length === 0 ? (
         <EmptyState
           title={dict.ag.aucuneAg}
           hint={gestion ? dict.ag.aucuneAgAide : undefined}
+          illustration="empty-ag"
           action={
             gestion ? (
-              <ButtonLink href={p("/ag/nouvelle")} size="sm">
+              <ButtonLink href={p("/ag/nouvelle")}>
+                <IconPlus width={16} height={16} />
                 {dict.ag.creer}
               </ButtonLink>
             ) : undefined
@@ -74,45 +76,47 @@ export default async function AgListPage({
         />
       ) : (
         <>
-          <div className="stagger-grid space-y-3">
+          {/* Liste à plat sur la toile (Wise) : pastille, titre gras, date, statut, chevron. */}
+          <ul className="stagger-grid -mx-2 space-y-1 sm:-mx-3">
             {ags.map((ag) => {
               const aVenir = ["PLANIFIEE", "CONVOQUEE"].includes(ag.statut);
               return (
-                <Link
-                  key={ag.id}
-                  href={p(`/ag/${ag.id}`)}
-                  className="card group flex flex-wrap items-center gap-4 p-4 hover:border-action/40 sm:p-5"
-                >
-                  <IconCircle tone={aVenir ? "tosca" : "lilac"} size={44}>
-                    {aVenir ? <CCalendar /> : <CVote />}
-                  </IconCircle>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <p className="text-[15px] font-semibold text-ink group-hover:text-action">
-                        {dict.enums.typeAg[ag.type]}
+                <li key={ag.id}>
+                  <Link
+                    href={p(`/ag/${ag.id}`)}
+                    className="group flex items-center gap-3.5 rounded-2xl px-2 py-3 transition-colors hover:bg-wash sm:gap-4 sm:px-3"
+                  >
+                    <IconCircle tone={ag.statut === "EN_COURS" ? "warn" : aVenir ? "tosca" : "lilac"} size={48}>
+                      {aVenir ? <CCalendar /> : <CVote />}
+                    </IconCircle>
+                    <div className="min-w-0 flex-1">
+                      <p className="line-clamp-2 text-[16px] font-bold leading-snug text-ink">{dict.enums.typeAg[ag.type]}</p>
+                      <p className="mt-0.5 text-[13px] text-soft">
+                        <span className="tnum">{formatDateHeure(ag.dateAg, ctx.locale)}</span>
+                        {ag.quorumAtteint ? (
+                          <span className="hidden sm:inline">
+                            {` · ${dict.ag.quorum} `}
+                            <span className="tnum">{formatPourcent(ag.quorumAtteint)}</span>
+                          </span>
+                        ) : null}
                       </p>
-                      <Badge
-                        variant={agVariant[ag.statut]}
-                        pulse={ag.statut === "EN_COURS"}
-                      >
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
+                      <Badge variant={agVariant[ag.statut]} pulse={ag.statut === "EN_COURS"}>
                         {dict.enums.statutAg[ag.statut]}
                       </Badge>
+                      {aVenir ? <EcheanceRelative iso={ag.dateAg} dict={dict} /> : null}
                     </div>
-                    <p className="mt-1 text-[13px] text-soft">
-                      {formatDateHeure(ag.dateAg, ctx.locale)}
-                      {ag.quorumAtteint
-                        ? ` · ${dict.ag.quorum} ${formatPourcent(ag.quorumAtteint)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    {aVenir ? <EcheanceRelative iso={ag.dateAg} dict={dict} /> : null}
-                    <IconArrowEnd className="text-faint transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-                  </div>
-                </Link>
+                    <IconChevronEnd
+                      width={18}
+                      height={18}
+                      className="shrink-0 text-link transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5"
+                    />
+                  </Link>
+                </li>
               );
             })}
-          </div>
+          </ul>
           {agsRes.ok ? <Pagination meta={agsRes.meta} basePath={p("/ag")} dict={dict} /> : null}
         </>
       )}

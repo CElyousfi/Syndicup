@@ -1,12 +1,13 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { celebrate } from "../../../../lib/success";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { enregistrerVisite, repondreVisite } from "./actions";
 import { IconDoor } from "../../../../components/ui/icons";
@@ -28,6 +29,13 @@ export function EnregistrerVisiteModal({
   const [open, setOpen] = useState(ouvertInitialement);
   const [state, action] = useActionState(enregistrerVisite, IDLE);
   const v = dict.visites;
+  // Visiteur enregistré = action majeure du gardien : écran de succès plein (Wise).
+  const enregistree = v.enregistree;
+  useEffect(() => {
+    if (state.status !== "success") return;
+    setOpen(false);
+    celebrate({ titre: enregistree, illustration: "ok-visiteur" });
+  }, [state, enregistree]);
 
   return (
     <>

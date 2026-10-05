@@ -12,7 +12,7 @@ import { EmptyState } from "../../../../components/ui/empty-state";
 import { Input } from "../../../../components/ui/field";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { coproVariant } from "../../../../lib/status";
-import { IconPlus, IconSearch } from "../../../../components/ui/icons";
+import { IconChevronEnd, IconPlus, IconSearch } from "../../../../components/ui/icons";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { IconCircle, CBuilding, CFile, CShield } from "../../../../components/ui/color-icons";
 
@@ -82,7 +82,7 @@ export default async function AdminPage({
       </div>
 
       <form className="mb-4" method="GET">
-        <div className="relative max-w-xs">
+        <div className="relative w-72 max-w-full">
           <IconSearch
             width={16}
             height={16}
@@ -93,7 +93,7 @@ export default async function AdminPage({
       </form>
 
       {copros.length === 0 ? (
-        <EmptyState title={dict.common.emptyDefault} />
+        <EmptyState title={dict.common.emptyDefault} illustration={q ? "empty-search" : undefined} />
       ) : (
         <TableCard>
           <Table>
@@ -111,10 +111,10 @@ export default async function AdminPage({
                   <TD className="font-semibold text-ink">
                     <Link
                       href={`/${locale}/admin/coproprietes/${c.id}`}
-                      className="flex items-center gap-3 transition-colors hover:text-action"
+                      className="flex items-center gap-3 text-[15px] font-bold transition-colors hover:text-link"
                     >
-                      <IconCircle tone="sage" size={36}>
-                        <CBuilding width={18} height={18} />
+                      <IconCircle tone="sage" size={40}>
+                        <CBuilding width={20} height={20} />
                       </IconCircle>
                       <span className="min-w-0 truncate">{c.nom}</span>
                     </Link>
@@ -134,9 +134,10 @@ export default async function AdminPage({
                   <TD align="end">
                     <Link
                       href={`/${locale}/admin/coproprietes/${c.id}`}
-                      className="inline-flex h-8 items-center rounded-btn px-2.5 text-[13px] font-medium text-action transition-colors hover:bg-action-tint"
+                      className="inline-flex items-center gap-1 text-[14px] font-semibold text-link hover:text-brand-deep"
                     >
                       {ad.ficheClient}
+                      <IconChevronEnd width={16} height={16} className="icon-flip" />
                     </Link>
                   </TD>
                 </TR>

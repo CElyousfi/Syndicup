@@ -1223,6 +1223,22 @@ export const fr = {
   },
 
   documents: {
+    typesConnus: {
+      ANNONCE_PJ: "Pièce jointe d'annonce",
+      FACTURE: "Facture",
+      FICHE_PAIE: "Fiche de paie",
+      IMPORT_SOURCE: "Fichier d'import",
+      RAPPORT_GESTION: "Rapport de gestion",
+      REGLEMENT_INTERIEUR: "Règlement intérieur",
+      PV: "Procès-verbal",
+      CONTRAT: "Contrat",
+      QUITTANCE: "Quittance",
+      CONVOCATION: "Convocation",
+      JUSTIFICATIF: "Justificatif",
+      ASSURANCE: "Assurance",
+      DEVIS: "Devis",
+      CV: "CV",
+    } as Record<string, string>,
     titre: "Documents",
     subtitle: "Règlement, procès-verbaux, contrats et rapports de la copropriété.",
     televerser: "Ajouter un document",

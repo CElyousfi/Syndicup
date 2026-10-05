@@ -52,14 +52,14 @@ export default async function InvitationCodePage({
         <IconCircle tone={apercu.statut === "ACCEPTEE" ? "sage" : "sand"} size={72} className="mx-auto">
           <CKey width={32} height={32} />
         </IconCircle>
-        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-ink">{dict.auth.inviteTitle}</h1>
-        <p className="mt-2 font-mono text-lg font-semibold tracking-[0.3em] text-soft" dir="ltr">{code}</p>
+        <h1 className="mt-6 text-[30px] font-bold leading-[1.1] tracking-[-0.02em] text-ink">{dict.auth.inviteTitle}</h1>
+        <p className="mx-auto mt-3 w-fit rounded-full bg-tile px-4 py-1.5 font-mono text-lg font-bold tracking-[0.3em] text-ink" dir="ltr">{code}</p>
         <Banner variant={apercu.statut === "ACCEPTEE" ? "info" : "warn"} className="mt-6 text-start">
           {message}
         </Banner>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <ButtonLink href={`/${locale}/connexion`}>{dict.auth.signIn}</ButtonLink>
-          <ButtonLink href={`/${locale}/invitation`} variant="secondary">
+        <div className="mt-7 flex flex-col gap-3">
+          <ButtonLink href={`/${locale}/connexion`} size="lg" className="w-full">{dict.auth.signIn}</ButtonLink>
+          <ButtonLink href={`/${locale}/invitation`} variant="secondary" size="lg" className="w-full">
             {dict.auth.inviteEnterCode}
           </ButtonLink>
         </div>
@@ -73,14 +73,14 @@ export default async function InvitationCodePage({
       <IconCircle tone="sand" size={72} className="mx-auto">
         <CHandshake width={34} height={34} />
       </IconCircle>
-      <h1 className="mt-5 text-2xl font-semibold tracking-tight text-ink">
+      <h1 className="mt-6 text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-ink sm:text-[30px]">
         {fill(dict.auth.inviteRejoindre, { nom: apercu.copropriete_nom })}
       </h1>
-      <p className="mt-2 flex flex-wrap items-center justify-center gap-2 text-sm text-soft">
+      <p className="mt-3 flex flex-wrap items-center justify-center gap-2 text-[15px] text-soft">
         <Badge variant="info">{fill(dict.auth.inviteEnTantQue, { role })}</Badge>
         <span>{apercu.ville}</span>
       </p>
-      <p className="mt-2 text-[12px] text-faint">
+      <p className="mt-2 text-[13px] text-soft">
         {fill(dict.auth.inviteExpireLe, { date: formatDateHeure(apercu.expire_le, locale) })}
       </p>
     </div>
@@ -89,13 +89,16 @@ export default async function InvitationCodePage({
   return (
     <div>
       {enTete}
-      <div className="card mt-6 p-5 text-start sm:p-6">
-        <p className="text-[13px] font-semibold text-ink">{dict.auth.inviteVosInfos}</p>
-        <p className="mt-0.5 text-[13px] text-soft">{dict.auth.inviteVosInfosAide}</p>
+      {/* À plat sur la toile (Wise). Le formulaire d'acceptation porte déjà son propre intitulé. */}
+      <div className="mt-8 text-start">
         {session.accessToken ? (
           <AcceptForm dict={dict} locale={locale} code={code} />
         ) : (
-          <InscriptionForm dict={dict} locale={locale} code={code} />
+          <>
+            <h2 className="text-[19px] font-bold tracking-tight text-ink">{dict.auth.inviteVosInfos}</h2>
+            <p className="mt-1 text-[14px] text-soft">{dict.auth.inviteVosInfosAide}</p>
+            <InscriptionForm dict={dict} locale={locale} code={code} />
+          </>
         )}
       </div>
     </div>

@@ -7,7 +7,6 @@ import { formatDateHeure } from "../../../../lib/format";
 import { lienNotification } from "../../../../lib/notifications-link";
 import { PageHeader } from "../../../../components/page-header";
 import { EmptyState } from "../../../../components/ui/empty-state";
-import { IconBell } from "../../../../components/ui/icons";
 import { NotificationsList } from "./notifications-list";
 
 export async function generateMetadata({
@@ -56,7 +55,7 @@ export default async function NotificationsPage({
       />
 
       {items.length === 0 ? (
-        <EmptyState title={n.aucune} hint={n.aucuneAide} icon={<IconBell width={44} height={44} />} />
+        <EmptyState title={n.aucune} hint={n.aucuneAide} illustration="empty-notifications" />
       ) : (
         <NotificationsList items={items} marquerLuLabel={n.marquerLu} />
       )}
