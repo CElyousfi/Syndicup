@@ -71,6 +71,10 @@ flutter:
           weight: 800
         - asset: assets/fonts/ArchivoDisplay-Black.ttf
           weight: 900
+    - family: SuWordmark
+      fonts:
+        - asset: assets/fonts/SuWordmark-Black.ttf
+          weight: 900
     - family: SuDisplayAr
       fonts:
         - asset: assets/fonts/NotoKufiArabic-ExtraBold.ttf
@@ -106,6 +110,6 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/logo.png"
-  adaptive_icon_background: "#4C6C5A"
+  adaptive_icon_background: "#1E7552"
   adaptive_icon_foreground: "assets/images/logo-foreground.png"
   remove_alpha_ios: true

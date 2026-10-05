@@ -669,7 +669,7 @@ class _CoproMark extends ConsumerWidget {
 class _Mark extends StatelessWidget {
   const _Mark();
   @override
-  Widget build(BuildContext context) => ClipOval(child: Image.asset('assets/images/logo.png', width: 30, height: 30, fit: BoxFit.cover));
+  Widget build(BuildContext context) => const ClipOval(child: BrandTile(size: 30));
 }
 
 /// Cloche qui sonne (oscillation amortie) quand le compteur MONTE — pas au premier affichage.

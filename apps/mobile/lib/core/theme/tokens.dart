@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens — palette « Résidence » d'apps/web/app/globals.css (encre #121212, greige,
-/// sauge, lilas / sable / tosca ; statuts armée / ambre / rouge profond), distribuée selon la
-/// GRAMMAIRE du langage Wise (refero.design, app iOS Wise + wise.design) :
+/// Design tokens — couleurs du LOGO SyndicUp (vert marque #1E7552, lime #E3EF8D, encre, greige),
+/// distribuées selon la GRAMMAIRE du langage Wise (refero.design, app iOS Wise + wise.design) :
 ///   • toile blanche, tuiles greige plates, aucune ombre portée sur le contenu ;
-///   • l'appel à l'action est une pill PLEINE de couleur claire (lime chez Wise → sauge ici)
-///     au texte encre — ce rôle est réservé aux actions principales et aux états actifs ;
-///   • liens et accents interactifs en vert profond (forest chez Wise → actionDeep), soulignés ;
-///   • une « salle sombre » (encre) pour les cartes-affiches, texte sauge ou blanc.
-/// Aucune nouvelle teinte : seuls les rôles changent.
+///   • l'appel à l'action est une pill PLEINE lime au texte encre (15:1) — rôle réservé aux
+///     actions principales et aux états actifs ;
+///   • liens et accents interactifs en vert marque, soulignés ;
+///   • une « salle de marque » (vert, comme le logo inversé) pour les cartes-affiches, titre lime.
+/// Les tons secondaires (lilas / sable / tosca) et les statuts restent ceux de la palette Résidence.
 class SuColors {
   SuColors._();
 
-  // Rôles Wise (voir en-tête) — alias de la palette existante.
-  /// Remplissage des pills d'action principale (rôle « lime » de Wise). Contraste encre : 10,2:1.
-  static const Color cta = sage;
+  // Logo
+  /// Vert marque (chevron du logo, « up »). 5,6:1 sur blanc, 4,7:1 sur greige.
+  static const Color brand = Color(0xFF1E7552);
+  /// Vert marque appuyé : texte sur teintes vertes, états pressés.
+  static const Color brandDeep = Color(0xFF17603F);
+  /// Lime du logo inversé.
+  static const Color lime = Color(0xFFE3EF8D);
+
+  // Rôles Wise (voir en-tête).
+  /// Remplissage des pills d'action principale (rôle « lime » de Wise). Contraste encre : 15:1.
+  static const Color cta = lime;
   static const Color onCta = ink;
-  /// Liens, onglets actifs, accents interactifs (rôle « forest » de Wise). 6,4:1 sur greige.
-  static const Color link = actionDeep;
+  /// Liens, onglets actifs, accents interactifs (rôle « forest » de Wise).
+  static const Color link = brand;
   /// Tuiles et surfaces secondaires (rôle « ash gray » de Wise).
   static const Color tile = ground;
   /// Voile d'encre translucide : pistes de jauge, pastilles neutres — lisible sur blanc ET greige.
@@ -36,15 +43,15 @@ class SuColors {
   static const Color hover = Color(0xFFF7F6F2);
   static const Color surface = Color(0xFFFFFFFF);
 
-  // Action — vert sauge profond (liens, focus, jauges, éléments actifs)
-  static const Color action = Color(0xFF4C6C5A);
-  static const Color actionDeep = Color(0xFF3D5A4A);
-  static const Color actionTint = Color(0xFFE6EFEA);
-  static const Color actionWash = Color(0xFFF2F6F3);
+  // Action — vert marque (liens, focus, jauges, éléments actifs)
+  static const Color action = brand;
+  static const Color actionDeep = brandDeep;
+  static const Color actionTint = Color(0xFFE2EEE7);
+  static const Color actionWash = Color(0xFFF0F6F2);
 
   // Accents secondaires — pastilles d'icônes, séries de graphiques
   static const Color sage = Color(0xFFA4C8AE);
-  static const Color sageTint = Color(0xFFE6EFEA);
+  static const Color sageTint = actionTint;
   static const Color moss = Color(0xFF617C6C);
   static const Color army = Color(0xFF395917);
   static const Color lilac = Color(0xFF595D75);
@@ -65,14 +72,14 @@ class SuColors {
   static const Color danger = Color(0xFF98140B);
   static const Color dangerTint = Color(0xFFF8E9E7);
 
-  // Alias conservés pour les écrans (même valeur que les tokens web ci-dessus).
+  // Alias conservés pour les écrans.
   static const Color actionDark = actionDeep;
   static const Color actionSoft = sage;
   static const Color canvas = ground;
   /// Liserés de bannières : warn/30, danger/30, action/25, ok/30 (globals.css banner.tsx).
   static const Color warnBorder = Color(0x4D8A5A00);
   static const Color dangerSoft = Color(0x4D98140B);
-  static const Color actionBorder = Color(0x404C6C5A);
+  static const Color actionBorder = Color(0x401E7552);
   static const Color okBorder = Color(0x4D395917);
   /// Bordure de carte : rgb(32 31 35 / 0.05).
   static const Color cardBorder = Color(0x0D201F23);
@@ -83,7 +90,7 @@ class SuColors {
   static const Color darkText = faint;
 
   // Alias de compatibilité pour les écrans écrits avec les noms de la maquette bleue —
-  // TOUS mappés sur la palette « Résidence » ci-dessus (aucune nouvelle couleur).
+  // TOUS mappés sur la palette ci-dessus (aucune nouvelle couleur).
   static const Color blue700 = actionDeep;
   static const Color blue600 = action;
   static const Color blue500 = action;

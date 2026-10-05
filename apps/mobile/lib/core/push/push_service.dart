@@ -178,7 +178,7 @@ class PushService {
       number: badge,
       groupKey: 'ma.syndicup.$fil',
       ticker: titre,
-      color: const Color(0xFF4C6C5A),
+      color: const Color(0xFF1E7552),
       styleInformation: BigTextStyleInformation(corps ?? '', contentTitle: titre),
       actions: [
         AndroidNotificationAction(actionOuvrir, _d.open, showsUserInterface: true),

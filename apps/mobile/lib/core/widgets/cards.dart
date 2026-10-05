@@ -238,10 +238,10 @@ class TileCarousel extends StatelessWidget {
   }
 }
 
-/// Carte-affiche Wise (« BOOST YOUR USD BALANCE… ») : salle sombre encre, grand titre en
-/// capitales d'affiche sauge, accroche blanche au-dessus, visuel optionnel, fermeture ronde.
+/// Carte-affiche Wise (« BOOST YOUR USD BALANCE… ») : salle de marque verte (logo inversé), grand
+/// titre en capitales d'affiche lime, accroche blanche au-dessus, visuel optionnel, fermeture ronde.
 class PosterCard extends StatelessWidget {
-  const PosterCard({super.key, required this.title, this.kicker, this.body, this.image, this.art, this.onTap, this.onClose, this.ctaLabel, this.onCta, this.color = SuColors.ink, this.titleColor = SuColors.cta});
+  const PosterCard({super.key, required this.title, this.kicker, this.body, this.image, this.art, this.onTap, this.onClose, this.ctaLabel, this.onCta, this.color = SuColors.brand, this.titleColor = SuColors.lime});
   final String title;
   /// Action du bouton (par défaut : `onTap`).
   final VoidCallback? onCta;
