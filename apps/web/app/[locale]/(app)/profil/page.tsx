@@ -9,7 +9,7 @@ import { Card, SectionHeader } from "../../../../components/ui/card";
 import { compteVariant } from "../../../../lib/status";
 import { IconDownload } from "../../../../components/ui/icons";
 import { Avatar } from "../../../../components/ui/avatar";
-import { CShield, IconCircle } from "../../../../components/ui/color-icons";
+import { PosterCard } from "../../../../components/ui/poster-card";
 import { nomComplet } from "../../../../lib/format";
 import { ProfilForm } from "./profil-form";
 import { apiFetch } from "../../../../lib/api/client";
@@ -60,15 +60,38 @@ export default async function ProfilPage({
       ) : null}
 
       <div className="grid gap-4 lg:grid-cols-3">
-        <Card className="lg:col-span-2 lg:self-start">
-          <ProfilForm
-            dict={dict}
-            locale={ctx.locale}
-            nom={profil.nom ?? ""}
-            prenom={profil.prenom ?? ""}
-            langue={profil.langue_preferee}
+        <div className="space-y-4 lg:col-span-2 lg:self-start">
+          <Card>
+            <ProfilForm
+              dict={dict}
+              locale={ctx.locale}
+              nom={profil.nom ?? ""}
+              prenom={profil.prenom ?? ""}
+              langue={profil.langue_preferee}
+            />
+          </Card>
+
+          {/* J2 — CNDP : carte-affiche sous le formulaire (téléchargement direct, pas un lien Next). */}
+          <PosterCard
+            title={pr.donneesTitre}
+            poster="poster-securite"
+            body={
+              <>
+                <p>{pr.donneesCorps}</p>
+                <p className="mt-2 text-[13px] text-white/70">{pr.donneesConservation}</p>
+                <a
+                  href="/api/export-cndp"
+                  download
+                  className="su-btn mt-6 inline-flex h-11 items-center gap-2 rounded-btn bg-cta px-6 text-[15px] font-semibold text-ink transition-colors hover:bg-lime-hover"
+                >
+                  <IconDownload width={16} height={16} />
+                  {pr.exporter}
+                </a>
+                <p className="mt-2 text-[13px] text-white/70">{pr.exportFormat}</p>
+              </>
+            }
           />
-        </Card>
+        </div>
 
         <div className="space-y-4">
           <Card>
@@ -116,28 +139,6 @@ export default async function ProfilPage({
                   </li>
                 ))}
             </ul>
-          </Card>
-
-          {/* J2 — CNDP */}
-          <Card>
-            <div className="flex items-center gap-3">
-              <IconCircle tone="sage" size={44}>
-                <CShield width={22} height={22} />
-              </IconCircle>
-              <h2 className="text-[19px] font-bold tracking-tight text-ink">{pr.donneesTitre}</h2>
-            </div>
-            <p className="mt-3 text-[14px] leading-relaxed text-body">{pr.donneesCorps}</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-soft">{pr.donneesConservation}</p>
-            {/* Téléchargement direct (route API) : pill secondaire Wise, pas un lien Next. */}
-            <a
-              href="/api/export-cndp"
-              download
-              className="su-btn mt-5 inline-flex h-10 items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[14px] font-semibold text-link transition-colors hover:bg-action-wash"
-            >
-              <IconDownload width={16} height={16} />
-              {pr.exporter}
-            </a>
-            <p className="mt-2 text-[13px] text-soft">{pr.exportFormat}</p>
           </Card>
         </div>
       </div>

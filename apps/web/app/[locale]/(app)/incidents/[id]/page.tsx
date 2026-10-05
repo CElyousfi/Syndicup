@@ -19,6 +19,7 @@ import { fill } from "../../../../../lib/i18n";
 import { formatDate, formatDateHeure, formatMAD, formatTelephone, nomComplet } from "../../../../../lib/format";
 import { BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
+import { CelebrateOnce } from "../../../../../components/ui/celebrate-once";
 import { Banner } from "../../../../../components/ui/banner";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Avatar } from "../../../../../components/ui/avatar";
@@ -109,10 +110,12 @@ export default async function IncidentDetailPage({
 
   return (
     <div className="page-root">
+      {/* Signalement tout juste créé : écran de succès plein (comme le mobile), une seule fois. */}
       {sp.signale === "1" ? (
-        <Banner variant="ok" className="mb-5">
-          {incident.urgence === "URGENCE_MAXIMALE" ? i.signaleUrgent : i.signale}
-        </Banner>
+        <CelebrateOnce
+          titre={incident.urgence === "URGENCE_MAXIMALE" ? i.signaleUrgent : i.signale}
+          illustration="ok-incident"
+        />
       ) : null}
 
       <div className="mb-4 sm:mb-5">

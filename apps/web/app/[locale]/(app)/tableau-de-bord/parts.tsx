@@ -15,8 +15,7 @@ import { SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
 import { PosterCard } from "../../../../components/ui/poster-card";
 import { ProgressBar } from "../../../../components/ui/progress";
-import { Illustration } from "../../../../components/ui/illustration";
-import { CVote, IconCircle, type IconTone } from "../../../../components/ui/color-icons";
+import { IconCircle, type IconTone } from "../../../../components/ui/color-icons";
 import {
   IconBuilding,
   IconCalendar,
@@ -75,6 +74,13 @@ export function RoundActions({ ctx, max = 4 }: { ctx: AppContext; max?: number }
       })}
     </div>
   );
+}
+
+/** Lien « Où va mon argent » s'il figure dans la navigation du rôle, sinon null. */
+export function transparenceDansNav(ctx: AppContext): string | null {
+  const href = `/${ctx.locale}/rapports/transparence`;
+  const nav = buildNav(ctx.role, ctx.dict, ctx.locale);
+  return nav.some((s) => s.items.some((i) => i.href === href)) ? href : null;
 }
 
 /** Section de l'accueil : grand titre gras, lien souligné « Tout voir » à l'extrémité. */
@@ -191,21 +197,6 @@ export function echeanceTexte(iso: string, dict: Dict): string | null {
         : null;
 }
 
-/** Visuel de l'affiche AG : illustration dédiée, sinon l'urne sur disque lime voilé. */
-function AgArt() {
-  return (
-    <Illustration
-      name="poster-ag"
-      size={170}
-      fallback={
-        <span className="flex size-36 items-center justify-center rounded-full bg-lime/15">
-          <CVote width={76} height={76} />
-        </span>
-      }
-    />
-  );
-}
-
 /** Prochaine AG en carte-affiche (salle verte, date en capitales lime). */
 export function AgPoster({
   ag,
@@ -244,7 +235,7 @@ export function AgPoster({
       }
       href={href}
       ctaLabel={ctaLabel}
-      art={<AgArt />}
+      poster="poster-ag"
     />
   );
 }
@@ -263,40 +254,51 @@ export function ChecklistTile({
   const t = dict.importation;
   const restantes = checklist.etapes.filter((e) => !e.fait);
   return (
-    <div className="card p-5 sm:p-6">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[19px] font-bold tracking-tight text-ink">{t.onboarding}</h2>
-          <p className="mt-1 text-[14px] text-soft">{t.onboardingAide}</p>
-        </div>
-        <Badge variant="info" className="shrink-0">
-          {fill(t.progressionOnboarding, { faites: checklist.faites, total: checklist.total })}
-        </Badge>
+    <div className="card overflow-hidden">
+      {/* Bandeau d'affiche (fond encre) en tête de tuile : l'affiche entière, calée à l'extrémité
+          (sa moitié vide se fond dans l'encre), miroitée en arabe. */}
+      <div aria-hidden className="relative h-[120px] overflow-hidden bg-ink sm:h-[140px]">
+        <img
+          src="/illustrations/poster-onboarding.png"
+          alt=""
+          className="absolute end-0 top-1/2 h-[118%] w-auto max-w-none -translate-y-1/2 rtl:-scale-x-100"
+        />
       </div>
-      <ProgressBar ratio={checklist.progression / 100} className="mt-4" />
-      <ul className="mt-4 grid gap-2 sm:grid-cols-2">
-        {restantes.map((e) => (
-          <li key={e.cle}>
-            <Link
-              href={`/${locale}${e.lien}`}
-              className="group flex items-center gap-3 rounded-[16px] bg-surface px-4 py-3 transition-colors hover:bg-action-wash"
-            >
-              <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-link text-link">
-                <IconCheck width={12} height={12} className="opacity-0 transition-opacity group-hover:opacity-100" />
-              </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-[14px] font-semibold text-ink">{t.etapesOnboarding[e.cle]}</span>
-                {e.detail ? (
-                  <span className="block text-[12px] text-soft" dir="auto">
-                    {e.detail}
-                  </span>
-                ) : null}
-              </span>
-              <IconChevronEnd width={16} height={16} className="shrink-0 text-link" />
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-[19px] font-bold tracking-tight text-ink">{t.onboarding}</h2>
+            <p className="mt-1 text-[14px] text-soft">{t.onboardingAide}</p>
+          </div>
+          <Badge variant="info" className="shrink-0">
+            {fill(t.progressionOnboarding, { faites: checklist.faites, total: checklist.total })}
+          </Badge>
+        </div>
+        <ProgressBar ratio={checklist.progression / 100} className="mt-4" />
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+          {restantes.map((e) => (
+            <li key={e.cle}>
+              <Link
+                href={`/${locale}${e.lien}`}
+                className="group flex items-center gap-3 rounded-[16px] bg-surface px-4 py-3 transition-colors hover:bg-action-wash"
+              >
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full border-2 border-link text-link">
+                  <IconCheck width={12} height={12} className="opacity-0 transition-opacity group-hover:opacity-100" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[14px] font-semibold text-ink">{t.etapesOnboarding[e.cle]}</span>
+                  {e.detail ? (
+                    <span className="block text-[12px] text-soft" dir="auto">
+                      {e.detail}
+                    </span>
+                  ) : null}
+                </span>
+                <IconChevronEnd width={16} height={16} className="shrink-0 text-link" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

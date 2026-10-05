@@ -8,6 +8,7 @@ import { Brand, BrandTile } from "../brand";
 import { LocaleSwitch } from "../locale-switch";
 import { Avatar } from "../ui/avatar";
 import { CBuilding, IconCircle } from "../ui/color-icons";
+import { Illustration } from "../ui/illustration";
 import { GuidedTour, type TourLabels } from "../onboarding/guided-tour";
 import { Toaster } from "./toaster";
 import { SuccessOverlay } from "./success-overlay";
@@ -782,9 +783,15 @@ function QuickSheet({ title, close, actions, onClose }: { title: string; close: 
             return (
               <li key={a.href}>
                 <Link href={a.href} onClick={onClose} className="group/qa flex items-center gap-4 rounded-[20px] px-2 py-2.5 transition-colors hover:bg-wash">
-                  <IconCircle tone={a.tone} size={48}>
-                    <Icon width={22} height={22} className="text-ink" />
-                  </IconCircle>
+                  <Illustration
+                    name={a.art}
+                    size={48}
+                    fallback={
+                      <IconCircle tone={a.tone} size={48}>
+                        <Icon width={22} height={22} className="text-ink" />
+                      </IconCircle>
+                    }
+                  />
                   <span className="min-w-0 flex-1 text-[16px] font-semibold text-ink">{a.label}</span>
                   <IconChevronEnd width={20} height={20} className="shrink-0 text-link transition-transform group-hover/qa:translate-x-0.5 rtl:group-hover/qa:-translate-x-0.5" />
                 </Link>

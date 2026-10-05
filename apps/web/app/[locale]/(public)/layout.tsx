@@ -36,34 +36,32 @@ export default async function PublicLayout({
         </footer>
       </main>
 
-      {/* Panneau image — la résidence, titre-affiche lime (moment de marque). À plat, sans ombre. */}
-      <aside className="relative m-3 hidden w-[44%] overflow-hidden rounded-[28px] bg-brand lg:block">
-        {/* Travelling arrière à l'ouverture, puis lente respiration de la photo. */}
-        <div className="hero-zoom absolute inset-0">
-          <div className="hero-drift absolute inset-0">
-            <Image
-              src="/images/residence-hero.jpg"
-              alt=""
-              fill
-              priority
-              sizes="44vw"
-              className="object-cover"
-            />
-          </div>
+      {/* Panneau de marque — illustration 2D de la résidence-logo sur tuile greige, titre-affiche
+          vert (moment de marque, mêmes visuels que l'app mobile). À plat, sans ombre. */}
+      <aside className="relative m-3 hidden w-[44%] flex-col overflow-hidden rounded-[28px] bg-tile lg:flex">
+        <div className="hero-zoom flex flex-1 items-center justify-center px-10 pt-10">
+          <Image
+            src="/illustrations/welcome-hero.png"
+            alt=""
+            width={1024}
+            height={1024}
+            priority
+            sizes="40vw"
+            className="h-auto w-full max-w-[460px] object-contain"
+          />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
-        <div className="absolute inset-x-0 bottom-0 p-10 xl:p-12">
-          <p className="font-poster max-w-lg text-[44px] text-lime xl:text-[56px] [:root[lang=ar]_&]:text-[36px] xl:[:root[lang=ar]_&]:text-[44px]">
+        <div className="px-10 pb-10 xl:px-12 xl:pb-12">
+          <p className="font-poster max-w-lg text-[44px] text-brand xl:text-[56px] [:root[lang=ar]_&]:text-[36px] xl:[:root[lang=ar]_&]:text-[44px]">
             <RevealText text={dict.brand.tagline} delayMs={350} />
           </p>
-          <p className="hero-rise mt-5 max-w-md text-[16px] leading-relaxed text-white/80" style={{ animationDelay: "750ms" }}>
+          <p className="hero-rise mt-5 max-w-md text-[16px] leading-relaxed text-body" style={{ animationDelay: "750ms" }}>
             {dict.brand.subtitle}
           </p>
           <div className="mt-8 flex flex-wrap gap-2">
             {[dict.nav.appels, dict.nav.ag, dict.nav.incidents, dict.nav.documents].map((f, i) => (
               <span
                 key={f}
-                className="hero-rise rounded-full bg-white/15 px-4 py-2 text-[13px] font-semibold text-white backdrop-blur-sm transition-colors duration-300 hover:bg-white/25"
+                className="hero-rise rounded-full bg-surface px-4 py-2 text-[13px] font-semibold text-ink"
                 style={{ animationDelay: `${950 + i * 70}ms` }}
               >
                 {f}

@@ -38,7 +38,8 @@ import {
   CHome,
   CWrench,
 } from "../../../../components/ui/color-icons";
-import { AgPoster, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
+import { AgPoster, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section, transparenceDansNav } from "./parts";
+import { PosterCard } from "../../../../components/ui/poster-card";
 import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
 
@@ -90,6 +91,9 @@ export async function DashboardResident({
 
   // Indicateurs personnels — parité avec les autres tableaux de bord (syndic/gardien).
   const totalDu = lotsAvecSolde.reduce((s, lot) => s + (soldes.get(lot.id) ?? 0n), 0n);
+
+  // Lien transparence seulement s'il figure dans la navigation du rôle (mêmes droits que la coque).
+  const transparenceHref = transparenceDansNav(ctx);
 
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
@@ -223,6 +227,18 @@ export async function DashboardResident({
             </Section>
           )}
         </div>
+      ) : null}
+
+      {/* Sans affiche d'AG : l'affiche « Où va mon argent », si la transparence est dans la navigation du rôle. */}
+      {!prochaineAg && transparenceHref ? (
+        <PosterCard
+          className="mt-10"
+          title={dict.rapports.transparenceTitre}
+          body={dict.rapports.transparenceSubtitle}
+          href={transparenceHref}
+          ctaLabel={dict.common.see}
+          poster="poster-transparence"
+        />
       ) : null}
 
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">

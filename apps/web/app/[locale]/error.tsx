@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "../../components/ui/button";
 import { IconCircle, CAlert } from "../../components/ui/color-icons";
+import { Illustration } from "../../components/ui/illustration";
 
 /** Erreur serveur générique (A5) — request_id discret pour le support. */
 export default function ErrorPage({
@@ -30,9 +31,16 @@ export default function ErrorPage({
   return (
     <div className="flex min-h-screen items-center justify-center bg-surface px-4">
       <div className="w-full max-w-md animate-in-up py-12 text-center">
-        <IconCircle tone="danger" size={72} className="mx-auto">
-          <CAlert width={32} height={32} />
-        </IconCircle>
+        <Illustration
+          name="offline"
+          size={180}
+          className="mx-auto"
+          fallback={
+            <IconCircle tone="danger" size={72}>
+              <CAlert width={32} height={32} />
+            </IconCircle>
+          }
+        />
         <h1 className="mt-6 text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-ink">
           Une erreur est survenue
         </h1>

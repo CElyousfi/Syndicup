@@ -15,6 +15,7 @@ import { Card, SectionHeader } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { IconCircle, type IconTone } from "../../../../components/ui/color-icons";
 import { IconChevronEnd, IconMegaphone, IconPlus } from "../../../../components/ui/icons";
+import { PosterCard } from "../../../../components/ui/poster-card";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { annonceVariant, categorieAnnonceVariant, sondageVariant } from "../../../../lib/status";
 
@@ -45,6 +46,11 @@ export default async function AffichagePage({ params, searchParams }: { params: 
   const nonLues = annRes.ok ? Number((annRes.meta as { non_lues?: number }).non_lues ?? 0) : 0;
   const sondages = sondRes.ok ? sondRes.data : [];
   const contacts = contactsRes.ok ? contactsRes.data : [];
+  // Annonce à la une : l'épinglée publiée la plus récente (elle reste aussi dans la liste).
+  const aLaUne =
+    annonces
+      .filter((a) => a.epingle && a.statut === "PUBLIEE")
+      .sort((x, y) => (y.publieLe ?? y.creeLe).localeCompare(x.publieLe ?? x.creeLe))[0] ?? null;
   const qs = (o: { categorie?: string; statut?: string }) => { const u = new URLSearchParams(); if (o.categorie) u.set("categorie", o.categorie); if (o.statut) u.set("statut", o.statut); const q = u.toString(); return `${p("/affichage")}${q ? `?${q}` : ""}`; };
 
   return (
@@ -63,6 +69,18 @@ export default async function AffichagePage({ params, searchParams }: { params: 
       {!annRes.ok ? <Banner variant="danger" className="mb-4">{c.chargementImpossible}</Banner> : null}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-4 lg:col-span-2">
+          {aLaUne ? (
+            <PosterCard
+              tone="ink"
+              poster="poster-annonce"
+              className="mb-2"
+              kicker={`${e.categorieAnnonce[aLaUne.categorie]} · ${c.epinglee}`}
+              title={aLaUne.titre}
+              body={<p className="line-clamp-2" dir="auto">{aLaUne.apercu}</p>}
+              href={p(`/affichage/${aLaUne.id}`)}
+              ctaLabel={dict.common.see}
+            />
+          ) : null}
           {/* Filtres en pastilles (Wise) : catégorie, puis statut pour la gestion. */}
           <nav className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 scroll-thin sm:mx-0 sm:flex-wrap sm:px-0">
             <Puce href={qs({ statut })} actif={!categorie}>{c.toutes}</Puce>
