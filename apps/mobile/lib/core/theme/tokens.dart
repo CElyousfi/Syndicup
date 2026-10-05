@@ -1,11 +1,28 @@
 import 'package:flutter/material.dart';
 
-/// Design tokens — copie EXACTE de apps/web/app/globals.css (thème « Résidence » : fond greige
-/// chaud, surfaces blanches très arrondies, encre #121212, accent vert sauge profond, accents
-/// lilas / sable / tosca pour les pastilles d'icônes ; statuts armée / ambre / rouge profond).
-/// Aucune couleur propre au mobile : tout vient du web (Master Spec 14.2, parité).
+/// Design tokens — palette « Résidence » d'apps/web/app/globals.css (encre #121212, greige,
+/// sauge, lilas / sable / tosca ; statuts armée / ambre / rouge profond), distribuée selon la
+/// GRAMMAIRE du langage Wise (refero.design, app iOS Wise + wise.design) :
+///   • toile blanche, tuiles greige plates, aucune ombre portée sur le contenu ;
+///   • l'appel à l'action est une pill PLEINE de couleur claire (lime chez Wise → sauge ici)
+///     au texte encre — ce rôle est réservé aux actions principales et aux états actifs ;
+///   • liens et accents interactifs en vert profond (forest chez Wise → actionDeep), soulignés ;
+///   • une « salle sombre » (encre) pour les cartes-affiches, texte sauge ou blanc.
+/// Aucune nouvelle teinte : seuls les rôles changent.
 class SuColors {
   SuColors._();
+
+  // Rôles Wise (voir en-tête) — alias de la palette existante.
+  /// Remplissage des pills d'action principale (rôle « lime » de Wise). Contraste encre : 10,2:1.
+  static const Color cta = sage;
+  static const Color onCta = ink;
+  /// Liens, onglets actifs, accents interactifs (rôle « forest » de Wise). 6,4:1 sur greige.
+  static const Color link = actionDeep;
+  /// Tuiles et surfaces secondaires (rôle « ash gray » de Wise).
+  static const Color tile = ground;
+  /// Voile d'encre translucide : pistes de jauge, pastilles neutres — lisible sur blanc ET greige.
+  static const Color wash = Color(0x10121212);
+  static const Color washStrong = Color(0x1C121212);
 
   // Encre & neutres (chauds, jamais bleutés)
   static const Color ink = Color(0xFF121212);
@@ -99,15 +116,15 @@ class SuGradients {
   static const LinearGradient amber = LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [SuColors.sandMid, SuColors.sand]);
 }
 
-/// Rayons — globals.css : cartes 24 (22 sous lg, 20 pour les tuiles stat), pills 999,
-/// champs 14, feuilles 28.
+/// Rayons — Wise : grands rayons doux sur les blocs de contenu (cartes/tuiles 24), pills pour
+/// tout ce qui est interactif (boutons, puces, recherche), feuilles 32.
 class SuRadius {
   SuRadius._();
-  static const double card = 22;
-  static const double tile = 20;
+  static const double card = 24;
+  static const double tile = 24;
   static const double button = 999;
   static const double field = 14;
-  static const double sheet = 28;
+  static const double sheet = 32;
   static const double pill = 999;
   static const double base = 8;
   // Alias de compatibilité (maquette bleue) → rayons « Résidence ».
@@ -126,13 +143,12 @@ class SuSpace {
   static const double xxl = 32;
 }
 
-/// Ombres — --shadow-lift / --shadow-pop.
+/// Ombres — Wise n'en porte aucune sur le contenu (la hiérarchie vient de la couleur et de
+/// l'échelle) : `lift` est vide. `pop` / `float` restent pour ce qui flotte VRAIMENT au-dessus
+/// de l'écran (toasts, bouton d'action central).
 class SuShadows {
   SuShadows._();
-  static const List<BoxShadow> lift = [
-    BoxShadow(color: Color(0x08201F23), blurRadius: 2, offset: Offset(0, 1)),
-    BoxShadow(color: Color(0x24201F23), blurRadius: 32, offset: Offset(0, 12), spreadRadius: -20),
-  ];
+  static const List<BoxShadow> lift = [];
   static const List<BoxShadow> pop = [
     BoxShadow(color: Color(0x38201F23), blurRadius: 48, offset: Offset(0, 24), spreadRadius: -16),
     BoxShadow(color: Color(0x14201F23), blurRadius: 12, offset: Offset(0, 4), spreadRadius: -4),
@@ -143,4 +159,28 @@ class SuShadows {
     BoxShadow(color: Color(0x2E201F23), blurRadius: 44, offset: Offset(0, 20), spreadRadius: -24),
   ];
   static const List<BoxShadow> nav = float;
+}
+
+/// Typographie « affiche » (Wise Sans 900 → Archivo semi-condensé Black ; Noto Kufi Arabic en
+/// arabe) : réservée aux moments de marque — onboarding, accueil, cartes-affiches. Jamais pour
+/// l'interface courante (Inter). Capitales en latin, interlignage serré (0,9) ; l'arabe garde
+/// un interlignage normal (pas de capitales, ascendantes hautes).
+class SuType {
+  SuType._();
+
+  static TextStyle poster(BuildContext context, double size, {Color color = SuColors.ink}) {
+    final ar = Localizations.maybeLocaleOf(context)?.languageCode == 'ar';
+    return TextStyle(
+      fontFamily: ar ? 'SuDisplayAr' : 'SuDisplay',
+      fontFamilyFallback: ar ? const ['SuDisplay'] : const ['SuDisplayAr'],
+      fontWeight: ar ? FontWeight.w800 : FontWeight.w900,
+      fontSize: ar ? size * 0.82 : size,
+      height: ar ? 1.35 : 1.0,
+      letterSpacing: ar ? 0 : -0.01 * size,
+      color: color,
+    );
+  }
+
+  /// Texte d'affiche : capitales en latin uniquement.
+  static String posterText(BuildContext context, String s) => Localizations.maybeLocaleOf(context)?.languageCode == 'ar' ? s : s.toUpperCase();
 }

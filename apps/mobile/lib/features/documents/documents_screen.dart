@@ -13,6 +13,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -27,6 +28,7 @@ class DocumentsScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
+  static final _pill = OutlineInputBorder(borderRadius: BorderRadius.circular(SuRadius.pill), borderSide: BorderSide.none);
   String _filtre = '';
   final _search = TextEditingController();
 
@@ -40,25 +42,45 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       title: d.documents.titre,
       subtitle: d.documents.subtitle,
       onRefresh: () async => ref.invalidate(documentsProvider),
-      actions: [if (ctx.isGestion) IconButton(icon: const Icon(Icons.upload_file_rounded), tooltip: d.documents.televerser, onPressed: () => _upload(context))],
+      actions: [if (ctx.isGestion) CircleIconButton(icon: Icons.upload_file_rounded, tooltip: d.documents.televerser, onTap: () => _upload(context))],
       children: [
         PhotoBanner('cour', title: ctx.copropriete?.nom),
-        TextField(controller: _search, onChanged: (v) => setState(() => _filtre = v.toLowerCase()), decoration: InputDecoration(hintText: d.common.search, prefixIcon: const Icon(Icons.search_rounded))),
-        const SizedBox(height: 12),
+        // Recherche Wise : pill greige pleine, loupe encre, sans liseré.
+        TextField(
+          controller: _search,
+          onChanged: (v) => setState(() => _filtre = v.toLowerCase()),
+          decoration: InputDecoration(
+            hintText: d.common.search,
+            prefixIcon: const Icon(Icons.search_rounded, color: SuColors.ink),
+            filled: true,
+            fillColor: SuColors.tile,
+            border: _pill,
+            enabledBorder: _pill,
+            focusedBorder: _pill.copyWith(borderSide: const BorderSide(color: SuColors.ink, width: 2)),
+          ),
+        ),
+        const SizedBox(height: 16),
         AsyncView(docs, onRetry: () => ref.invalidate(documentsProvider), data: (list) {
           final types = list.map((x) => x.type).toSet().toList()..sort();
           final visible = list.where((x) => _filtre.isEmpty || x.nom.toLowerCase().contains(_filtre) || x.type.toLowerCase().contains(_filtre)).toList();
-          if (visible.isEmpty) return EmptyState(title: d.documents.aucunDocument, hint: ctx.isGestion ? d.documents.aucunDocumentAide : null, icon: Icons.description_rounded);
+          if (visible.isEmpty) {
+            return _filtre.isNotEmpty && list.isNotEmpty
+                ? EmptyState(title: d.documents.aucunDocument, icon: Icons.search_rounded, illustration: 'empty-search')
+                : EmptyState(title: d.documents.aucunDocument, hint: ctx.isGestion ? d.documents.aucunDocumentAide : null, icon: Icons.description_rounded, illustration: 'empty-documents');
+          }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (types.length > 1) ...[
-                Wrap(spacing: 6, children: [for (final ty in types) StatusBadge(ty, variant: BadgeVariant.outline, small: true)]),
+                Wrap(spacing: 6, children: [for (final ty in types) StatusBadge(libelleTypeDocument(context, ty), variant: BadgeVariant.outline, small: true)]),
                 const SizedBox(height: 12),
               ],
               CardList([for (final doc in visible) DocumentRow(doc, canDelete: ctx.isGestion)]),
-              const SizedBox(height: 12),
-              Text(d.documents.telechargement, style: t.labelSmall),
+              const SizedBox(height: 16),
+              Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Padding(padding: EdgeInsetsDirectional.only(top: 1, end: 6), child: Icon(Icons.lock_rounded, size: 14, color: SuColors.faint)),
+                Expanded(child: Text(d.documents.telechargement, style: t.labelSmall)),
+              ]),
             ],
           );
         }),
@@ -83,9 +105,9 @@ class DocumentRow extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final d = context.dict;
     return ListRow(
-      leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.lilac, size: 40),
+      leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.lilac),
       title: doc.nom,
-      subtitle: '${doc.type} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
+      subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
       trailing: canDelete
           ? IconButton(
               icon: const Icon(Icons.delete_outline_rounded, color: SuColors.faint),
@@ -102,7 +124,7 @@ class DocumentRow extends ConsumerWidget {
                 }
               },
             )
-          : const CircleArrow(size: 32),
+          : null,
       onTap: () => ouvrirDocument(context, ref, doc.id, titre: doc.nom),
     );
   }
@@ -182,8 +204,11 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
       return;
     }
     widget.onDone();
+    // Contexte racine capturé avant de fermer la feuille : l'écran de succès s'y pose.
+    final racine = Navigator.of(context, rootNavigator: true);
+    final titre = context.dict.documents.ajoute;
     Navigator.pop(context);
-    showToast(context, context.dict.documents.ajoute);
+    if (racine.mounted) showSuccess(racine.context, title: titre, illustration: 'ok-general');
   }
 
   @override
@@ -207,4 +232,14 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
       ],
     );
   }
+}
+
+/// Type de document lisible : code système traduit, sinon texte libre saisi (« REGLEMENT_X »
+/// → « Reglement x »).
+String libelleTypeDocument(BuildContext context, String code) {
+  final connu = context.mdict.docTypes[code.toUpperCase()];
+  if (connu != null) return connu;
+  if (!RegExp(r'^[A-Z0-9_]+$').hasMatch(code)) return code;
+  final t = code.replaceAll('_', ' ').toLowerCase();
+  return t.isEmpty ? code : '${t[0].toUpperCase()}${t.substring(1)}';
 }

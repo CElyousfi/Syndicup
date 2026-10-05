@@ -26,35 +26,64 @@ class LitigesScreen extends ConsumerWidget {
     return SuPage(
       title: gestion ? d.litiges.titre : d.litiges.mesLitiges,
       onRefresh: () async => ref.invalidate(litigesProvider),
-      fab: ctx.isPrestataire || ctx.isGardien ? null : FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.litiges.declarer, builder: (_) => const _LitigeForm()), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.litiges.declarer)),
+      fab: ctx.isPrestataire || ctx.isGardien ? null : FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.litiges.declarer, builder: (_) => const _LitigeForm()), icon: const Icon(Icons.add_rounded), label: Text(d.litiges.declarer)),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(litigesProvider), data: (ls) {
-          if (ls.isEmpty) return EmptyState(title: d.litiges.aucun, hint: d.litiges.aucunAide, icon: Icons.balance_rounded);
+          if (ls.isEmpty) return EmptyState(title: d.litiges.aucun, hint: d.litiges.aucunAide, icon: Icons.balance_rounded, illustration: 'empty-litiges');
           final sorted = [...ls]..sort((a, b) => b.creeLe.compareTo(a.creeLe));
           return Column(
             children: [
-              for (final x in sorted)
-                SuCard(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [Expanded(child: Text(x.type, style: t.titleSmall)), StatusBadge(d.enums.statutLitige[x.statut] ?? x.statut, variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true)]),
-                      const SizedBox(height: 4),
-                      Text(x.description, style: t.bodyMedium, maxLines: 4, overflow: TextOverflow.ellipsis),
-                      Text(fill(d.litiges.declareLe, {'date': formatDateCourte(x.creeLe, l)}), style: t.labelSmall),
-                      const SizedBox(height: 12),
-                      _Stepper(niveau: x.escaladeNiveau),
-                      if (gestion && x.statut == 'OUVERT')
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
-                            if (x.escaladeNiveau < 2 && ctx.isGestion) TextButton(onPressed: () => _escalader(context, ref, x), child: Text(d.litiges.escalader)),
-                            if (ctx.isGestion) TextButton(onPressed: () => _cloturer(context, ref, x), child: Text(d.litiges.cloturer)),
-                          ],
-                        ),
-                    ],
-                  ),
+              for (int i = 0; i < sorted.length; i++)
+                SuEnter(
+                  index: i,
+                  child: Builder(builder: (context) {
+                    final x = sorted[i];
+                    // Tuile Wise : pastille, objet en gras, date, statut ; description ardoise ;
+                    // frise d'escalade ; actions en liens soulignés.
+                    return SuCard(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              IconCircle(Icons.balance_rounded, tone: x.statut == 'OUVERT' ? (x.escaladeNiveau >= 2 ? Tone.danger : Tone.sand) : Tone.ok),
+                              const SizedBox(width: 14),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(x.type, style: t.titleMedium),
+                                    const SizedBox(height: 2),
+                                    Text(fill(d.litiges.declareLe, {'date': formatDateCourte(x.creeLe, l)}), style: t.bodySmall),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              StatusBadge(d.enums.statutLitige[x.statut] ?? x.statut, variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(x.description, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.45), maxLines: 4, overflow: TextOverflow.ellipsis),
+                          const SizedBox(height: 18),
+                          _Stepper(niveau: x.escaladeNiveau),
+                          if (gestion && x.statut == 'OUVERT' && ctx.isGestion)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 6),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  if (x.escaladeNiveau < 2) LinkButton(d.litiges.escalader, color: SuColors.danger, onTap: () => _escalader(context, ref, x)),
+                                  const SizedBox(width: 12),
+                                  LinkButton(d.litiges.cloturer, onTap: () => _cloturer(context, ref, x)),
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  }),
                 ),
             ],
           );
@@ -69,8 +98,8 @@ class LitigesScreen extends ConsumerWidget {
     await showFormSheet<void>(context, title: d.litiges.escaladerTitre, builder: (sheet) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''}), style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 12),
+        SuBanner(tone: BannerTone.warn, body: fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''})),
+        const SizedBox(height: 16),
         SuField(label: d.litiges.escaladeMotif, controller: ctrl, maxLines: 3, required: true),
         const SizedBox(height: 16),
         SubmitButton(label: d.litiges.escalader, danger: true, onPressed: () async {
@@ -78,7 +107,9 @@ class LitigesScreen extends ConsumerWidget {
           if (!ok) return;
           final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()});
           if (!sheet.mounted) return;
-          if (r is ApiFail) showToast(sheet, r.error.message, error: true); else {
+          if (r is ApiFail) {
+            showToast(sheet, r.error.message, error: true);
+          } else {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.escalade);
@@ -104,7 +135,9 @@ class LitigesScreen extends ConsumerWidget {
         SubmitButton(label: d.litiges.cloturer, onPressed: () async {
           final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()});
           if (!sheet.mounted) return;
-          if (r is ApiFail) showToast(sheet, r.error.message, error: true); else {
+          if (r is ApiFail) {
+            showToast(sheet, r.error.message, error: true);
+          } else {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.cloture);
@@ -122,23 +155,46 @@ class _Stepper extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
+    // Frise Wise (suivi de transfert) : étapes franchies en vert profond pleines, à venir en
+    // voile d'encre ; filets arrondis entre les pastilles.
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         for (int i = 0; i <= 2; i++) ...[
           Expanded(
+            flex: 3,
             child: Column(
               children: [
-                Container(width: 26, height: 26, alignment: Alignment.center, decoration: BoxDecoration(color: i <= niveau ? SuColors.ink : SuColors.ground, shape: BoxShape.circle, border: Border.all(color: i <= niveau ? SuColors.ink : SuColors.hairlineStrong)), child: Text('$i', style: t.labelSmall?.copyWith(color: i <= niveau ? Colors.white : SuColors.faint, fontWeight: FontWeight.w700))),
-                const SizedBox(height: 4),
-                Text(d.enums.escaladeLitige['$i'] ?? '$i', style: t.labelSmall?.copyWith(color: i == niveau ? SuColors.ink : SuColors.faint, fontWeight: i == niveau ? FontWeight.w700 : FontWeight.w500), textAlign: TextAlign.center, maxLines: 2),
+                Container(
+                  width: 30,
+                  height: 30,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(color: i <= niveau ? SuColors.link : SuColors.washStrong, shape: BoxShape.circle),
+                  child: i < niveau
+                      ? const Icon(Icons.check_rounded, size: 16, color: Colors.white)
+                      : Text('$i', style: t.labelMedium?.copyWith(color: i <= niveau ? Colors.white : SuColors.soft, fontWeight: FontWeight.w700)),
+                ),
+                const SizedBox(height: 6),
+                Text(d.enums.escaladeLitige['$i'] ?? '$i', style: t.labelSmall?.copyWith(color: i == niveau ? SuColors.ink : SuColors.soft, fontWeight: i == niveau ? FontWeight.w700 : FontWeight.w500, height: 1.3), textAlign: TextAlign.center, maxLines: 4),
               ],
             ),
           ),
-          if (i < 2) Expanded(child: Container(height: 2, margin: const EdgeInsets.only(bottom: 22), color: i < niveau ? SuColors.ink : SuColors.hairline)),
+          if (i < 2)
+            Expanded(
+              flex: 2,
+              child: Container(height: 3, margin: const EdgeInsets.only(top: 13.5), decoration: BoxDecoration(color: i < niveau ? SuColors.link : SuColors.washStrong, borderRadius: BorderRadius.circular(999))),
+            ),
         ],
       ],
     );
   }
+}
+
+/// Sépare un message « Phrase courte. Explication. » en (titre sans point final, suite).
+(String, String?) _scinder(String s) {
+  final m = RegExp(r'^(.+?)[.!?؟]\s+(.+)$', dotAll: true).firstMatch(s.trim());
+  if (m == null) return (s.trim(), null);
+  return (m[1]!, m[2]);
 }
 
 class _LitigeForm extends ConsumerStatefulWidget {
@@ -172,7 +228,7 @@ class _LitigeFormState extends ConsumerState<_LitigeForm> {
               _fail = null;
             });
             final r = await ref.read(apiClientProvider).post<dynamic>('/litiges', body: {'type': _type.text.trim(), 'description': _desc.text.trim()});
-            if (!mounted) return;
+            if (!context.mounted) return;
             if (r is ApiFail) {
               setState(() {
                 _loading = false;
@@ -181,8 +237,12 @@ class _LitigeFormState extends ConsumerState<_LitigeForm> {
               return;
             }
             ref.invalidate(litigesProvider);
+            // Succès plein écran (contexte racine : la feuille se ferme). « Litige déclaré. Le
+            // syndic va l'examiner. » → titre-affiche = 1re phrase, explication = la suite.
+            final root = Navigator.of(context, rootNavigator: true).context;
+            final (titre, corps) = _scinder(d.litiges.declare);
             Navigator.pop(context);
-            showToast(context, d.litiges.declare);
+            showSuccess(root, title: titre, body: corps, illustration: 'ok-general');
           },
         ),
       ],

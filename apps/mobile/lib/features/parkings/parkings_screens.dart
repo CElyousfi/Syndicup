@@ -16,6 +16,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../incidents/incidents_screens.dart' show scinderMessage;
 import '../../offline/sync_queue/visites_sync.dart' show localDatabaseProvider, connectivityProvider;
 
 const _cachePlaques = 'parkings:plaques-actives';
@@ -67,18 +68,18 @@ class _ParkingsScreenState extends ConsumerState<ParkingsScreen> with TickerProv
     final racine = !context.canPop();
     final titre = t.titre;
     final bar = TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final o in _onglets) Tab(text: switch (o) { 'plan' => t.onglets.plan, 'vehicules' => t.onglets.vehicules, 'badges' => t.onglets.badges, _ => t.onglets.visiteurs })]);
-    return Scaffold(
-      appBar: racine ? ShellHeaderWithBottom(title: titre, bottom: bar) : AppBar(title: Text(titre), bottom: bar),
-      body: TabBarView(controller: _tabs, children: [
-        for (final o in _onglets)
-          switch (o) {
-            'plan' => _PlanTab(resident: ctx.isResident),
-            'vehicules' => _VehiculesTab(ctx: ctx),
-            'badges' => _BadgesTab(ctx: ctx),
-            _ => const _VisiteursTab(),
-          },
-      ]),
-    );
+    final vues = TabBarView(controller: _tabs, children: [
+      for (final o in _onglets)
+        switch (o) {
+          'plan' => _PlanTab(resident: ctx.isResident),
+          'vehicules' => _VehiculesTab(ctx: ctx),
+          'badges' => _BadgesTab(ctx: ctx),
+          _ => const _VisiteursTab(),
+        },
+    ]);
+    // Hors racine : page Wise (retour rond, titre compact, onglets dessous).
+    if (!racine) return SuPage(title: titre, bottom: bar, body: vues);
+    return Scaffold(appBar: ShellHeaderWithBottom(title: titre, bottom: bar), body: vues);
   }
 }
 
@@ -111,9 +112,9 @@ class _PlanTab extends ConsumerWidget {
         ref.invalidate(planEmplacementsProvider);
         ref.invalidate(attributionsProvider);
       },
-      color: SuColors.action,
+      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
-        Text(resident ? t.subtitleResident : t.subtitle, style: tt.bodySmall),
+        Text(resident ? t.subtitleResident : t.subtitle, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         if (resident) ...[
           SectionHeader(t.onglets.mesAttributions),
           AsyncView(mes, onRetry: () => ref.invalidate(attributionsProvider), data: (rows) => rows.isEmpty
@@ -121,7 +122,7 @@ class _PlanTab extends ConsumerWidget {
               : CardList([
                   for (final a in rows)
                     ListRow(
-                      leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral, size: 40),
+                      leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral),
                       title: '${a.emplacementCode} · ${t.lot} ${a.lotNumero ?? '—'}',
                       subtitle: '${e.typeAttribution[a.type] ?? a.type} · ${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
                       trailing: StatusBadge(a.active ? t.active : t.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
@@ -129,20 +130,16 @@ class _PlanTab extends ConsumerWidget {
                 ])),
         ],
         AsyncView(plan, onRetry: () => ref.invalidate(planEmplacementsProvider), data: (p) {
-          if (p.niveaux.isEmpty) return EmptyState(title: t.aucunEmplacement, icon: Icons.local_parking_rounded);
+          if (p.niveaux.isEmpty) return EmptyState(title: t.aucunEmplacement, icon: Icons.local_parking_rounded, illustration: 'empty-parkings');
           return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             if (!resident) ...[
-              const SizedBox(height: 12),
-              Row(children: [
-                Expanded(child: StatTile(label: t.total, value: '${p.total}', icon: Icons.local_parking_rounded)),
-                const SizedBox(width: 8),
-                Expanded(child: StatTile(label: t.attribues, value: '${p.attribues}', icon: Icons.key_rounded, tone: Tone.tosca, hint: '${p.disponibles} ${t.disponibles.toLowerCase()}')),
-              ]),
-              const SizedBox(height: 8),
-              Row(children: [
-                Expanded(child: StatTile(label: t.visiteurs, value: '${p.visiteursOccupees}/${p.visiteurs}', icon: Icons.meeting_room_rounded, tone: p.visiteurs > 0 && p.visiteursOccupees >= p.visiteurs ? Tone.warn : Tone.sand, hint: t.visiteursOccupees)),
-                const SizedBox(width: 8),
-                Expanded(child: StatTile(label: t.horsService, value: '${p.horsService}', icon: Icons.block_rounded, tone: p.horsService > 0 ? Tone.warn : Tone.sage)),
+              const SizedBox(height: 16),
+              // Soldes Wise : quatre tuiles greige, grand chiffre en bas.
+              TwoCols([
+                StatTile(label: t.total, value: '${p.total}', icon: Icons.local_parking_rounded, minHeight: 140),
+                StatTile(label: t.attribues, value: '${p.attribues}', icon: Icons.key_rounded, tone: Tone.tosca, hint: '${p.disponibles} ${t.disponibles.toLowerCase()}', minHeight: 140),
+                StatTile(label: t.visiteurs, value: '${p.visiteursOccupees}/${p.visiteurs}', icon: Icons.meeting_room_rounded, tone: p.visiteurs > 0 && p.visiteursOccupees >= p.visiteurs ? Tone.warn : Tone.sand, hint: t.visiteursOccupees, minHeight: 140),
+                StatTile(label: t.horsService, value: '${p.horsService}', icon: Icons.block_rounded, tone: p.horsService > 0 ? Tone.warn : Tone.sage, minHeight: 140),
               ]),
             ],
             for (final n in p.niveaux) ...[
@@ -151,9 +148,10 @@ class _PlanTab extends ConsumerWidget {
                 crossAxisCount: 3,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-                childAspectRatio: 1.15,
+                padding: EdgeInsets.zero,
+                mainAxisSpacing: 10,
+                crossAxisSpacing: 10,
+                childAspectRatio: 1.1,
                 children: [for (final x in n.emplacements) CaseEmplacement(x, resident: resident)],
               ),
             ],
@@ -175,18 +173,18 @@ class CaseEmplacement extends StatelessWidget {
     final e = d.enumsParkings;
     final tt = Theme.of(context).textTheme;
     final hs = x.statut == 'HORS_SERVICE';
-    final fond = hs ? SuColors.hover : x.occupee ? SuColors.toscaTint : x.type == 'PARKING_VISITEUR' ? SuColors.okTint : SuColors.surface;
-    final bord = hs ? SuColors.hairline : x.occupee ? SuColors.toscaMid : SuColors.okBorder;
+    // Tuiles plates (Wise) : la teinte seule porte l'état — attribuée tosca, visiteurs vert, libre greige, hors service voilée.
+    final fond = hs ? SuColors.wash : x.occupee ? SuColors.toscaTint : x.type == 'PARKING_VISITEUR' ? SuColors.okTint : SuColors.tile;
     final etat = hs ? e.statutEmplacement['HORS_SERVICE']! : x.attributionCourante != null ? '${t.lot} ${x.attributionCourante!.lotNumero ?? '—'}' : x.statut == 'ATTRIBUE' ? e.statutEmplacement['ATTRIBUE']! : x.type == 'PARKING_VISITEUR' ? (x.visiteurOccupee ? t.visiteurOccupee : t.visiteurLibre) : (x.type == 'PARKING_PMR' || !x.attribuable) ? t.nonAttribuable : e.statutEmplacement['DISPONIBLE']!;
     return SuCard(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+      radius: 20,
       color: fond,
-      border: bord,
       onTap: resident ? null : () => context.push('/parkings/${x.id}'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(x.code, style: tt.titleMedium?.copyWith(fontFamily: 'GeistMono', color: hs ? SuColors.faint : SuColors.ink), textDirection: TextDirection.ltr),
-        Text(e.typeEmplacement[x.type] ?? x.type, style: tt.labelSmall?.copyWith(fontSize: 9.5), maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(etat, style: tt.bodySmall?.copyWith(color: hs ? SuColors.faint : SuColors.ink, fontSize: 11.5), maxLines: 2, overflow: TextOverflow.ellipsis),
+        Text(x.code, style: tt.titleLarge?.copyWith(fontFamily: 'GeistMono', color: hs ? SuColors.faint : SuColors.ink, decoration: hs ? TextDecoration.lineThrough : null), textDirection: TextDirection.ltr, maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(e.typeEmplacement[x.type] ?? x.type, style: tt.labelSmall?.copyWith(fontSize: 10.5, color: SuColors.soft), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(etat, style: tt.bodySmall?.copyWith(color: hs ? SuColors.faint : SuColors.ink, fontSize: 12, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
     );
   }
@@ -204,24 +202,36 @@ class EmplacementDetailScreen extends ConsumerWidget {
     final l = context.locale;
     final tt = Theme.of(context).textTheme;
     final emp = ref.watch(emplacementProvider(id));
-    return Scaffold(
-      appBar: AppBar(title: Text(emp.valueOrNull?.code ?? t.titre)),
-      body: AsyncView(emp, onRetry: () => ref.invalidate(emplacementProvider(id)), loading: const Padding(padding: EdgeInsets.all(16), child: LoadingList()), data: (x) {
+    return SuPage(
+      title: emp.valueOrNull?.code ?? t.titre,
+      onRefresh: () async => ref.invalidate(emplacementProvider(id)),
+      children: [
+        AsyncView(emp, onRetry: () => ref.invalidate(emplacementProvider(id)), data: (x) {
         final c = x.attributionCourante;
         final aujourdhui = DateTime.now().toIso8601String().substring(0, 10);
-        return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
-          Wrap(spacing: 6, runSpacing: 6, children: [
-            StatusBadge(e.statutEmplacement[x.statut] ?? x.statut, variant: emplacementVariant[x.statut] ?? BadgeVariant.neutral),
-            StatusBadge(e.typeEmplacement[x.type] ?? x.type, variant: BadgeVariant.outline),
-            if (!x.attribuable) StatusBadge(t.nonAttribuable, variant: BadgeVariant.neutral),
-          ]),
-          const SizedBox(height: 10),
-          Text(x.code, style: tt.headlineSmall?.copyWith(fontFamily: 'GeistMono'), textDirection: TextDirection.ltr),
-          if (x.niveau != null) Text('${t.niveau} ${x.niveau}', style: tt.bodySmall),
+        final hs = x.statut == 'HORS_SERVICE';
+        return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          // Bloc résumé Wise : grande pastille, type, niveau, statuts.
+          SuEnter(
+            child: SuCard(
+              padding: const EdgeInsets.all(20),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                IconCircle(hs ? Icons.block_rounded : Icons.local_parking_rounded, tone: hs ? Tone.warn : x.occupee ? Tone.tosca : Tone.ok, size: 64),
+                const SizedBox(height: 18),
+                Text(e.typeEmplacement[x.type] ?? x.type, style: tt.displaySmall),
+                if (x.niveau != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('${t.niveau} ${x.niveau}', style: tt.bodyMedium?.copyWith(color: SuColors.soft))),
+                const SizedBox(height: 14),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  StatusBadge(e.statutEmplacement[x.statut] ?? x.statut, variant: emplacementVariant[x.statut] ?? BadgeVariant.neutral),
+                  if (!x.attribuable) StatusBadge(t.nonAttribuable, variant: BadgeVariant.outline),
+                ]),
+              ]),
+            ),
+          ),
           SectionHeader(t.attributionCourante),
           c == null
-              ? SuCard(child: Text(t.aucuneAttribution, style: tt.bodySmall))
-              : SuCard(child: Column(children: [
+              ? Text(t.aucuneAttribution, style: tt.bodyMedium?.copyWith(color: SuColors.soft))
+              : SuCard(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8), child: Column(children: [
                   KeyValueRow(t.lotBeneficiaire, c.lotNumero ?? '—'),
                   KeyValueRow(t.type, e.typeAttribution[c.type] ?? c.type),
                   KeyValueRow(t.periode, '${formatJourAnnee(c.dateDebut, l)} → ${c.dateFin != null ? formatJourAnnee(c.dateFin, l) : t.sansFin}'),
@@ -230,19 +240,20 @@ class EmplacementDetailScreen extends ConsumerWidget {
                 ])),
           SectionHeader(t.historique),
           x.attributions.isEmpty
-              ? SuCard(child: Text(t.aucunHistorique, style: tt.bodySmall))
+              ? Text(t.aucunHistorique, style: tt.bodyMedium?.copyWith(color: SuColors.soft))
               : CardList([
                   for (final a in x.attributions)
                     ListRow(
-                      leading: IconCircle(Icons.history_rounded, tone: a.active ? Tone.ok : Tone.neutral, size: 36),
+                      leading: IconCircle(Icons.history_rounded, tone: a.active ? Tone.ok : Tone.neutral),
                       title: '${t.lot} ${a.lotNumero ?? '—'} · ${e.typeAttribution[a.type] ?? a.type}',
                       subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
                       trailing: StatusBadge(a.active ? t.active : a.dateDebut.compareTo(aujourdhui) > 0 ? t.aVenir : t.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
                     ),
                 ]),
-          if (x.notes != null && x.notes!.isNotEmpty) ...[SectionHeader(t.notes), SuCard(child: Text(x.notes!, style: tt.bodyMedium))],
+          if (x.notes != null && x.notes!.isNotEmpty) ...[SectionHeader(t.notes), SuCard(child: Text(x.notes!, style: tt.bodyLarge?.copyWith(color: SuColors.ink)))],
         ]);
       }),
+      ],
     );
   }
 }
@@ -333,24 +344,22 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
     final liste = ref.watch(vehiculesProvider(''));
     final peutDeclarer = ctx.isResident || ctx.isGestion;
     Widget ligne(Vehicule v, {bool actions = false}) => ListRow(
-          leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral, size: 40),
+          leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : v.type == 'UTILITAIRE' ? Icons.local_shipping_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral),
           title: v.immatriculation,
           subtitle: '${t.lot} ${v.lotNumero ?? '—'} · ${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}',
           trailing: actions && peutDeclarer && v.actif
-              ? PopupMenuButton<String>(onSelected: (k) => k == 'edit' ? _declarer(v) : _retirer(v), itemBuilder: (_) => [PopupMenuItem(value: 'edit', child: Text(d.common.modify)), PopupMenuItem(value: 'del', child: Text(t.retirerVehicule))])
+              ? PopupMenuButton<String>(icon: const Icon(Icons.more_vert_rounded, color: SuColors.link), onSelected: (k) => k == 'edit' ? _declarer(v) : _retirer(v), itemBuilder: (_) => [PopupMenuItem(value: 'edit', child: Text(d.common.modify)), PopupMenuItem(value: 'del', child: Text(t.retirerVehicule))])
               : StatusBadge(v.actif ? t.actif : t.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
         );
     return RefreshIndicator(
       onRefresh: () async { ref.invalidate(vehiculesProvider); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
-      color: SuColors.action,
-      child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 96), children: [
+      color: SuColors.link,
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [
         if (ctx.isGardien || ctx.isGestion) ...[
+          // Recherche de plaque : titre de section Wise + tuile greige (champ blanc, pill « Rechercher »).
+          SectionHeader(t.rechercher, subtitle: t.rechercherAide),
           SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(t.rechercher, style: tt.titleSmall),
-            const SizedBox(height: 4),
-            Text(t.rechercherAide, style: tt.bodySmall),
-            const SizedBox(height: 10),
-            Row(children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Expanded(child: SuField(label: t.immatriculation, controller: _plaque, hint: '12345-A-6', keyboardType: TextInputType.visiblePassword)),
               const SizedBox(width: 8),
               // Le thème fixe minimumSize = Size.fromHeight(…) (largeur infinie) : borné explicitement dans une Row.
@@ -358,17 +367,16 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
             ]),
             if (!online) Padding(padding: const EdgeInsets.only(top: 8), child: StatusBadge(context.mdict.offlineCached, variant: BadgeVariant.warn, small: true)),
             if (_resultat != null) ...[
-              const SizedBox(height: 10),
-              if (_horsLigne) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(context.mdict.offlineCached, style: tt.labelSmall?.copyWith(color: SuColors.warn))),
-              if (_resultat!.exact != null) ...[Text(t.resultatExact, style: tt.labelSmall), ligne(_resultat!.exact!)] else Text(t.aucunResultat, style: tt.bodyMedium?.copyWith(color: SuColors.danger)),
-              if (_resultat!.similaires.isNotEmpty) ...[const SizedBox(height: 6), Text(t.resultatsSimilaires, style: tt.labelSmall), for (final v in _resultat!.similaires) ligne(v)],
+              const SizedBox(height: 14),
+              if (_horsLigne) Padding(padding: const EdgeInsets.only(bottom: 6), child: Text(context.mdict.offlineCached, style: tt.bodySmall?.copyWith(color: SuColors.warn, fontWeight: FontWeight.w600))),
+              if (_resultat!.exact != null) ...[Text(t.resultatExact, style: tt.labelMedium?.copyWith(color: SuColors.soft)), CardList([ligne(_resultat!.exact!)])] else Row(children: [const Icon(Icons.search_off_rounded, size: 20, color: SuColors.danger), const SizedBox(width: 8), Expanded(child: Text(t.aucunResultat, style: tt.bodyMedium?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w600)))]),
+              if (_resultat!.similaires.isNotEmpty) ...[const SizedBox(height: 10), Text(t.resultatsSimilaires, style: tt.labelMedium?.copyWith(color: SuColors.soft)), CardList([for (final v in _resultat!.similaires) ligne(v)])],
             ],
           ])),
-          const SizedBox(height: 12),
         ],
         SectionHeader(ctx.isResident ? t.mesVehicules : t.vehicules, actionLabel: peutDeclarer ? t.declarerVehicule : null, onAction: peutDeclarer ? () => _declarer() : null),
         AsyncView(liste, onRetry: () => ref.invalidate(vehiculesProvider), data: (rows) => rows.isEmpty
-            ? EmptyState(title: t.aucunVehicule, hint: t.aucunVehiculeAide, icon: Icons.directions_car_rounded, actionLabel: peutDeclarer ? t.declarerVehicule : null, onAction: peutDeclarer ? () => _declarer() : null)
+            ? EmptyState(title: t.aucunVehicule, hint: t.aucunVehiculeAide, icon: Icons.directions_car_rounded, illustration: 'empty-parkings', actionLabel: peutDeclarer ? t.declarerVehicule : null, onAction: peutDeclarer ? () => _declarer() : null)
             : CardList([for (final v in rows) ligne(v, actions: true)])),
       ]),
     );
@@ -410,8 +418,16 @@ class _VehiculeFormState extends ConsumerState<VehiculeForm> {
         : await api.patch<Vehicule>('/vehicules/${widget.existant!.id}', body: corps, parse: (j) => Vehicule.fromJson(asMap(j)));
     if (!mounted) return;
     if (r is ApiFail<Vehicule>) { setState(() { _loading = false; _fail = r; }); return; }
-    showToast(context, widget.existant == null ? d.parkings.vehiculeDeclare : d.parkings.vehiculeModifie);
+    if (widget.existant != null) {
+      showToast(context, d.parkings.vehiculeModifie);
+      Navigator.pop(context, true);
+      return;
+    }
+    // Déclaration : succès plein écran (navigateur racine), après fermeture de la feuille.
+    final racine = Navigator.of(context, rootNavigator: true).context;
+    final plaque = (r as ApiOk<Vehicule>).data.immatriculation;
     Navigator.pop(context, true);
+    if (racine.mounted) showSuccess(racine, title: scinderMessage(d.parkings.vehiculeDeclare).$1, body: plaque, illustration: 'ok-general');
   }
 
   @override
@@ -436,6 +452,7 @@ class _VehiculeFormState extends ConsumerState<VehiculeForm> {
       SuField(label: t.couleur, controller: _couleur, optionalLabel: d.common.optional),
       const SizedBox(height: 12),
       FormError(_fail),
+      if (_fail != null) const SizedBox(height: 12),
       SubmitButton(label: widget.existant == null ? t.declarerVehicule : d.common.save, loading: _loading, onPressed: _immat.text.trim().length >= 2 || _loading ? _envoyer : null),
     ]);
   }
@@ -467,19 +484,19 @@ class _BadgesTab extends ConsumerWidget {
     final peutSignaler = ctx.isResident || ctx.isGestion;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(badgesProvider),
-      color: SuColors.action,
-      child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
+      color: SuColors.link,
+      child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
         SectionHeader(ctx.isResident ? t.mesBadges : t.badges),
         AsyncView(liste, onRetry: () => ref.invalidate(badgesProvider), data: (rows) => rows.isEmpty
-            ? EmptyState(title: t.aucunBadge, hint: ctx.isGestion ? t.aucunBadgeAide : null, icon: Icons.badge_rounded)
+            ? EmptyState(title: t.aucunBadge, hint: ctx.isGestion ? t.aucunBadgeAide : null, icon: Icons.badge_rounded, illustration: 'empty-parkings')
             : CardList([
                 for (final b in rows)
                   ListRow(
-                    leading: IconCircle(switch (b.type) { 'TELECOMMANDE_PARKING' => Icons.settings_remote_rounded, 'CLE_CAVE' => Icons.key_rounded, 'CARTE_ASCENSEUR' => Icons.elevator_rounded, _ => Icons.badge_rounded }, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral, size: 40),
+                    leading: IconCircle(switch (b.type) { 'TELECOMMANDE_PARKING' => Icons.settings_remote_rounded, 'CLE_CAVE' => Icons.key_rounded, 'CARTE_ASCENSEUR' => Icons.elevator_rounded, _ => Icons.badge_rounded }, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral),
                     title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}',
                     subtitle: '${t.lot} ${b.lotNumero ?? '—'} · ${t.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${t.caution} ${formatMAD(b.cautionMontant, l)}' : ''}${b.restitueLe != null ? ' · ${t.restitueLe} ${formatJourAnnee(b.restitueLe, l)}' : ''}',
                     trailing: b.statut == 'ACTIF' && peutSignaler
-                        ? TextButton(onPressed: () => _perdu(context, ref, b), style: TextButton.styleFrom(foregroundColor: SuColors.danger, padding: const EdgeInsets.symmetric(horizontal: 8)), child: Text(t.declarerPerdu))
+                        ? LinkButton(t.declarerPerdu, color: SuColors.danger, onTap: () => _perdu(context, ref, b))
                         : StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true),
                   ),
               ])),
@@ -500,29 +517,41 @@ class _VisiteursTab extends ConsumerWidget {
     final jour = ref.watch(visiteursAujourdhuiProvider);
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(visiteursAujourdhuiProvider),
-      color: SuColors.action,
+      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
-        Text(t.visiteursJourAide, style: tt.bodySmall),
+        Text(t.visiteursJourAide, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         AsyncView(jour, onRetry: () => ref.invalidate(visiteursAujourdhuiProvider), data: (j) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           SectionHeader(t.placesLibres),
           j.placesLibres.isEmpty
-              ? SuCard(child: Text(t.aucunePlace, style: tt.bodySmall))
-              : Wrap(spacing: 8, runSpacing: 8, children: [for (final p in j.placesLibres) StatusBadge('${p['code']}', variant: BadgeVariant.ok)]),
+              ? Text(t.aucunePlace, style: tt.bodyMedium?.copyWith(color: SuColors.soft))
+              : Wrap(spacing: 8, runSpacing: 8, children: [
+                  // Places libres : pastilles « plaque » vert ok, code en chiffres mono.
+                  for (final p in j.placesLibres)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(color: SuColors.okTint, borderRadius: BorderRadius.circular(SuRadius.pill)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.local_parking_rounded, size: 16, color: SuColors.ok),
+                        const SizedBox(width: 6),
+                        Text('${p['code']}', textDirection: TextDirection.ltr, style: tt.labelLarge?.copyWith(color: SuColors.ok, fontFamily: 'GeistMono', fontWeight: FontWeight.w700)),
+                      ]),
+                    ),
+                ]),
           SectionHeader(t.visiteursJour, actionLabel: d.nav.visites, onAction: () => context.push('/visites')),
           if (j.visites.isEmpty && j.sejours.isEmpty)
-            SuCard(child: Text(t.aucunVisiteur, style: tt.bodySmall))
+            EmptyState(title: t.aucunVisiteur, icon: Icons.local_parking_rounded, illustration: 'empty-visites')
           else
             CardList([
               for (final v in j.visites)
                 ListRow(
-                  leading: IconCircle(v['depassee'] == true ? Icons.timer_off_rounded : Icons.local_parking_rounded, tone: v['depassee'] == true ? Tone.danger : Tone.sand, size: 40),
+                  leading: IconCircle(v['depassee'] == true ? Icons.timer_off_rounded : Icons.local_parking_rounded, tone: v['depassee'] == true ? Tone.danger : Tone.sand),
                   title: '${(v['emplacement'] as Map?)?['code'] ?? '—'} · ${v['visiteur_nom']}',
                   subtitle: '${t.lot} ${v['lot'] ?? '—'} · ${v['immatriculation'] ?? '—'} · ${formatHeure('${v['horodatage']}', l)}${v['heure_limite'] != null ? ' · ${t.heureLimite} ${formatHeure('${v['heure_limite']}', l)}' : ''}',
                   trailing: v['depassee'] == true ? StatusBadge(t.depassee, variant: BadgeVariant.danger, small: true, pulse: true) : null,
                 ),
               for (final s in j.sejours)
                 ListRow(
-                  leading: const IconCircle(Icons.luggage_rounded, tone: Tone.lilac, size: 40),
+                  leading: const IconCircle(Icons.luggage_rounded, tone: Tone.lilac),
                   title: '${(s['emplacement'] as Map?)?['code'] ?? '—'} · ${s['voyageur']}',
                   subtitle: '${t.lot} ${s['lot'] ?? '—'} · ${s['immatriculation'] ?? '—'} · ${t.depart} ${formatJourAnnee('${s['date_depart']}', l)}',
                   trailing: StatusBadge(t.sejourLcd, variant: BadgeVariant.info, small: true),
@@ -579,7 +608,7 @@ class _PlaceVisiteurSheetState extends ConsumerState<PlaceVisiteurSheet> {
     final l = context.locale;
     final places = ref.watch(placesVisiteursProvider).valueOrNull ?? const <Emplacement>[];
     return Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(t.attribuerPlaceAide, style: Theme.of(context).textTheme.bodySmall),
+      Text(t.attribuerPlaceAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
       const SizedBox(height: 12),
       SuSelect<String?>(label: t.placeVisiteur, value: _place, options: [null, ...places.map((p) => p.id)], labelOf: (v) => v == null ? t.retirerPlace : places.where((p) => p.id == v).map((p) => '${p.code}${p.niveau != null ? ' · ${t.niveau} ${p.niveau}' : ''}${p.visiteurOccupee && p.id != widget.visite.emplacementId ? ' · ${t.visiteurOccupee}' : ''}').firstOrNull ?? v, onChanged: (v) => setState(() => _place = v), error: fieldError(_fail, 'emplacement_id')),
       const SizedBox(height: 12),
@@ -589,6 +618,7 @@ class _PlaceVisiteurSheetState extends ConsumerState<PlaceVisiteurSheet> {
         OutlinedButton.icon(onPressed: _choisirHeure, icon: const Icon(Icons.schedule_rounded, size: 18), label: Text('${t.heureLimite} · ${_limite != null ? formatHeure(_limite!.toIso8601String(), l) : '—'}')),
       const SizedBox(height: 12),
       FormError(_fail),
+      if (_fail != null) const SizedBox(height: 12),
       SubmitButton(label: t.attribuerPlace, loading: _loading, onPressed: _loading ? null : _envoyer),
     ]);
   }

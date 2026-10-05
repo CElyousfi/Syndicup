@@ -10,14 +10,17 @@ import '../i18n/mobile_dict.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'cards.dart';
+import 'illustration.dart';
 import 'motion.dart';
 import 'toast.dart';
 
 /// État vide (empty-state.tsx) : carte, motif « résidence sous le soleil » en couleurs de la
 /// palette, titre 15 px, aide 13 px soft, action.
 class EmptyState extends StatelessWidget {
-  const EmptyState({super.key, required this.title, this.hint, this.icon, this.actionLabel, this.onAction, this.tone = Tone.sage});
+  const EmptyState({super.key, required this.title, this.hint, this.icon, this.actionLabel, this.onAction, this.tone = Tone.sage, this.illustration});
   final String title;
+  /// Nom d'illustration (`empty-incidents`…) : affichée si livrée, sinon le pictogramme.
+  final String? illustration;
   final String? hint;
   final IconData? icon;
   final String? actionLabel;
@@ -27,15 +30,16 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return SuCard(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+    // État vide Wise : pas de cadre — illustration, titre gras, aide ardoise, pill d'action.
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
       child: Column(
         children: [
-          SuEnter(offset: 0.15, child: icon == null ? const MotifResidence() : IconCircle(icon!, tone: tone, size: 64)),
+          SuEnter(offset: 0.15, child: SuIllustration(illustration ?? '', size: 168, fallback: icon == null ? const MotifResidence() : IconCircle(icon!, tone: tone, size: 72))),
           const SizedBox(height: 22),
-          Text(title, style: t.titleMedium, textAlign: TextAlign.center),
-          if (hint != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(hint!, style: t.bodySmall?.copyWith(height: 1.55), textAlign: TextAlign.center)),
-          if (actionLabel != null) Padding(padding: const EdgeInsets.only(top: 22), child: FilledButton(onPressed: onAction, style: FilledButton.styleFrom(minimumSize: const Size(0, 44)), child: Text(actionLabel!))),
+          Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
+          if (hint != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(hint!, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.5), textAlign: TextAlign.center)),
+          if (actionLabel != null) Padding(padding: const EdgeInsets.only(top: 22), child: FilledButton(onPressed: onAction, style: FilledButton.styleFrom(minimumSize: const Size(0, 48)), child: Text(actionLabel!))),
         ],
       ),
     );
@@ -90,7 +94,7 @@ class _MotifPainter extends CustomPainter {
     final sway = 2.5 * math.pi / 180 * math.sin(ph * 1.8);
     Paint p(Color color, [double a = 1]) => Paint()..color = color.withValues(alpha: a);
     void rr(double x, double y, double w, double h, double r, Paint paint) => c.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(x, y, w, h), Radius.circular(r)), paint);
-    c.drawOval(Rect.fromCenter(center: const Offset(66, 80), width: 116, height: 14), p(SuColors.ground));
+    c.drawOval(Rect.fromCenter(center: const Offset(66, 80), width: 116, height: 14), p(SuColors.tile));
     c.drawCircle(Offset(106, 18 + sunDy), 10, p(SuColors.sandMid));
     c.drawCircle(Offset(106, 18 + sunDy), 6, p(SuColors.sandTint));
     rr(24, 26, 30, 54, 5, p(SuColors.sage, 0.55));
@@ -151,17 +155,19 @@ class ErrorState extends StatelessWidget {
       message = d.common.errorBody;
       ref = null;
     }
-    return SuCard(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         children: [
-          const IconCircle(Icons.error_outline_rounded, tone: Tone.danger, size: 56),
-          const SizedBox(height: 14),
-          Text(d.common.errorTitle, style: t.titleMedium, textAlign: TextAlign.center),
+          e is ApiException && e.error.code == 'NETWORK'
+              ? const SuIllustration('offline', size: 150, fallback: IconCircle(Icons.wifi_off_rounded, tone: Tone.warn, size: 64))
+              : const IconCircle(Icons.priority_high_rounded, tone: Tone.warn, size: 64),
+          const SizedBox(height: 16),
+          Text(d.common.errorTitle, style: t.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text(message, style: t.bodySmall?.copyWith(height: 1.55), textAlign: TextAlign.center),
           if (ref != null && ref.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(fill(d.common.errorReference, {'id': ref}), style: t.labelSmall?.copyWith(fontFamily: 'GeistMono'), textAlign: TextAlign.center)),
-          if (onRetry != null) Padding(padding: const EdgeInsets.only(top: 18), child: OutlinedButton(onPressed: onRetry, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 44)), child: Text(d.common.retry))),
+          if (onRetry != null) Padding(padding: const EdgeInsets.only(top: 18), child: OutlinedButton(onPressed: onRetry, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)), child: Text(d.common.retry))),
         ],
       ),
     );
@@ -179,7 +185,7 @@ class LoadingList extends StatelessWidget {
           for (int i = 0; i < count; i++)
             Padding(
               padding: const EdgeInsets.only(bottom: 10),
-              child: _Shimmer(child: Container(height: height, decoration: BoxDecoration(color: SuColors.hairline, borderRadius: BorderRadius.circular(SuRadius.card)))),
+              child: _Shimmer(child: Container(height: height, decoration: BoxDecoration(color: SuColors.tile, borderRadius: BorderRadius.circular(SuRadius.card)))),
             ),
         ],
       );
@@ -263,26 +269,26 @@ class SuBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final (Color bg, Color border, Color iconColor, IconData icon) = switch (tone) {
-      BannerTone.info => (SuColors.actionWash, SuColors.actionBorder, SuColors.action, Icons.info_outline_rounded),
-      BannerTone.warn => (SuColors.warnTint, SuColors.warnBorder, SuColors.warn, Icons.warning_amber_rounded),
-      BannerTone.ok => (SuColors.okTint, SuColors.okBorder, SuColors.ok, Icons.info_outline_rounded),
-      BannerTone.danger => (SuColors.dangerTint, SuColors.dangerSoft, SuColors.danger, Icons.warning_amber_rounded),
-      BannerTone.legal => (SuColors.ground, SuColors.hairlineStrong, SuColors.soft, Icons.shield_outlined),
+      BannerTone.info => (SuColors.sageTint, Colors.transparent, SuColors.actionDeep, Icons.info_rounded),
+      BannerTone.warn => (SuColors.warnTint, Colors.transparent, SuColors.warn, Icons.error_rounded),
+      BannerTone.ok => (SuColors.okTint, Colors.transparent, SuColors.ok, Icons.check_circle_rounded),
+      BannerTone.danger => (SuColors.dangerTint, Colors.transparent, SuColors.danger, Icons.error_rounded),
+      BannerTone.legal => (SuColors.tile, Colors.transparent, SuColors.ink, Icons.shield_rounded),
     };
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(16), border: Border.all(color: border)),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: border == Colors.transparent ? null : Border.all(color: border)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(padding: const EdgeInsets.only(top: 2), child: Icon(icon, color: iconColor, size: 18)),
+          Padding(padding: const EdgeInsets.only(top: 1), child: Icon(icon, color: iconColor, size: 22)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (title != null) Padding(padding: const EdgeInsets.only(bottom: 2), child: Text(title!, style: t.bodyMedium?.copyWith(color: SuColors.inkStrong, fontWeight: FontWeight.w600))),
-                Text(body, style: t.bodySmall?.copyWith(color: SuColors.body, height: 1.55)),
+                if (title != null) Padding(padding: const EdgeInsets.only(bottom: 3), child: Text(title!, style: t.titleSmall)),
+                Text(body, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.body, height: 1.5)),
                 if (action != null) Padding(padding: const EdgeInsets.only(top: 10), child: action!),
               ],
             ),

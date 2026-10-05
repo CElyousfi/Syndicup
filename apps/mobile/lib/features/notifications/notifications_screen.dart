@@ -33,7 +33,6 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Widget build(BuildContext context) {
     final d = context.dict;
     final l = context.locale;
-    final t = Theme.of(context).textTheme;
     final notifs = ref.watch(notificationsProvider);
     return SuPage(
       title: d.notifs.titre,
@@ -52,45 +51,54 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         ),
       ],
       children: [
-        Segmented<bool>(value: _nonLues, options: const [false, true], labelOf: (v) => v ? '${d.notifs.nonLues} · ${(notifs.valueOrNull ?? const []).where((x) => !x.lu).length}' : '${d.common.all} · ${notifs.valueOrNull?.length ?? 0}', onChanged: (v) => setState(() => _nonLues = v)),
-        const SizedBox(height: 12),
+        Segmented<bool>(value: _nonLues, options: const [false, true], labelOf: (v) => v ? fill(d.notifs.nonLues, {'n': (notifs.valueOrNull ?? const []).where((x) => !x.lu).length}) : '${d.common.all} · ${notifs.valueOrNull?.length ?? 0}', onChanged: (v) => setState(() => _nonLues = v)),
+        const SizedBox(height: 4),
         AsyncView(notifs, onRetry: () => ref.invalidate(notificationsProvider), data: (list) {
           final visible = list.where((n) => !_nonLues || !n.lu).toList()..sort((a, b) => b.horodatageEnvoi.compareTo(a.horodatageEnvoi));
-          if (visible.isEmpty) return EmptyState(title: d.notifs.aucune, hint: d.notifs.aucuneAide, icon: Icons.notifications_none_rounded);
-          return CardList([
-            for (final n in visible)
-              InkWell(
-                onTap: () {
-                  _lire(n);
-                  context.push(lienNotification(n.templateCode, n.contenuJson));
-                },
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      IconCircle(_icon(n.templateCode), tone: n.lu ? Tone.neutral : Tone.action, size: 40),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(n.titre ?? n.templateCode, style: t.titleSmall?.copyWith(fontWeight: n.lu ? FontWeight.w500 : FontWeight.w700)),
-                            if (n.corps != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(n.corps!, style: t.bodySmall, maxLines: 3, overflow: TextOverflow.ellipsis)),
-                            const SizedBox(height: 4),
-                            Text('${d.enums.canal[n.canal] ?? n.canal} · ${formatDateHeure(n.horodatageEnvoi, l)}${n.statutEnvoi == 'EN_ATTENTE' ? ' · ${d.notifs.envoiEnAttente}' : ''}', style: t.labelSmall),
-                          ],
-                        ),
-                      ),
-                      if (!n.lu) Container(width: 9, height: 9, margin: const EdgeInsets.only(top: 6), decoration: const BoxDecoration(color: SuColors.action, shape: BoxShape.circle)),
-                    ],
-                  ),
-                ),
-              ),
-          ]);
+          if (visible.isEmpty) {
+            return Padding(padding: const EdgeInsets.only(top: 12), child: EmptyState(title: d.notifs.aucune, hint: d.notifs.aucuneAide, icon: Icons.notifications_none_rounded, illustration: 'empty-notifications'));
+          }
+          // Fil d'activité Wise : regroupé par jour (Aujourd'hui, Hier, puis la date).
+          final groupes = <String, List<NotificationItem>>{};
+          for (final n in visible) {
+            groupes.putIfAbsent(_jour(context, n.horodatageEnvoi), () => []).add(n);
+          }
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (final g in groupes.entries) ...[
+                SectionHeader(g.key),
+                CardList([
+                  for (final n in g.value)
+                    _NotifRow(
+                      n: n,
+                      icon: _icon(n.templateCode),
+                      meta: n.statutEnvoi == 'EN_ATTENTE' ? '${formatHeure(n.horodatageEnvoi, l)} · ${fill(d.notifs.envoiEnAttente, {'canal': (d.enums.canal[n.canal] ?? n.canal).toLowerCase()})}' : '${d.enums.canal[n.canal] ?? n.canal} · ${formatHeure(n.horodatageEnvoi, l)}',
+                      onTap: () {
+                        _lire(n);
+                        context.push(lienNotification(n.templateCode, n.contenuJson));
+                      },
+                    ),
+                ]),
+              ],
+            ],
+          );
         }),
       ],
     );
+  }
+
+  /// Libellé du jour (heure locale) : « Aujourd'hui », « Hier », sinon la date longue.
+  String _jour(BuildContext context, String iso) {
+    final d = context.dict;
+    final t = DateTime.tryParse(iso)?.toLocal();
+    if (t == null) return '—';
+    final now = DateTime.now();
+    final jour = DateTime(t.year, t.month, t.day);
+    final ecart = DateTime(now.year, now.month, now.day).difference(jour).inDays;
+    if (ecart == 0) return d.common.today;
+    if (ecart == 1) return d.common.yesterday;
+    return formatDate(iso, context.locale);
   }
 
   IconData _icon(String code) {
@@ -103,5 +111,53 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     if (code.startsWith('DEPENSE_') || code == 'FACTURE_ECHEANCE_PROCHE') return Icons.receipt_long_rounded;
     if (code.startsWith('JUSTIFICATIF_') || code == 'PAIEMENT_VALIDE' || code == 'PAIEMENT_ESPECES_SAISI') return Icons.verified_rounded;
     return Icons.notifications_rounded;
+  }
+}
+
+/// Ligne de notification Wise : pastille 48 (teintée si non lue), titre gras si non lu, extrait
+/// ardoise, canal + heure, point vert profond en fin de ligne.
+class _NotifRow extends StatelessWidget {
+  const _NotifRow({required this.n, required this.icon, required this.meta, required this.onTap});
+  final NotificationItem n;
+  final IconData icon;
+  final String meta;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final nonLue = !n.lu;
+    return SuPressable(
+      scale: 0.985,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 11),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IconCircle(icon, tone: nonLue ? Tone.sage : Tone.neutral),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(n.titre ?? n.templateCode, style: t.titleMedium?.copyWith(fontWeight: nonLue ? FontWeight.w700 : FontWeight.w500, color: nonLue ? SuColors.ink : SuColors.body), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    if (n.corps != null) Padding(padding: const EdgeInsets.only(top: 3), child: Text(n.corps!, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35), maxLines: 3, overflow: TextOverflow.ellipsis)),
+                    Padding(padding: const EdgeInsets.only(top: 4), child: Text(meta, style: t.bodySmall?.copyWith(color: nonLue ? SuColors.link : SuColors.faint, fontWeight: nonLue ? FontWeight.w600 : null))),
+                  ],
+                ),
+              ),
+              if (nonLue)
+                Padding(
+                  padding: const EdgeInsetsDirectional.only(start: 10, top: 6),
+                  child: Container(width: 10, height: 10, decoration: const BoxDecoration(color: SuColors.link, shape: BoxShape.circle)),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

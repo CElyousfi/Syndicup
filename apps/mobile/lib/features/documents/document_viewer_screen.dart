@@ -132,61 +132,106 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     final d = context.dict;
     final md = context.mdict;
     final t = Theme.of(context).textTheme;
+    // Visionneuse de relevé Wise : pages blanches posées sur la toile greige, fermeture et
+    // partage en boutons ronds blancs, compteur de pages en pill encre flottante.
     return Scaffold(
-      backgroundColor: SuColors.surface,
+      backgroundColor: SuColors.tile,
       appBar: AppBar(
-        backgroundColor: SuColors.bg,
-        title: Text(widget.titre, maxLines: 1, overflow: TextOverflow.ellipsis),
+        backgroundColor: SuColors.tile,
+        automaticallyImplyLeading: false,
+        leadingWidth: 68,
+        leading: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 16),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: CircleIconButton(icon: Icons.close_rounded, color: SuColors.surface, tooltip: MaterialLocalizations.of(context).closeButtonTooltip, onTap: () => Navigator.of(context).maybePop()),
+          ),
+        ),
+        titleSpacing: 6,
+        title: Text(widget.titre, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.titleLarge),
         actions: [
-          if (_bytes != null) IconButton(tooltip: d.common.share, icon: const Icon(Icons.ios_share_rounded), onPressed: _partager),
+          if (_bytes != null) CircleIconButton(tooltip: d.common.share, icon: Icons.ios_share_rounded, color: SuColors.surface, onTap: _partager),
+          const SizedBox(width: 16),
         ],
       ),
-      body: switch (_etat) {
-        _Etat.chargement => const Center(child: LoadingOrb()),
-        _Etat.erreur => Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: md.viewerError, onRetry: () {
-            setState(() => _etat = _Etat.chargement);
-            _charger();
-          })),
-        _Etat.autre => Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                SuBanner(tone: BannerTone.info, body: md.viewerUnsupported),
-                const SizedBox(height: 12),
-                FilledButton.icon(onPressed: _partager, icon: const Icon(Icons.ios_share_rounded), label: Text(d.common.share)),
-              ],
+      body: SafeArea(
+        top: false,
+        child: switch (_etat) {
+          _Etat.chargement => const Center(child: LoadingOrb()),
+          _Etat.erreur => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: ErrorState(error: md.viewerError, onRetry: () {
+                  setState(() => _etat = _Etat.chargement);
+                  _charger();
+                }),
+              ),
             ),
-          ),
-        _Etat.image => InteractiveViewer(
-            minScale: 0.8,
-            maxScale: 5,
-            child: Center(child: Image.memory(_bytes!, fit: BoxFit.contain, gaplessPlayback: true)),
-          ),
-        _Etat.pdf => Column(
-            children: [
-              Expanded(
-                child: PdfViewPinch(
-                  controller: _pdf!,
-                  padding: 12,
-                  onPageChanged: (p) => setState(() => _page = p),
-                  builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
-                    options: const DefaultBuilderOptions(),
-                    documentLoaderBuilder: (_) => const Center(child: LoadingOrb()),
-                    pageLoaderBuilder: (_) => const Center(child: LoadingOrb()),
-                    errorBuilder: (_, __) => Center(child: Text(md.viewerError, style: t.bodySmall)),
+          _Etat.autre => Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: SuCard(
+                  color: SuColors.surface,
+                  padding: const EdgeInsets.fromLTRB(22, 28, 22, 22),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Center(child: IconCircle(Icons.insert_drive_file_rounded, tone: Tone.lilac, size: 72)),
+                      const SizedBox(height: 16),
+                      Text(widget.titre, style: t.headlineSmall, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 8),
+                      Text(md.viewerUnsupported, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
+                      const SizedBox(height: 22),
+                      FilledButton.icon(onPressed: _partager, icon: const Icon(Icons.ios_share_rounded), label: Text(d.common.share)),
+                    ],
                   ),
                 ),
               ),
-              if (_pages > 0)
-                Container(
-                  width: double.infinity,
-                  color: SuColors.bg,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  child: Text('$_page / $_pages', textAlign: TextAlign.center, textDirection: TextDirection.ltr, style: t.labelSmall),
+            ),
+          _Etat.image => InteractiveViewer(
+              minScale: 0.8,
+              maxScale: 5,
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.memory(_bytes!, fit: BoxFit.contain, gaplessPlayback: true)),
                 ),
-            ],
-          ),
-      },
+              ),
+            ),
+          _Etat.pdf => Stack(
+              children: [
+                Positioned.fill(
+                  child: PdfViewPinch(
+                    controller: _pdf!,
+                    padding: 16,
+                    // Page blanche plate, sans l'ombre portée par défaut.
+                    backgroundDecoration: const BoxDecoration(color: SuColors.surface),
+                    onPageChanged: (p) => setState(() => _page = p),
+                    builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
+                      options: const DefaultBuilderOptions(),
+                      documentLoaderBuilder: (_) => const Center(child: LoadingOrb()),
+                      pageLoaderBuilder: (_) => const Center(child: LoadingOrb()),
+                      errorBuilder: (_, __) => Center(child: Text(md.viewerError, style: t.bodySmall)),
+                    ),
+                  ),
+                ),
+                if (_pages > 0)
+                  PositionedDirectional(
+                    start: 0,
+                    end: 0,
+                    bottom: 16,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                        decoration: BoxDecoration(color: SuColors.ink, borderRadius: BorderRadius.circular(SuRadius.pill)),
+                        child: Text('$_page / $_pages', textDirection: TextDirection.ltr, style: t.labelMedium?.copyWith(color: Colors.white, fontFeatures: const [FontFeature.tabularFigures()])),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+        },
+      ),
     );
   }
 }

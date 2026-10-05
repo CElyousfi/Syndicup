@@ -8,6 +8,7 @@ import 'app.dart';
 import 'core/auth/session.dart';
 import 'core/i18n/i18n.dart';
 import 'core/push/push_service.dart';
+import 'core/widgets/illustration.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,7 @@ Future<void> main() async {
 
   await Future.wait([initializeDateFormatting('fr'), initializeDateFormatting('ar')]);
   final prefs = await SharedPreferences.getInstance();
+  await SuIllustration.init();
   final session = await SessionStorage().read();
   await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));
 

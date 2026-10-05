@@ -139,10 +139,11 @@ class _ToastCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final reduced = SuMotion.reduced(context);
+    // Toast Wise : bloc encre, pastille sauge (ou rouge), texte blanc.
     final card = Material(
-      color: SuColors.surface,
+      color: SuColors.ink,
       elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.tile), side: const BorderSide(color: SuColors.hairline)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
@@ -155,11 +156,11 @@ class _ToastCard extends StatelessWidget {
                   Container(
                     width: 36,
                     height: 36,
-                    decoration: BoxDecoration(color: data.error ? SuColors.dangerTint : SuColors.okTint, shape: BoxShape.circle),
-                    child: Icon(data.error ? Icons.warning_amber_rounded : Icons.check_rounded, size: 17, color: data.error ? SuColors.danger : SuColors.ok),
+                    decoration: BoxDecoration(color: data.error ? SuColors.dangerTint : SuColors.cta, shape: BoxShape.circle),
+                    child: Icon(data.error ? Icons.priority_high_rounded : Icons.check_rounded, size: 19, color: data.error ? SuColors.danger : SuColors.ink),
                   ).animate().scaleXY(begin: reduced ? 1 : 0.4, end: 1, duration: 420.ms, delay: 80.ms, curve: SuMotion.spring),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(data.message, maxLines: 3, overflow: TextOverflow.ellipsis, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600))),
+                  Expanded(child: Text(data.message, maxLines: 3, overflow: TextOverflow.ellipsis, style: t.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600))),
                 ],
               ),
             ),
@@ -174,7 +175,7 @@ class _ToastCard extends StatelessWidget {
                 builder: (_, v, __) => FractionallySizedBox(
                   alignment: AlignmentDirectional.centerStart,
                   widthFactor: v,
-                  child: Container(height: 2, color: SuColors.action.withValues(alpha: 0.25)),
+                  child: Container(height: 3, color: SuColors.cta.withValues(alpha: 0.55)),
                 ),
               ),
             ),
@@ -182,7 +183,7 @@ class _ToastCard extends StatelessWidget {
         ),
       ),
     );
-    final shadowed = DecoratedBox(decoration: BoxDecoration(borderRadius: BorderRadius.circular(SuRadius.tile), boxShadow: SuShadows.pop), child: card);
+    final shadowed = DecoratedBox(decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: SuShadows.pop), child: card);
     return Semantics(
       liveRegion: true,
       child: AnimatedOpacity(

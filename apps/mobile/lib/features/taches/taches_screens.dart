@@ -52,11 +52,11 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
         if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: TextButton(onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), child: Text(d.common.retry)))),
         if (!gardien) ...[
           FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? v }, onChanged: (v) => setState(() => _filtre = v)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
         ],
         AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
           final visibles = gardien && _filtre == 'OUVERTES' ? rows.where((x) => x.ouverte).toList() : rows;
-          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded);
+          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search');
           return CardList([for (final x in visibles) TacheRow(x, file: file)]);
         }),
       ],
@@ -76,7 +76,7 @@ class TacheRow extends StatelessWidget {
     final e = d.enumsTaches;
     final enFile = file.any((q) => q.tacheId == x.id && !q.definitif);
     return ListRow(
-      leading: IconCircle(x.statut == 'TERMINEE' ? Icons.check_circle_rounded : x.enRetard ? Icons.warning_amber_rounded : Icons.task_alt_rounded, tone: x.statut == 'TERMINEE' ? Tone.ok : x.enRetard ? Tone.danger : x.priorite == 'HAUTE' || x.priorite == 'CRITIQUE' ? Tone.warn : Tone.sage, size: 40),
+      leading: IconCircle(tacheIcone(x), tone: tacheTone(x)),
       title: x.titre,
       subtitle: '${x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance}${x.assignee != null ? ' · ${x.assignee!.affichage}' : ''}${x.checklist != null && x.checklist!.isNotEmpty ? ' · ${fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})}' : ''}${x.origine != 'MANUELLE' ? ' · ${e.origine[x.origine] ?? x.origine}' : ''}',
       trailing: enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : StatusBadge(x.enRetard ? t.enRetard : (e.statut[x.statut] ?? x.statut), variant: x.enRetard ? BadgeVariant.danger : (tacheVariant[x.statut] ?? BadgeVariant.neutral), small: true),
@@ -85,6 +85,10 @@ class TacheRow extends StatelessWidget {
     );
   }
 }
+
+IconData tacheIcone(Tache x) => x.statut == 'TERMINEE' ? Icons.check_circle_rounded : x.enRetard ? Icons.warning_amber_rounded : x.statut == 'BLOQUEE' ? Icons.block_rounded : x.statut == 'ANNULEE' ? Icons.cancel_rounded : Icons.task_alt_rounded;
+
+Tone tacheTone(Tache x) => x.statut == 'TERMINEE' ? Tone.ok : x.enRetard ? Tone.danger : x.statut == 'ANNULEE' ? Tone.neutral : x.priorite == 'HAUTE' || x.priorite == 'CRITIQUE' ? Tone.warn : Tone.sage;
 
 /// Fiche d'une tâche — checklist cochable, statut (avec photo), commentaires, journal, objet source.
 class TacheDetailScreen extends ConsumerStatefulWidget {
@@ -141,66 +145,82 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
     final e = d.enumsTaches;
     final tt = Theme.of(context).textTheme;
     final tache = ref.watch(tacheProvider(widget.id));
-    return Scaffold(
-      appBar: AppBar(title: Text(tache.valueOrNull?.titre ?? t.titre)),
-      body: AsyncView(
-        tache,
-        onRetry: () => ref.invalidate(tacheProvider(widget.id)),
-        loading: const Padding(padding: EdgeInsets.all(16), child: LoadingList()),
-        data: (x) {
-          final lien = x.resolutionAg != null ? (label: t.voirResolution, path: '/ag/${x.resolutionAg!['agId']}', texte: '${d.ag.resolutions} n° ${x.resolutionAg!['ordre']} — ${x.resolutionAg!['texte']}')
-              : x.contratEcheance != null ? (label: t.voirContrat, path: '/contrats/${x.contratEcheance!['contratId']}', texte: '${x.contratEcheance!['contratLibelle']} · ${formatJourAnnee('${x.contratEcheance!['dateEcheance']}', l)}')
-              : x.incident != null ? (label: t.voirIncident, path: '/incidents/${x.incident!['id']}', texte: d.enums.categorieIncident['${x.incident!['categorie']}'] ?? '${x.incident!['categorie']}')
-              : x.rapportGestion != null ? (label: t.voirRapport, path: '/rapports', texte: '${d.rapports.gestionTitre} ${x.rapportGestion!['exercice']}')
-              : null;
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(tacheProvider(widget.id)),
-            color: SuColors.action,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+    return SuPage(
+      title: tache.valueOrNull?.titre ?? t.titre,
+      onRefresh: () async => ref.invalidate(tacheProvider(widget.id)),
+      children: [
+        AsyncView(
+          tache,
+          onRetry: () => ref.invalidate(tacheProvider(widget.id)),
+          data: (x) {
+            final lien = x.resolutionAg != null ? (label: t.voirResolution, path: '/ag/${x.resolutionAg!['agId']}', texte: '${d.ag.resolutions} n° ${x.resolutionAg!['ordre']} — ${x.resolutionAg!['texte']}')
+                : x.contratEcheance != null ? (label: t.voirContrat, path: '/contrats/${x.contratEcheance!['contratId']}', texte: '${x.contratEcheance!['contratLibelle']} · ${formatJourAnnee('${x.contratEcheance!['dateEcheance']}', l)}')
+                : x.incident != null ? (label: t.voirIncident, path: '/incidents/${x.incident!['id']}', texte: d.enums.categorieIncident['${x.incident!['categorie']}'] ?? '${x.incident!['categorie']}')
+                : x.rapportGestion != null ? (label: t.voirRapport, path: '/rapports', texte: '${d.rapports.gestionTitre} ${x.rapportGestion!['exercice']}')
+                : null;
+            final nbFaits = x.checklistFaits;
+            final nbEtapes = x.checklist?.length ?? 0;
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(e.statut[x.statut] ?? x.statut, variant: tacheVariant[x.statut] ?? BadgeVariant.neutral),
-                  StatusBadge(e.priorite[x.priorite] ?? x.priorite, variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
-                  if (x.enRetard) StatusBadge(t.enRetard, variant: BadgeVariant.danger),
-                ]),
-                const SizedBox(height: 10),
-                Text(x.titre, style: tt.headlineSmall),
-                const SizedBox(height: 4),
-                Text('${e.origine[x.origine] ?? x.origine}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodySmall),
-                if (x.peutMettreAJour && (x.ouverte || ctx.isGestion) && x.statut != 'ANNULEE') Padding(padding: const EdgeInsets.only(top: 12), child: SubmitButton(label: t.changerStatut, icon: Icons.published_with_changes_rounded, onPressed: () => _changerStatut(x, ctx.isGestion))),
-                if (x.description != null && x.description!.isNotEmpty) ...[const SizedBox(height: 12), SuCard(child: Text(x.description!, style: tt.bodyLarge))],
-                SectionHeader(t.echeance),
-                SuCard(child: Column(children: [
+                // Bloc résumé Wise : grande pastille, statut en gros, origine, priorité, description.
+                SuEnter(
+                  child: SuCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Row(children: [
+                        IconCircle(tacheIcone(x), tone: tacheTone(x), size: 64),
+                        const Spacer(),
+                        if (x.enRetard) StatusBadge(t.enRetard, variant: BadgeVariant.danger, pulse: true),
+                      ]),
+                      const SizedBox(height: 18),
+                      Text(e.statut[x.statut] ?? x.statut, style: tt.displaySmall),
+                      const SizedBox(height: 4),
+                      Text('${e.origine[x.origine] ?? x.origine}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+                      const SizedBox(height: 14),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        StatusBadge(e.priorite[x.priorite] ?? x.priorite, variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
+                      ]),
+                      if (nbEtapes > 0) ...[
+                        const SizedBox(height: 16),
+                        Gauge(nbFaits / nbEtapes, height: 6),
+                      ],
+                      if (x.description != null && x.description!.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(x.description!, style: tt.bodyLarge?.copyWith(color: SuColors.ink, height: 1.5)),
+                      ],
+                    ]),
+                  ),
+                ),
+                if (x.peutMettreAJour && (x.ouverte || ctx.isGestion) && x.statut != 'ANNULEE') Padding(padding: const EdgeInsets.only(top: 16), child: SubmitButton(label: t.changerStatut, icon: Icons.published_with_changes_rounded, onPressed: () => _changerStatut(x, ctx.isGestion))),
+                SectionHeader(d.common.details),
+                SuCard(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8), child: Column(children: [
                   KeyValueRow(t.assignee, x.assignee?.affichage ?? t.nonAssignee),
                   KeyValueRow(t.echeance, x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance),
                   if (x.termineeLe != null) KeyValueRow(e.statut['TERMINEE'] ?? 'TERMINEE', formatDateHeure(x.termineeLe, l)),
                   KeyValueRow(t.recurrence, x.recurrenceFrequence != null ? (e.frequence[x.recurrenceFrequence!] ?? x.recurrenceFrequence!) : t.aucuneRecurrence),
                 ])),
                 if (x.checklist != null && x.checklist!.isNotEmpty) ...[
-                  SectionHeader(t.checklist, subtitle: fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})),
-                  SuCard(padding: const EdgeInsets.symmetric(vertical: 4), child: Column(children: [
+                  SectionHeader(t.checklist, subtitle: fill(t.checklistProgres, {'n': '$nbFaits', 'total': '$nbEtapes'})),
+                  SuCard(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4), child: Column(children: [
                     for (final it in x.checklist!)
-                      CheckboxListTile(value: it.fait, onChanged: x.peutMettreAJour && x.ouverte ? (v) => _cocher(x, it, v ?? false) : null, title: Text(it.libelle, style: it.fait ? tt.bodyMedium?.copyWith(decoration: TextDecoration.lineThrough, color: SuColors.soft) : tt.bodyMedium), controlAffinity: ListTileControlAffinity.leading, dense: true, contentPadding: const EdgeInsets.symmetric(horizontal: 8)),
+                      CheckboxListTile(value: it.fait, onChanged: x.peutMettreAJour && x.ouverte ? (v) => _cocher(x, it, v ?? false) : null, title: Text(it.libelle, style: it.fait ? tt.bodyLarge?.copyWith(decoration: TextDecoration.lineThrough, color: SuColors.soft) : tt.bodyLarge?.copyWith(color: SuColors.ink)), controlAffinity: ListTileControlAffinity.leading, contentPadding: const EdgeInsets.symmetric(horizontal: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
                   ])),
                 ],
                 if (lien != null) ...[
                   SectionHeader(t.lieA),
-                  SuCard(onTap: () => context.push(lien.path), child: Row(children: [const IconCircle(Icons.link_rounded, tone: Tone.lilac, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(lien.texte, style: tt.titleSmall), Text(lien.label, style: tt.bodySmall)])), const ChevronEnd()])),
+                  CardList([ListRow(leading: const IconCircle(Icons.link_rounded, tone: Tone.lilac), title: lien.texte, subtitle: lien.label, onTap: () => context.push(lien.path))]),
                 ],
                 if (x.piecesJointes.isNotEmpty) ...[
                   SectionHeader(t.piecesJointes),
-                  CardList([for (final p in x.piecesJointes) ListRow(leading: const IconCircle(Icons.attach_file_rounded, tone: Tone.neutral, size: 36), title: '${p['nom']}', chevron: true, onTap: () => ouvrirVisionneuse(context, titre: '${p['nom']}', url: '${p['url']}'))]),
+                  CardList([for (final p in x.piecesJointes) ListRow(leading: const IconCircle(Icons.attach_file_rounded, tone: Tone.neutral), title: '${p['nom']}', chevron: true, onTap: () => ouvrirVisionneuse(context, titre: '${p['nom']}', url: '${p['url']}'))]),
                 ],
                 SectionHeader('${t.commentaires}${x.commentaires.isNotEmpty ? ' · ${x.commentaires.length}' : ''}'),
-                if (x.commentaires.isEmpty) SuCard(child: Text(t.aucunCommentaire, style: tt.bodySmall)),
-                for (final k in x.commentaires)
-                  SuCard(margin: const EdgeInsets.only(bottom: 8), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Row(children: [Expanded(child: Text(IdentiteCourte.fromJson(_asMap(k['auteur'])).affichage, style: tt.labelLarge)), Text(formatDateHeure('${k['creeLe']}', l), style: tt.bodySmall)]),
-                    const SizedBox(height: 4),
-                    Text('${k['contenu']}', style: tt.bodyMedium),
-                  ])),
-                const SizedBox(height: 8),
+                if (x.commentaires.isEmpty) Text(t.aucunCommentaire, style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+                // Fil de commentaires Wise : avatar, nom gras, heure ardoise, bulle greige.
+                for (int k = 0; k < x.commentaires.length; k++)
+                  SuEnter(index: k, offset: 0.12, child: _Commentaire(auteur: IdentiteCourte.fromJson(_asMap(x.commentaires[k]['auteur'])).affichage, quand: formatDateHeure('${x.commentaires[k]['creeLe']}', l), texte: '${x.commentaires[k]['contenu']}')),
+                const SizedBox(height: 14),
                 SuField(label: t.votreCommentaire, controller: _commentaire, maxLines: 3, maxLength: 4000),
                 const SizedBox(height: 8),
                 SubmitButton(label: t.commenter, secondary: true, loading: _envoi, onPressed: () async {
@@ -215,17 +235,54 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   ref.invalidate(tacheProvider(widget.id));
                 }),
                 if (x.journal.isNotEmpty) ...[
+                  // Journal = fil d'activité Wise (plus récent en haut).
                   SectionHeader(t.journal),
-                  SuCard(child: Column(children: [
+                  CardList([
                     for (final j in x.journal.reversed.take(10))
-                      KeyValueRow('${j['type']}${(j['details'] is Map && (j['details'] as Map)['vers'] != null) ? ' → ${e.statut['${(j['details'] as Map)['vers']}'] ?? (j['details'] as Map)['vers']}' : ''}', formatDateHeure('${j['horodatage']}', l)),
-                  ])),
+                      ListRow(
+                        leading: const IconCircle(Icons.history_rounded, tone: Tone.neutral),
+                        title: '${j['type']}${(j['details'] is Map && (j['details'] as Map)['vers'] != null) ? ' → ${e.statut['${(j['details'] as Map)['vers']}'] ?? (j['details'] as Map)['vers']}' : ''}',
+                        subtitle: formatDateHeure('${j['horodatage']}', l),
+                      ),
+                  ]),
                 ],
               ],
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+/// Commentaire Wise : avatar initiales, auteur gras + heure, bulle greige.
+class _Commentaire extends StatelessWidget {
+  const _Commentaire({required this.auteur, required this.quand, required this.texte});
+  final String auteur, quand, texte;
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Avatar(auteur, size: 40),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Expanded(child: Text(auteur, style: tt.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              const SizedBox(width: 8),
+              Text(quand, style: tt.bodySmall?.copyWith(color: SuColors.soft)),
+            ]),
+            Container(
+              margin: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(color: SuColors.tile, borderRadius: const BorderRadiusDirectional.only(topEnd: Radius.circular(18), bottomStart: Radius.circular(18), bottomEnd: Radius.circular(18), topStart: Radius.circular(6)).resolve(Directionality.of(context))),
+              child: Text(texte, style: tt.bodyMedium?.copyWith(color: SuColors.ink, height: 1.45)),
             ),
-          );
-        },
-      ),
+          ]),
+        ),
+      ]),
     );
   }
 }
@@ -291,7 +348,8 @@ class ExecutionResolutionLigne extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(t.execution.toUpperCase(), style: Theme.of(context).textTheme.labelSmall?.copyWith(color: SuColors.soft, letterSpacing: 0.6)),
+        // Pas d'espacement de lettres ni de capitales forcées : le libellé peut être en arabe.
+        Text(t.execution, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.soft)),
         if (ex.taches.isEmpty) Text(t.aucuneTacheExecution, style: Theme.of(context).textTheme.bodySmall),
         for (final tk in ex.taches)
           InkWell(

@@ -13,12 +13,13 @@ import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
+import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import 'ag_screens.dart';
 
-/// E5 — séance live : vue votant (sombre pour la salle, vote pondéré + procuration, vote
+/// E5 — séance live : vue votant (salle sombre en tête, vote pondéré + procuration, vote
 /// immuable dit AVANT) ou pupitre syndic (agrégats live, finalisation, clôture verrouillée).
 class AgSeanceScreen extends ConsumerStatefulWidget {
   const AgSeanceScreen({super.key, required this.id});
@@ -45,15 +46,148 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
   @override
   Widget build(BuildContext context) {
     final ctx = ref.watch(appContextProvider);
+    final d = context.dict;
     final ag = ref.watch(agProvider(widget.id));
     ref.listen(agProvider(widget.id), (_, next) {
       final a = next.valueOrNull;
       if (a != null && a.statut == 'CLOTUREE' && !ctx.isGestion) context.pushReplacement('/ag/${widget.id}/pv');
     });
     return ag.when(
-      loading: () => Scaffold(appBar: AppBar(), body: const Center(child: LoadingOrb())),
-      error: (e, _) => Scaffold(appBar: AppBar(), body: Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id))))),
+      loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, body: const Center(child: LoadingOrb())),
+      error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
       data: (a) => ctx.isGestion ? _Pupitre(ag: a) : _VueVotant(ag: a),
+    );
+  }
+}
+
+/// « Salle » de séance : bandeau encre en tête (statut live, quorum, résolution courante en
+/// capitales d'affiche, progression de l'ordre du jour, navigation ronde).
+class _Salle extends StatelessWidget {
+  const _Salle({required this.resolutions, required this.index, this.quorum, this.onPrev, this.onNext});
+  final List<AgResolution> resolutions;
+  final int index;
+  final String? quorum;
+  final VoidCallback? onPrev, onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    final d = context.dict;
+    final t = Theme.of(context).textTheme;
+    final i = index.clamp(0, resolutions.length - 1);
+    final r = resolutions[i];
+    Widget nav(IconData icon, String tip, VoidCallback? onTap) => CircleIconButton(
+          icon: icon,
+          mirror: true,
+          tooltip: tip,
+          onTap: onTap,
+          color: Colors.white.withValues(alpha: onTap == null ? 0.05 : 0.14),
+          iconColor: onTap == null ? Colors.white.withValues(alpha: 0.25) : Colors.white,
+        );
+    return SuCard(
+      color: SuColors.ink,
+      radius: 28,
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              StatusBadge(d.enums.statutAg['EN_COURS'] ?? 'EN_COURS', variant: BadgeVariant.warn, pulse: true, small: true),
+              const SizedBox(width: 10),
+              if (quorum != null) Expanded(child: Text(quorum!, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelMedium?.copyWith(color: Colors.white70))) else const Spacer(),
+            ],
+          ),
+          const SizedBox(height: 22),
+          Text(SuType.posterText(context, '${d.ag.resolution} ${r.ordre}'), style: SuType.poster(context, 40, color: SuColors.cta)),
+          const SizedBox(height: 16),
+          // Ordre du jour : un segment par résolution (finalisée = sauge, courante = blanc).
+          Row(
+            children: [
+              for (int k = 0; k < resolutions.length; k++)
+                Expanded(
+                  child: Container(
+                    height: 5,
+                    margin: EdgeInsetsDirectional.only(end: k < resolutions.length - 1 ? 4 : 0),
+                    decoration: BoxDecoration(
+                      color: k == i ? Colors.white : resolutions[k].resultat != 'EN_ATTENTE' ? SuColors.cta : Colors.white.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              nav(Icons.arrow_back_rounded, d.ag.resolutionPrecedente, onPrev),
+              Expanded(child: Text('${i + 1} / ${resolutions.length}', textAlign: TextAlign.center, textDirection: TextDirection.ltr, style: t.titleMedium?.copyWith(color: Colors.white, fontFeatures: const [FontFeature.tabularFigures()]))),
+              nav(Icons.arrow_forward_rounded, d.ag.resolutionSuivante, onNext),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Gros bouton de vote (pill 68 px) : pastille teintée + libellé ; choisi = plein, coche.
+class _VoteChoice extends StatelessWidget {
+  const _VoteChoice({required this.label, required this.icon, required this.color, required this.tint, required this.selected, this.onTap});
+  final String label;
+  final IconData icon;
+  final Color color, tint;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final fg = selected ? Colors.white : SuColors.ink;
+    return Semantics(
+      button: true,
+      selected: selected,
+      enabled: onTap != null,
+      child: Opacity(
+        opacity: onTap == null ? 0.5 : 1,
+        child: SuPressable(
+          enabled: onTap != null,
+          child: AnimatedContainer(
+            duration: SuMotion.of(context, SuMotion.base),
+            curve: SuMotion.easeOut,
+            height: 68,
+            decoration: ShapeDecoration(color: selected ? color : SuColors.surface, shape: const StadiumBorder()),
+            child: Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                customBorder: const StadiumBorder(),
+                onTap: onTap,
+                child: Padding(
+                  padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 18, 0),
+                  child: Row(
+                    children: [
+                      AnimatedContainer(
+                        duration: SuMotion.of(context, SuMotion.base),
+                        width: 48,
+                        height: 48,
+                        decoration: BoxDecoration(color: selected ? Colors.white.withValues(alpha: 0.18) : tint, shape: BoxShape.circle),
+                        child: Icon(icon, size: 24, color: selected ? Colors.white : color),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(child: Text(label, style: t.titleLarge?.copyWith(color: fg), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                      AnimatedScale(
+                        scale: selected ? 1 : 0,
+                        duration: SuMotion.of(context, SuMotion.base),
+                        curve: SuMotion.easeOut,
+                        child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 26),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -93,7 +227,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
     ];
     _identite ??= identites.firstOrNull?.$1;
     if (resolutions.isEmpty) {
-      return Scaffold(appBar: AppBar(title: Text(d.ag.seance)), body: Padding(padding: const EdgeInsets.all(16), child: SuBanner(tone: BannerTone.info, body: d.ag.aucuneResolution)));
+      return SuPage(title: d.ag.seance, children: [EmptyState(title: d.ag.aucuneResolution, icon: Icons.list_alt_rounded, illustration: 'empty-ag')]);
     }
     final r = resolutions[_index.clamp(0, resolutions.length - 1)];
     final cle = '${r.id}|$_identite';
@@ -102,15 +236,17 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
 
     return SuPage(
       title: d.ag.seance,
-      subtitle: '${md.seanceEnCours}${ag.quorumAtteint != null ? ' · ${md.quorumAtteint} ${formatPourcent(double.tryParse(ag.quorumAtteint!))}' : ''}',
+      subtitle: d.enums.typeAg[ag.type] ?? ag.type,
       children: [
-        Row(
-          children: [
-            Flexible(child: TextButton(onPressed: _index > 0 ? () => setState(() { _index--; _choix = null; _fail = null; }) : null, style: TextButton.styleFrom(foregroundColor: SuColors.body), child: Text(d.ag.resolutionPrecedente, maxLines: 1, overflow: TextOverflow.ellipsis))),
-            Text('${_index + 1} / ${resolutions.length}', textAlign: TextAlign.center, style: t.labelMedium?.copyWith(color: SuColors.soft, fontFeatures: const [FontFeature.tabularFigures()])),
-            Flexible(child: TextButton(onPressed: _index < resolutions.length - 1 ? () => setState(() { _index++; _choix = null; _fail = null; }) : null, style: TextButton.styleFrom(foregroundColor: SuColors.body), child: Text(d.ag.resolutionSuivante, maxLines: 1, overflow: TextOverflow.ellipsis))),
-          ],
+        _Salle(
+          resolutions: resolutions,
+          index: _index,
+          quorum: ag.quorumAtteint != null ? '${md.quorumAtteint} ${formatPourcent(double.tryParse(ag.quorumAtteint!))}' : null,
+          onPrev: _index > 0 ? () => setState(() { _index--; _choix = null; _fail = null; }) : null,
+          onNext: _index < resolutions.length - 1 ? () => setState(() { _index++; _choix = null; _fail = null; }) : null,
         ),
+        const SizedBox(height: 12),
+        // La résolution : texte lisible en grand, majorité requise, statut.
         SuCard(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -118,70 +254,70 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
             children: [
               Row(
                 children: [
-                  Container(width: 36, height: 36, alignment: Alignment.center, decoration: const BoxDecoration(color: SuColors.actionTint, shape: BoxShape.circle), child: Text('${r.ordre}', style: t.labelMedium?.copyWith(color: SuColors.action, fontSize: 15, fontWeight: FontWeight.w600))),
-                  const Spacer(),
+                  Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, style: t.labelMedium?.copyWith(color: SuColors.soft))),
                   StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral),
                 ],
               ),
-              const SizedBox(height: 20),
-              Text(r.texte, style: t.titleLarge?.copyWith(fontSize: 17, fontWeight: FontWeight.w500, height: 1.5)),
-              const SizedBox(height: 8),
-              Text('${d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite} — ${d.enums.typeMajoriteAide[r.typeMajorite] ?? ''}', style: t.bodySmall),
-              const SizedBox(height: 22),
-              if (identites.isEmpty)
-                SuBanner(tone: BannerTone.warn, body: d.ag.indivisaireImpaye)
-              else if (identites.length == 1)
-                Text(identites.first.$2, style: t.labelMedium?.copyWith(color: SuColors.soft))
-              else
-                SuSelect<String>(label: d.ag.voterEnTantQue, value: _identite, options: identites.map((i) => i.$1).toList(), labelOf: (v) => identites.firstWhere((i) => i.$1 == v).$2, onChanged: (v) => setState(() { _identite = v; _choix = null; })),
-              const SizedBox(height: 24),
-              if (voteFait != null || r.resultat != 'EN_ATTENTE')
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                  decoration: BoxDecoration(color: SuColors.okTint, borderRadius: BorderRadius.circular(14)),
-                  child: Row(
-                    children: [
-                      Container(width: 32, height: 32, decoration: const BoxDecoration(color: SuColors.ok, shape: BoxShape.circle), child: const Icon(Icons.check_rounded, color: Colors.white, size: 16)),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: voteFait != null
-                            ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.ag.voteEnregistre, style: t.titleSmall), Text('${d.enums.valeurVote[voteFait]} · ${d.ag.voteImmuable}', style: t.labelSmall)])
-                            : Text(d.ag.dejaVote, style: t.titleSmall),
-                      ),
-                    ],
-                  ),
-                )
-              else ...[
-                for (final v in const [('POUR', SuColors.ok), ('CONTRE', SuColors.danger), ('ABSTENTION', SuColors.hairlineStrong)])
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: SizedBox(
-                      height: 56,
-                      child: OutlinedButton(
-                        onPressed: peutVoter ? () => setState(() => _choix = v.$1) : null,
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: _choix == v.$1 ? (v.$1 == 'ABSTENTION' ? SuColors.ink : v.$2) : SuColors.surface,
-                          foregroundColor: _choix == v.$1 ? Colors.white : (v.$1 == 'ABSTENTION' ? SuColors.body : v.$2),
-                          side: BorderSide(color: _choix == v.$1 && v.$1 == 'ABSTENTION' ? SuColors.ink : v.$2, width: 2),
-                          textStyle: t.titleMedium,
-                        ),
-                        child: Text(d.enums.valeurVote[v.$1] ?? v.$1),
-                      ),
-                    ),
-                  ),
-                if (_fail != null) ...[
-                  _fail!.error.code == 'CONFLICT' ? Text(d.ag.dejaVote, style: t.bodySmall?.copyWith(color: SuColors.warn)) : FormError(_fail),
-                  const SizedBox(height: 12),
-                ],
-                SubmitButton(label: md.registerVote, loading: _loading, onPressed: _choix == null ? null : () => _confirmer(r)),
-                const SizedBox(height: 10),
-                Text(d.ag.voteImmuable, style: t.labelSmall),
-              ],
+              const SizedBox(height: 14),
+              Text(r.texte, style: t.headlineSmall?.copyWith(height: 1.4)),
+              const SizedBox(height: 10),
+              Text(d.enums.typeMajoriteAide[r.typeMajorite] ?? '', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
             ],
           ),
         ),
+        const SizedBox(height: 18),
+        if (identites.isEmpty)
+          SuBanner(tone: BannerTone.warn, body: d.ag.indivisaireImpaye)
+        else if (identites.length == 1)
+          CardList([ListRow(leading: const IconCircle(Icons.how_to_vote_rounded, tone: Tone.neutral), title: identites.first.$2, subtitle: d.ag.voterEnTantQue)])
+        else
+          SuSelect<String>(label: d.ag.voterEnTantQue, value: _identite, options: identites.map((i) => i.$1).toList(), labelOf: (v) => identites.firstWhere((i) => i.$1 == v).$2, onChanged: (v) => setState(() { _identite = v; _choix = null; })),
         const SizedBox(height: 16),
-        Text(d.ag.voteAnonymeNote, style: t.labelSmall, textAlign: TextAlign.center),
+        if (voteFait != null || r.resultat != 'EN_ATTENTE')
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: SuColors.okTint, borderRadius: BorderRadius.circular(SuRadius.card)),
+            child: Row(
+              children: [
+                const IconCircle(Icons.check_rounded, tone: Tone.ok),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: voteFait != null
+                      ? Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.ag.voteEnregistre, style: t.titleMedium), const SizedBox(height: 2), Text('${d.enums.valeurVote[voteFait]} · ${d.ag.voteImmuable}', style: t.bodySmall)])
+                      : Text(d.ag.dejaVote, style: t.titleMedium),
+                ),
+              ],
+            ),
+          )
+        else ...[
+          // Trois gros boutons, un tap = un choix ; l'enregistrement reste une étape confirmée.
+          for (final v in const [
+            ('POUR', Icons.thumb_up_alt_rounded, SuColors.ok, SuColors.okTint),
+            ('CONTRE', Icons.thumb_down_alt_rounded, SuColors.danger, SuColors.dangerTint),
+            ('ABSTENTION', Icons.remove_rounded, SuColors.ink, SuColors.wash),
+          ])
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: _VoteChoice(
+                label: d.enums.valeurVote[v.$1] ?? v.$1,
+                icon: v.$2,
+                color: v.$3,
+                tint: v.$4,
+                selected: _choix == v.$1,
+                onTap: peutVoter ? () => setState(() => _choix = v.$1) : null,
+              ),
+            ),
+          const SizedBox(height: 6),
+          if (_fail != null) ...[
+            _fail!.error.code == 'CONFLICT' ? SuBanner(tone: BannerTone.warn, body: d.ag.dejaVote) : FormError(_fail),
+            const SizedBox(height: 12),
+          ],
+          SubmitButton(label: md.registerVote, loading: _loading, onPressed: _choix == null ? null : () => _confirmer(r)),
+          const SizedBox(height: 10),
+          Text(d.ag.voteImmuable, style: t.bodySmall, textAlign: TextAlign.center),
+        ],
+        const SizedBox(height: 20),
+        Text(d.ag.voteAnonymeNote, style: t.bodySmall, textAlign: TextAlign.center),
       ],
     );
   }
@@ -211,6 +347,8 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
           _choix = null;
         });
         ref.invalidate(agResultatsProvider((agId: widget.ag.id, resolutionId: r.id)));
+        // Séance : on vote résolution après résolution — un toast bref, pas d'écran plein.
+        showToast(context, d.ag.voteEnregistre);
       case ApiFail<AgVote>():
         setState(() {
           _loading = false;
@@ -272,27 +410,32 @@ class _PupitreState extends ConsumerState<_Pupitre> {
       children: [
         if (ag.statut == 'CLOTUREE') ...[
           SuBanner(tone: BannerTone.ok, title: d.ag.cloturee, body: d.ag.toutesFinalisees),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           FilledButton.icon(onPressed: () => context.pushReplacement('/ag/${ag.id}/pv'), icon: const Icon(Icons.gavel_rounded), label: Text(d.ag.pv)),
         ] else if (r == null) ...[
-          SuBanner(tone: BannerTone.warn, body: d.ag.aucuneResolution),
+          EmptyState(title: d.ag.aucuneResolution, icon: Icons.list_alt_rounded, illustration: 'empty-ag'),
         ] else ...[
-          Row(
-            children: [
-              IconButton(onPressed: _index > 0 ? () => setState(() { _index--; _fail = null; }) : null, icon: const Icon(Icons.chevron_left_rounded)),
-              Expanded(child: Text('${d.ag.resolution} ${_index + 1} / ${rs.length}', textAlign: TextAlign.center, style: t.labelMedium)),
-              IconButton(onPressed: _index < rs.length - 1 ? () => setState(() { _index++; _fail = null; }) : null, icon: const Icon(Icons.chevron_right_rounded)),
-            ],
+          _Salle(
+            resolutions: rs,
+            index: _index,
+            quorum: ag.quorumAtteint != null ? '${md.quorumAtteint} ${formatPourcent(double.tryParse(ag.quorumAtteint!))}' : null,
+            onPrev: _index > 0 ? () => setState(() { _index--; _fail = null; }) : null,
+            onNext: _index < rs.length - 1 ? () => setState(() { _index++; _fail = null; }) : null,
           ),
+          const SizedBox(height: 12),
           SuCard(
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(children: [StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, variant: BadgeVariant.info, small: true), const Spacer(), StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true)]),
-                const SizedBox(height: 10),
-                Text(r.texte, style: t.titleMedium),
-                const SizedBox(height: 6),
-                Text(d.enums.typeMajoriteAide[r.typeMajorite] ?? '', style: t.bodySmall),
+                Row(children: [
+                  Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, variant: BadgeVariant.info, small: true))),
+                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                ]),
+                const SizedBox(height: 14),
+                Text(r.texte, style: t.headlineSmall?.copyWith(height: 1.4)),
+                const SizedBox(height: 8),
+                Text(d.enums.typeMajoriteAide[r.typeMajorite] ?? '', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
               ],
             ),
           ),
@@ -300,7 +443,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
           SuCard(child: ResultatsWidget(agId: ag.id, resolution: r)),
           const SizedBox(height: 12),
           SuBanner(tone: BannerTone.info, body: md.pupitreRule),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           FormError(_fail),
           if (_fail != null) const SizedBox(height: 10),
           if (r.resultat == 'EN_ATTENTE')
@@ -316,19 +459,20 @@ class _PupitreState extends ConsumerState<_Pupitre> {
                   _fail = null;
                 });
                 final res = await ref.read(apiClientProvider).post<AgResolution>('/ag/${ag.id}/resolutions/${r.id}/finaliser', parse: (j) => AgResolution.fromJson(asMap(j)));
-                if (!mounted) return;
+                if (!context.mounted) return;
                 setState(() => _loading = false);
                 if (res is ApiFail<AgResolution>) {
                   setState(() => _fail = res);
                   return;
                 }
                 ref.invalidate(agProvider(ag.id));
+                // Finalisations à la chaîne pendant la séance : toast bref.
                 showToast(context, '${d.enums.resultatResolution[(res as ApiOk<AgResolution>).data.resultat]}${res.data.resultat == 'REJETEE' ? ' · ${d.ag.egaliteRejetee}' : ''}');
               },
             )
           else if (_index < rs.length - 1)
-            OutlinedButton(onPressed: () => setState(() => _index++), child: Text(d.ag.resolutionSuivante)),
-          const SizedBox(height: 24),
+            SubmitButton(label: d.ag.resolutionSuivante, secondary: true, icon: Icons.arrow_forward_rounded, onPressed: () => setState(() => _index++)),
+          const SizedBox(height: 28),
           SubmitButton(
             label: d.ag.cloturer,
             danger: true,
@@ -339,7 +483,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
                     final ok = await confirmDialog(context, title: d.ag.cloturer, body: d.ag.cloturerCorps, danger: true, irreversible: true);
                     if (!ok) return;
                     final res = await ref.read(apiClientProvider).post<dynamic>('/ag/${ag.id}/cloturer');
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     if (res is ApiFail) {
                       setState(() => _fail = res);
                       return;
@@ -349,8 +493,8 @@ class _PupitreState extends ConsumerState<_Pupitre> {
                     context.pushReplacement('/ag/${ag.id}/pv');
                   },
           ),
-          const SizedBox(height: 6),
-          Text(enAttente > 0 ? fill(d.ag.restentEnAttente, {'n': enAttente}) : d.ag.cloturerCorps, style: t.labelSmall, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(enAttente > 0 ? fill(d.ag.restentEnAttente, {'n': enAttente}) : d.ag.cloturerCorps, style: t.bodySmall, textAlign: TextAlign.center),
         ],
       ],
     );

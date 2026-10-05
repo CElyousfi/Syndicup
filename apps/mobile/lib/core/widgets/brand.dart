@@ -18,8 +18,8 @@ class BrandWordmark extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text.rich(
       TextSpan(
-        style: TextStyle(fontFamily: 'Geist', fontSize: 17, fontWeight: FontWeight.w600, letterSpacing: -0.3, color: inverse ? Colors.white : SuColors.ink),
-        children: [const TextSpan(text: 'Syndic'), TextSpan(text: 'Up', style: TextStyle(color: inverse ? SuColors.sage : SuColors.action))],
+        style: TextStyle(fontFamily: 'Inter', fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.5, color: inverse ? Colors.white : SuColors.ink),
+        children: [const TextSpan(text: 'Syndic'), TextSpan(text: 'Up', style: TextStyle(color: inverse ? SuColors.sage : SuColors.actionDeep))],
       ),
       textDirection: TextDirection.ltr,
     );

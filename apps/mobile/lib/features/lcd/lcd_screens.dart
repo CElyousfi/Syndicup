@@ -22,6 +22,7 @@ import '../../offline/local_db/database.dart';
 import '../../offline/sync_queue/lcd_sync.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../shell/app_shell.dart';
+import '../visites/visites_screens.dart' show StatutReseauTile;
 import 'lcd_sejour_screens.dart';
 
 /// M15 Location courte durée (Doc A §10.2) — accueil par rôle, règlement (syndic), fiche de
@@ -101,16 +102,16 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
         onTap: ctx.isSyndic ? () => context.push('/location-courte-duree/reglement') : null,
         child: Row(
           children: [
-            IconCircle(Icons.gavel_rounded, tone: switch (r.regimeLcd) { 'INTERDITE' => Tone.danger, 'NON_DEFINI' => Tone.neutral, 'ENCADREE' => Tone.tosca, _ => Tone.ok }, size: 44),
-            const SizedBox(width: 12),
+            IconCircle(Icons.gavel_rounded, tone: switch (r.regimeLcd) { 'INTERDITE' => Tone.danger, 'NON_DEFINI' => Tone.neutral, 'ENCADREE' => Tone.tosca, _ => Tone.ok }),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [Expanded(child: Text(d.lcd.regime, style: t.titleSmall)), StatusBadge(d.enums.regimeLcd[r.regimeLcd] ?? r.regimeLcd, variant: regimeLcdVariant[r.regimeLcd] ?? BadgeVariant.neutral, small: true)]),
+                  Row(children: [Expanded(child: Text(d.lcd.regime, style: t.titleMedium)), const SizedBox(width: 8), StatusBadge(d.enums.regimeLcd[r.regimeLcd] ?? r.regimeLcd, variant: regimeLcdVariant[r.regimeLcd] ?? BadgeVariant.neutral, small: true)]),
                   const SizedBox(height: 4),
-                  Text(resume, style: t.bodySmall, maxLines: 3, overflow: TextOverflow.ellipsis),
-                  if (ctx.isSyndic) Padding(padding: const EdgeInsets.only(top: 6), child: Text(d.lcd.configurerReglement, style: t.labelMedium?.copyWith(color: SuColors.action))),
+                  Text(resume, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35), maxLines: 3, overflow: TextOverflow.ellipsis),
+                  if (ctx.isSyndic) Padding(padding: const EdgeInsets.only(top: 8), child: Text(d.lcd.configurerReglement, style: t.labelMedium?.copyWith(color: SuColors.link, decoration: TextDecoration.underline, decorationColor: SuColors.link))),
                 ],
               ),
             ),
@@ -137,7 +138,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     }
 
     Widget declarationRow(LcdDeclaration x) => ListRow(
-          leading: IconCircle(Icons.apartment_rounded, tone: x.statut == 'EN_ATTENTE' ? Tone.warn : x.statut == 'VALIDEE' ? Tone.ok : Tone.neutral, size: 40),
+          leading: IconCircle(Icons.apartment_rounded, tone: x.statut == 'EN_ATTENTE' ? Tone.warn : x.statut == 'VALIDEE' ? Tone.ok : Tone.neutral),
           title: '${d.lcd.lot} ${x.lotNumero}',
           subtitle: '${x.plateformes?.isNotEmpty == true ? '${x.plateformes!.join(', ')} · ' : ''}${md.lcdDeclareLe} ${formatDateCourte(x.creeLe, l)}',
           trailing: StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? x.statut, variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, small: true, pulse: x.statut == 'EN_ATTENTE' && ctx.isGestion),
@@ -147,21 +148,21 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     Widget sejourTerrain(LcdSejour s, String action) => Column(
           children: [
             SejourRow(s, enAttente: enFile.contains(s.id), trailing: !peutConfirmer || enFile.contains(s.id) ? null : const SizedBox.shrink()),
+            // Gardien : grande pill pleine largeur — arrivée = action principale, départ = contour.
             if (peutConfirmer && !enFile.contains(s.id))
               Padding(
-                padding: const EdgeInsetsDirectional.fromSTEB(16, 0, 16, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: () => confirmerSejour(context, ref, s, action),
-                    style: FilledButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: action == 'arrivee' ? SuColors.action : SuColors.ink),
-                    icon: Icon(action == 'arrivee' ? Icons.login_rounded : Icons.logout_rounded, size: 18),
-                    label: Text(action == 'arrivee' ? d.lcd.confirmerArrivee : d.lcd.confirmerDepart),
-                  ),
+                padding: const EdgeInsets.only(bottom: 14),
+                child: SuPressable(
+                  child: action == 'arrivee'
+                      ? FilledButton.icon(onPressed: () => confirmerSejour(context, ref, s, action), icon: const Icon(Icons.login_rounded, size: 20), label: Text(d.lcd.confirmerArrivee))
+                      : OutlinedButton.icon(onPressed: () => confirmerSejour(context, ref, s, action), icon: const Icon(Icons.logout_rounded, size: 20), label: Text(d.lcd.confirmerDepart)),
                 ),
               ),
           ],
         );
+
+    // Libellé de groupe (Wise « Today », « Yesterday ») : petit, ardoise, au-dessus d'une liste.
+    Widget groupe(String texte) => Padding(padding: const EdgeInsets.only(top: 4, bottom: 2), child: Text(texte, style: t.bodyMedium?.copyWith(color: SuColors.soft, fontWeight: FontWeight.w600)));
 
     Widget tableauDuJour() {
       final live = duJour!;
@@ -175,20 +176,22 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           if (dj == null)
             AsyncView(live, onRetry: () => ref.invalidate(lcdDuJourProvider), skeletonCount: 2, data: (_) => const SizedBox.shrink())
           else if (dj.vide)
-            SuCard(child: Text(d.lcd.rienAujourdhui, style: t.bodySmall))
+            ctx.isGardien
+                ? EmptyState(title: d.lcd.rienAujourdhui, icon: Icons.luggage_rounded, illustration: 'empty-lcd')
+                : Text(d.lcd.rienAujourdhui, style: t.bodyMedium?.copyWith(color: SuColors.soft))
           else ...[
             if (dj.arrivees.isNotEmpty) ...[
-              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${d.lcd.arrivees} · ${dj.arrivees.length}', style: t.labelMedium?.copyWith(color: SuColors.ink))),
+              groupe('${d.lcd.arrivees} · ${dj.arrivees.length}'),
               CardList([for (final s in dj.arrivees) sejourTerrain(s, 'arrivee')]),
               const SizedBox(height: 12),
             ],
             if (dj.departs.isNotEmpty) ...[
-              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${d.lcd.departs} · ${dj.departs.length}', style: t.labelMedium?.copyWith(color: SuColors.ink))),
+              groupe('${d.lcd.departs} · ${dj.departs.length}'),
               CardList([for (final s in dj.departs) sejourTerrain(s, 'depart')]),
               const SizedBox(height: 12),
             ],
             if (dj.enCours.where((s) => !dj.departs.any((x) => x.id == s.id)).isNotEmpty) ...[
-              Padding(padding: const EdgeInsets.only(bottom: 6), child: Text('${d.lcd.enCours} · ${dj.enCours.length}', style: t.labelMedium?.copyWith(color: SuColors.ink))),
+              groupe('${d.lcd.enCours} · ${dj.enCours.length}'),
               CardList([for (final s in dj.enCours.where((s) => !dj.departs.any((x) => x.id == s.id))) SejourRow(s, enAttente: enFile.contains(s.id))]),
             ],
           ],
@@ -197,104 +200,102 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     }
 
     final titre = d.lcd.titre;
+    final fab = peutDeclarerSejour ? FloatingActionButton.extended(onPressed: () => context.push('/location-courte-duree/sejours/nouveau'), icon: const Icon(Icons.luggage_rounded), label: Text(d.lcd.declarerSejour)) : null;
+    Future<void> refresh() async {
+      ref.invalidate(lcdReglementProvider);
+      ref.invalidate(lcdDeclarationsProvider);
+      ref.invalidate(lcdSejoursProvider);
+      if (terrain) ref.invalidate(lcdDuJourProvider);
+      await ref.read(lcdSyncProvider.notifier).flush();
+    }
+
+    final contenu = <Widget>[
+      // Réseau : état lisible d'un coup d'œil pour qui confirme arrivées et départs.
+      if (peutConfirmer) ...[StatutReseauTile(online: online, syncing: sync.syncing, hint: md.lcdOfflineConfirm), const SizedBox(height: 12)],
+      if (queue.isNotEmpty) ...[LcdQueueCard(queue: queue), const SizedBox(height: 12)],
+      if (reglement.hasError && reg == null && !ctx.isGardien) ErrorState(error: reglement.error!, onRetry: () => ref.invalidate(lcdReglementProvider)),
+      bannieres(),
+      if (ctx.isGestion || ctx.isConseil) ...[
+        regimeCard(),
+        const SizedBox(height: 12),
+        TwoCols([
+          StatTile(label: md.pending, value: '${decls.where((x) => x.statut == 'EN_ATTENTE').length}', tone: Tone.warn, icon: Icons.pending_actions_rounded),
+          StatTile(label: d.lcd.enCours, value: '${(sejours.valueOrNull ?? const <LcdSejour>[]).where((s) => s.statut == 'EN_COURS').length}', tone: Tone.ok, icon: Icons.luggage_rounded),
+        ]),
+        if (ctx.isConseil) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.legal, body: md.lcdConseilLecture)),
+        SectionHeader(d.lcd.declarations, actionLabel: peutDeclarerLot ? d.common.add : null, onAction: peutDeclarerLot ? _declarerLot : null),
+        AsyncView(declarations, onRetry: () => ref.invalidate(lcdDeclarationsProvider), skeletonCount: 2, data: (list) {
+          if (list.isEmpty) return EmptyState(title: d.lcd.aucuneDeclaration, hint: d.lcd.aucuneDeclarationAide, icon: Icons.luggage_rounded, illustration: 'empty-lcd');
+          const ordre = ['EN_ATTENTE', 'VALIDEE', 'SUSPENDUE', 'REFUSEE', 'CLOTUREE'];
+          final sorted = [...list]..sort((a, b) {
+              final c = ordre.indexOf(a.statut).compareTo(ordre.indexOf(b.statut));
+              return c != 0 ? c : b.creeLe.compareTo(a.creeLe);
+            });
+          return CardList([for (final x in sorted.take(50)) declarationRow(x)]);
+        }),
+        tableauDuJour(),
+      ] else if (ctx.isGardien) ...[
+        tableauDuJour(),
+        AsyncView(sejours, onRetry: () => ref.invalidate(lcdSejoursProvider), skeletonCount: 1, data: (list) {
+          final aujourdhui = jourIso(DateTime.now());
+          final aVenir = list.where((s) => s.statut == 'PREVU' && s.jourArrivee.compareTo(aujourdhui) > 0).toList()..sort((a, b) => a.jourArrivee.compareTo(b.jourArrivee));
+          if (aVenir.isEmpty) return const SizedBox.shrink();
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [SectionHeader(d.lcd.aVenir), CardList([for (final s in aVenir.take(20)) SejourRow(s)])]);
+        }),
+      ] else ...[
+        // Propriétaire / gestionnaire : mes déclarations, mes séjours.
+        if (reg != null && reg.autorise && reg.regimeLcd == 'ENCADREE') Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: d.lcd.regimeEncadree)),
+        SectionHeader(d.lcd.mesLocations, actionLabel: peutDeclarerLot ? d.lcd.declarerLot : null, onAction: peutDeclarerLot ? _declarerLot : null),
+        AsyncView(declarations, onRetry: () => ref.invalidate(lcdDeclarationsProvider), skeletonCount: 2, data: (list) {
+          if (list.isEmpty) {
+            return EmptyState(
+              title: d.lcd.aucuneDeclaration,
+              hint: gestionnaire ? d.lcd.aucuneDeclarationAide : (reg?.autorise ?? false) ? d.lcd.declarerLotAide : null,
+              icon: Icons.luggage_rounded,
+              illustration: 'empty-lcd',
+              actionLabel: peutDeclarerLot ? d.lcd.declarerLot : null,
+              onAction: peutDeclarerLot ? _declarerLot : null,
+            );
+          }
+          final sorted = [...list]..sort((a, b) => b.creeLe.compareTo(a.creeLe));
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CardList([for (final x in sorted) declarationRow(x)]),
+              if (sorted.any((x) => x.statut == 'EN_ATTENTE')) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.info, body: d.lcd.declareeEnAttente)),
+            ],
+          );
+        }),
+        SectionHeader(d.lcd.mesSejours, actionLabel: peutDeclarerSejour ? d.lcd.declarerSejour : null, onAction: peutDeclarerSejour ? () => context.push('/location-courte-duree/sejours/nouveau') : null),
+        AsyncView(sejours, onRetry: () => ref.invalidate(lcdSejoursProvider), skeletonCount: 2, data: (list) {
+          if (list.isEmpty) return EmptyState(title: d.lcd.aucunSejour, hint: peutDeclarerSejour ? d.lcd.aucunSejourAide : null, icon: Icons.luggage_rounded, illustration: 'empty-lcd', actionLabel: peutDeclarerSejour ? d.lcd.declarerSejour : null, onAction: peutDeclarerSejour ? () => context.push('/location-courte-duree/sejours/nouveau') : null);
+          final actifs = list.where((s) => s.actif).toList()..sort((a, b) => a.jourArrivee.compareTo(b.jourArrivee));
+          final passes = trierSejours(list.where((s) => !s.actif).toList());
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (actifs.isNotEmpty) CardList([for (final s in actifs) SejourRow(s)]),
+              if (passes.isNotEmpty) ...[
+                const SizedBox(height: 14),
+                groupe(d.lcd.historique),
+                CardList([for (final s in passes.take(20)) SejourRow(s)]),
+              ],
+            ],
+          );
+        }),
+      ],
+    ];
+
+    // Écran racine (onglet) : en-tête de la coque ; poussé : page Wise (retour rond, grand titre).
+    if (!racine) return SuPage(title: titre, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 112), children: contenu);
     return Scaffold(
-      appBar: racine ? ShellHeader(title: titre) : AppBar(title: Text(titre)),
-      floatingActionButton: peutDeclarerSejour
-          ? FloatingActionButton.extended(onPressed: () => context.push('/location-courte-duree/sejours/nouveau'), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.luggage_rounded), label: Text(d.lcd.declarerSejour))
-          : null,
+      appBar: ShellHeader(title: titre),
+      floatingActionButton: fab,
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(lcdReglementProvider);
-          ref.invalidate(lcdDeclarationsProvider);
-          ref.invalidate(lcdSejoursProvider);
-          if (terrain) ref.invalidate(lcdDuJourProvider);
-          await ref.read(lcdSyncProvider.notifier).flush();
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-          children: [
-            if (peutConfirmer) ...[
-              Row(children: [
-                StatusBadge(online ? md.online : md.offline, variant: online ? BadgeVariant.ok : BadgeVariant.warn, small: true),
-                const SizedBox(width: 8),
-                if (sync.syncing) const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2)),
-                const SizedBox(width: 10),
-                Expanded(child: Text(md.lcdOfflineConfirm, style: t.labelSmall, textAlign: TextAlign.end, maxLines: 2, overflow: TextOverflow.ellipsis)),
-              ]),
-              const SizedBox(height: 10),
-            ],
-            if (queue.isNotEmpty) ...[LcdQueueCard(queue: queue), const SizedBox(height: 12)],
-            if (reglement.hasError && reg == null && !ctx.isGardien) ErrorState(error: reglement.error!, onRetry: () => ref.invalidate(lcdReglementProvider)),
-            bannieres(),
-            if (ctx.isGestion || ctx.isConseil) ...[
-              regimeCard(),
-              const SizedBox(height: 10),
-              TwoCols([
-                StatTile(label: md.pending, value: '${decls.where((x) => x.statut == 'EN_ATTENTE').length}', tone: Tone.warn, icon: Icons.pending_actions_rounded),
-                StatTile(label: d.lcd.enCours, value: '${(sejours.valueOrNull ?? const <LcdSejour>[]).where((s) => s.statut == 'EN_COURS').length}', tone: Tone.ok, icon: Icons.luggage_rounded),
-              ]),
-              if (ctx.isConseil) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.legal, body: md.lcdConseilLecture)),
-              SectionHeader(d.lcd.declarations, actionLabel: peutDeclarerLot ? d.common.add : null, onAction: peutDeclarerLot ? _declarerLot : null),
-              AsyncView(declarations, onRetry: () => ref.invalidate(lcdDeclarationsProvider), skeletonCount: 2, data: (list) {
-                if (list.isEmpty) return EmptyState(title: d.lcd.aucuneDeclaration, hint: d.lcd.aucuneDeclarationAide, icon: Icons.luggage_rounded);
-                const ordre = ['EN_ATTENTE', 'VALIDEE', 'SUSPENDUE', 'REFUSEE', 'CLOTUREE'];
-                final sorted = [...list]..sort((a, b) {
-                    final c = ordre.indexOf(a.statut).compareTo(ordre.indexOf(b.statut));
-                    return c != 0 ? c : b.creeLe.compareTo(a.creeLe);
-                  });
-                return CardList([for (final x in sorted.take(50)) declarationRow(x)]);
-              }),
-              tableauDuJour(),
-            ] else if (ctx.isGardien) ...[
-              tableauDuJour(),
-              AsyncView(sejours, onRetry: () => ref.invalidate(lcdSejoursProvider), skeletonCount: 1, data: (list) {
-                final aujourdhui = jourIso(DateTime.now());
-                final aVenir = list.where((s) => s.statut == 'PREVU' && s.jourArrivee.compareTo(aujourdhui) > 0).toList()..sort((a, b) => a.jourArrivee.compareTo(b.jourArrivee));
-                if (aVenir.isEmpty) return const SizedBox.shrink();
-                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [SectionHeader(d.lcd.aVenir), CardList([for (final s in aVenir.take(20)) SejourRow(s)])]);
-              }),
-            ] else ...[
-              // Propriétaire / gestionnaire : mes déclarations, mes séjours.
-              if (reg != null && reg.autorise && reg.regimeLcd == 'ENCADREE') Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: d.lcd.regimeEncadree)),
-              SectionHeader(d.lcd.mesLocations, actionLabel: peutDeclarerLot ? d.lcd.declarerLot : null, onAction: peutDeclarerLot ? _declarerLot : null),
-              AsyncView(declarations, onRetry: () => ref.invalidate(lcdDeclarationsProvider), skeletonCount: 2, data: (list) {
-                if (list.isEmpty) {
-                  return EmptyState(
-                    title: d.lcd.aucuneDeclaration,
-                    hint: gestionnaire ? d.lcd.aucuneDeclarationAide : (reg?.autorise ?? false) ? d.lcd.declarerLotAide : null,
-                    icon: Icons.luggage_rounded,
-                    actionLabel: peutDeclarerLot ? d.lcd.declarerLot : null,
-                    onAction: peutDeclarerLot ? _declarerLot : null,
-                  );
-                }
-                final sorted = [...list]..sort((a, b) => b.creeLe.compareTo(a.creeLe));
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CardList([for (final x in sorted) declarationRow(x)]),
-                    if (sorted.any((x) => x.statut == 'EN_ATTENTE')) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.info, body: d.lcd.declareeEnAttente)),
-                  ],
-                );
-              }),
-              SectionHeader(d.lcd.mesSejours, actionLabel: peutDeclarerSejour ? d.lcd.declarerSejour : null, onAction: peutDeclarerSejour ? () => context.push('/location-courte-duree/sejours/nouveau') : null),
-              AsyncView(sejours, onRetry: () => ref.invalidate(lcdSejoursProvider), skeletonCount: 2, data: (list) {
-                if (list.isEmpty) return EmptyState(title: d.lcd.aucunSejour, hint: peutDeclarerSejour ? d.lcd.aucunSejourAide : null, icon: Icons.luggage_rounded, actionLabel: peutDeclarerSejour ? d.lcd.declarerSejour : null, onAction: peutDeclarerSejour ? () => context.push('/location-courte-duree/sejours/nouveau') : null);
-                final actifs = list.where((s) => s.actif).toList()..sort((a, b) => a.jourArrivee.compareTo(b.jourArrivee));
-                final passes = trierSejours(list.where((s) => !s.actif).toList());
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (actifs.isNotEmpty) CardList([for (final s in actifs) SejourRow(s)]),
-                    if (passes.isNotEmpty) ...[
-                      Padding(padding: const EdgeInsets.only(top: 14, bottom: 6), child: Text(d.lcd.historique, style: t.labelMedium?.copyWith(color: SuColors.ink))),
-                      CardList([for (final s in passes.take(20)) SejourRow(s)]),
-                    ],
-                  ],
-                );
-              }),
-            ],
-          ],
-        ),
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 112), physics: const AlwaysScrollableScrollPhysics(), children: contenu),
       ),
     );
   }
@@ -330,19 +331,19 @@ class _DeclarationFormState extends ConsumerState<_DeclarationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(d.lcd.declarerLotAide, style: t.bodySmall),
-        const SizedBox(height: 12),
+        Text(d.lcd.declarerLotAide, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 18),
         if (options.isEmpty)
           SuBanner(tone: BannerTone.warn, body: md.lcdAucunLotDeclarable)
         else
           SuSelect<String>(label: d.lcd.lot, value: _lot, options: options.map((x) => x.id).toList(), labelOf: (id) => options.firstWhere((x) => x.id == id).numero, onChanged: (v) => setState(() => _lot = v), required: true, placeholder: md.selectLot, error: fieldError(_fail, 'lot_id')),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuField(label: d.lcd.plateformes, controller: _plateformes, hint: d.lcd.plateformesAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'plateformes')),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuField(label: d.lcd.contactUrgenceNom, controller: _nom, required: reg?.parametres?.contactGardienObligatoire ?? false, optionalLabel: d.common.optional, error: fieldError(_fail, 'contact_urgence_nom')),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuField(label: d.lcd.contactUrgenceTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, required: reg?.parametres?.contactGardienObligatoire ?? false, optionalLabel: d.common.optional, error: fieldError(_fail, 'contact_urgence_telephone')),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
@@ -362,14 +363,17 @@ class _DeclarationFormState extends ConsumerState<_DeclarationForm> {
                     'contact_urgence_nom': _nom.text.trim().isEmpty ? null : _nom.text.trim(),
                     'contact_urgence_telephone': _tel.text.trim().isEmpty ? null : normaliserTelephone(_tel.text) ?? _tel.text.trim(),
                   }, parse: (j) => LcdDeclaration.fromJson(asMap(j)));
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   switch (r) {
                     case ApiOk<LcdDeclaration>(:final data):
                       ref.invalidate(lcdDeclarationsProvider);
                       ref.invalidate(lcdSyntheseProvider(data.lotId));
+                      // Feuille fermée : succès sur le navigateur racine, puis la fiche de la déclaration.
+                      final racine = Navigator.of(context, rootNavigator: true).context;
+                      final router = GoRouter.of(context);
                       Navigator.pop(context);
-                      showToast(context, d.lcd.declaree);
-                      context.push('/location-courte-duree/declarations/${data.id}');
+                      await showSuccess(racine, title: scinderSucces(d.lcd.declaree).title, body: data.statut == 'EN_ATTENTE' ? scinderSucces(d.lcd.declareeEnAttente).body : null, illustration: 'ok-general');
+                      router.push('/location-courte-duree/declarations/${data.id}');
                     case ApiFail<LcdDeclaration>():
                       setState(() {
                         _loading = false;
@@ -418,26 +422,27 @@ class _LcdReglementScreenState extends ConsumerState<LcdReglementScreen> {
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
-    final t = Theme.of(context).textTheme;
     final reglement = ref.watch(lcdReglementProvider);
     if (reglement.valueOrNull != null && !_prefilled) {
       _prefilled = true;
       _prefill(reglement.valueOrNull!);
     }
     return SuPage(
-      title: d.lcd.regime,
-      subtitle: d.lcd.titre,
+      title: d.lcd.reglementTitre,
+      subtitle: d.lcd.reglementSubtitle,
       children: [
         if (reglement.isLoading && !_prefilled)
           const LoadingList(count: 3)
         else ...[
-          Text(d.lcd.regimeAide, style: t.bodySmall),
+          SuSelect<String>(label: d.lcd.regime, value: _regime, options: d.enums.regimeLcd.keys.toList(), labelOf: (v) => d.enums.regimeLcd[v] ?? v, onChanged: (v) => setState(() => _regime = v), required: true, error: fieldError(_fail, 'regime_lcd'), help: d.lcd.regimeAide),
           const SizedBox(height: 14),
-          SuSelect<String>(label: d.lcd.regime, value: _regime, options: d.enums.regimeLcd.keys.toList(), labelOf: (v) => d.enums.regimeLcd[v] ?? v, onChanged: (v) => setState(() => _regime = v), required: true, error: fieldError(_fail, 'regime_lcd')),
-          const SizedBox(height: 6),
-          Text(switch (_regime) { 'AUTORISEE' => d.lcd.regimeAutorisee, 'INTERDITE' => d.lcd.regimeInterditCorps, 'ENCADREE' => d.lcd.regimeEncadree, _ => d.lcd.regimeNonDefiniSyndic }, style: t.bodySmall),
+          // Effet du régime choisi, en clair.
+          SuBanner(
+            tone: switch (_regime) { 'INTERDITE' => BannerTone.danger, 'AUTORISEE' => BannerTone.ok, 'NON_DEFINI' => BannerTone.legal, _ => BannerTone.info },
+            body: switch (_regime) { 'AUTORISEE' => d.lcd.regimeAutorisee, 'INTERDITE' => d.lcd.regimeInterditCorps, 'ENCADREE' => d.lcd.regimeEncadree, _ => d.lcd.regimeNonDefiniSyndic },
+          ),
           if (_regime == 'ENCADREE') ...[
-            SectionHeader(d.lcd.parametres),
+            SectionHeader(d.lcd.parametres, subtitle: d.lcd.parametresAide),
             SuCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -445,19 +450,19 @@ class _LcdReglementScreenState extends ConsumerState<LcdReglementScreen> {
                   SuCheckbox(value: _prealable, onChanged: (v) => setState(() => _prealable = v), label: d.lcd.declarationPrealable),
                   SuCheckbox(value: _gestionnaireObligatoire, onChanged: (v) => setState(() => _gestionnaireObligatoire = v), label: d.lcd.gestionnaireObligatoire),
                   SuCheckbox(value: _contactGardien, onChanged: (v) => setState(() => _contactGardien = v), label: d.lcd.contactGardien),
-                  const SizedBox(height: 10),
-                  SuField(label: d.lcd.delaiDeclaration, controller: _delai, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], hint: d.lcd.sansQuota, optionalLabel: d.common.optional, error: fieldError(_fail, 'parametres_lcd_json.delai_declaration_heures')),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+                  SuField(label: d.lcd.delaiDeclaration, controller: _delai, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], hint: d.lcd.sansQuota, help: d.lcd.delaiDeclarationAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'parametres_lcd_json.delai_declaration_heures')),
+                  const SizedBox(height: 16),
                   SuField(label: d.lcd.nuitsMax, controller: _nuits, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], hint: d.lcd.sansQuota, optionalLabel: d.common.optional, error: fieldError(_fail, 'parametres_lcd_json.nb_nuits_max_par_an')),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   SuField(label: d.lcd.voyageursMax, controller: _voyageurs, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], hint: d.lcd.sansQuota, optionalLabel: d.common.optional, error: fieldError(_fail, 'parametres_lcd_json.nb_voyageurs_max_par_lot')),
                 ],
               ),
             ),
           ],
-          const SizedBox(height: 14),
-          SuField(label: d.lcd.agResolution, controller: _resolution, help: d.lcd.agResolutionAide, mono: true, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'ag_resolution_id')),
           const SizedBox(height: 20),
+          SuField(label: d.lcd.agResolution, controller: _resolution, help: d.lcd.agResolutionAide, mono: true, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'ag_resolution_id')),
+          const SizedBox(height: 28),
           FormError(_fail),
           if (_fail != null) const SizedBox(height: 12),
           SubmitButton(label: d.common.save, loading: _loading, onPressed: _submit),
@@ -573,19 +578,26 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Résumé Wise : grande pastille, lot en grand, date de déclaration, statut.
+              SuEnter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconCircle(Icons.apartment_rounded, tone: x.statut == 'VALIDEE' ? Tone.ok : x.statut == 'EN_ATTENTE' ? Tone.warn : Tone.neutral, size: 64),
+                    const SizedBox(height: 16),
+                    Text('${d.enums.typeLot[x.lot?.typeLot] ?? d.lcd.lot} ${x.lotNumero}', style: t.displaySmall),
+                    const SizedBox(height: 4),
+                    Text('${md.lcdDeclareLe} ${formatDateCourte(x.creeLe, l)}', style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+                    const SizedBox(height: 12),
+                    StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? x.statut, variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, pulse: x.statut == 'EN_ATTENTE'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
               SuCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        IconCircle(Icons.apartment_rounded, tone: x.statut == 'VALIDEE' ? Tone.ok : x.statut == 'EN_ATTENTE' ? Tone.warn : Tone.neutral, size: 48),
-                        const SizedBox(width: 12),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${d.enums.typeLot[x.lot?.typeLot] ?? d.lcd.lot} ${x.lotNumero}', style: t.titleLarge), Text('${md.lcdDeclareLe} ${formatDateCourte(x.creeLe, l)}', style: t.bodySmall)])),
-                        StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? x.statut, variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral),
-                      ],
-                    ),
-                    const Divider(height: 24),
                     KeyValueRow(d.lcd.plateformes, x.plateformes?.isNotEmpty == true ? x.plateformes!.join(', ') : '—'),
                     KeyValueRow(d.lcd.contactUrgence, [x.contactUrgenceNom, formatTelephone(x.contactUrgenceTelephone)].where((s) => s != null && s.isNotEmpty && s != '—').join(' · ').replaceFirst(RegExp(r'^$'), '—')),
                     KeyValueRow(d.lcd.gestionnaire, '', valueWidget: Align(alignment: AlignmentDirectional.centerEnd, child: StatusBadge(x.gestionnaireId != null ? md.lcdGestionnaireDesigne : d.lcd.aucunGestionnaire, variant: x.gestionnaireId != null ? BadgeVariant.ok : BadgeVariant.neutral, small: true))),
@@ -596,7 +608,7 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
                 ),
               ),
               if (x.statut == 'EN_ATTENTE' && !ctx.isGestion) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.info, body: d.lcd.declareeEnAttente)],
-              const SizedBox(height: 14),
+              const SizedBox(height: 20),
               if (ctx.isGestion && x.ouverte) ...[
                 SubmitButton(label: md.lcdDecider, icon: Icons.gavel_rounded, loading: _loading, onPressed: () => _decider(x)),
                 const SizedBox(height: 10),
@@ -613,15 +625,16 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
                 SubmitButton(label: d.lcd.modifierContacts, icon: Icons.contact_phone_rounded, secondary: true, onPressed: () => _contacts(x)),
               if (peutGerer && x.ouverte) ...[
                 const SizedBox(height: 10),
-                OutlinedButton.icon(onPressed: _loading || sejourActif ? null : () => _cloturer(x), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: BorderSide(color: sejourActif ? SuColors.hairlineStrong : SuColors.danger), minimumSize: const Size.fromHeight(48)), icon: const Icon(Icons.lock_outline_rounded, size: 18), label: Text(d.lcd.cloturer)),
-                if (sejourActif) Padding(padding: const EdgeInsets.only(top: 6), child: Text(d.lcd.cloturerAide, style: t.labelSmall)),
+                // Destructif : contour rouge (confirmation « danger » + irréversible à l'appui).
+                OutlinedButton.icon(onPressed: _loading || sejourActif ? null : () => _cloturer(x), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: BorderSide(color: sejourActif ? SuColors.hairlineStrong : SuColors.danger, width: 1.2)), icon: const Icon(Icons.lock_outline_rounded, size: 20), label: Text(d.lcd.cloturer)),
+                if (sejourActif) Padding(padding: const EdgeInsets.only(top: 8), child: Text(d.lcd.cloturerAide, style: t.bodySmall)),
               ],
               if (ctx.isGestion || ctx.isProprietaire) ...[
-                const SizedBox(height: 10),
-                TextButton.icon(onPressed: () => context.push('/lots/${x.lotId}'), icon: const Icon(Icons.apartment_rounded, size: 18), label: Text(md.lcdVoirLot)),
+                const SizedBox(height: 8),
+                Center(child: LinkButton(md.lcdVoirLot, onTap: () => context.push('/lots/${x.lotId}'))),
               ],
               SectionHeader(d.lcd.sejours, actionLabel: x.statut == 'VALIDEE' && ctx.declareSejoursLcd ? d.lcd.declarerSejour : null, onAction: () => context.push('/location-courte-duree/sejours/nouveau?lot=${x.lotId}')),
-              sejours.isEmpty ? SuCard(child: Text(d.lcd.aucunSejour, style: t.bodySmall)) : CardList([for (final s in sejours.take(30)) SejourRow(s)]),
+              sejours.isEmpty ? Text(d.lcd.aucunSejour, style: t.bodyMedium?.copyWith(color: SuColors.soft)) : CardList([for (final s in sejours.take(30)) SejourRow(s)]),
             ],
           );
         }),
@@ -656,12 +669,14 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        Text(d.lcd.decisionAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 16),
         Segmented<String>(value: _decision, options: options, labelOf: (v) => d.enums.statutDeclarationLcd[v] ?? v, onChanged: (v) => setState(() => _decision = v)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         SuField(label: d.lcd.motif, controller: _motif, maxLines: 3, required: motifRequis, optionalLabel: motifRequis ? null : context.dict.common.optional, help: motifRequis ? d.lcd.motifAide : null, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'motif')),
-        const SizedBox(height: 10),
-        Text(md.retryHint, style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        Text(md.retryHint, style: Theme.of(context).textTheme.bodySmall),
+        const SizedBox(height: 20),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
@@ -676,7 +691,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
                     _fail = null;
                   });
                   final r = await ref.read(apiClientProvider).post<LcdDeclaration>('/lcd/declarations/${widget.declaration.id}/decision', body: {'decision': _decision, 'motif': _motif.text.trim().isEmpty ? null : _motif.text.trim()}, idempotencyKey: _key, parse: (j) => LcdDeclaration.fromJson(asMap(j)));
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   switch (r) {
                     case ApiOk<LcdDeclaration>():
                       widget.onDone();
@@ -728,9 +743,17 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
         children: [
           SuBanner(tone: BannerTone.ok, body: d.lcd.gestionnaireInvite),
           const SizedBox(height: 14),
-          Center(child: Text(inv.code, style: t.displayMedium?.copyWith(fontFamily: 'GeistMono', letterSpacing: 4), textDirection: TextDirection.ltr)),
-          const SizedBox(height: 6),
-          Center(child: Text('${d.enums.canal[inv.canal] ?? inv.canal} · ${formatDateCourte(inv.expireLe, context.locale)}', style: t.labelSmall)),
+          // Code d'invitation : grand, sur tuile greige, toujours lu de gauche à droite.
+          SuCard(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+            child: Column(
+              children: [
+                FittedBox(fit: BoxFit.scaleDown, child: Text(inv.code, style: t.displayMedium?.copyWith(fontFamily: 'GeistMono', letterSpacing: 4), textDirection: TextDirection.ltr)),
+                const SizedBox(height: 6),
+                Text('${d.enums.canal[inv.canal] ?? inv.canal} · ${formatDateCourte(inv.expireLe, context.locale)}', style: t.bodySmall, textAlign: TextAlign.center),
+              ],
+            ),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
@@ -758,19 +781,19 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(d.lcd.gestionnaireAide, style: t.bodySmall),
-        const SizedBox(height: 12),
+        Text(d.lcd.gestionnaireAide, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 16),
         Segmented<String>(value: _mode, options: const ['inviter', 'compte'], labelOf: (v) => v == 'inviter' ? md.lcdInviter : d.lcd.gestionnaireCompte, onChanged: (v) => setState(() => _mode = v)),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         if (inviter) ...[
           SuField(label: d.lcd.gestionnaireTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, hint: '+212 6…', onChanged: (_) => setState(() {}), error: fieldError(_fail, 'telephone')),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SuField(label: d.lcd.gestionnaireEmail, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'email')),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           SuSelect<String>(label: d.lcd.canalInvitation, value: _canal, options: const ['SMS', 'WHATSAPP', 'EMAIL', 'QR_CODE'], labelOf: (v) => d.enums.canal[v] ?? v, onChanged: (v) => setState(() => _canal = v)),
         ] else
-          SuField(label: d.lcd.gestionnaireId, controller: _userId, mono: true, textDirection: TextDirection.ltr, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'utilisateur_id')),
-        const SizedBox(height: 14),
+          SuField(label: d.lcd.gestionnaireId, controller: _userId, mono: true, textDirection: TextDirection.ltr, help: d.lcd.gestionnaireIdAide, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'utilisateur_id')),
+        const SizedBox(height: 20),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
@@ -791,7 +814,7 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
                         }
                       : {'utilisateur_id': _userId.text.trim(), 'canal': _canal};
                   final r = await ref.read(apiClientProvider).post<LcdGestionnaireResult>('/lcd/declarations/${widget.declaration.id}/gestionnaire', body: body, parse: (j) => LcdGestionnaireResult.fromJson(asMap(j)));
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   switch (r) {
                     case ApiOk<LcdGestionnaireResult>(:final data):
                       widget.onDone();
@@ -841,11 +864,11 @@ class _ContactsFormState extends ConsumerState<_ContactsForm> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SuField(label: d.lcd.plateformes, controller: _plateformes, hint: d.lcd.plateformesAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'plateformes')),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuField(label: d.lcd.contactUrgenceNom, controller: _nom, optionalLabel: d.common.optional, error: fieldError(_fail, 'contact_urgence_nom')),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuField(label: d.lcd.contactUrgenceTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'contact_urgence_telephone')),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
@@ -862,7 +885,7 @@ class _ContactsFormState extends ConsumerState<_ContactsForm> {
               'contact_urgence_nom': _nom.text.trim().isEmpty ? null : _nom.text.trim(),
               'contact_urgence_telephone': _tel.text.trim().isEmpty ? null : normaliserTelephone(_tel.text) ?? _tel.text.trim(),
             }, parse: (j) => LcdDeclaration.fromJson(asMap(j)));
-            if (!mounted) return;
+            if (!context.mounted) return;
             switch (r) {
               case ApiOk<LcdDeclaration>():
                 widget.onDone();
@@ -913,15 +936,17 @@ class LcdLotSection extends ConsumerWidget {
               KeyValueRow(fill(d.lcd.nuitsUtilisees, {'annee': synth.annee}), quota == null ? '${synth.nuitsUtilisees}' : '${synth.nuitsUtilisees} / $quota'),
               if (ratio != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Gauge(ratio)),
               KeyValueRow(d.lcd.incidentsLies, '${synth.incidentsLies}'),
-              if (synth.derniersSejours.isNotEmpty) ...[
-                const Divider(height: 20),
-                Text(d.lcd.sejours, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-                for (final s in synth.derniersSejours.take(3))
-                  ListRow(padding: const EdgeInsets.symmetric(vertical: 8), leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut), size: 32, iconSize: 16), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
-              ],
             ],
           ),
         ),
+        // Derniers séjours : liste Wise à plat sous la tuile.
+        if (synth.derniersSejours.isNotEmpty) ...[
+          Padding(padding: const EdgeInsets.only(top: 18, bottom: 2), child: Text(d.lcd.derniersSejours, style: t.bodyMedium?.copyWith(color: SuColors.soft, fontWeight: FontWeight.w600))),
+          CardList([
+            for (final s in synth.derniersSejours.take(3))
+              ListRow(leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
+          ]),
+        ],
       ],
     );
   }

@@ -29,6 +29,7 @@ import '../../features/litiges/litiges_screen.dart';
 import '../../features/lots/lots_screens.dart';
 import '../../features/membres/membres_screens.dart';
 import '../../features/notifications/notifications_screen.dart';
+import '../../features/onboarding/onboarding_screen.dart';
 import '../../features/parametres/parametres_screen.dart';
 import '../../features/personnel/personnel_screen.dart';
 import '../../features/personnel/personnel_rh_screens.dart';
@@ -89,7 +90,7 @@ class _TabRoute extends PageRoute<void> with MaterialRouteTransitionMixin<void> 
   }
 }
 
-const _publicPrefixes = ['/connexion', '/invitation', '/compte'];
+const _publicPrefixes = ['/connexion', '/invitation', '/compte', '/bienvenue'];
 
 bool _isPublic(String path) => path == '/' || _publicPrefixes.any((p) => path == p || path.startsWith('$p/'));
 
@@ -117,6 +118,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final s = st.valueOrNull;
       switch (s) {
         case AppSignedOut():
+          // Tout premier lancement : l'onboarding avant l'écran d'accueil (une seule fois).
+          if (path == '/' && !(ref.read(sharedPrefsProvider).getBool(onboardingSeenKey) ?? false)) return '/bienvenue';
           return _isPublic(path) ? null : '/';
         case AppNeedsInvitation():
           return path.startsWith('/invitation') || path.startsWith('/connexion') ? null : '/invitation';
@@ -148,6 +151,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       // vide. Les écrans gardent leurs propres animations d'entrée.
       GoRoute(path: '/splash', pageBuilder: (_, s) => NoTransitionPage<void>(key: s.pageKey, child: const SplashScreen())),
       GoRoute(path: '/', builder: (_, __) => const WelcomeScreen()),
+      GoRoute(path: '/bienvenue', pageBuilder: (_, s) => NoTransitionPage<void>(key: s.pageKey, child: const OnboardingScreen())),
       GoRoute(path: '/connexion', builder: (_, s) => LoginScreen(next: s.uri.queryParameters['next'])),
       GoRoute(path: '/connexion/code', builder: (_, s) => OtpScreen(telephone: s.uri.queryParameters['tel'] ?? '', next: s.uri.queryParameters['next'])),
       GoRoute(path: '/invitation', builder: (_, __) => const InvitationEntryScreen()),

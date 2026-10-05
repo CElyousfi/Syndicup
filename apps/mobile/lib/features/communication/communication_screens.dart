@@ -61,20 +61,20 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
       title: c.titre,
       subtitle: nonLues > 0 ? fill(c.nonLues, {'n': '$nonLues'}) : c.subtitle,
       onRefresh: () async => _rafraichirAffichage(ref),
-      fab: gestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.campaign_rounded), label: Text(c.nouvelle)) : null,
+      fab: gestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))), icon: const Icon(Icons.campaign_rounded), label: Text(c.nouvelle)) : null,
       children: [
         FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? v), onChanged: (v) => setState(() => _categorie = v)),
         const SizedBox(height: 12),
         AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
-          if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined);
-          return Column(children: [for (final a in rows) Padding(padding: const EdgeInsets.only(bottom: 10), child: AnnonceCard(a))]);
+          if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: _categorie == null ? 'empty-annonces' : 'empty-search');
+          return Column(children: [for (int i = 0; i < rows.length; i++) SuEnter(index: i, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: AnnonceCard(rows[i])))]);
         }),
         if (sondages.isNotEmpty) ...[
           SectionHeader(c.sondages, actionLabel: gestion ? c.nouveauSondage : null, onAction: gestion ? () => showFormSheet<void>(context, title: c.nouveauSondage, builder: (_) => SondageComposer(onDone: () => _rafraichirAffichage(ref))) : null),
           CardList([
             for (final s in sondages.take(5))
               ListRow(
-                leading: IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral, size: 40),
+                leading: IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral),
                 title: s.question,
                 subtitle: s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateCourte(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)}),
                 trailing: StatusBadge(s.maReponse != null ? c.dejaRepondu : (e.statutSondage[s.statut] ?? s.statut), variant: s.maReponse != null ? BadgeVariant.info : (sondageVariant[s.statut] ?? BadgeVariant.neutral), small: true),
@@ -84,17 +84,17 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
           ]),
         ] else if (gestion) ...[
           SectionHeader(c.sondages, actionLabel: c.nouveauSondage, onAction: () => showFormSheet<void>(context, title: c.nouveauSondage, builder: (_) => SondageComposer(onDone: () => _rafraichirAffichage(ref)))),
-          SuCard(child: Text(c.aucunSondage, style: t.bodySmall)),
+          Text(c.aucunSondage, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
         ],
         if (contacts.isNotEmpty) ...[
           SectionHeader(c.contacts, subtitle: c.contactsAide),
           CardList([
             for (final x in contacts)
               ListRow(
-                leading: const IconCircle(Icons.call_rounded, tone: Tone.sage, size: 40),
+                leading: const IconCircle(Icons.call_rounded, tone: Tone.sage),
                 title: x.libelle,
                 subtitle: x.telephone,
-                trailing: IconButton(tooltip: c.appeler, icon: const Icon(Icons.phone_forwarded_rounded, color: SuColors.action), onPressed: () => launchUrl(Uri.parse('tel:${x.telephone.replaceAll(RegExp(r'[^+0-9]'), '')}'))),
+                trailing: CircleIconButton(tooltip: c.appeler, icon: Icons.phone_forwarded_rounded, onTap: () => launchUrl(Uri.parse('tel:${x.telephone.replaceAll(RegExp(r'[^+0-9]'), '')}'))),
                 onTap: () => launchUrl(Uri.parse('tel:${x.telephone.replaceAll(RegExp(r'[^+0-9]'), '')}')),
               ),
           ]),
@@ -114,26 +114,54 @@ class AnnonceCard extends StatelessWidget {
     final c = d.communication;
     final e = d.enumsCommunication;
     final t = Theme.of(context).textTheme;
+    // Tuile Wise plate : pastille de catégorie, badges, titre gras, aperçu ardoise, méta.
     return SuCard(
       onTap: () => context.push('/affichage/${a.id}'),
-      border: !a.lu && a.statut == 'PUBLIEE' ? SuColors.actionBorder : null,
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Wrap(spacing: 6, runSpacing: 6, children: [
-          StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral, small: true),
-          if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink, small: true),
-          if (a.statut != 'PUBLIEE') StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral, small: true),
-          if (!a.lu && a.statut == 'PUBLIEE') StatusBadge(c.nonLue, variant: BadgeVariant.warn, small: true),
-        ]),
-        const SizedBox(height: 8),
-        Text(a.titre, style: t.titleMedium?.copyWith(fontWeight: a.lu ? FontWeight.w600 : FontWeight.w700)),
-        const SizedBox(height: 4),
-        Text(a.apercu, style: t.bodyMedium, maxLines: 3, overflow: TextOverflow.ellipsis),
-        const SizedBox(height: 6),
-        Text('${a.publieLe != null ? formatDateHeure(a.publieLe, l) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})}${a.nbCommentaires > 0 ? ' · ${a.nbCommentaires} ${c.commentaires.toLowerCase()}' : ''}${a.nbLectures != null && a.statut == 'PUBLIEE' ? ' · ${c.lectures} ${a.nbLectures}' : ''}', style: t.bodySmall),
+      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        IconCircle(_iconeCategorie(a.categorie), tone: _toneCategorie(a.categorie)),
+        const SizedBox(width: 14),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Wrap(spacing: 6, runSpacing: 6, children: [
+              StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral, small: true),
+              if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink, small: true),
+              if (a.statut != 'PUBLIEE') StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral, small: true),
+              if (!a.lu && a.statut == 'PUBLIEE') StatusBadge(c.nonLue, variant: BadgeVariant.warn, small: true, pulse: true),
+            ]),
+            const SizedBox(height: 10),
+            Text(a.titre, style: t.titleMedium?.copyWith(fontWeight: a.lu ? FontWeight.w600 : FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(a.apercu, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.4), maxLines: 3, overflow: TextOverflow.ellipsis),
+            const SizedBox(height: 8),
+            Text('${a.publieLe != null ? formatDateHeure(a.publieLe, l) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})}${a.nbCommentaires > 0 ? ' · ${a.nbCommentaires} ${c.commentaires.toLowerCase()}' : ''}${a.nbLectures != null && a.statut == 'PUBLIEE' ? ' · ${c.lectures} ${a.nbLectures}' : ''}', style: t.bodySmall),
+          ]),
+        ),
       ]),
     );
   }
 }
+
+/// Pictogramme d'une catégorie d'annonce (pastilles de liste et de détail).
+IconData _iconeCategorie(String categorie) => switch (categorie) {
+      'TRAVAUX' => Icons.construction_rounded,
+      'COUPURE' => Icons.power_off_rounded,
+      'SECURITE' => Icons.shield_rounded,
+      'URGENCE' => Icons.warning_rounded,
+      'AG' => Icons.how_to_vote_rounded,
+      'CONVIVIALITE' => Icons.celebration_rounded,
+      'REGLEMENT' => Icons.gavel_rounded,
+      _ => Icons.campaign_rounded,
+    };
+
+Tone _toneCategorie(String categorie) => switch (categorie) {
+      'URGENCE' => Tone.danger,
+      'COUPURE' || 'SECURITE' => Tone.warn,
+      'TRAVAUX' => Tone.sand,
+      'AG' => Tone.lilac,
+      'CONVIVIALITE' => Tone.tosca,
+      'REGLEMENT' => Tone.neutral,
+      _ => Tone.sage,
+    };
 
 /// Détail d'une annonce — accusé de lecture automatique, pièces jointes, commentaires, modération / publication (gestion).
 class AnnonceDetailScreen extends ConsumerStatefulWidget {
@@ -157,14 +185,21 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     ref.invalidate(annoncesNonLuesProvider);
   }
 
-  Future<void> _action(String path, {Map<String, Object?> body = const {}, bool idempotent = false, String? succes}) async {
+  /// [corps] non nul : action majeure (publication) → écran de succès plein écran.
+  Future<void> _action(String path, {Map<String, Object?> body = const {}, bool idempotent = false, String? succes, String? corps}) async {
     final r = await ref.read(apiClientProvider).post<dynamic>(path, body: body, idempotent: idempotent);
     if (!mounted) return;
     if (r is ApiFail) {
       showToast(context, r.error.message, error: true);
       return;
     }
-    if (succes != null) showToast(context, succes);
+    if (succes != null) {
+      if (corps != null) {
+        showSuccess(context, title: succes, body: corps, illustration: 'ok-general');
+      } else {
+        showToast(context, succes);
+      }
+    }
     ref.invalidate(annonceProvider(widget.id));
     _rafraichirAffichage(ref);
   }
@@ -179,50 +214,53 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     final t = Theme.of(context).textTheme;
     final annonce = ref.watch(annonceProvider(widget.id));
     final gestion = ctx.isGestion || ctx.isConseil;
-    return Scaffold(
-      appBar: AppBar(title: Text(annonce.valueOrNull?.titre ?? c.titre)),
-      body: AsyncView(
-        annonce,
-        onRetry: () => ref.invalidate(annonceProvider(widget.id)),
-        loading: const Padding(padding: EdgeInsets.all(16), child: LoadingList()),
-        data: (a) {
-          WidgetsBinding.instance.addPostFrameCallback((_) => _marquerLue(a));
-          final peutModifier = gestion && a.statut != 'ARCHIVEE' && (ctx.isGestion || a.categorie != 'URGENCE');
-          return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(annonceProvider(widget.id)),
-            color: SuColors.action,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+    return SuPage(
+      title: annonce.valueOrNull?.titre ?? c.titre,
+      onRefresh: () async => ref.invalidate(annonceProvider(widget.id)),
+      children: [
+        AsyncView(
+          annonce,
+          onRetry: () => ref.invalidate(annonceProvider(widget.id)),
+          data: (a) {
+            WidgetsBinding.instance.addPostFrameCallback((_) => _marquerLue(a));
+            final peutModifier = gestion && a.statut != 'ARCHIVEE' && (ctx.isGestion || a.categorie != 'URGENCE');
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Wrap(spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral),
-                  StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral),
-                  if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink),
+                // En-tête Wise : grande pastille de catégorie + statuts, puis la méta en ardoise.
+                Row(children: [
+                  IconCircle(_iconeCategorie(a.categorie), tone: _toneCategorie(a.categorie), size: 56),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Wrap(spacing: 6, runSpacing: 6, children: [
+                      StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral),
+                      StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral),
+                      if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink),
+                    ]),
+                  ),
                 ]),
-                const SizedBox(height: 10),
-                Text(a.titre, style: t.headlineSmall),
-                const SizedBox(height: 4),
-                Text('${a.publieLe != null ? (a.statut == 'BROUILLON' ? fill(c.programmeeLe, {'date': formatDateHeure(a.publieLe, l)}) : fill(c.publieeLe, {'date': formatDateHeure(a.publieLe, l)})) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})} · ${e.audience[a.audience] ?? a.audience}${a.batiment != null ? ' ${a.batiment}' : ''}', style: t.bodySmall),
-                const SizedBox(height: 12),
-                SuCard(child: SelectableText(texteAnnonce(a.contenu), style: t.bodyLarge)),
+                const SizedBox(height: 14),
+                Text('${a.publieLe != null ? (a.statut == 'BROUILLON' ? fill(c.programmeeLe, {'date': formatDateHeure(a.publieLe, l)}) : fill(c.publieeLe, {'date': formatDateHeure(a.publieLe, l)})) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})} · ${e.audience[a.audience] ?? a.audience}${a.batiment != null ? ' ${a.batiment}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                const SizedBox(height: 16),
+                SuCard(padding: const EdgeInsets.all(20), child: SelectableText(texteAnnonce(a.contenu), style: t.bodyLarge?.copyWith(color: SuColors.ink, height: 1.55))),
                 if (a.piecesJointes.isNotEmpty) ...[
                   SectionHeader(c.piecesJointes),
                   CardList([
                     for (final p in a.piecesJointes)
-                      ListRow(leading: const IconCircle(Icons.attach_file_rounded, tone: Tone.neutral, size: 36), title: '${p['nom']}', chevron: true, onTap: () => ouvrirVisionneuse(context, titre: '${p['nom']}', url: '${p['url']}')),
+                      ListRow(leading: const IconCircle(Icons.attach_file_rounded, tone: Tone.neutral), title: '${p['nom']}', chevron: true, onTap: () => ouvrirVisionneuse(context, titre: '${p['nom']}', url: '${p['url']}')),
                   ]),
                 ],
                 if (gestion) ...[
                   SectionHeader(c.lectures, subtitle: c.lecteursAide),
-                  SuCard(child: Row(children: [
-                    Expanded(child: Text(a.nbLectures != null && a.nbDestinataires != null ? fill(c.luPar, {'n': '${a.nbLectures}', 'total': '${a.nbDestinataires}'}) : '—', style: t.titleSmall)),
-                    if (a.nbDestinataires != null && a.nbDestinataires! > 0) SizedBox(width: 120, child: Gauge((a.nbLectures ?? 0) / a.nbDestinataires!)),
+                  SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(a.nbLectures != null && a.nbDestinataires != null ? fill(c.luPar, {'n': '${a.nbLectures}', 'total': '${a.nbDestinataires}'}) : '—', style: t.headlineSmall),
+                    if (a.nbDestinataires != null && a.nbDestinataires! > 0) ...[const SizedBox(height: 12), Gauge((a.nbLectures ?? 0) / a.nbDestinataires!)],
                   ])),
                   if (peutModifier) Padding(
-                    padding: const EdgeInsets.only(top: 12),
-                    child: Wrap(spacing: 8, runSpacing: 8, children: [
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                       if (a.statut == 'BROUILLON') FilledButton.icon(onPressed: () async {
-                        if (await confirmDialog(context, title: c.publierTitre, body: c.publierCorps, confirmLabel: c.publier)) await _action('/annonces/${a.id}/publier', idempotent: true, succes: c.enregistree);
+                        if (await confirmDialog(context, title: c.publierTitre, body: c.publierCorps, confirmLabel: c.publier)) await _action('/annonces/${a.id}/publier', idempotent: true, succes: c.enregistree, corps: c.publierCorps);
                       }, icon: const Icon(Icons.send_rounded, size: 18), label: Text(c.publier)),
                       if (a.statut == 'PUBLIEE') OutlinedButton.icon(onPressed: () async {
                         if (await confirmDialog(context, title: c.archiver, body: c.archiverCorps, danger: true)) await _action('/annonces/${a.id}/archiver', succes: c.archivee);
@@ -230,28 +268,34 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                     ]),
                   ),
                 ],
-                SectionHeader('${c.commentaires}${a.commentaires.isNotEmpty ? ' · ${a.commentaires.length}' : ''}'),
-                if (a.commentaires.isEmpty) SuCard(child: Text(c.aucunCommentaire, style: t.bodySmall)),
+                SectionHeader(c.commentaires, subtitle: a.commentaires.isNotEmpty ? '${a.commentaires.length}' : null),
+                if (a.commentaires.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(c.aucunCommentaire, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
                 for (final k in a.commentaires)
                   Opacity(
                     opacity: k.masque ? 0.6 : 1,
                     child: SuCard(
-                      margin: const EdgeInsets.only(bottom: 8),
+                      margin: const EdgeInsets.only(bottom: 10),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Row(children: [Avatar(k.auteur.affichage, size: 28), const SizedBox(width: 8), Expanded(child: Text(k.auteur.affichage, style: t.labelLarge)), Text(formatDateHeure(k.creeLe, l), style: t.bodySmall)]),
-                        if (k.masque) Padding(padding: const EdgeInsets.only(top: 4), child: Text(c.masque, style: t.bodySmall?.copyWith(color: SuColors.danger))),
-                        const SizedBox(height: 6),
-                        Text(texteAnnonce(k.contenu), style: t.bodyMedium),
-                        if (ctx.isGestion && !k.masque) Align(alignment: AlignmentDirectional.centerEnd, child: TextButton(onPressed: () => _action('/annonces/${a.id}/commentaires/${k.id}/masquer'), child: Text(c.masquer, style: const TextStyle(color: SuColors.danger)))),
+                        Row(children: [
+                          Avatar(k.auteur.affichage, size: 36),
+                          const SizedBox(width: 10),
+                          Expanded(child: Text(k.auteur.affichage, style: t.titleSmall)),
+                          Text(formatDateHeure(k.creeLe, l), style: t.bodySmall),
+                        ]),
+                        if (k.masque) Padding(padding: const EdgeInsets.only(top: 6), child: Text(c.masque, style: t.bodySmall?.copyWith(color: SuColors.danger))),
+                        const SizedBox(height: 8),
+                        Text(texteAnnonce(k.contenu), style: t.bodyMedium?.copyWith(color: SuColors.ink)),
+                        if (ctx.isGestion && !k.masque) Align(alignment: AlignmentDirectional.centerEnd, child: LinkButton(c.masquer, color: SuColors.danger, onTap: () => _action('/annonces/${a.id}/commentaires/${k.id}/masquer'))),
                       ]),
                     ),
                   ),
                 if (a.statut == 'PUBLIEE' && a.commentairesActives) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   SuField(label: c.votreCommentaire, controller: _commentaire, maxLines: 3, maxLength: 2000, error: fieldError(_fail, 'contenu')),
                   const SizedBox(height: 8),
                   FormError(_fail),
-                  SubmitButton(label: c.commenter, loading: _envoi, onPressed: () async {
+                  if (_fail != null) const SizedBox(height: 12),
+                  SubmitButton(label: c.commenter, icon: Icons.send_rounded, loading: _envoi, onPressed: () async {
                     if (_commentaire.text.trim().isEmpty) return;
                     setState(() { _envoi = true; _fail = null; });
                     final r = await ref.read(apiClientProvider).post<dynamic>('/annonces/${a.id}/commentaires', body: {'contenu': _commentaire.text.trim()});
@@ -265,10 +309,10 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                   }),
                 ] else Padding(padding: const EdgeInsets.only(top: 8), child: Text(c.commentairesDesactives, style: t.bodySmall)),
               ],
-            ),
-          );
-        },
-      ),
+            );
+          },
+        ),
+      ],
     );
   }
 }
@@ -310,9 +354,20 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
     }
     widget.onDone();
     if (!context.mounted) return;
+    final c = context.dict.communication;
+    if (!publier) {
+      Navigator.pop(context);
+      showToast(context, c.enregistree);
+      context.push('/affichage/$id');
+      return;
+    }
+    // Publication (immédiate ou programmée) : succès plein écran posé sur la fiche ouverte.
+    final root = Navigator.of(context, rootNavigator: true).context;
+    final router = GoRouter.of(context);
+    final corps = _programme != null ? fill(c.programmeeLe, {'date': formatDateHeure(_programme!.toIso8601String(), context.locale)}) : c.publierCorps;
     Navigator.pop(context);
-    showToast(context, publier ? (_programme != null ? context.dict.communication.programmee : context.dict.communication.enregistree) : context.dict.communication.enregistree);
-    context.push('/affichage/$id');
+    router.push('/affichage/$id');
+    showSuccess(root, title: _programme != null ? c.programmee : c.enregistree, body: corps, illustration: 'ok-general');
   }
 
   @override
@@ -323,8 +378,8 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
     final c = d.communication;
     final e = d.enumsCommunication;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text(c.nouvelleAide, style: Theme.of(context).textTheme.bodySmall),
-      const SizedBox(height: 12),
+      Text(c.nouvelleAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
+      const SizedBox(height: 16),
       SuField(label: c.titreChamp, controller: _titre, required: true, maxLength: 200, error: fieldError(_fail, 'titre')),
       const SizedBox(height: 12),
       SuSelect<String>(label: c.categorie, value: _categorie, options: _categories.where((k) => ctx.isGestion || k != 'URGENCE').toList(), labelOf: (v) => e.categorieAnnonce[v] ?? v, onChanged: (v) => setState(() => _categorie = v)),
@@ -336,20 +391,27 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
       const SizedBox(height: 8),
       SuCheckbox(value: _epingle, onChanged: (v) => setState(() => _epingle = v), label: c.epingler),
       SuCheckbox(value: _commentaires, onChanged: (v) => setState(() => _commentaires = v), label: c.commentairesActives),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: Text(_programme == null ? c.publierMaintenant : fill(c.programmeeLe, {'date': formatDateHeure(_programme!.toIso8601String(), l)}), style: Theme.of(context).textTheme.bodyMedium)),
-        TextButton.icon(onPressed: () async {
-          final now = DateTime.now();
-          final jour = await showDatePicker(context: context, initialDate: now.add(const Duration(days: 1)), firstDate: now, lastDate: now.add(const Duration(days: 365)), locale: l);
-          if (jour == null || !context.mounted) return;
-          final heure = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
-          if (heure == null) return;
-          setState(() => _programme = DateTime(jour.year, jour.month, jour.day, heure.hour, heure.minute));
-        }, icon: const Icon(Icons.schedule_rounded, size: 18), label: Text(c.programmer)),
-        if (_programme != null) IconButton(onPressed: () => setState(() => _programme = null), icon: const Icon(Icons.close_rounded, size: 18)),
-      ]),
       const SizedBox(height: 12),
+      // Moment de publication : tuile Wise (pastille, libellé, lien « Programmer »).
+      SuCard(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 8, 10),
+        child: Row(children: [
+          IconCircle(Icons.schedule_rounded, tone: _programme == null ? Tone.neutral : Tone.sage),
+          const SizedBox(width: 12),
+          Expanded(child: Text(_programme == null ? c.publierMaintenant : fill(c.programmeeLe, {'date': formatDateHeure(_programme!.toIso8601String(), l)}), style: Theme.of(context).textTheme.titleSmall)),
+          LinkButton(_programme == null ? c.programmer : d.common.modify, onTap: () async {
+            final now = DateTime.now();
+            final jour = await showDatePicker(context: context, initialDate: now.add(const Duration(days: 1)), firstDate: now, lastDate: now.add(const Duration(days: 365)), locale: l);
+            if (jour == null || !context.mounted) return;
+            final heure = await showTimePicker(context: context, initialTime: const TimeOfDay(hour: 9, minute: 0));
+            if (heure == null) return;
+            setState(() => _programme = DateTime(jour.year, jour.month, jour.day, heure.hour, heure.minute));
+          }),
+          if (_programme != null)
+            CircleIconButton(icon: Icons.close_rounded, size: 40, color: SuColors.surface, tooltip: MaterialLocalizations.of(context).closeButtonTooltip, onTap: () => setState(() => _programme = null)),
+        ]),
+      ),
+      const SizedBox(height: 16),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
       SubmitButton(label: _programme == null ? c.publierMaintenant : c.programmer, loading: _loading, onPressed: () => _envoyer(publier: true)),
@@ -390,39 +452,57 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
     final t = Theme.of(context).textTheme;
     final sondage = ref.watch(sondageProvider(widget.id));
     final gestion = ctx.isGestion || ctx.isConseil;
-    return Scaffold(
-      appBar: AppBar(title: Text(c.sondage)),
-      body: AsyncView(
-        sondage,
-        onRetry: () => ref.invalidate(sondageProvider(widget.id)),
-        loading: const Padding(padding: EdgeInsets.all(16), child: LoadingList()),
-        data: (s) => RefreshIndicator(
-          onRefresh: () async => ref.invalidate(sondageProvider(widget.id)),
-          color: SuColors.action,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+    return SuPage(
+      title: c.sondage,
+      onRefresh: () async => ref.invalidate(sondageProvider(widget.id)),
+      children: [
+        AsyncView(
+          sondage,
+          onRetry: () => ref.invalidate(sondageProvider(widget.id)),
+          data: (s) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Wrap(spacing: 6, children: [StatusBadge(e.statutSondage[s.statut] ?? s.statut, variant: sondageVariant[s.statut] ?? BadgeVariant.neutral), if (s.maReponse != null) StatusBadge(c.dejaRepondu, variant: BadgeVariant.info)]),
-              const SizedBox(height: 10),
-              Text(s.question, style: t.headlineSmall),
-              const SizedBox(height: 4),
-              Text('${s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateHeure(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)})} · ${e.audience[s.audience] ?? s.audience}', style: t.bodySmall),
-              const SizedBox(height: 12),
+              // Synthèse Wise : grande pastille, statuts, la question en grand, l'échéance.
+              Row(children: [
+                IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral, size: 56),
+                const SizedBox(width: 14),
+                Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: [StatusBadge(e.statutSondage[s.statut] ?? s.statut, variant: sondageVariant[s.statut] ?? BadgeVariant.neutral), if (s.maReponse != null) StatusBadge(c.dejaRepondu, variant: BadgeVariant.info)])),
+              ]),
+              const SizedBox(height: 16),
+              Text(s.question, style: t.headlineMedium),
+              const SizedBox(height: 6),
+              Text('${s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateHeure(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)})} · ${e.audience[s.audience] ?? s.audience}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+              const SizedBox(height: 16),
               SuBanner(tone: BannerTone.info, body: c.mention),
-              if (s.description != null && s.description!.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: SuCard(child: Text(texteAnnonce(s.description!), style: t.bodyMedium))),
+              if (s.description != null && s.description!.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: SuCard(child: Text(texteAnnonce(s.description!), style: t.bodyLarge?.copyWith(color: SuColors.ink)))),
               if (gestion && (s.statut == 'BROUILLON' || s.statut == 'OUVERT')) Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Wrap(spacing: 8, children: [
+                padding: const EdgeInsets.only(top: 16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
                   if (s.statut == 'BROUILLON') FilledButton.icon(onPressed: () async { if (await confirmDialog(context, title: c.ouvrir, body: c.ouvrirCorps)) await _transition('ouvrir', c.ouvert); }, icon: const Icon(Icons.play_arrow_rounded, size: 18), label: Text(c.ouvrir)),
                   if (s.statut == 'OUVERT') OutlinedButton.icon(onPressed: () async { if (await confirmDialog(context, title: c.clore, body: c.cloreCorps, danger: true)) await _transition('clore', c.clos); }, icon: const Icon(Icons.stop_circle_outlined, size: 18), label: Text(c.clore)),
                 ]),
               ),
               SectionHeader(s.maReponse != null || !s.ouvertEncore ? c.resultats : c.repondre, subtitle: s.choixMultiple ? c.choixMultiple : null),
-              if (s.ouvertEncore && s.maReponse == null) SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+              if (s.ouvertEncore && s.maReponse == null) ...[
+                // Options en pills blanches sélectionnables (case ou bouton radio selon le mode).
                 for (final o in s.options)
-                  s.choixMultiple
-                      ? CheckboxListTile(value: _choix.contains(o.id), onChanged: (v) => setState(() => v == true ? _choix.add(o.id) : _choix.remove(o.id)), title: Text(o.libelle), contentPadding: EdgeInsets.zero, controlAffinity: ListTileControlAffinity.leading)
-                      : RadioListTile<String>(value: o.id, groupValue: _choix.isEmpty ? null : _choix.first, onChanged: (v) => setState(() { _choix.clear(); if (v != null) _choix.add(v); }), title: Text(o.libelle), contentPadding: EdgeInsets.zero),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _OptionSondage(
+                      label: o.libelle,
+                      multiple: s.choixMultiple,
+                      selected: _choix.contains(o.id),
+                      onTap: () => setState(() {
+                        if (s.choixMultiple) {
+                          _choix.contains(o.id) ? _choix.remove(o.id) : _choix.add(o.id);
+                        } else {
+                          _choix
+                            ..clear()
+                            ..add(o.id);
+                        }
+                      }),
+                    ),
+                  ),
                 const SizedBox(height: 8),
                 SubmitButton(label: c.repondre, loading: _envoi, onPressed: _choix.isEmpty ? null : () async {
                   setState(() => _envoi = true);
@@ -430,25 +510,67 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
                   if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
-                  showToast(context, c.reponseEnvoyee);
                   ref.invalidate(sondageProvider(widget.id));
                   ref.invalidate(sondagesProvider);
+                  // Réponse délibérée et unique : succès plein écran.
+                  showSuccess(context, title: c.reponseEnvoyee, body: s.question, illustration: 'ok-vote');
                 }),
-              ]))
-              else if (s.resultats == null) SuCard(child: Text(c.resultatsApres, style: t.bodySmall))
+              ]
+              else if (s.resultats == null) Text(c.resultatsApres, style: t.bodyMedium?.copyWith(color: SuColors.soft))
               else SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                Text('${fill(c.reponses, {'n': '${s.resultats!.nbReponses}', 'total': '${s.resultats!.nbDestinataires}'})}${s.resultats!.ponderationTantiemes ? ' · ${fill(c.tantiemesExprimes, {'n': s.resultats!.tantiemesExprimes})}' : ''}', style: t.bodySmall),
-                const SizedBox(height: 10),
+                Text('${fill(c.reponses, {'n': '${s.resultats!.nbReponses}', 'total': '${s.resultats!.nbDestinataires}'})}${s.resultats!.ponderationTantiemes ? ' · ${fill(c.tantiemesExprimes, {'n': s.resultats!.tantiemesExprimes})}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                const SizedBox(height: 14),
                 for (final o in s.resultats!.options) ...[
-                  Row(children: [Expanded(child: Text(o.libelle, style: t.bodyMedium)), if (s.maReponse?.contains(o.id) ?? false) const Icon(Icons.check_rounded, size: 16, color: SuColors.action), const SizedBox(width: 6), Text('${o.nb} · ${o.pourcentage} %', style: t.bodySmall)]),
-                  const SizedBox(height: 4),
-                  Gauge(o.pourcentage / 100, color: SuColors.action),
-                  if (s.resultats!.ponderationTantiemes) ...[const SizedBox(height: 3), Gauge(o.pourcentageTantiemes / 100, height: 5, color: SuColors.ink), Text('${c.parTantiemes} · ${o.pourcentageTantiemes} %', style: t.bodySmall)],
-                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: Text(o.libelle, style: t.titleSmall)),
+                    if (s.maReponse?.contains(o.id) ?? false) const Padding(padding: EdgeInsetsDirectional.only(end: 6), child: Icon(Icons.check_circle_rounded, size: 18, color: SuColors.link)),
+                    Text('${o.nb} · ${o.pourcentage} %', textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
+                  ]),
+                  const SizedBox(height: 6),
+                  Gauge(o.pourcentage / 100, color: SuColors.link),
+                  if (s.resultats!.ponderationTantiemes) ...[const SizedBox(height: 4), Gauge(o.pourcentageTantiemes / 100, height: 5, color: SuColors.ink), const SizedBox(height: 2), Text('${c.parTantiemes} · ${o.pourcentageTantiemes} %', style: t.bodySmall)],
+                  const SizedBox(height: 14),
                 ],
                 Text(c.mention, style: t.bodySmall),
               ])),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Option de sondage : pill blanche, case/bouton radio vert profond, sélection = teinte sauge.
+class _OptionSondage extends StatelessWidget {
+  const _OptionSondage({required this.label, required this.multiple, required this.selected, required this.onTap});
+  final String label;
+  final bool multiple, selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final icon = multiple
+        ? (selected ? Icons.check_box_rounded : Icons.check_box_outline_blank_rounded)
+        : (selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded);
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: SuPressable(
+        scale: 0.98,
+        child: Material(
+          color: selected ? SuColors.sageTint : SuColors.tile,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: selected ? SuColors.link : Colors.transparent, width: 1.5)),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Row(children: [
+                Icon(icon, color: selected ? SuColors.link : SuColors.faint, size: 24),
+                const SizedBox(width: 12),
+                Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium)),
+              ]),
+            ),
           ),
         ),
       ),
@@ -496,9 +618,19 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
     }
     widget.onDone();
     if (!context.mounted) return;
+    final c = context.dict.communication;
+    if (!ouvrir) {
+      Navigator.pop(context);
+      showToast(context, c.sondageEnregistre);
+      context.push('/affichage/sondages/$id');
+      return;
+    }
+    // Sondage ouvert (création majeure) : succès plein écran posé sur la fiche ouverte.
+    final root = Navigator.of(context, rootNavigator: true).context;
+    final router = GoRouter.of(context);
     Navigator.pop(context);
-    showToast(context, ouvrir ? context.dict.communication.ouvert : context.dict.communication.sondageEnregistre);
-    context.push('/affichage/sondages/$id');
+    router.push('/affichage/sondages/$id');
+    showSuccess(root, title: c.ouvert, body: c.ouvrirCorps, illustration: 'ok-general');
   }
 
   @override
@@ -514,21 +646,33 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
       const SizedBox(height: 12),
       SuField(label: c.description, controller: _description, maxLines: 3, maxLength: 4000, optionalLabel: d.common.optional),
       const SizedBox(height: 12),
-      Text(c.options, style: Theme.of(context).textTheme.labelLarge),
+      Text(c.options, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.ink)),
       for (var i = 0; i < _options.length; i++) Padding(padding: const EdgeInsets.only(top: 8), child: SuField(label: fill(c.option, {'n': '${i + 1}'}), controller: _options[i], required: i < 2, maxLength: 200)),
       if (_options.length < 10) Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(onPressed: () => setState(() => _options.add(TextEditingController())), icon: const Icon(Icons.add_rounded, size: 18), label: Text(fill(c.option, {'n': '${_options.length + 1}'})))),
       const SizedBox(height: 8),
       SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? v, onChanged: (v) => setState(() => _audience = v)),
       if (_audience == 'BATIMENT') ...[const SizedBox(height: 12), SuField(label: c.batiment, controller: _batiment, required: true, error: fieldError(_fail, 'batiment'))],
       const SizedBox(height: 12),
-      Row(children: [
-        Expanded(child: Text('${c.dateFin} : ${formatDateHeure(_fin.toIso8601String(), l)}', style: Theme.of(context).textTheme.bodyMedium)),
-        TextButton(onPressed: () async {
-          final jour = await showDatePicker(context: context, initialDate: _fin, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)), locale: l);
-          if (jour == null) return;
-          setState(() => _fin = DateTime(jour.year, jour.month, jour.day, 18));
-        }, child: Text(d.common.modify)),
-      ]),
+      // Date de fin : tuile Wise (pastille, libellé + date, lien « Modifier »).
+      SuCard(
+        padding: const EdgeInsetsDirectional.fromSTEB(14, 10, 8, 10),
+        child: Row(children: [
+          const IconCircle(Icons.event_rounded, tone: Tone.neutral),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(c.dateFin, style: Theme.of(context).textTheme.bodySmall),
+              Text(formatDateHeure(_fin.toIso8601String(), l), style: Theme.of(context).textTheme.titleSmall),
+            ]),
+          ),
+          LinkButton(d.common.modify, onTap: () async {
+            final jour = await showDatePicker(context: context, initialDate: _fin, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)), locale: l);
+            if (jour == null) return;
+            setState(() => _fin = DateTime(jour.year, jour.month, jour.day, 18));
+          }),
+        ]),
+      ),
+      const SizedBox(height: 8),
       SuCheckbox(value: _multiple, onChanged: (v) => setState(() => _multiple = v), label: c.choixMultiple),
       SuCheckbox(value: _ponderation, onChanged: (v) => setState(() => _ponderation = v), label: c.ponderation, help: c.ponderationAide),
       const SizedBox(height: 12),
@@ -585,9 +729,7 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       SuCheckbox(value: _push, onChanged: (v) => setState(() => _push = v), label: c.annoncesPush, help: c.annoncesPushAide),
       const SizedBox(height: 14),
       // Push sur le téléphone — niveaux (bannières, alertes, écran verrouillé) ; URGENT toujours livré.
-      Text(c.pushTitre, style: Theme.of(context).textTheme.titleSmall),
-      Text(c.pushAide, style: Theme.of(context).textTheme.bodySmall),
-      const SizedBox(height: 8),
+      SectionHeader(c.pushTitre, subtitle: c.pushAide),
       SuCheckbox(value: _pushNormal, onChanged: (v) => setState(() => _pushNormal = v), label: c.pushNormal, help: c.pushNormalAide),
       const SizedBox(height: 8),
       SuCheckbox(value: _pushInfo, onChanged: (v) => setState(() => _pushInfo = v), label: c.pushInfo, help: c.pushInfoAide),

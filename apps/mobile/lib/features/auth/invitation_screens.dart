@@ -56,33 +56,31 @@ class _InvitationEntryScreenState extends ConsumerState<InvitationEntryScreen> {
       children: [
         const HeroImageCard(asset: 'assets/images/residence-entrance.jpg'),
         Text(d.auth.inviteTitle, style: t.displayMedium),
-        const SizedBox(height: 4),
-        Text(md.scanOrType, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
-        const SizedBox(height: 24),
-        SuCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SuField(
-                label: d.auth.inviteCodeLabel,
-                controller: _code,
-                hint: 'SEED0001',
-                help: d.auth.inviteCodeHint,
-                mono: true,
-                textDirection: TextDirection.ltr,
-                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')), LengthLimitingTextInputFormatter(16), _Upper()],
-                textInputAction: TextInputAction.go,
-                onSubmitted: (_) => _go(),
-              ),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: _go, child: Text(d.common.next)),
-            ],
-          ),
+        const SizedBox(height: 8),
+        Text(md.scanOrType, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 28),
+        // Formulaire Wise à plat (comme la connexion) : champ, pill principale pleine largeur.
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            SuField(
+              label: d.auth.inviteCodeLabel,
+              controller: _code,
+              hint: 'SEED0001',
+              help: d.auth.inviteCodeHint,
+              mono: true,
+              textDirection: TextDirection.ltr,
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')), LengthLimitingTextInputFormatter(16), _Upper()],
+              textInputAction: TextInputAction.go,
+              onSubmitted: (_) => _go(),
+            ),
+            const SizedBox(height: 20),
+            SuPressable(child: FilledButton(onPressed: _go, child: Text(d.common.next))),
+          ],
         ),
-        const SizedBox(height: 16),
-        OutlinedButton.icon(onPressed: () => context.push('/invitation/scan'), icon: const Icon(Icons.qr_code_scanner_rounded, size: 18), label: Text(d.auth.scanQr)),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(onPressed: () => context.push('/invitation/scan'), icon: const Icon(Icons.qr_code_scanner_rounded, size: 20), label: Text(d.auth.scanQr)),
+        const SizedBox(height: 12),
         Center(
           child: session != null
               ? TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))
@@ -125,15 +123,31 @@ class _InvitationScanScreenState extends State<InvitationScanScreen> {
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
+    final t = Theme.of(context).textTheme;
+    // Caméra plein écran ; bouton rond blanc de fermeture, titre blanc par-dessus (Wise).
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(backgroundColor: Colors.black, foregroundColor: Colors.white, title: Text(d.auth.scanQr, style: const TextStyle(color: Colors.white)), iconTheme: const IconThemeData(color: Colors.white)),
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        automaticallyImplyLeading: false,
+        leadingWidth: 68,
+        leading: Padding(
+          padding: const EdgeInsetsDirectional.only(start: 16),
+          child: Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: CircleIconButton(icon: Icons.close_rounded, color: SuColors.surface, iconColor: SuColors.ink, tooltip: MaterialLocalizations.of(context).closeButtonTooltip, onTap: () => Navigator.of(context).maybePop()),
+          ),
+        ),
+        titleSpacing: 6,
+        title: Text(d.auth.scanQr, style: t.titleLarge?.copyWith(color: Colors.white)),
+      ),
       body: Stack(
         fit: StackFit.expand,
         children: [
           MobileScanner(
             controller: _controller,
-            errorBuilder: (_, e, __) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(d.auth.scanDenied, style: const TextStyle(color: Colors.white), textAlign: TextAlign.center))),
+            errorBuilder: (_, e, __) => Center(child: Padding(padding: const EdgeInsets.all(24), child: Text(d.auth.scanDenied, style: t.bodyLarge?.copyWith(color: Colors.white), textAlign: TextAlign.center))),
             onDetect: (capture) {
               if (_done) return;
               for (final b in capture.barcodes) {
@@ -149,21 +163,29 @@ class _InvitationScanScreenState extends State<InvitationScanScreen> {
           ),
           Center(
             child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 2), borderRadius: BorderRadius.circular(24)),
+              width: 260,
+              height: 260,
+              decoration: BoxDecoration(border: Border.all(color: SuColors.cta, width: 3), borderRadius: BorderRadius.circular(32)),
             ),
           ),
-          Positioned(
-            left: 24,
-            right: 24,
+          PositionedDirectional(
+            start: 24,
+            end: 24,
             bottom: 40,
-            child: Column(
-              children: [
-                Text(_error ?? d.auth.scanHint, style: const TextStyle(color: Colors.white, fontSize: 14), textAlign: TextAlign.center),
-                const SizedBox(height: 12),
-                IconButton(onPressed: () => _controller.toggleTorch(), icon: const Icon(Icons.flashlight_on_rounded, color: Colors.white)),
-              ],
+            child: SafeArea(
+              top: false,
+              child: Column(
+                children: [
+                  // Consigne en pill encre (rouge profond si le QR n'est pas reconnu).
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                    decoration: BoxDecoration(color: _error != null ? SuColors.danger : SuColors.ink, borderRadius: BorderRadius.circular(SuRadius.pill)),
+                    child: Text(_error ?? d.auth.scanHint, style: t.labelMedium?.copyWith(color: Colors.white, height: 1.35), textAlign: TextAlign.center),
+                  ),
+                  const SizedBox(height: 18),
+                  CircleIconButton(icon: Icons.flashlight_on_rounded, size: 56, color: SuColors.surface, iconColor: SuColors.ink, onTap: () => _controller.toggleTorch()),
+                ],
+              ),
             ),
           ),
         ],
@@ -202,11 +224,32 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) => setState(() => _langue = context.isRtl ? 'AR' : 'FR'));
   }
 
+  /// Écran de succès Wise (« ok-invitation »), posé sur le navigateur racine UNE FOIS la
+  /// session résolue et la redirection vers l'accueil appliquée (cet écran est alors démonté).
+  /// Tout ce qui dépend du contexte (dictionnaire, navigateur, conteneur) est capturé AVANT les
+  /// appels réseau.
+  Future<void> _succes(Dict d, NavigatorState racine, ProviderContainer conteneur, String nom, String statutCompte) async {
+    final titre = statutCompte == 'EN_VALIDATION' ? d.auth.inviteAccepted : fill(d.auth.inviteBienvenue, {'nom': nom});
+    final AppState etat;
+    try {
+      etat = await conteneur.read(appStateProvider.future);
+    } catch (_) {
+      return; // erreur de résolution : l'écran d'amorçage l'affiche déjà
+    }
+    if (etat is! AppReady && etat is! AppEnValidation) return;
+    await WidgetsBinding.instance.endOfFrame;
+    if (racine.mounted) await showSuccess(racine.context, title: titre, illustration: 'ok-invitation');
+  }
+
   Future<void> _accepter() async {
     setState(() {
       _loading = true;
       _fail = null;
     });
+    final d = context.dict;
+    final racine = Navigator.of(context, rootNavigator: true);
+    final conteneur = ProviderScope.containerOf(context, listen: false);
+    final nom = ref.read(_apercuProvider(widget.code)).valueOrNull?.coproprieteNom ?? '';
     final api = ref.read(apiClientProvider);
     final jeton = await ref.read(invitationJetonProvider.future);
     final res = await api.post<InviteAcceptResult>('/auth/invite/accept', body: {'code': widget.code, 'jeton': jeton}, parse: (j) => InviteAcceptResult.fromJson(asMap(j)));
@@ -228,6 +271,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
     infos['langue_preferee'] = _langue;
     await api.patch<dynamic>('/users/me', body: infos, coproprieteId: data.coproprieteId);
     await ref.read(appStateProvider.notifier).reload();
+    await _succes(d, racine, conteneur, nom, data.statutCompte);
   }
 
   Future<void> _inscrire() async {
@@ -235,6 +279,9 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
       _loading = true;
       _fail = null;
     });
+    final racine = Navigator.of(context, rootNavigator: true);
+    final conteneur = ProviderScope.containerOf(context, listen: false);
+    final nom = ref.read(_apercuProvider(widget.code)).valueOrNull?.coproprieteNom ?? '';
     final api = ref.read(apiClientProvider);
     final jeton = await ref.read(invitationJetonProvider.future);
     final res = await api.post<InviteInscriptionResult>(
@@ -262,6 +309,8 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
     final data = (res as ApiOk<InviteInscriptionResult>).data;
     await ref.read(localeProvider.notifier).set(Locale(_langue == 'AR' ? 'ar' : 'fr'));
     await ref.read(sessionProvider.notifier).signIn(data.tokens, coproprieteId: data.coproprieteId);
+    // Succès dans la langue choisie à l'inscription.
+    await _succes(Locale(_langue == 'AR' ? 'ar' : 'fr').dict, racine, conteneur, nom, data.statutCompte);
   }
 
   @override
@@ -288,7 +337,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Center(child: IconCircle(Icons.vpn_key_rounded, tone: a.statut == 'ACCEPTEE' ? Tone.sage : Tone.sand, size: 72)),
+                  Center(child: IconCircle(Icons.vpn_key_rounded, tone: a.statut == 'ACCEPTEE' ? Tone.sage : Tone.sand, size: 80)),
                   const SizedBox(height: 18),
                   Text(d.auth.inviteTitle, style: t.displayMedium, textAlign: TextAlign.center),
                   const SizedBox(height: 6),
@@ -306,7 +355,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Center(child: const IconCircle(Icons.handshake_rounded, tone: Tone.sand, size: 72)),
+                const Center(child: IconCircle(Icons.handshake_rounded, tone: Tone.sand, size: 80)),
                 const SizedBox(height: 18),
                 Text(fill(d.auth.inviteRejoindre, {'nom': a.coproprieteNom}), style: t.displayMedium, textAlign: TextAlign.center),
                 const SizedBox(height: 10),
@@ -317,46 +366,40 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
                   runSpacing: 6,
                   children: [
                     StatusBadge(fill(d.auth.inviteEnTantQue, {'role': role}), variant: BadgeVariant.info),
-                    Text(a.ville, style: t.bodySmall),
+                    Text(a.ville, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                   ],
                 ),
                 const SizedBox(height: 6),
                 Text(fill(d.auth.inviteExpireLe, {'date': formatDateHeure(a.expireLe, context.locale)}), style: t.labelSmall, textAlign: TextAlign.center),
-                const SizedBox(height: 22),
-                SuCard(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(d.auth.inviteVosInfos, style: t.titleSmall),
-                      const SizedBox(height: 2),
-                      Text(d.auth.inviteVosInfosAide, style: t.bodySmall),
-                      const SizedBox(height: 16),
-                      SuField(label: d.profil.prenom, controller: _prenom, error: fieldError(_fail, 'prenom'), required: session == null, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.givenName]),
+                // Formulaire à plat (comme la connexion) sous un titre de section Wise.
+                SectionHeader(d.auth.inviteVosInfos, subtitle: d.auth.inviteVosInfosAide),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SuField(label: d.profil.prenom, controller: _prenom, error: fieldError(_fail, 'prenom'), required: session == null, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.givenName]),
+                    const SizedBox(height: 12),
+                    SuField(label: d.profil.nom, controller: _nom, error: fieldError(_fail, 'nom'), required: session == null, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.familyName]),
+                    const SizedBox(height: 12),
+                    if (session == null) ...[
+                      SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, help: d.auth.inviteEmailAide, error: fieldError(_fail, 'email'), required: true, autofillHints: const [AutofillHints.email], textInputAction: TextInputAction.next),
                       const SizedBox(height: 12),
-                      SuField(label: d.profil.nom, controller: _nom, error: fieldError(_fail, 'nom'), required: session == null, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.familyName]),
+                      SuField(label: d.auth.passwordLabel, controller: _pwd, obscureText: true, textDirection: TextDirection.ltr, help: d.auth.inviteMotDePasseAide, error: fieldError(_fail, 'mot_de_passe'), required: true, autofillHints: const [AutofillHints.newPassword]),
                       const SizedBox(height: 12),
-                      if (session == null) ...[
-                        SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, help: d.auth.inviteEmailAide, error: fieldError(_fail, 'email'), required: true, autofillHints: const [AutofillHints.email], textInputAction: TextInputAction.next),
-                        const SizedBox(height: 12),
-                        SuField(label: d.auth.passwordLabel, controller: _pwd, obscureText: true, textDirection: TextDirection.ltr, help: d.auth.inviteMotDePasseAide, error: fieldError(_fail, 'mot_de_passe'), required: true, autofillHints: const [AutofillHints.newPassword]),
-                        const SizedBox(height: 12),
-                      ],
-                      Text(d.profil.langue, style: t.labelMedium?.copyWith(color: SuColors.inkStrong, fontSize: 13)),
-                      const SizedBox(height: 6),
-                      Segmented<String>(value: _langue, options: const ['FR', 'AR'], labelOf: (l) => l == 'FR' ? d.common.french : d.common.arabic, onChanged: (l) => setState(() => _langue = l)),
-                      const SizedBox(height: 16),
-                      FormError(_fail),
-                      if (_fail != null) const SizedBox(height: 12),
-                      SubmitButton(label: session == null ? d.auth.inviteCreerCompte : d.auth.inviteAccept, loading: _loading, onPressed: session == null ? _inscrire : _accepter),
-                      if (session == null) ...[
-                        const SizedBox(height: 8),
-                        TextButton(onPressed: () => context.push('/connexion?next=${Uri.encodeComponent('/invitation/${widget.code}')}'), child: Text(d.auth.inviteDejaCompte)),
-                      ],
                     ],
-                  ),
+                    Text(d.profil.langue, style: t.labelMedium?.copyWith(color: SuColors.ink)),
+                    const SizedBox(height: 8),
+                    Segmented<String>(value: _langue, options: const ['FR', 'AR'], labelOf: (l) => l == 'FR' ? d.common.french : d.common.arabic, onChanged: (l) => setState(() => _langue = l)),
+                    const SizedBox(height: 20),
+                    FormError(_fail),
+                    if (_fail != null) const SizedBox(height: 12),
+                    SubmitButton(label: session == null ? d.auth.inviteCreerCompte : d.auth.inviteAccept, loading: _loading, onPressed: session == null ? _inscrire : _accepter),
+                    if (session == null) ...[
+                      const SizedBox(height: 8),
+                      TextButton(onPressed: () => context.push('/connexion?next=${Uri.encodeComponent('/invitation/${widget.code}')}'), child: Text(d.auth.inviteDejaCompte)),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Text(md.contactSyndic, style: t.labelSmall, textAlign: TextAlign.center),
               ],
             );
@@ -392,37 +435,27 @@ class ChooseCoproScreen extends ConsumerWidget {
     return PublicScaffold(
       showBack: true,
       children: [
-            Text(d.auth.chooseCoproTitle, style: t.displayMedium),
-            const SizedBox(height: 4),
-            Text(d.auth.chooseCoproSubtitle, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
-            const SizedBox(height: 24),
-            for (final c in copros)
-              SuCard(
-                margin: const EdgeInsets.only(bottom: 10),
-                onTap: () async {
-                  await ref.read(sessionProvider.notifier).chooseCopropriete(c.id);
-                  await ref.read(appStateProvider.notifier).reload();
-                  if (context.mounted) context.go('/tableau-de-bord');
-                },
-                child: Row(
-                  children: [
-                    const IconCircle(Icons.apartment_rounded, tone: Tone.sage),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(c.nom, style: t.titleMedium),
-                          Text('${c.ville} · ${roleDans(c.id)}', style: t.bodySmall),
-                        ],
-                      ),
-                    ),
-                    const ChevronEnd(),
-                  ],
-                ),
-              ),
-            const SizedBox(height: 16),
-            Center(child: TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))),
+        Text(d.auth.chooseCoproTitle, style: t.displayMedium),
+        const SizedBox(height: 8),
+        Text(d.auth.chooseCoproSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 20),
+        // Sélecteur de comptes Wise : lignes à plat, pastille-logo 48 (initiales), chevron vert.
+        CardList([
+          for (final c in copros)
+            ListRow(
+              leading: Avatar(c.nom, size: 48),
+              title: c.nom,
+              subtitle: [c.ville, roleDans(c.id)].where((x) => x.isNotEmpty).join(' · '),
+              chevron: true,
+              onTap: () async {
+                await ref.read(sessionProvider.notifier).chooseCopropriete(c.id);
+                await ref.read(appStateProvider.notifier).reload();
+                if (context.mounted) context.go('/tableau-de-bord');
+              },
+            ),
+        ]),
+        const SizedBox(height: 16),
+        Center(child: TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))),
       ],
     );
   }
@@ -444,14 +477,15 @@ class CompteEtatScreen extends ConsumerWidget {
     return PublicScaffold(
       children: [
         const SizedBox(height: 24),
-        Center(child: IconCircle(icon, tone: tone, size: 72)),
-        const SizedBox(height: 20),
+        Center(child: IconCircle(icon, tone: tone, size: 88)),
+        const SizedBox(height: 24),
         Text(title, style: t.displayMedium, textAlign: TextAlign.center),
-        const SizedBox(height: 8),
-        Text(body, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
-        const SizedBox(height: 28),
+        const SizedBox(height: 10),
+        Text(body, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5), textAlign: TextAlign.center),
+        const SizedBox(height: 32),
         if (kind == 'sans-acces') ...[FilledButton(onPressed: () => context.go('/invitation'), child: Text(d.auth.inviteEnterCode)), const SizedBox(height: 10)],
         OutlinedButton(onPressed: () => ref.read(appStateProvider.notifier).reload(), child: Text(d.common.retry)),
+        const SizedBox(height: 8),
         Center(child: TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))),
       ],
     );
@@ -465,7 +499,7 @@ class SplashScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final st = ref.watch(appStateProvider);
     return Scaffold(
-      backgroundColor: SuColors.ground,
+      backgroundColor: SuColors.surface,
       body: Center(
         child: st.hasError
             ? Padding(

@@ -98,11 +98,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       showBack: true,
       children: [
         Text(d.auth.loginTitle, style: t.displayMedium),
-        const SizedBox(height: 4),
-        Text(d.auth.loginSubtitle, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
-        const SizedBox(height: 24),
-        SuCard(
-          padding: const EdgeInsets.all(20),
+        const SizedBox(height: 8),
+        Text(d.auth.loginSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 28),
+        Padding(
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -257,11 +257,11 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
       showBack: true,
       children: [
         Text(d.auth.otpTitle, style: t.displayMedium),
-        const SizedBox(height: 4),
-        Text(fill(d.auth.otpSubtitle, {'telephone': formatTelephone(widget.telephone)}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
-        const SizedBox(height: 24),
-        SuCard(
-          padding: const EdgeInsets.all(20),
+        const SizedBox(height: 8),
+        Text(fill(d.auth.otpSubtitle, {'telephone': '\u2066${formatTelephone(widget.telephone)}\u2069'}), style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 28),
+        Padding(
+          padding: EdgeInsets.zero,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -282,15 +282,15 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                                 child: AnimatedContainer(
                                   duration: SuMotion.of(context, Duration(milliseconds: _loading ? 260 + i * 50 : 180)),
                                   curve: SuMotion.easeOut,
-                                  height: 56,
+                                  height: 60,
                                   alignment: Alignment.center,
                                   decoration: BoxDecoration(
-                                    color: _succes ? SuColors.okTint : _loading ? SuColors.actionWash : SuColors.surface,
+                                    color: _succes ? SuColors.okTint : _loading ? SuColors.sageTint : SuColors.tile,
                                     borderRadius: BorderRadius.circular(SuRadius.field),
-                                    border: Border.all(color: _succes ? SuColors.ok : _loading || i == digits.length ? SuColors.action : SuColors.hairlineStrong, width: i == digits.length && !_loading ? 1.5 : 1),
+                                    border: Border.all(color: _succes ? SuColors.ok : _loading ? SuColors.sage : i == digits.length ? SuColors.ink : Colors.transparent, width: 2),
                                   ),
                                   child: i < digits.length
-                                      ? Text(digits[i], key: ValueKey('d$i${digits[i]}'), style: t.headlineMedium?.copyWith(fontSize: 20, fontFeatures: const [FontFeature.tabularFigures()]))
+                                      ? Text(digits[i], key: ValueKey('d$i${digits[i]}'), style: t.headlineMedium?.copyWith(fontSize: 24, fontFeatures: const [FontFeature.tabularFigures()]))
                                           .animate()
                                           .scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.6, end: 1, duration: 320.ms, curve: SuMotion.spring)
                                       : const SizedBox.shrink(),

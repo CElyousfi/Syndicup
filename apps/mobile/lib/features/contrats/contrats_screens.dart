@@ -62,7 +62,7 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
           CardList([
             for (final e in prochaines.take(6))
               ListRow(
-                leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : Tone.tosca, size: 40),
+                leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : Tone.tosca),
                 title: e.contratLibelle ?? d.contrats.titre,
                 subtitle: '${formatDateCourte(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
                 trailing: e.montant != null ? MoneyText(formatMAD(e.montant, l)) : StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
@@ -77,11 +77,11 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
           contrats,
           onRetry: () => ref.invalidate(contratsProvider(statut)),
           data: (rows) => rows.isEmpty
-              ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded)
+              ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
               : CardList([for (final c in rows) _ContratRow(c)]),
         ),
-        const SizedBox(height: 8),
-        Text(d.contrats.echeancierAide, style: t.labelSmall),
+        const SizedBox(height: 16),
+        Text(d.contrats.echeancierAide, style: t.bodySmall),
       ],
     );
   }
@@ -125,7 +125,7 @@ class _ContratRow extends StatelessWidget {
     final l = context.locale;
     final fin = c.dateFin == null ? d.contrats.dureeIndeterminee : '${d.contrats.dateFin} ${formatDateCourte(c.dateFin, l)}';
     return ListRow(
-      leading: IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral, size: 40),
+      leading: IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral),
       title: c.libelle,
       subtitle: [d.enumsContrats.typeContrat[c.type] ?? c.type, if (c.prestataireNom != null) c.prestataireNom!, fin].join(' · '),
       trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
@@ -156,19 +156,31 @@ class ContratDetailScreen extends ConsumerWidget {
         AsyncView(contrat, onRetry: () => ref.invalidate(contratProvider(id)), data: (c) {
           final det = c.detailsAssurance;
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            // Synthèse Wise : grande pastille du type, statut, montant en gros chiffre, modalités.
             SuCard(
+              padding: const EdgeInsets.all(20),
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Wrap(spacing: 6, runSpacing: 6, children: [
+                Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral, size: 56),
+                  const Spacer(),
                   StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? c.statut, variant: contratVariant[c.statut] ?? BadgeVariant.neutral),
+                ]),
+                const SizedBox(height: 18),
+                if (c.montantPeriode != null) ...[
+                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(formatMAD(c.montantPeriode, l), style: t.displayMedium)),
+                  const SizedBox(height: 2),
+                  Text(d.contrats.montantPeriode, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                  const SizedBox(height: 14),
+                ],
+                Wrap(spacing: 6, runSpacing: 6, children: [
                   StatusBadge(d.enumsContrats.periodicite[c.periodicite] ?? c.periodicite, variant: BadgeVariant.outline),
                   if (c.tacite) StatusBadge(d.contrats.tacite, variant: BadgeVariant.info),
                 ]),
-                const SizedBox(height: 14),
-                if (c.montantPeriode != null) ...[
-                  Text(d.contrats.montantPeriode, style: t.labelMedium),
-                  MoneyText(formatMAD(c.montantPeriode, l), style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                ],
+              ]),
+            ),
+            const SizedBox(height: 12),
+            SuCard(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 KeyValueRow(d.contrats.dateDebut, formatDate(c.dateDebut, l)),
                 KeyValueRow(d.contrats.dateFin, c.dateFin != null ? formatDate(c.dateFin, l) : d.contrats.dureeIndeterminee),
                 if (c.joursAvantFin != null && c.statut == 'ACTIF') KeyValueRow(d.contrats.aRenouveler, fill(d.contrats.joursAvantFin, {'n': c.joursAvantFin!})),
@@ -200,18 +212,18 @@ class ContratDetailScreen extends ConsumerWidget {
             if (c.documentId != null || c.attestationId != null) ...[
               SectionHeader(d.nav.documents),
               CardList([
-                if (c.documentId != null) ListRow(leading: const IconCircle(Icons.description_rounded, tone: Tone.sage, size: 40), title: d.contrats.documentSigne, subtitle: c.documentNom, chevron: true, onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${c.documentId}/download-url', titre: c.documentNom ?? d.contrats.documentSigne)),
-                if (c.attestationId != null) ListRow(leading: const IconCircle(Icons.verified_user_rounded, tone: Tone.tosca, size: 40), title: d.contrats.attestation, subtitle: c.attestationNom, chevron: true, onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${c.attestationId}/download-url', titre: c.attestationNom ?? d.contrats.attestation)),
+                if (c.documentId != null) ListRow(leading: const IconCircle(Icons.description_rounded, tone: Tone.sage), title: d.contrats.documentSigne, subtitle: c.documentNom, chevron: true, onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${c.documentId}/download-url', titre: c.documentNom ?? d.contrats.documentSigne)),
+                if (c.attestationId != null) ListRow(leading: const IconCircle(Icons.verified_user_rounded, tone: Tone.tosca), title: d.contrats.attestation, subtitle: c.attestationNom, chevron: true, onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${c.attestationId}/download-url', titre: c.attestationNom ?? d.contrats.attestation)),
               ]),
             ],
             SectionHeader(d.contrats.echeancier, subtitle: '${c.echeances.length}'),
             if (c.echeances.isEmpty)
-              SuCard(child: Text(d.contrats.aucuneEcheance, style: t.bodySmall))
+              Text(d.contrats.aucuneEcheance, style: t.bodyMedium?.copyWith(color: SuColors.soft))
             else
               CardList([
                 for (final e in c.echeances)
                   ListRow(
-                    leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : e.statut == 'A_VENIR' ? Tone.tosca : Tone.sage, size: 40),
+                    leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : e.statut == 'A_VENIR' ? Tone.tosca : Tone.sage),
                     title: '${formatDate(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
                     subtitle: e.depenseLibelle != null ? '${e.depenseLibelle} · ${d.enumsDepenses.statutDepense[e.depenseStatut ?? ''] ?? ''}' : null,
                     trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
@@ -224,7 +236,7 @@ class ContratDetailScreen extends ConsumerWidget {
               ]),
             if (c.depenses.isNotEmpty) ...[
               SectionHeader(d.contrats.depensesLiees),
-              CardList([for (final dep in c.depenses) ListRow(leading: const IconCircle(Icons.receipt_long_rounded, tone: Tone.sand, size: 40), title: dep.nom, chevron: true, onTap: () => context.push('/depenses/${dep.id}'))]),
+              CardList([for (final dep in c.depenses) ListRow(leading: const IconCircle(Icons.receipt_long_rounded, tone: Tone.sand), title: dep.nom, chevron: true, onTap: () => context.push('/depenses/${dep.id}'))]),
             ],
             if (c.logs.isNotEmpty) ...[
               SectionHeader(d.contrats.journal),
@@ -233,8 +245,8 @@ class ContratDetailScreen extends ConsumerWidget {
                   KeyValueRow(d.contrats.journalTypes[(lg['type'] ?? '').toString()] ?? (lg['type'] ?? '').toString(), formatDateCourte(lg['horodatage']?.toString(), l)),
               ])),
             ],
-            const SizedBox(height: 12),
-            Text(d.contrats.nouveauAide, style: t.labelSmall),
+            const SizedBox(height: 20),
+            Text(d.contrats.nouveauAide, style: t.bodySmall),
           ]);
         }),
       ],

@@ -77,56 +77,93 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     final md = context.mdict;
     final t = Theme.of(context).textTheme;
     final p = ctx.profil;
+    final nom = nomCompletProfil(ctx);
     return SuPage(
       title: d.profil.titre,
       children: [
-        Row(
-          children: [
-            Hero(tag: 'su-me-avatar', child: Avatar(nomCompletProfil(ctx) ?? p.email ?? '?', size: 64)),
-            const SizedBox(width: 14),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nomCompletProfil(ctx) ?? '—', style: t.titleLarge), Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodySmall), const SizedBox(height: 4), StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral, small: true)])),
-          ],
+        // En-tête « Account » de Wise : grand avatar centré, nom en gras, rôle, statut du compte.
+        SuEnter(
+          child: Padding(
+            padding: const EdgeInsets.only(top: 4, bottom: 8),
+            child: Column(
+              children: [
+                Avatar(nom ?? p.email ?? '?', size: 104),
+                const SizedBox(height: 16),
+                Text(nom ?? '—', style: t.displaySmall, textAlign: TextAlign.center),
+                const SizedBox(height: 4),
+                Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
+                const SizedBox(height: 10),
+                StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral),
+              ],
+            ),
+          ),
         ),
-        const SizedBox(height: 20),
-        SuField(label: d.profil.prenom, controller: _prenom, error: fieldError(_fail, 'prenom')),
-        const SizedBox(height: 12),
-        SuField(label: d.profil.nom, controller: _nom, error: fieldError(_fail, 'nom')),
-        const SizedBox(height: 14),
-        Text(d.profil.langue, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 4),
-        Text(d.profil.langueAide, style: t.bodySmall),
-        const SizedBox(height: 8),
-        Segmented<String>(value: _langue, options: const ['FR', 'AR'], labelOf: (v) => v == 'FR' ? '${d.common.french} · →' : '${d.common.arabic} · ←', onChanged: (v) => setState(() => _langue = v)),
-        const SizedBox(height: 16),
-        FormError(_fail),
-        if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.save, loading: _loading, onPressed: _save),
+        // Informations modifiables : tuile greige (nom, prénom, langue).
+        const SizedBox(height: 22),
+        SuCard(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              SuField(label: d.profil.prenom, controller: _prenom, error: fieldError(_fail, 'prenom')),
+              const SizedBox(height: 14),
+              SuField(label: d.profil.nom, controller: _nom, error: fieldError(_fail, 'nom')),
+              const SizedBox(height: 18),
+              Text(d.profil.langue, style: t.labelMedium?.copyWith(color: SuColors.ink)),
+              const SizedBox(height: 4),
+              Text(d.profil.langueAide, style: t.bodySmall),
+              const SizedBox(height: 10),
+              Segmented<String>(value: _langue, options: const ['FR', 'AR'], labelOf: (v) => v == 'FR' ? '${d.common.french} · →' : '${d.common.arabic} · ←', onChanged: (v) => setState(() => _langue = v)),
+              const SizedBox(height: 18),
+              FormError(_fail),
+              if (_fail != null) const SizedBox(height: 12),
+              SubmitButton(label: d.common.save, loading: _loading, onPressed: _save),
+            ],
+          ),
+        ),
+        // Identifiants : lignes à pastille (lecture seule, sans chevron).
         SectionHeader(d.profil.identifiants, subtitle: d.profil.identifiantsAide),
-        SuCard(child: Column(children: [KeyValueRow(d.auth.phoneLabel, formatTelephone(p.telephone), mono: true), KeyValueRow(d.auth.emailLabel, p.email ?? '—')])),
+        CardList([
+          ListRow(leading: const IconCircle(Icons.phone_rounded, tone: Tone.tosca), title: d.auth.phoneLabel, subtitle: formatTelephone(p.telephone)),
+          ListRow(leading: const IconCircle(Icons.alternate_email_rounded, tone: Tone.tosca), title: d.auth.emailLabel, subtitle: p.email ?? '—'),
+        ]),
         SectionHeader(d.profil.mesRoles),
         CardList([
           for (final r in p.roles)
-            ListRow(leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac, size: 36), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
+            ListRow(leading: IconCircle(Icons.apartment_rounded, tone: r.actif ? Tone.lilac : Tone.neutral), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
         ]),
+        // Réglages : lignes Wise à pastille et chevron.
         SectionHeader(d.communication.preferences),
-        SuCard(onTap: () async {
-          final prefs = await ref.read(preferencesNotificationProvider.future);
-          if (!context.mounted) return;
-          await showFormSheet<void>(context, title: d.communication.preferences, builder: (_) => PreferencesNotificationSheet(initial: prefs));
-        }, child: Row(children: [const IconCircle(Icons.notifications_active_outlined, tone: Tone.sand, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.communication.preferences, style: t.titleSmall), Text(d.communication.preferencesAide, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)])), const ChevronEnd()])),
+        CardList([
+          ListRow(
+            leading: const IconCircle(Icons.notifications_active_rounded, tone: Tone.sand),
+            title: d.communication.preferences,
+            subtitle: d.communication.preferencesAide,
+            onTap: () async {
+              final prefs = await ref.read(preferencesNotificationProvider.future);
+              if (!context.mounted) return;
+              await showFormSheet<void>(context, title: d.communication.preferences, builder: (_) => PreferencesNotificationSheet(initial: prefs));
+            },
+          ),
+        ]),
         SectionHeader(d.profil.donnees),
-        SuCard(onTap: () => context.push('/profil/donnees'), child: Row(children: [const IconCircle(Icons.shield_outlined, tone: Tone.sage, size: 40), const SizedBox(width: 12), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.profil.donneesTitre, style: t.titleSmall), Text(d.profil.donneesCorps, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis)])), const ChevronEnd()])),
+        CardList([
+          ListRow(leading: const IconCircle(Icons.shield_rounded, tone: Tone.sage), title: d.profil.donneesTitre, subtitle: d.profil.donneesCorps, onTap: () => context.push('/profil/donnees')),
+        ]),
+        SectionHeader(md.sessionTitle),
+        CardList([
+          ListRow(
+            leading: const IconCircle(Icons.logout_rounded, tone: Tone.danger),
+            title: d.common.logout,
+            // Pas de chevron : action immédiate, pas une page.
+            trailing: const SizedBox.shrink(),
+            onTap: () async {
+              await PushService.instance.unregisterToken(ref.read(apiClientProvider));
+              await ref.read(sessionProvider.notifier).signOut();
+            },
+          ),
+        ]),
         const SizedBox(height: 24),
-        OutlinedButton.icon(
-          onPressed: () async {
-            await PushService.instance.unregisterToken(ref.read(apiClientProvider));
-            await ref.read(sessionProvider.notifier).signOut();
-          },
-          style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger),
-          icon: const Icon(Icons.logout_rounded),
-          label: Text(d.common.logout),
-        ),
-        const SizedBox(height: 16),
         Text('${md.version} ${AppConfig.appVersion} · ${md.server} ${Uri.parse(AppConfig.apiBaseUrl).host}', style: t.labelSmall, textAlign: TextAlign.center),
       ],
     );
@@ -150,14 +187,15 @@ class _DonneesScreenState extends ConsumerState<DonneesScreen> {
     return SuPage(
       title: d.profil.donneesTitre,
       children: [
-        const IconCircle(Icons.shield_outlined, tone: Tone.sage, size: 64),
+        // Wise : grande pastille, explication, conservation, puis l'action.
+        const SuEnter(child: Align(alignment: AlignmentDirectional.centerStart, child: IconCircle(Icons.shield_rounded, tone: Tone.sage, size: 72))),
+        const SizedBox(height: 18),
+        Text(d.profil.donneesCorps, style: t.bodyLarge?.copyWith(color: SuColors.body, height: 1.5)),
         const SizedBox(height: 16),
-        Text(d.profil.donneesCorps, style: t.bodyMedium),
-        const SizedBox(height: 10),
         SuBanner(tone: BannerTone.info, body: d.profil.donneesConservation),
-        const SizedBox(height: 16),
-        Text(d.profil.exportFormat, style: t.labelSmall),
-        const SizedBox(height: 10),
+        const SizedBox(height: 24),
+        Text(d.profil.exportFormat, style: t.bodySmall),
+        const SizedBox(height: 12),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(

@@ -21,11 +21,11 @@ class StatusBadge extends StatelessWidget {
       BadgeVariant.danger => (SuColors.danger, Colors.white, SuColors.danger),
       BadgeVariant.info => (SuColors.toscaDeep, Colors.white, SuColors.toscaDeep),
       BadgeVariant.ink => (SuColors.ink, Colors.white, SuColors.ink),
-      BadgeVariant.neutral => (SuColors.ground, SuColors.ink, SuColors.ground),
+      BadgeVariant.neutral => (SuColors.washStrong, SuColors.ink, Colors.transparent),
       BadgeVariant.outline => (SuColors.surface, SuColors.ink, SuColors.hairlineStrong),
     };
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: small ? 8 : 10, vertical: small ? 3 : 4),
+      padding: EdgeInsets.symmetric(horizontal: small ? 9 : 11, vertical: small ? 3 : 5),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(SuRadius.pill), border: Border.all(color: border)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -36,7 +36,7 @@ class StatusBadge extends StatelessWidget {
           ],
           Text(
             label,
-            style: TextStyle(fontSize: small ? 11 : 12, fontWeight: FontWeight.w600, color: fg, height: 1.2, fontFamily: variant == BadgeVariant.ink ? 'GeistMono' : null, letterSpacing: variant == BadgeVariant.ink ? -0.3 : null),
+            style: TextStyle(fontSize: small ? 11.5 : 12.5, fontWeight: FontWeight.w600, color: fg, height: 1.2, fontFamily: variant == BadgeVariant.ink ? 'GeistMono' : null, letterSpacing: variant == BadgeVariant.ink ? -0.3 : null),
           ),
         ],
       ),

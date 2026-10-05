@@ -28,6 +28,26 @@ double _ratio(String? part, String? total) {
   return (p / t).clamp(0.0, 1.0);
 }
 
+/// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
+class _MontantFin extends StatelessWidget {
+  const _MontantFin(this.montant, {this.secondaire, this.color});
+  final String montant;
+  final Widget? secondaire;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MoneyText(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), color: color),
+          if (secondaire != null) ...[const SizedBox(height: 2), secondaire!],
+        ],
+      );
+}
+
+/// Section secondaire vide : ligne ardoise compacte (pas de carte).
+Widget _vide(BuildContext context, String s) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(s, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)));
+
 class _Ligne extends StatelessWidget {
   const _Ligne({required this.label, required this.valeur, this.ratio, this.color, this.hint});
   final String label, valeur;
@@ -159,9 +179,9 @@ class RapportsScreen extends ConsumerWidget {
                   _Ligne(label: d.enumsRapports.tranche[tr.tranche] ?? tr.tranche, valeur: formatMAD(tr.montant, l), ratio: _ratio(tr.montant, x.impayesTotal), color: tr.tranche == '0_30' ? SuColors.toscaDeep : tr.tranche == '31_90' ? SuColors.warn : SuColors.danger, hint: '${tr.nbLots} ${d.rapports.lots.toLowerCase()} · ${tr.nbLignes} ${d.rapports.lignes.toLowerCase()}'),
                 if (x.topLots.isNotEmpty) ...[
                   const SizedBox(height: 8),
-                  Text(d.rapports.topLots, style: t.labelMedium),
+                  Text(d.rapports.topLots, style: t.titleSmall),
                   for (final lot in x.topLots)
-                    ListRow(padding: const EdgeInsets.symmetric(vertical: 8), title: lot.lotNumero, subtitle: '${lot.retardMaxJours} j${lot.conteste ? ' · ${d.rapports.conteste}' : ''}', trailing: MoneyText(formatMAD(lot.resteDu, l), color: SuColors.danger), onTap: () => context.push('/lots/${lot.lotId}?onglet=finances')),
+                    ListRow(padding: const EdgeInsets.symmetric(vertical: 8), title: lot.lotNumero, subtitle: '${lot.retardMaxJours} j${lot.conteste ? ' · ${d.rapports.conteste}' : ''}', trailing: _MontantFin(formatMAD(lot.resteDu, l), color: SuColors.danger), onTap: () => context.push('/lots/${lot.lotId}?onglet=finances')),
                 ],
               ]),
             ),
@@ -171,7 +191,7 @@ class RapportsScreen extends ConsumerWidget {
             SectionHeader(d.rapports.depenses, subtitle: '${d.rapports.parCategorie} · ${x.exercice}', actionLabel: d.rapports.voirTout, onAction: () => context.push('/depenses')),
             SuCard(child: Column(children: [
               for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? c.categorie, valeur: formatMAD(c.montant, l), ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} % · ${c.nb}' : null),
-              if (x.parCategorie.isEmpty) Text(d.rapports.aucuneDepense, style: t.bodySmall),
+              if (x.parCategorie.isEmpty) _vide(context, d.rapports.aucuneDepense),
             ])),
             SectionHeader(d.rapports.incidentsOuverts),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -183,7 +203,7 @@ class RapportsScreen extends ConsumerWidget {
         }),
         SectionHeader(d.rapports.gestionTitre, subtitle: d.rapports.gestionSubtitle),
         AsyncView(rapports, onRetry: () => ref.invalidate(rapportsGestionProvider), data: (rows) {
-          if (rows.isEmpty) return EmptyState(title: d.rapports.aucunRapport, hint: d.rapports.aucunRapportAide, icon: Icons.summarize_rounded);
+          if (rows.isEmpty) return EmptyState(title: d.rapports.aucunRapport, hint: d.rapports.aucunRapportAide, icon: Icons.summarize_rounded, illustration: 'empty-documents');
           return CardList([for (final r in rows) _RapportRow(r)]);
         }),
       ],
@@ -200,13 +220,13 @@ class _RapportRow extends ConsumerWidget {
     final l = context.locale;
     final langue = l.languageCode == 'ar' ? 'ar' : 'fr';
     return ListRow(
-      leading: IconCircle(Icons.summarize_rounded, tone: r.statut == 'APPROUVE' ? Tone.ok : r.statut == 'REJETE' ? Tone.danger : Tone.sage, size: 40),
+      leading: IconCircle(Icons.summarize_rounded, tone: r.statut == 'APPROUVE' ? Tone.ok : r.statut == 'REJETE' ? Tone.danger : Tone.sage),
       title: '${d.rapports.exercice} ${r.exercice}',
       subtitle: '${d.rapports.compteCourant} ${formatMAD(r.compteCourantCloture, l)}${r.tauxRecouvrement != null ? ' · ${r.tauxRecouvrement} %' : ''}',
       trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
         StatusBadge(d.enumsRapports.statutRapport[r.statut] ?? r.statut, variant: rapportVariant[r.statut] ?? BadgeVariant.neutral, small: true),
         const SizedBox(height: 4),
-        Text(formatDateCourte(r.genereLe, l), style: Theme.of(context).textTheme.labelSmall),
+        Text(formatDateCourte(r.genereLe, l), style: Theme.of(context).textTheme.bodySmall),
       ]),
       onTap: () => ouvrirPdfApi(context, ref, endpoint: '/rapports/gestion/${r.id}/pdf', query: {'langue': langue, 'variante': 'complete'}, titre: '${d.rapports.gestionTitre} ${r.exercice}'),
     );
@@ -231,7 +251,6 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
     final vue = ref.watch(transparenceProvider(_exercice));
     final annee = DateTime.now().year;
     final exercices = [for (var i = 0; i < 3; i++) (annee - i).toString()];
-    final viewerLabels = (see: d.common.see, close: d.common.close, download: d.common.download);
     return SuPage(
       title: d.rapports.transparenceTitre,
       subtitle: d.rapports.transparenceSubtitle,
@@ -255,44 +274,44 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
             SectionHeader(d.rapports.parCategorie, subtitle: '${d.rapports.depenses} · ${formatMAD(x.depensesTotal, l)}'),
             SuCard(child: Column(children: [
               for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? c.categorie, valeur: formatMAD(c.montant, l), ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} %' : null),
-              if (x.parCategorie.isEmpty) Text(d.rapports.aucuneDepense, style: t.bodySmall),
+              if (x.parCategorie.isEmpty) _vide(context, d.rapports.aucuneDepense),
             ])),
             SectionHeader(d.rapports.depenses, subtitle: x.facturesVisibles ? d.rapports.facturesVisibles : null),
             if (x.depenses.isEmpty)
-              SuCard(child: Text(d.rapports.aucuneDepense, style: t.bodySmall))
+              _vide(context, d.rapports.aucuneDepense)
             else
               CardList([
                 for (final dep in x.depenses)
                   ListRow(
-                    leading: IconCircle(dep.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: dep.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand, size: 40),
+                    leading: IconCircle(dep.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: dep.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand),
                     title: dep.libelle,
                     subtitle: '${formatDateCourte(dep.date, l)} · ${d.enumsDepenses.categorieDepense[dep.categorie] ?? dep.categorie}${dep.prestataire != null ? ' · ${dep.prestataire}' : ''}',
-                    trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                      MoneyText(formatMAD(dep.montantTtc, l)),
-                      if (dep.factures.isNotEmpty)
-                        TextButton(
-                          style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap),
-                          onPressed: () => ouvrirVisionneuse(context, titre: dep.factures.first.numero ?? dep.libelle, url: dep.factures.first.url),
-                          child: Text(d.rapports.voirFacture, style: t.labelSmall?.copyWith(color: SuColors.action)),
-                        ),
-                    ]),
+                    trailing: _MontantFin(
+                      formatMAD(dep.montantTtc, l),
+                      secondaire: dep.factures.isEmpty
+                          ? null
+                          : TextButton(
+                              style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 28), tapTargetSize: MaterialTapTargetSize.shrinkWrap, textStyle: t.bodySmall?.copyWith(fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
+                              onPressed: () => ouvrirVisionneuse(context, titre: dep.factures.first.numero ?? dep.libelle, url: dep.factures.first.url),
+                              child: Text(d.rapports.voirFacture),
+                            ),
+                    ),
                   ),
               ]),
             SectionHeader(d.rapports.rapportsSoumis, subtitle: d.rapports.rapportsSoumisAide),
             if (x.rapports.isEmpty)
-              SuCard(child: Text(d.rapports.aucunRapportSoumis, style: t.bodySmall))
+              _vide(context, d.rapports.aucunRapportSoumis)
             else
               CardList([
                 for (final r in x.rapports)
                   ListRow(
-                    leading: const IconCircle(Icons.summarize_rounded, tone: Tone.ok, size: 40),
+                    leading: const IconCircle(Icons.summarize_rounded, tone: Tone.ok),
                     title: r.nom,
                     subtitle: formatDateCourte(r.date, l),
-                    trailing: Text(viewerLabels.see, style: t.labelMedium?.copyWith(color: SuColors.action)),
                     onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${r.documentId}/download-url', titre: r.nom),
                   ),
               ]),
-            if (ctx.isGestion) Padding(padding: const EdgeInsets.only(top: 12), child: Text(d.rapports.facturesVisiblesAide, style: t.labelSmall)),
+            if (ctx.isGestion) Padding(padding: const EdgeInsets.only(top: 16), child: Text(d.rapports.facturesVisiblesAide, style: t.bodySmall)),
           ]);
         }),
       ],

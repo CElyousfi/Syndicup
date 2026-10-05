@@ -46,17 +46,17 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
       title: d.invitations.titre,
       subtitle: d.invitations.subtitle,
       onRefresh: () async => ref.invalidate(invitationsProvider),
-      fab: FloatingActionButton.extended(onPressed: _nouvelle, backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.invitations.nouvelle)),
+      fab: FloatingActionButton.extended(onPressed: _nouvelle, icon: const Icon(Icons.add_rounded), label: Text(d.invitations.nouvelle)),
       children: [
         SuBanner(tone: BannerTone.info, body: d.invitations.envoiManuel),
         const SizedBox(height: 12),
         AsyncView(invitations, onRetry: () => ref.invalidate(invitationsProvider), data: (list) {
-          if (list.isEmpty) return EmptyState(title: d.invitations.aucune, hint: d.invitations.aucuneAide, icon: Icons.vpn_key_rounded, actionLabel: d.invitations.nouvelle, onAction: _nouvelle);
+          if (list.isEmpty) return EmptyState(title: d.invitations.aucune, hint: d.invitations.aucuneAide, icon: Icons.vpn_key_rounded, illustration: 'empty-notifications', actionLabel: d.invitations.nouvelle, onAction: _nouvelle);
           final sorted = [...list]..sort((a, b) => b.creeLe.compareTo(a.creeLe));
           return CardList([
             for (final i in sorted)
               ListRow(
-                leading: IconCircle(Icons.vpn_key_rounded, tone: i.statut == 'EN_ATTENTE' ? Tone.action : Tone.neutral, size: 40),
+                leading: IconCircle(Icons.vpn_key_rounded, tone: i.statut == 'EN_ATTENTE' ? Tone.action : Tone.neutral),
                 title: '${d.roles[i.roleCible] ?? i.roleCible}${i.lotId != null ? ' · ${lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull ?? ''}' : ''}',
                 subtitle: '${i.code} · ${d.enums.canal[i.canal] ?? i.canal} · ${d.invitations.expiration} ${formatDateCourte(i.expireLe, l)}${i.ouverteLe != null ? ' · ${d.invitations.ouverte}' : ''}',
                 trailing: StatusBadge(d.enums.statutInvitation[i.statut] ?? i.statut, variant: invitationVariant[i.statut] ?? BadgeVariant.neutral, small: true),
@@ -64,8 +64,10 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
               ),
           ]);
         }),
-        const SizedBox(height: 8),
-        Text(d.invitations.usageUniqueAide, style: t.labelSmall),
+        const SizedBox(height: 12),
+        Text(d.invitations.usageUniqueAide, style: t.bodySmall),
+        // Place pour le bouton flottant.
+        const SizedBox(height: 72),
       ],
     );
   }
@@ -73,19 +75,20 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
   Future<void> _detail(BuildContext context, Invitation i) async {
     final d = context.dict;
     await showModalBottomSheet<void>(
+      useRootNavigator: true,
       context: context,
       sheetAnimationStyle: SuMotion.sheet,
       isScrollControlled: true,
       useSafeArea: true,
       builder: (sheet) => SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(d.invitations.transmettre, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 12),
+            Text(d.invitations.transmettre, style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 16),
             CodeCard(invitation: i),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             if (i.statut == 'EXPIREE' || i.statut == 'EN_ATTENTE')
               OutlinedButton.icon(
                 onPressed: () async {
@@ -100,6 +103,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
                 icon: const Icon(Icons.refresh_rounded),
                 label: Text(d.invitations.regenerer),
               ),
+            if (i.statut == 'EN_ATTENTE') const SizedBox(height: 8),
             if (i.statut == 'EN_ATTENTE')
               TextButton(
                 onPressed: () async {
@@ -134,19 +138,21 @@ class CodeCard extends StatelessWidget {
     final md = context.mdict;
     final t = Theme.of(context).textTheme;
     final lien = '${AppConfig.webBaseUrl}/${context.locale.languageCode}/invitation/${invitation.code}';
+    // Tuile Wise : code en grand, QR sur pastille blanche, lien, puis copier / partager.
     return SuCard(
+      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
       child: Column(
         children: [
-          Text(d.invitations.code, style: t.labelSmall),
-          const SizedBox(height: 4),
-          SelectableText(invitation.code, textDirection: TextDirection.ltr, style: t.displayMedium?.copyWith(fontFamily: 'GeistMono', letterSpacing: 6)),
-          const SizedBox(height: 12),
-          Text(d.invitations.ouQr, style: t.labelSmall),
-          const SizedBox(height: 8),
-          Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: SuColors.hairline)), child: QrImageView(data: lien, size: 190, backgroundColor: Colors.white)),
+          Text(d.invitations.code, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
           const SizedBox(height: 6),
+          FittedBox(fit: BoxFit.scaleDown, child: SelectableText(invitation.code, textDirection: TextDirection.ltr, style: t.displayMedium?.copyWith(fontSize: 34, fontFamily: 'GeistMono', letterSpacing: 6))),
+          const SizedBox(height: 18),
+          Text(d.invitations.ouQr, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
+          const SizedBox(height: 10),
+          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(20)), child: QrImageView(data: lien, size: 190, backgroundColor: Colors.white)),
+          const SizedBox(height: 10),
           Text(lien, style: t.labelSmall?.copyWith(fontFamily: 'GeistMono'), textAlign: TextAlign.center, textDirection: TextDirection.ltr),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(child: OutlinedButton.icon(onPressed: () {
@@ -154,7 +160,7 @@ class CodeCard extends StatelessWidget {
                 showToast(context, md.copied);
               }, icon: const Icon(Icons.copy_rounded, size: 18), label: Text(d.common.copy))),
               const SizedBox(width: 8),
-              Expanded(child: FilledButton.icon(onPressed: () => Share.share('${d.invitations.transmettre} : ${invitation.code}\n$lien'), style: FilledButton.styleFrom(minimumSize: const Size(0, 50)), icon: const Icon(Icons.share_rounded, size: 18), label: Text(d.common.share))),
+              Expanded(child: FilledButton.icon(onPressed: () => Share.share('${d.invitations.transmettre} : ${invitation.code}\n$lien'), icon: const Icon(Icons.share_rounded, size: 18), label: Text(d.common.share))),
             ],
           ),
         ],
@@ -184,13 +190,14 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final c = _creee;
     if (c != null) {
+      // Après l'écran de succès : le code à transmettre.
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          SuBanner(tone: BannerTone.ok, title: d.invitations.creee, body: d.invitations.envoiManuel),
-          const SizedBox(height: 12),
+          Text(d.invitations.transmettre, style: Theme.of(context).textTheme.headlineSmall),
+          const SizedBox(height: 14),
           CodeCard(invitation: c),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           FilledButton(onPressed: () => Navigator.pop(context), child: Text(d.common.close)),
         ],
       );
@@ -227,6 +234,9 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
                         _loading = false;
                         _creee = data;
                       });
+                      // Succès plein écran Wise (navigateur racine, au-dessus de la feuille) ; à la
+                      // fermeture, la feuille affiche le code à transmettre.
+                      showSuccess(this.context, title: d.invitations.creee, body: d.invitations.envoiManuel, illustration: 'ok-invitation');
                     case ApiFail<Invitation>():
                       setState(() {
                         _loading = false;

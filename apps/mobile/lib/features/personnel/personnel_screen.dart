@@ -8,7 +8,6 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
-import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import 'package:go_router/go_router.dart';
@@ -33,15 +32,15 @@ class PersonnelScreen extends ConsumerWidget {
     return SuPage(
       title: d.personnel.titre,
       subtitle: d.personnel.subtitle,
-      actions: [if (ctx.isGestion || ctx.isConseil) IconButton(tooltip: d.personnel.planning, icon: const Icon(Icons.calendar_view_week_rounded), onPressed: () => context.push('/personnel/planning'))],
+      actions: [if (ctx.isGestion || ctx.isConseil) CircleIconButton(tooltip: d.personnel.planning, icon: Icons.calendar_view_week_rounded, onTap: () => context.push('/personnel/planning'))],
       onRefresh: () async {
         ref.invalidate(personnelProvider);
         ref.invalidate(congesEnAttenteProvider);
       },
-      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.personnel.nouvelleFiche, builder: (_) => _PersonnelForm(lots: lots)), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.personnel.nouvelleFiche)) : null,
+      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.personnel.nouvelleFiche, builder: (_) => _PersonnelForm(lots: lots)), icon: const Icon(Icons.add_rounded), label: Text(d.personnel.nouvelleFiche)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(personnelProvider), data: (ps) {
-          if (ps.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, hint: ctx.isGestion ? d.personnel.aucuneFicheAide : null, icon: Icons.group_rounded);
+          if (ps.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, hint: ctx.isGestion ? d.personnel.aucuneFicheAide : null, icon: Icons.group_rounded, illustration: 'empty-personnel');
           return Column(
             children: [
               if (ps.any((p) => p.statut == 'ABSENT')) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.warn, body: d.personnel.absentAlerte)),
@@ -63,7 +62,7 @@ class PersonnelScreen extends ConsumerWidget {
                     final ouvrable = ctx.isGestion || estMoi;
                     final poste = d.enumsPersonnelRh.poste[p.poste] ?? p.poste;
                     return ListRow(
-                      leading: Avatar(p.nomAffiche(nom(p.utilisateurId)), size: 40, solid: estMoi),
+                      leading: Avatar(p.nomAffiche(nom(p.utilisateurId)), size: 48, solid: estMoi),
                       title: p.nomAffiche(nom(p.utilisateurId)),
                       subtitle: '$poste · ${d.personnel.logement} : ${p.logementLotNumero ?? lots.where((x) => x.id == p.logementLotId).map((x) => x.numero).firstOrNull ?? d.personnel.aucuneLoge}',
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -129,8 +128,11 @@ class _PersonnelFormState extends ConsumerState<_PersonnelForm> {
               return;
             }
             ref.invalidate(personnelProvider);
+            if (!context.mounted) return;
+            // Contexte racine capturé avant de fermer la feuille : l'écran de succès s'y pose.
+            final racine = Navigator.of(context, rootNavigator: true);
             Navigator.pop(context);
-            showToast(context, d.personnel.ficheCreee);
+            if (racine.mounted) showSuccess(racine.context, title: d.personnel.ficheCreee, illustration: 'ok-general');
           },
         ),
       ],

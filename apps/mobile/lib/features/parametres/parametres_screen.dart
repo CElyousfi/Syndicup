@@ -97,6 +97,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               SuField(label: p.ville, controller: _ville, error: fieldError(_fail, 'ville')),
               const SizedBox(height: 10),
               KeyValueRow(p.typeResidence, d.enums.typeResidence[c.typeResidence] ?? c.typeResidence),
+              const SizedBox(height: 4),
               SuField(label: p.nbLots, controller: _nbLots, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], textDirection: TextDirection.ltr, error: fieldError(_fail, 'nb_lots')),
               const SizedBox(height: 12),
               err('identite'),
@@ -111,18 +112,23 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             ])),
             SectionHeader(p.options),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              SwitchListTile(contentPadding: EdgeInsets.zero, value: _locPv, onChanged: (v) => setState(() => _locPv = v), title: Text(p.optLocatairesPv, style: t.bodyMedium?.copyWith(color: SuColors.ink))),
-              SwitchListTile(contentPadding: EdgeInsets.zero, value: _resaProprio, onChanged: (v) => setState(() => _resaProprio = v), title: Text(p.optReservationProprio, style: t.bodyMedium?.copyWith(color: SuColors.ink))),
-              const SizedBox(height: 8),
+              SwitchListTile(contentPadding: EdgeInsets.zero, value: _locPv, onChanged: (v) => setState(() => _locPv = v), title: Text(p.optLocatairesPv, style: t.titleMedium)),
+              SwitchListTile(contentPadding: EdgeInsets.zero, value: _resaProprio, onChanged: (v) => setState(() => _resaProprio = v), title: Text(p.optReservationProprio, style: t.titleMedium)),
+              const SizedBox(height: 12),
               err('options'),
               SubmitButton(label: d.common.save, loading: _loading && _section == 'options', onPressed: () => _save('options', {'config_json': {...?c.configJson, 'locataire_voit_pv': _locPv, 'reservation_espaces_proprietaires_only': _resaProprio}})),
             ])),
             SectionHeader(p.recouvrement, subtitle: p.recouvrementAide),
-            SuCard(child: Text(c.politiqueRecouvrementJson == null ? p.nonConfigure : c.politiqueRecouvrementJson!.entries.map((e) => '${e.key} : ${e.value}').join(' · '), style: t.bodySmall)),
+            // Politique de relance : une ligne clé / valeur par niveau.
+            SuCard(
+              child: c.politiqueRecouvrementJson == null || c.politiqueRecouvrementJson!.isEmpty
+                  ? Text(p.nonConfigure, style: t.bodyMedium?.copyWith(color: SuColors.soft))
+                  : Column(children: [for (final e in c.politiqueRecouvrementJson!.entries) KeyValueRow(d.enums.escalade[e.key] ?? e.key, '${e.value}', mono: true)]),
+            ),
             SectionHeader(p.legaux),
             SuBanner(tone: BannerTone.legal, body: p.legauxBanner),
-            const SizedBox(height: 10),
-            SuCard(border: SuColors.warnBorder, child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+            const SizedBox(height: 12),
+            SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               SuField(label: p.delaiConvocation, controller: _delai, help: p.delaiConvocationAide, hint: p.nonConfigure, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], textDirection: TextDirection.ltr, error: fieldError(_fail, 'delai_convocation_jours')),
               const SizedBox(height: 10),
               SuField(label: p.quorumPremiere, controller: _quorum, help: p.quorumPremiereAide, hint: '0.500', keyboardType: const TextInputType.numberWithOptions(decimal: true), textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'quorum_premiere_convocation')),
@@ -255,26 +261,26 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(borderRadius: BorderRadius.circular(SuRadius.row), child: SizedBox(width: 96, height: 64, child: CoproPhoto(cle, fallbackCle: fallbackCle))),
-              const SizedBox(width: 12),
+              ClipRRect(borderRadius: BorderRadius.circular(16), child: SizedBox(width: 104, height: 72, child: CoproPhoto(cle, fallbackCle: fallbackCle))),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(titre, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 2),
+                    Text(titre, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 3),
                     Text(aide, style: t.bodySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 8),
                     StatusBadge(perso ? d.parametres.photoPersonnalisee : d.parametres.photoDefaut, variant: perso ? BadgeVariant.info : BadgeVariant.outline, small: true),
                   ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: OutlinedButton.icon(onPressed: busy ? null : () => _changer(cle), icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_library_rounded, size: 18), label: Text(perso ? context.mdict.photoChanger : d.parametres.logoChoisir))),
+              Expanded(child: OutlinedButton.icon(onPressed: busy ? null : () => _changer(cle), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)), icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_library_rounded, size: 18), label: Text(perso ? context.mdict.photoChanger : d.parametres.logoChoisir))),
               if (perso) ...[
                 const SizedBox(width: 8),
                 TextButton(onPressed: busy ? null : () => _retirer(cle), style: TextButton.styleFrom(foregroundColor: SuColors.danger), child: Text(d.parametres.photoRetirer)),

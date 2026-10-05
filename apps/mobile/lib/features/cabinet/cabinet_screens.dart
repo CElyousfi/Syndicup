@@ -61,26 +61,39 @@ class _PortefeuilleTab extends ConsumerWidget {
     Color couleurTaux(double? x) => x == null ? SuColors.faint : x >= 80 ? SuColors.ok : x >= 60 ? SuColors.warn : SuColors.danger;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(portefeuilleProvider(cabinet.id)),
-      color: SuColors.action,
+      color: SuColors.link,
       child: AsyncView(lignes, onRetry: () => ref.invalidate(portefeuilleProvider(cabinet.id)), data: (rows) {
-        if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, icon: Icons.apartment_rounded)]);
+        if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, hint: t.aucuneCoproprieteAide, icon: Icons.apartment_rounded, illustration: 'empty-lots')]);
         final alertes = rows.fold<int>(0, (a, r) => a + r.alertes.length);
-        return ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
-          Text('${cabinet.nom} · ${cabinet.monRole != null ? (t.roles[cabinet.monRole!] ?? cabinet.monRole!) : ''}', style: tt.bodySmall),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(child: StatTile(label: t.coproprietes, value: '${rows.length}', icon: Icons.apartment_rounded)),
-            const SizedBox(width: 8),
-            Expanded(child: StatTile(label: t.alertes, value: '$alertes', icon: Icons.warning_amber_rounded, tone: alertes > 0 ? Tone.warn : Tone.sage)),
-          ]),
+        return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
+          Text('${cabinet.nom}${cabinet.monRole != null ? ' · ${t.roles[cabinet.monRole!] ?? cabinet.monRole!}' : ''}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
           const SizedBox(height: 12),
+          // Soldes Wise : deux tuiles de même hauteur.
+          TwoCols([
+            StatTile(label: t.coproprietes, value: '${rows.length}', icon: Icons.apartment_rounded),
+            StatTile(label: t.alertes, value: '$alertes', icon: Icons.warning_amber_rounded, tone: alertes > 0 ? Tone.warn : Tone.sage),
+          ]),
+          SectionHeader(t.onglets.portefeuille),
+          // Une tuile greige plate par copropriété ; l'alerte se lit à la pastille, pas à un liseré.
           for (final r in rows)
-            SuCard(margin: const EdgeInsets.only(bottom: 10), border: r.alertes.isNotEmpty ? SuColors.warnBorder : null, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [Expanded(child: Text(r.nom, style: tt.titleSmall)), StatusBadge(r.assuranceActive ? t.assuranceOk : t.assuranceAbsente, variant: r.assuranceActive ? BadgeVariant.ok : BadgeVariant.danger, small: true)]),
-              Text('${r.ville} · ${r.nbLots} ${t.lots.toLowerCase()}${r.honorairesMensuels != null ? ' · ${formatMAD(r.honorairesMensuels, l)}' : ''}', style: tt.bodySmall),
-              const SizedBox(height: 10),
-              Row(children: [Expanded(child: Gauge((r.tauxRecouvrement ?? 0) / 100, color: couleurTaux(r.tauxRecouvrement))), const SizedBox(width: 10), Text(r.tauxRecouvrement == null ? '—' : '${r.tauxRecouvrement!.toStringAsFixed(0)} %', style: tt.labelLarge?.copyWith(color: couleurTaux(r.tauxRecouvrement)))]),
-              const SizedBox(height: 8),
+            SuCard(margin: const EdgeInsets.only(bottom: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                IconCircle(Icons.apartment_rounded, tone: r.alertes.isNotEmpty ? Tone.warn : Tone.lilac),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(r.nom, style: tt.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
+                    Padding(padding: const EdgeInsets.only(top: 3), child: Text('${r.ville} · ${r.nbLots} ${t.lots.toLowerCase()}${r.honorairesMensuels != null ? ' · ${formatMAD(r.honorairesMensuels, l)}' : ''}', style: tt.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft))),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                StatusBadge(r.assuranceActive ? t.assuranceOk : t.assuranceAbsente, variant: r.assuranceActive ? BadgeVariant.ok : BadgeVariant.danger, small: true),
+              ]),
+              const SizedBox(height: 14),
+              Row(children: [Expanded(child: Text(t.recouvrement, style: tt.bodySmall)), Text(r.tauxRecouvrement == null ? '—' : '${r.tauxRecouvrement!.toStringAsFixed(0)} %', style: tt.titleSmall?.copyWith(color: couleurTaux(r.tauxRecouvrement)))]),
+              const SizedBox(height: 6),
+              Gauge((r.tauxRecouvrement ?? 0) / 100, color: couleurTaux(r.tauxRecouvrement)),
+              const SizedBox(height: 12),
               Wrap(spacing: 6, runSpacing: 6, children: [
                 StatusBadge('${t.impayes} ${formatMAD(r.impayesMontant, l)}', variant: r.impayesNbLots > 0 ? BadgeVariant.warn : BadgeVariant.neutral, small: true),
                 StatusBadge('${t.incidents} ${r.incidentsOuverts}', variant: r.incidentsUrgents > 0 ? BadgeVariant.danger : BadgeVariant.neutral, small: true),
@@ -89,7 +102,7 @@ class _PortefeuilleTab extends ConsumerWidget {
                 if (r.prochaineAg != null) StatusBadge('${t.prochaineAg} ${formatJourAnnee(r.prochaineAg!.substring(0, 10), l)}', variant: BadgeVariant.outline, small: true),
               ]),
             ])),
-          if (rows.isNotEmpty) Text(fill(t.calculeLe, {'date': formatDateHeure(rows.first.calculeLe, l)}), style: tt.labelSmall),
+          if (rows.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: Text(fill(t.calculeLe, {'date': formatDateHeure(rows.first.calculeLe, l)}), style: tt.labelSmall, textAlign: TextAlign.center)),
         ]);
       }),
     );
@@ -106,10 +119,10 @@ class _AlertesTab extends ConsumerWidget {
     String libelle(AlerteCabinet a) => fill(t.codesAlerte[a.code] ?? a.code, {'v': a.valeur ?? ''});
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(alertesCabinetProvider(cabinetId)),
-      color: SuColors.action,
+      color: SuColors.link,
       child: AsyncView(liste, onRetry: () => ref.invalidate(alertesCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
-          ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneAlerte, icon: Icons.check_circle_outline_rounded, tone: Tone.ok)])
-          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [CardList([for (final a in rows) ListRow(leading: IconCircle(a.niveau == 'danger' ? Icons.error_outline_rounded : Icons.warning_amber_rounded, tone: a.niveau == 'danger' ? Tone.danger : Tone.warn, size: 40), title: libelle(a), subtitle: a.copropriete)])])),
+          ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneAlerte, icon: Icons.check_circle_outline_rounded, tone: Tone.ok, illustration: 'empty-notifications')])
+          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [CardList([for (final a in rows) ListRow(leading: IconCircle(a.niveau == 'danger' ? Icons.error_outline_rounded : Icons.warning_amber_rounded, tone: a.niveau == 'danger' ? Tone.danger : Tone.warn), title: libelle(a), subtitle: a.copropriete)])])),
     );
   }
 }
@@ -124,13 +137,13 @@ class _AgendaTab extends ConsumerWidget {
     final liste = ref.watch(agendaCabinetProvider(cabinetId));
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(agendaCabinetProvider(cabinetId)),
-      color: SuColors.action,
+      color: SuColors.link,
       child: AsyncView(liste, onRetry: () => ref.invalidate(agendaCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
-          ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucunEvenement, icon: Icons.event_note_rounded)])
-          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
-              Text(t.agendaAide, style: Theme.of(context).textTheme.bodySmall),
-              const SizedBox(height: 10),
-              CardList([for (final e in rows) ListRow(leading: IconCircle(switch (e.type) { 'AG' => Icons.how_to_vote_rounded, 'ECHEANCE_CONTRAT' => Icons.handshake_rounded, 'TACHE' => Icons.task_alt_rounded, 'PAIE' => Icons.payments_rounded, _ => Icons.flag_rounded }, tone: e.retard ? Tone.danger : Tone.sage, size: 40), title: e.titre, subtitle: '${formatJourAnnee(e.date.substring(0, 10), l)} · ${e.copropriete} · ${t.typesEvenement[e.type] ?? e.type}${e.retard ? ' · ${t.enRetard}' : ''}')]),
+          ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucunEvenement, hint: t.agendaAide, icon: Icons.event_note_rounded, illustration: 'empty-ag')])
+          : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
+              Text(t.agendaAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
+              const SizedBox(height: 8),
+              CardList([for (final e in rows) ListRow(leading: IconCircle(switch (e.type) { 'AG' => Icons.how_to_vote_rounded, 'ECHEANCE_CONTRAT' => Icons.handshake_rounded, 'TACHE' => Icons.task_alt_rounded, 'PAIE' => Icons.payments_rounded, _ => Icons.flag_rounded }, tone: e.retard ? Tone.danger : Tone.sage), title: e.titre, subtitle: '${formatJourAnnee(e.date.substring(0, 10), l)} · ${e.copropriete} · ${t.typesEvenement[e.type] ?? e.type}${e.retard ? ' · ${t.enRetard}' : ''}')]),
             ])),
     );
   }

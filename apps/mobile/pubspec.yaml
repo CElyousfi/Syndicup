@@ -50,7 +50,31 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/illustrations/
   fonts:
+    # Langage « Wise » : Inter pour toute l'interface, Archivo semi-condensé Black pour les
+    # titres-affiches (substitut libre de Wise Sans), Noto Kufi Arabic pour les affiches en arabe.
+    # Licences OFL : assets/fonts/LICENSES.md.
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: SuDisplay
+      fonts:
+        - asset: assets/fonts/ArchivoDisplay-ExtraBold.ttf
+          weight: 800
+        - asset: assets/fonts/ArchivoDisplay-Black.ttf
+          weight: 900
+    - family: SuDisplayAr
+      fonts:
+        - asset: assets/fonts/NotoKufiArabic-ExtraBold.ttf
+          weight: 800
     - family: Geist
       fonts:
         - asset: assets/fonts/Geist-Regular.ttf

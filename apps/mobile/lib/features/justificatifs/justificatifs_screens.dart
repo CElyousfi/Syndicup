@@ -32,6 +32,41 @@ Future<Map<String, String>?> _televerserPreuve(ApiClient api, PieceLocale p) asy
   return {'storage_path': prep.data['storage_path'] as String, 'nom': p.nom};
 }
 
+/// Pictogramme d'un moyen de paiement.
+IconData _iconeMethode(String m) => switch (m) {
+      'ESPECES' => Icons.payments_rounded,
+      'CHEQUE' => Icons.receipt_long_rounded,
+      _ => Icons.account_balance_rounded,
+    };
+
+/// Ton de pastille dérivé d'un statut.
+Tone _toneDe(BadgeVariant v) => switch (v) {
+      BadgeVariant.ok => Tone.ok,
+      BadgeVariant.warn => Tone.warn,
+      BadgeVariant.danger => Tone.danger,
+      BadgeVariant.info => Tone.tosca,
+      _ => Tone.neutral,
+    };
+
+/// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
+class _MontantFin extends StatelessWidget {
+  const _MontantFin(this.montant, {this.secondaire});
+  final String montant;
+  final Widget? secondaire;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MoneyText(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          if (secondaire != null) ...[const SizedBox(height: 4), secondaire!],
+        ],
+      );
+}
+
+/// Section secondaire vide : ligne ardoise compacte (pas de carte).
+Widget _vide(BuildContext context, String s) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(s, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)));
+
 class JustificatifRow extends StatelessWidget {
   const JustificatifRow(this.x, {super.key});
   final Justificatif x;
@@ -39,15 +74,12 @@ class JustificatifRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = context.dict;
     final l = context.locale;
+    final v = justificatifVariant[x.statut] ?? BadgeVariant.neutral;
     return ListRow(
-      leading: IconCircle(x.methode == 'ESPECES' ? Icons.payments_rounded : Icons.receipt_rounded, tone: x.enAttente ? Tone.warn : Tone.sage, size: 40),
+      leading: IconCircle(_iconeMethode(x.methode), tone: x.enAttente ? Tone.warn : _toneDe(v)),
       title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? x.methode}',
       subtitle: '${formatDate(x.datePaiementDeclaree, l)}${x.reference != null ? ' · ${x.reference}' : ''}${x.declareParNom != null ? ' · ${x.declareParNom}' : ''}',
-      trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-        MoneyText(formatMAD(x.montant, l)),
-        const SizedBox(height: 4),
-        StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: justificatifVariant[x.statut] ?? BadgeVariant.neutral, small: true),
-      ]),
+      trailing: _MontantFin(formatMAD(x.montant, l), secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: v, small: true)),
       onTap: () => context.push('/justificatifs/${x.id}'),
     );
   }
@@ -74,23 +106,23 @@ class PayerScreen extends ConsumerWidget {
       children: [
         SectionHeader(d.justificatifs.virement, subtitle: d.justificatifs.virementAide),
         if (comptes.isEmpty)
-          SuCard(child: Text(d.justificatifs.aucunCompte, style: t.bodySmall))
+          _vide(context, d.justificatifs.aucunCompte)
         else
           CardList([
-            for (final c in comptes) ListRow(leading: const IconCircle(Icons.account_balance_rounded, tone: Tone.tosca, size: 40), title: c.libelle, subtitle: c.banque, trailing: Text(c.ribMasque, style: t.bodyMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr)),
+            for (final c in comptes) ListRow(leading: const IconCircle(Icons.account_balance_rounded, tone: Tone.tosca), title: c.libelle, subtitle: c.banque, trailing: Text(c.ribMasque, style: t.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr)),
           ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SubmitButton(
           label: d.justificatifs.declarer,
           icon: Icons.photo_camera_rounded,
           onPressed: lots.isEmpty ? null : () => showFormSheet<void>(context, title: d.justificatifs.declarerTitre, builder: (_) => DeclarationForm(lots: lots, comptes: comptes, mode: 'declarer', onDone: () => ref.invalidate(justificatifsProvider))),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         SuBanner(tone: BannerTone.info, title: d.justificatifs.especes, body: d.justificatifs.especesAide),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         SuBanner(tone: BannerTone.info, title: d.justificatifs.cmi, body: d.justificatifs.cmiBientot),
         SectionHeader(d.justificatifs.mesDeclarations),
-        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (rows) => rows.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.receipt_rounded) : CardList([for (final x in rows) JustificatifRow(x)])),
+        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (rows) => rows.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.receipt_rounded, illustration: 'empty-appels') : CardList([for (final x in rows) JustificatifRow(x)])),
       ],
     );
   }
@@ -163,7 +195,7 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
         ],
         ListRow(
           padding: EdgeInsets.zero,
-          leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral, size: 36),
+          leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral),
           title: j.datePaiement,
           subtitle: formatDate(jourIso(_date), l),
           chevron: true,
@@ -179,9 +211,9 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
         const SizedBox(height: 8),
         Wrap(spacing: 8, children: [
           if (_piece != null)
-            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.action), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
+            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
           else
-            ActionChip(avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.action), label: Text(j.prendrePhoto), onPressed: () async {
+            ActionChip(avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link), label: Text(j.prendrePhoto), onPressed: () async {
               final p = await choisirPiece(context);
               if (p != null) setState(() => _piece = p);
             }),
@@ -230,8 +262,16 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
                   switch (r) {
                     case ApiOk<Map<String, dynamic>>():
                       widget.onDone();
+                      // Succès plein écran Wise (virement déclaré / espèces reçues).
+                      final racine = Navigator.of(this.context, rootNavigator: true).context;
                       Navigator.pop(context);
-                      showToast(context, especes ? (r.data['type'] == 'PAIEMENT' ? j.especesPaiement : j.especesSaisie) : j.declare);
+                      if (!racine.mounted) return;
+                      showSuccess(
+                        racine,
+                        title: especes ? (r.data['type'] == 'PAIEMENT' ? j.especesPaiement : j.especesSaisie) : j.declare,
+                        body: especes || auNom ? null : j.declareAide,
+                        illustration: 'ok-paiement',
+                      );
                     case ApiFail<Map<String, dynamic>>():
                       setState(() {
                         _loading = false;
@@ -266,7 +306,7 @@ class _JustificatifsScreenState extends ConsumerState<JustificatifsScreen> {
       children: [
         FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
-        AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded) : CardList([for (final x in xs) JustificatifRow(x)])),
+        AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x)])),
       ],
     );
   }
@@ -287,7 +327,7 @@ class EspecesScreen extends ConsumerWidget {
       children: [
         SubmitButton(label: d.justificatifs.especesSaisir, icon: Icons.payments_rounded, onPressed: lots.isEmpty ? null : () => showFormSheet<void>(context, title: d.justificatifs.especesSaisir, builder: (_) => DeclarationForm(lots: lots, comptes: const [], mode: 'especes', onDone: () => ref.invalidate(justificatifsProvider)))),
         SectionHeader(d.justificatifs.mesSaisies),
-        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.payments_rounded) : CardList([for (final x in xs) JustificatifRow(x)])),
+        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.payments_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x)])),
       ],
     );
   }
@@ -318,13 +358,24 @@ class JustificatifDetailScreen extends ConsumerWidget {
       children: [
         AsyncView(x, onRetry: () => ref.invalidate(justificatifProvider(id)), data: (y) {
           final affectations = (y.details['affectations'] as List?)?.whereType<Map>().toList() ?? const [];
+          final v = justificatifVariant[y.statut] ?? BadgeVariant.neutral;
           return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-            SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 6, runSpacing: 6, children: [
-                StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? y.statut, variant: justificatifVariant[y.statut] ?? BadgeVariant.neutral),
-                StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? y.methode, variant: BadgeVariant.outline),
+            // En-tête Wise : moyen de paiement, gros montant, statut — puis le détail.
+            Padding(
+              padding: const EdgeInsets.only(top: 4, bottom: 22),
+              child: Column(children: [
+                SuEnter(child: IconCircle(_iconeMethode(y.methode), tone: _toneDe(v), size: 64, iconSize: 30)),
+                const SizedBox(height: 14),
+                SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: MoneyText(formatMAD(y.montant, l), style: t.displayMedium))),
+                Padding(padding: const EdgeInsets.only(top: 4), child: Text('${y.lotNumero ?? j.lot} · ${formatDate(y.datePaiementDeclaree, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
+                const SizedBox(height: 12),
+                Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
+                  StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? y.statut, variant: v),
+                  StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? y.methode, variant: BadgeVariant.outline),
+                ]),
               ]),
-              const SizedBox(height: 12),
+            ),
+            SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               KeyValueRow(j.montant, formatMAD(y.montant, l), mono: true),
               KeyValueRow(j.datePaiement, formatDate(y.datePaiementDeclaree, l)),
               if (y.banqueEmettrice != null) KeyValueRow(j.banqueEmettrice, y.banqueEmettrice!),
@@ -335,37 +386,37 @@ class JustificatifDetailScreen extends ConsumerWidget {
               if (y.traiteLe != null) KeyValueRow(j.traiteLe, '${formatDateHeure(y.traiteLe, l)} · ${y.traiteParNom ?? ''}'),
             ])),
             if (y.statut == 'REJETE' && y.motifRejet != null) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, title: j.motifRejet, body: y.motifRejet!)],
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             if (y.preuveUrl != null)
               SubmitButton(label: j.voirPreuve, icon: Icons.receipt_rounded, secondary: true, onPressed: () => ouvrirVisionneuse(context, titre: y.preuveNom ?? j.preuve, url: y.preuveUrl!))
             else
-              SuCard(child: Text(j.aucunePreuve, style: t.bodySmall)),
+              _vide(context, j.aucunePreuve),
             if (ctx.isGestion && y.enAttente) ...[
               const SizedBox(height: 12),
               SubmitButton(label: j.valider, icon: Icons.check_circle_rounded, onPressed: () => showFormSheet<void>(context, title: j.validerTitre, builder: (_) => _DecisionForm(justificatif: y, valider: true, onDone: () => _refresh(ref)))),
-              const SizedBox(height: 8),
+              const SizedBox(height: 10),
               SubmitButton(label: j.rejeter, icon: Icons.cancel_rounded, danger: true, secondary: true, onPressed: () => showFormSheet<void>(context, title: j.rejeterTitre, builder: (_) => _DecisionForm(justificatif: y, valider: false, onDone: () => _refresh(ref)))),
             ],
             if (y.enAttente && y.declareParId == ctx.profil.id && !ctx.isGestion) ...[
               const SizedBox(height: 8),
-              TextButton(onPressed: () => _annuler(context, ref, y), child: Text(j.annuler, style: const TextStyle(color: SuColors.danger))),
+              Center(child: LinkButton(j.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, y))),
             ],
             SectionHeader(j.lignesOuvertes),
             if (y.lignesOuvertes.isEmpty)
-              SuCard(child: Text(j.aucuneLigneOuverte, style: t.bodySmall))
+              _vide(context, j.aucuneLigneOuverte)
             else
               CardList([
                 for (final li in y.lignesOuvertes)
                   ListRow(
-                    leading: IconCircle(Icons.request_quote_rounded, tone: li.appelDeFondsLotId == y.appelDeFondsLotId ? Tone.action : Tone.neutral, size: 36),
+                    leading: IconCircle(Icons.request_quote_rounded, tone: li.appelDeFondsLotId == y.appelDeFondsLotId ? Tone.sage : Tone.neutral),
                     title: formatPeriode(li.periode, l),
                     subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? li.type}',
-                    trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [MoneyText(formatMAD(li.restant, l)), const SizedBox(height: 4), StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)]),
+                    trailing: _MontantFin(formatMAD(li.restant, l), secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
                   ),
               ]),
             if (affectations.isNotEmpty) ...[
               SectionHeader(j.affectations),
-              SuCard(child: Column(children: [for (final a in affectations) KeyValueRow(a['statut']?.toString() ?? '', formatMAD(a['montant']?.toString(), l), mono: true)])),
+              SuCard(child: Column(children: [for (final a in affectations) KeyValueRow(d.enums.statutLigne[a['statut']?.toString()] ?? a['statut']?.toString() ?? '', formatMAD(a['montant']?.toString(), l), mono: true)])),
             ],
           ]);
         }),
@@ -438,8 +489,14 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
                 switch (r) {
                   case ApiOk<Map<String, dynamic>>():
                     widget.onDone();
+                    // Validation = paiement enregistré → succès plein écran ; rejet → simple toast.
+                    final racine = Navigator.of(this.context, rootNavigator: true).context;
                     Navigator.pop(context);
-                    showToast(context, widget.valider ? j.valide : j.rejete);
+                    if (widget.valider) {
+                      if (racine.mounted) showSuccess(racine, title: j.valide, body: '${y.lotNumero ?? ''} · ${formatMAD(y.montant, l)}', illustration: 'ok-paiement');
+                    } else {
+                      showToast(context, j.rejete);
+                    }
                   case ApiFail<Map<String, dynamic>>():
                     setState(() {
                       _loading = false;

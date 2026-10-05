@@ -65,7 +65,7 @@ class SuField extends StatelessWidget {
             if (!required && optionalLabel != null) Text('  ·  $optionalLabel', style: t.labelSmall),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           keyboardType: keyboardType,
@@ -110,15 +110,16 @@ class SuSelect<T> extends StatelessWidget {
         Row(children: [Text(label, style: t.labelMedium?.copyWith(color: SuColors.ink)), if (required) Text(' *', style: t.labelMedium?.copyWith(color: SuColors.danger))]),
         const SizedBox(height: 6),
         Material(
-          color: enabled ? SuColors.surface : SuColors.ground,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairline)),
+          color: enabled ? SuColors.surface : SuColors.wash,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
           child: InkWell(
             borderRadius: BorderRadius.circular(SuRadius.field),
             onTap: !enabled
                 ? null
                 : () async {
                     final picked = await showModalBottomSheet<T>(
-                      context: context,
+                      useRootNavigator: true,
+      context: context,
                       sheetAnimationStyle: SuMotion.sheet,
                       isScrollControlled: true,
                       builder: (ctx) => SafeArea(
@@ -128,12 +129,13 @@ class SuSelect<T> extends StatelessWidget {
                             shrinkWrap: true,
                             padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
                             children: [
-                              Padding(padding: const EdgeInsets.fromLTRB(12, 4, 12, 8), child: Text(label, style: t.titleMedium)),
+                              Padding(padding: const EdgeInsets.fromLTRB(12, 0, 12, 12), child: Text(label, style: t.headlineMedium)),
                               for (final o in options)
                                 ListTile(
                                   title: Text(labelOf(o), style: t.bodyLarge?.copyWith(color: SuColors.ink)),
-                                  trailing: o == value ? const Icon(Icons.check_rounded, color: SuColors.action) : null,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  trailing: o == value ? const Icon(Icons.check_circle_rounded, color: SuColors.ink) : null,
+                                  minTileHeight: 56,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                   onTap: () => Navigator.of(ctx).pop(o),
                                 ),
                             ],
@@ -144,11 +146,11 @@ class SuSelect<T> extends StatelessWidget {
                     if (picked != null) onChanged(picked);
                   },
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
               child: Row(
                 children: [
                   Expanded(child: Text(value == null ? (placeholder ?? '—') : labelOf(value as T), style: t.bodyLarge?.copyWith(color: value == null ? SuColors.faint : SuColors.ink), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                  const Icon(Icons.expand_more_rounded, color: SuColors.soft),
+                  const Icon(Icons.expand_more_rounded, color: SuColors.link),
                 ],
               ),
             ),
@@ -177,7 +179,7 @@ class Segmented<T> extends StatelessWidget {
     // Une seule pastille blanche qui glisse (ressort) sous l'option active ; sens RTL respecté.
     return Container(
       padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(color: SuColors.canvas, borderRadius: BorderRadius.circular(SuRadius.field)),
+      decoration: BoxDecoration(color: SuColors.wash, borderRadius: BorderRadius.circular(999)),
       child: Stack(
         children: [
           Positioned.fill(
@@ -188,7 +190,7 @@ class Segmented<T> extends StatelessWidget {
               child: FractionallySizedBox(
                 widthFactor: 1 / n,
                 heightFactor: 1,
-                child: DecoratedBox(decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(11), boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 4, offset: Offset(0, 1))])),
+                child: DecoratedBox(decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(999), boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 1))])),
               ),
             ),
           ),
@@ -200,12 +202,13 @@ class Segmented<T> extends StatelessWidget {
                     behavior: HitTestBehavior.opaque,
                     onTap: () => onChanged(o),
                     child: SizedBox(
-                      height: 40,
+                      height: 42,
                       child: Center(
                         child: AnimatedDefaultTextStyle(
                           duration: SuMotion.of(context, SuMotion.base),
                           style: (t.labelMedium ?? const TextStyle()).copyWith(color: o == value ? SuColors.ink : SuColors.soft),
-                          child: Text(labelOf(o), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          // Libellé long : réduit pour tenir, jamais tronqué.
+                          child: Padding(padding: const EdgeInsets.symmetric(horizontal: 8), child: FittedBox(fit: BoxFit.scaleDown, child: Text(labelOf(o), maxLines: 1))),
                         ),
                       ),
                     ),
@@ -237,7 +240,7 @@ class SuCheckbox extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(width: 28, height: 28, child: Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), activeColor: SuColors.action, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)))),
+            SizedBox(width: 28, height: 28, child: Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), activeColor: SuColors.ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)))),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
@@ -314,8 +317,8 @@ class SubmitButton extends StatelessWidget {
       enabled: !loading && onPressed != null,
       child: FilledButton(
         onPressed: loading ? null : onPressed,
-        style: danger ? FilledButton.styleFrom(backgroundColor: SuColors.danger) : null,
-        child: swap(loading ? spinner(Colors.white) : labelRow),
+        style: danger ? FilledButton.styleFrom(backgroundColor: SuColors.danger, foregroundColor: Colors.white) : null,
+        child: swap(loading ? spinner(danger ? Colors.white : SuColors.onCta) : labelRow),
       ),
     );
   }
@@ -324,20 +327,21 @@ class SubmitButton extends StatelessWidget {
 /// Feuille du bas de formulaire (poignée, zone sûre, clavier).
 Future<T?> showFormSheet<T>(BuildContext context, {required String title, required Widget Function(BuildContext ctx) builder}) {
   return showModalBottomSheet<T>(
-    context: context,
+    useRootNavigator: true,
+      context: context,
     sheetAnimationStyle: SuMotion.sheet,
     isScrollControlled: true,
     useSafeArea: true,
     builder: (ctx) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(title, style: Theme.of(ctx).textTheme.headlineSmall),
-            const SizedBox(height: 16),
+            Text(title, style: Theme.of(ctx).textTheme.displaySmall),
+            const SizedBox(height: 20),
             builder(ctx),
           ],
         ),
@@ -361,12 +365,12 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
           if (irreversible) Padding(padding: const EdgeInsets.only(top: 10), child: Text(d.common.irreversible, style: Theme.of(ctx).textTheme.bodySmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w600))),
         ],
       ),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(d.common.cancel)),
         FilledButton(
           onPressed: () => Navigator.pop(ctx, true),
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 44), backgroundColor: danger ? SuColors.danger : SuColors.action),
+          style: FilledButton.styleFrom(minimumSize: const Size(0, 46), backgroundColor: danger ? SuColors.danger : SuColors.cta, foregroundColor: danger ? Colors.white : SuColors.onCta),
           child: Text(confirmLabel ?? d.common.confirm),
         ),
       ],

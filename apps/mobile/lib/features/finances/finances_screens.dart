@@ -19,6 +19,70 @@ import '../../core/widgets/widgets.dart';
 import '../documents/document_viewer_screen.dart';
 import '../shell/app_shell.dart';
 
+/// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
+class _MontantFin extends StatelessWidget {
+  const _MontantFin(this.montant, {this.secondaire, this.color});
+  final String montant;
+  final Widget? secondaire;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        MoneyText(montant, style: t.titleMedium?.copyWith(fontWeight: FontWeight.w700), color: color),
+        if (secondaire != null) ...[const SizedBox(height: 4), secondaire!],
+      ],
+    );
+  }
+}
+
+/// Ligne secondaire en texte (sous un montant de fin de ligne).
+Widget _sousMontant(BuildContext context, String s) => Text(s, style: Theme.of(context).textTheme.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis);
+
+/// En-tête de détail Wise : grande pastille, gros montant, légende ardoise, statuts — posé à plat
+/// sur la toile, avant les détails.
+class _Resume extends StatelessWidget {
+  const _Resume({required this.icon, required this.montant, this.tone = Tone.sage, this.legende, this.badges = const [], this.bas});
+  final IconData icon;
+  final String montant;
+  final Tone tone;
+  final String? legende;
+  final List<Widget> badges;
+  final Widget? bas;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 22),
+      child: Column(
+        children: [
+          SuEnter(child: IconCircle(icon, tone: tone, size: 64, iconSize: 30)),
+          const SizedBox(height: 14),
+          SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: MoneyText(montant, style: t.displayMedium))),
+          if (legende != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(legende!, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
+          if (badges.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: badges)),
+          if (bas != null) Padding(padding: const EdgeInsets.only(top: 18), child: bas!),
+        ],
+      ),
+    );
+  }
+}
+
+/// Ton de pastille dérivé d'un statut.
+Tone _toneDe(BadgeVariant v) => switch (v) {
+      BadgeVariant.ok => Tone.ok,
+      BadgeVariant.warn => Tone.warn,
+      BadgeVariant.danger => Tone.danger,
+      BadgeVariant.info => Tone.tosca,
+      _ => Tone.neutral,
+    };
+
+/// Section secondaire vide : ligne ardoise compacte (pas de carte).
+Widget _vide(BuildContext context, String s) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(s, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)));
+
 // ── D1 Budgets ────────────────────────────────────────────────────────────────
 class BudgetsScreen extends ConsumerWidget {
   const BudgetsScreen({super.key});
@@ -27,54 +91,57 @@ class BudgetsScreen extends ConsumerWidget {
     final ctx = ref.watch(appContextProvider);
     final d = context.dict;
     final l = context.locale;
-    final t = Theme.of(context).textTheme;
     final budgets = ref.watch(budgetsProvider);
     return SuPage(
       title: d.finances.budgets,
       subtitle: d.finances.budgetsSubtitle,
       onRefresh: () async => ref.invalidate(budgetsProvider),
-      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => _form(context, ref, null), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.finances.creerBudget)) : null,
+      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => _form(context, ref, null), icon: const Icon(Icons.add_rounded), label: Text(d.finances.creerBudget)) : null,
       children: [
         SuBanner(tone: BannerTone.info, body: d.finances.budgetActifRequis),
         const SizedBox(height: 12),
         AsyncView(budgets, onRetry: () => ref.invalidate(budgetsProvider), data: (list) {
-          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded);
+          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded, illustration: 'empty-appels');
           final sorted = [...list]..sort((a, b) => b.exercice.compareTo(a.exercice));
-          return CardList([
-            for (final b in sorted)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                child: Row(
-                  children: [
-                    const IconCircle(Icons.account_balance_wallet_rounded, tone: Tone.sand, size: 40),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${d.finances.exercice} ${b.exercice}', style: t.titleSmall),
-                          MoneyText(formatMAD(b.montantTotal, l), style: t.bodySmall),
-                        ],
+          final actif = sorted.where((b) => b.statut == 'ACTIF').firstOrNull;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Budget en vigueur : le « solde » de l'écran, en tête.
+              if (actif != null)
+                _Resume(
+                  icon: Icons.account_balance_wallet_rounded,
+                  tone: Tone.ok,
+                  montant: formatMAD(actif.montantTotal, l),
+                  legende: '${d.finances.exercice} ${actif.exercice}',
+                  badges: [StatusBadge(d.enums.statutBudget[actif.statut] ?? actif.statut, variant: budgetVariant[actif.statut] ?? BadgeVariant.neutral)],
+                ),
+              CardList([
+                for (final b in sorted)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      ListRow(
+                        leading: IconCircle(Icons.account_balance_wallet_rounded, tone: b.statut == 'ACTIF' ? Tone.ok : Tone.sand),
+                        title: '${d.finances.exercice} ${b.exercice}',
+                        trailing: _MontantFin(formatMAD(b.montantTotal, l), secondaire: StatusBadge(d.enums.statutBudget[b.statut] ?? b.statut, variant: budgetVariant[b.statut] ?? BadgeVariant.neutral, small: true)),
                       ),
-                    ),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        StatusBadge(d.enums.statutBudget[b.statut] ?? b.statut, variant: budgetVariant[b.statut] ?? BadgeVariant.neutral, small: true),
-                        if (ctx.isGestion && b.statut != 'ACTIF' && b.statut != 'REMPLACE')
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
+                      if (ctx.isGestion && b.statut != 'ACTIF' && b.statut != 'REMPLACE')
+                        Padding(
+                          padding: const EdgeInsetsDirectional.only(start: 58, bottom: 6),
+                          child: Wrap(
+                            spacing: 14,
                             children: [
-                              if (b.statut == 'PROPOSE') TextButton(style: TextButton.styleFrom(minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: 8)), onPressed: () => _form(context, ref, b), child: Text(d.common.modify)),
-                              TextButton(style: TextButton.styleFrom(minimumSize: const Size(0, 36), padding: const EdgeInsets.symmetric(horizontal: 8)), onPressed: () => _activer(context, ref, b), child: Text(d.finances.activerBudget)),
+                              if (b.statut == 'PROPOSE') LinkButton(d.common.modify, onTap: () => _form(context, ref, b)),
+                              LinkButton(d.finances.activerBudget, onTap: () => _activer(context, ref, b)),
                             ],
                           ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-          ]);
+                        ),
+                    ],
+                  ),
+              ]),
+            ],
+          );
         }),
       ],
     );
@@ -190,60 +257,52 @@ class _AppelsScreenState extends ConsumerState<AppelsScreen> {
     final t = Theme.of(context).textTheme;
     final synthese = ref.watch(syntheseProvider);
     final racine = !context.canPop();
+    Future<void> refresh() async => ref.invalidate(syntheseProvider);
+    final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: _generer, icon: const Icon(Icons.add_rounded), label: Text(d.finances.genererAppel)) : null;
+    final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
+      if (s.appels.isEmpty) return EmptyState(title: d.finances.aucunAppel, hint: ctx.isGestion ? d.finances.aucunAppelAide : null, icon: Icons.request_quote_rounded, illustration: 'empty-appels', actionLabel: ctx.isGestion ? d.finances.genererAppel : null, onAction: _generer);
+      final tot = totauxGlobaux(s);
+      final totaux = totauxParAppel(s);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (ctx.voitFinancesGlobales) ...[
+            TwoCols([
+              StatTile(icon: Icons.insights_rounded, label: d.finances.tauxPaiement, value: formatPourcent(tot.taux), tone: Tone.sage),
+              StatTile(icon: Icons.payments_rounded, label: d.dash.impayes, value: formatMAD(versChaine(tot.impaye), l), tone: Tone.sand),
+            ]),
+            const SizedBox(height: 18),
+          ],
+          // Lignes « transaction » Wise : période en titre, montant appelé gras en fin.
+          CardList([
+            for (final a in s.appels)
+              ListRow(
+                leading: IconCircle(Icons.request_quote_rounded, tone: a.statut == 'CLOTURE' ? Tone.neutral : Tone.sand),
+                title: formatPeriode(a.periode, l),
+                subtitle: '${d.enums.typeAppel[a.type] ?? a.type}\n${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)} · ${formatPourcent(totaux[a.id]?.taux ?? 0)} ${d.finances.paye.toLowerCase()}',
+                trailing: _MontantFin(formatMAD(a.montantTotal, l), secondaire: StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral, small: true)),
+                onTap: () => context.push('/finances/appels-de-fonds/${a.id}'),
+              ),
+          ]),
+        ],
+      );
+    });
+    if (!racine) {
+      return SuPage(title: d.finances.appels, subtitle: d.finances.appelsSubtitle, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [contenu]);
+    }
     return Scaffold(
-      appBar: racine ? ShellHeader(title: d.finances.appels) : AppBar(title: Text(d.finances.appels)),
-      floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: _generer, backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.finances.genererAppel)) : null,
+      appBar: ShellHeader(title: d.finances.appels),
+      floatingActionButton: fab,
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(syntheseProvider),
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
-            Text(d.finances.appelsSubtitle, style: t.bodySmall),
-            const SizedBox(height: 12),
-            AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
-              if (s.appels.isEmpty) return EmptyState(title: d.finances.aucunAppel, hint: ctx.isGestion ? d.finances.aucunAppelAide : null, icon: Icons.request_quote_rounded, actionLabel: ctx.isGestion ? d.finances.genererAppel : null, onAction: _generer);
-              final tot = totauxGlobaux(s);
-              final totaux = totauxParAppel(s);
-              return Column(
-                children: [
-                  if (ctx.voitFinancesGlobales)
-                    TwoCols([
-                      StatTile(label: d.finances.tauxPaiement, value: formatPourcent(tot.taux), tone: Tone.sage),
-                      StatTile(label: d.dash.impayes, value: formatMAD(versChaine(tot.impaye), l), tone: Tone.sand),
-                    ]),
-                  const SizedBox(height: 12),
-                  CardList([
-                    for (final a in s.appels)
-                      InkWell(
-                        onTap: () => context.push('/finances/appels-de-fonds/${a.id}'),
-                        child: Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(child: Text(formatPeriode(a.periode, l), style: t.titleSmall)),
-                                  StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral, small: true),
-                                ],
-                              ),
-                              Text('${d.enums.typeAppel[a.type] ?? a.type} · ${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)}', style: t.labelSmall),
-                              const SizedBox(height: 8),
-                              Row(
-                                children: [
-                                  Expanded(child: Gauge(totaux[a.id]?.taux ?? 0)),
-                                  const SizedBox(width: 10),
-                                  MoneyText('${formatMontant(versChaine(totaux[a.id]?.paye ?? BigInt.zero))} / ${formatMAD(a.montantTotal, l)}', style: t.labelSmall?.copyWith(color: SuColors.ink)),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                  ]),
-                ],
-              );
-            }),
+            Text(d.finances.appelsSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+            const SizedBox(height: 16),
+            contenu,
           ],
         ),
       ),
@@ -297,8 +356,15 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
               case ApiOk<AppelDeFonds>(:final data):
                 ref.invalidate(syntheseProvider);
                 ref.invalidate(appelsProvider);
+                final racine = Navigator.of(this.context, rootNavigator: true).context;
+                final l = this.context.locale;
                 Navigator.pop(context);
                 context.push('/finances/appels-de-fonds/${data.id}');
+                // Succès plein écran, posé au-dessus du détail une fois celui-ci empilé.
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!racine.mounted) return;
+                  showSuccess(racine, title: formatPeriode(data.periode, l), body: '${d.enums.typeAppel[data.type] ?? data.type} · ${formatMAD(data.montantTotal, l)}\n${d.finances.montantReparti}', illustration: 'ok-general');
+                });
               case ApiFail<AppelDeFonds>():
                 setState(() {
                   _loading = false;
@@ -321,7 +387,6 @@ class AppelDetailScreen extends ConsumerWidget {
     final ctx = ref.watch(appContextProvider);
     final d = context.dict;
     final l = context.locale;
-    final t = Theme.of(context).textTheme;
     final appel = ref.watch(appelProvider(id));
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final lotParId = {for (final x in lots) x.id: x};
@@ -332,61 +397,46 @@ class AppelDetailScreen extends ConsumerWidget {
         ref.invalidate(appelProvider(id));
         ref.invalidate(syntheseProvider);
       },
-      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showPaiementSheet(context, ref, appel: appel.valueOrNull), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.payments_rounded), label: Text(d.finances.enregistrerPaiement)) : null,
+      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showPaiementSheet(context, ref, appel: appel.valueOrNull), icon: const Icon(Icons.payments_rounded), label: Text(d.finances.enregistrerPaiement)) : null,
       children: [
         AsyncView(appel, onRetry: () => ref.invalidate(appelProvider(id)), data: (a) {
           final du = sommeCentimes(a.lignes.map((x) => x.montantDu));
           final paye = sommeCentimes(a.lignes.map((x) => x.montantPaye));
           return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SuCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(children: [Expanded(child: MoneyText(formatMAD(a.montantTotal, l), style: t.displaySmall)), StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral)]),
-                    const SizedBox(height: 4),
-                    Text('${d.finances.echeance} · ${formatDate(a.dateEcheance, l)}', style: t.bodySmall),
-                    const SizedBox(height: 12),
-                    Gauge(ratio(paye, du)),
-                    const SizedBox(height: 8),
-                    Row(children: [Expanded(child: Text('${d.finances.paye} ${formatMAD(versChaine(paye), l)}', style: t.labelSmall)), Text('${d.finances.montantReparti.split('.').first} ${formatMAD(versChaine(du), l)}', style: t.labelSmall, textAlign: TextAlign.end)]),
-                  ],
-                ),
+              _Resume(
+                icon: Icons.request_quote_rounded,
+                tone: Tone.sand,
+                montant: formatMAD(a.montantTotal, l),
+                legende: '${d.finances.echeance} · ${formatDate(a.dateEcheance, l)}',
+                badges: [StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral)],
+                bas: Gauge(ratio(paye, du)),
               ),
+              TwoCols([
+                StatTile(icon: Icons.payments_rounded, label: d.finances.paye, value: formatMAD(versChaine(paye), l), tone: Tone.sage, hint: formatPourcent(ratio(paye, du))),
+                StatTile(icon: Icons.hourglass_bottom_rounded, label: d.finances.restant, value: formatMAD(versChaine(du - paye), l), tone: Tone.sand, hint: '${d.finances.du} ${formatMAD(versChaine(du), l)}'),
+              ]),
               SectionHeader(d.finances.lignes, subtitle: d.finances.lignesSubtitle),
               CardList([
                 for (final li in a.lignes)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(lotParId[li.lotId] == null ? li.lotId.substring(0, 8) : '${d.enums.typeLot[lotParId[li.lotId]!.typeLot]} ${lotParId[li.lotId]!.numero}', style: t.titleSmall),
-                              const SizedBox(height: 4),
-                              Wrap(spacing: 6, runSpacing: 4, children: [
-                                StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true),
-                                StatusBadge(d.enums.escalade[li.niveauEscalade] ?? li.niveauEscalade, variant: escaladeVariant(li.niveauEscalade), small: true),
-                                if (li.conteste) StatusBadge(d.enums.conteste, variant: BadgeVariant.warn, small: true),
-                              ]),
-                            ],
-                          ),
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            MoneyText(formatMontant(li.montantDu), style: t.titleSmall),
-                            Text('${d.finances.paye.toLowerCase()} ${formatMontant(li.montantPaye)}', style: t.labelSmall),
-                            if (ctx.isGestion && li.statut != 'PAYE')
-                              TextButton(style: TextButton.styleFrom(minimumSize: const Size(0, 32), padding: const EdgeInsets.symmetric(horizontal: 6)), onPressed: () => showPaiementSheet(context, ref, appel: a, ligneInitiale: li.id), child: Text(d.finances.enregistrerPaiement)),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
+                  Builder(builder: (context) {
+                    final lot = lotParId[li.lotId];
+                    final payable = ctx.isGestion && li.statut != 'PAYE';
+                    final v = ligneAppelVariant[li.statut] ?? BadgeVariant.neutral;
+                    return ListRow(
+                      leading: IconCircle(Icons.home_rounded, tone: _toneDe(v)),
+                      title: lot == null ? li.lotId.substring(0, 8) : '${d.enums.typeLot[lot.typeLot]} ${lot.numero}',
+                      subtitle: [
+                        '${d.finances.paye} ${formatMAD(li.montantPaye, l)}',
+                        if (li.niveauEscalade != 'N0') d.enums.escalade[li.niveauEscalade] ?? li.niveauEscalade,
+                        if (li.conteste) d.enums.conteste,
+                      ].join(' · '),
+                      trailing: _MontantFin(formatMAD(li.montantDu, l), secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: v, small: true)),
+                      // Gestion : toucher une ligne non soldée ouvre le paiement ciblé sur elle.
+                      onTap: payable ? () => showPaiementSheet(context, ref, appel: a, ligneInitiale: li.id) : null,
+                    );
+                  }),
               ]),
             ],
           );
@@ -418,7 +468,6 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
   final _payeur = TextEditingController();
   bool _tropPercu = false, _loading = false;
   ApiFail? _fail;
-  PaiementResult? _resultat;
 
   @override
   void initState() {
@@ -438,29 +487,6 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
     final lotParId = {for (final x in lots) x.id: x};
     final appelParId = {for (final a in synthese.appels) a.id: a};
     final lignes = (widget.appel?.lignes ?? synthese.lignes).where((x) => x.statut != 'PAYE').toList();
-    final resultat = _resultat;
-    if (resultat != null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          SuBanner(tone: BannerTone.ok, title: d.finances.paiementEnregistre, body: resultat.quittance != null ? d.finances.quittanceGeneree : ''),
-          if (resultat.fifo && resultat.affectations.isNotEmpty) ...[
-            SectionHeader(d.finances.fifoRepartition),
-            CardList([
-              for (final a in resultat.affectations)
-                ListRow(title: formatMAD(a.montant, l), trailing: StatusBadge(a.statut == 'PAYE' ? d.finances.fifoLigneSoldee : d.finances.fifoLignePartielle, variant: ligneAppelVariant[a.statut] ?? BadgeVariant.neutral, small: true)),
-            ]),
-          ],
-          const SizedBox(height: 14),
-          if (resultat.quittance != null) FilledButton(onPressed: () {
-            Navigator.pop(context);
-            context.push('/finances/quittances/${resultat.quittance!.id}');
-          }, child: Text(d.finances.voirQuittance)),
-          const SizedBox(height: 8),
-          OutlinedButton(onPressed: () => Navigator.pop(context), child: Text(d.common.close)),
-        ],
-      );
-    }
     String libelleLigne(AppelDeFondsLigne x) {
       final a = appelParId[x.appelDeFondsId] ?? widget.appel;
       final lot = lotParId[x.lotId];
@@ -515,10 +541,30 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         ref.invalidate(appelsProvider);
         ref.invalidate(paiementsProvider);
         if (widget.appel != null) ref.invalidate(appelProvider(widget.appel!.id));
-        setState(() {
-          _loading = false;
-          _resultat = data;
-        });
+        // Succès plein écran Wise : quittance + répartition FIFO dans le corps, « Voir la
+        // quittance » en action de suite (après fermeture du succès).
+        final d = context.dict;
+        final l = context.locale;
+        final racine = Navigator.of(context, rootNavigator: true).context;
+        final router = GoRouter.of(context);
+        final quittance = data.quittance;
+        final corps = [
+          if (quittance != null) d.finances.quittanceGeneree,
+          if (data.fifo && data.affectations.isNotEmpty) ...[
+            d.finances.fifoRepartition,
+            for (final a in data.affectations) '${formatMAD(a.montant, l)} · ${a.statut == 'PAYE' ? d.finances.fifoLigneSoldee : d.finances.fifoLignePartielle}',
+          ],
+        ];
+        Navigator.pop(context);
+        if (!racine.mounted) return;
+        showSuccess(
+          racine,
+          title: d.finances.paiementEnregistre,
+          body: corps.isEmpty ? null : corps.join('\n'),
+          illustration: 'ok-paiement',
+          secondaryLabel: quittance == null ? null : d.finances.voirQuittance,
+          onSecondary: quittance == null ? null : () => router.push('/finances/quittances/${quittance.id}'),
+        );
       case ApiFail<PaiementResult>():
         setState(() {
           _loading = false;
@@ -555,34 +601,47 @@ class QuittanceScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // Reçu Wise : montant réglé en grand, statut, puis le détail de la quittance.
+              _Resume(
+                icon: Icons.verified_rounded,
+                tone: Tone.ok,
+                montant: formatMAD(ligne?.montantPaye ?? paiement.firstOrNull?.montant, l),
+                legende: appel == null ? d.finances.quittance : '${d.finances.quittance} · ${formatPeriode(appel.periode, l)}',
+                badges: [StatusBadge(d.enums.statutLigne['PAYE']!, variant: BadgeVariant.ok)],
+              ),
               SuCard(
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [ClipRRect(borderRadius: BorderRadius.circular(8), child: Image.asset('assets/images/logo.png', width: 28, height: 28)), const SizedBox(width: 8), Expanded(child: Text(ctx.copropriete?.nom ?? '', style: t.titleSmall)), StatusBadge(d.enums.statutLigne['PAYE']!, variant: BadgeVariant.ok, small: true)]),
-                    Text('${ctx.copropriete?.adresse ?? ''} · ${ctx.copropriete?.ville ?? ''}', style: t.labelSmall),
-                    const Divider(height: 28),
-                    Text('${d.finances.quittanceNumero.toUpperCase()} ${qt.numero}', style: t.labelSmall?.copyWith(letterSpacing: 1, fontFamily: 'GeistMono')),
+                    Row(children: [
+                      ClipRRect(borderRadius: BorderRadius.circular(10), child: Image.asset('assets/images/logo.png', width: 32, height: 32)),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                          Text(ctx.copropriete?.nom ?? '', style: t.titleMedium),
+                          Text('${ctx.copropriete?.adresse ?? ''} · ${ctx.copropriete?.ville ?? ''}', style: t.bodySmall),
+                        ]),
+                      ),
+                    ]),
                     const SizedBox(height: 12),
+                    KeyValueRow(fill(d.finances.quittanceNumero, {'numero': ''}).replaceAll(RegExp(r'\s+$'), ''), qt.numero, mono: true),
                     KeyValueRow(d.invitations.lot, lot == null ? '—' : '${lot.numero} · ${d.enums.typeLot[lot.typeLot]}'),
                     KeyValueRow(d.lots.proprietaire, proprietaire == null || proprietaire.isEmpty ? '—' : proprietaire),
                     KeyValueRow(d.finances.periode, appel == null ? '—' : formatPeriode(appel.periode, l)),
                     KeyValueRow(d.finances.methode, paiement.isEmpty ? '—' : (d.enums.methodePaiement[paiement.first.methode] ?? paiement.first.methode)),
                     KeyValueRow(d.finances.emiseLe, formatDate(qt.dateEmission, l)),
-                    const Divider(height: 24),
-                    Text(d.finances.montant, style: t.labelSmall),
-                    MoneyText(formatMAD(ligne?.montantPaye ?? paiement.firstOrNull?.montant, l), style: t.displaySmall),
-                    const SizedBox(height: 14),
-                    Text(d.finances.quittanceCorps, style: t.labelSmall),
+                    KeyValueRow(d.finances.montant, formatMAD(ligne?.montantPaye ?? paiement.firstOrNull?.montant, l)),
+                    const SizedBox(height: 10),
+                    Text(d.finances.quittanceCorps, style: t.bodySmall),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
               SuBanner(tone: BannerTone.info, body: d.finances.quittanceConservation),
-              const SizedBox(height: 14),
+              const SizedBox(height: 18),
               FilledButton.icon(
-                onPressed: () => ouvrirPdfApi(context, ref, endpoint: '/finances/quittances/$id/pdf', titre: '${d.finances.quittanceNumero} ${qt.numero}'),
+                onPressed: () => ouvrirPdfApi(context, ref, endpoint: '/finances/quittances/$id/pdf', titre: fill(d.finances.quittanceNumero, {'numero': qt.numero})),
                 icon: const Icon(Icons.picture_as_pdf_rounded),
                 label: Text('${d.common.download} · PDF'),
               ),
@@ -614,24 +673,38 @@ class ContestationsScreen extends ConsumerWidget {
       onRefresh: () async => ref.invalidate(contestationsProvider),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(contestationsProvider), data: (cs) {
-          if (cs.isEmpty) return EmptyState(title: d.finances.aucuneContestation, icon: Icons.balance_rounded);
+          if (cs.isEmpty) return EmptyState(title: d.finances.aucuneContestation, icon: Icons.balance_rounded, illustration: 'empty-litiges');
           return CardList([
             for (final c in cs)
               Builder(builder: (context) {
                 final ligne = synthese.lignes.where((x) => x.id == c.appelDeFondsLotId).firstOrNull;
                 final appel = ligne == null ? null : synthese.appels.where((a) => a.id == ligne.appelDeFondsId).firstOrNull;
                 final lot = ligne == null ? null : lots.where((x) => x.id == ligne.lotId).firstOrNull;
+                final v = contestationVariant[c.statut] ?? BadgeVariant.neutral;
+                final badge = StatusBadge(d.enums.statutContestation[c.statut] ?? c.statut, variant: v, small: true);
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(children: [Expanded(child: Text(appel == null ? c.appelDeFondsLotId.substring(0, 8) : '${d.enums.typeAppel[appel.type]} · ${formatPeriode(appel.periode, l)}${lot != null ? ' · ${lot.numero}' : ''}', style: t.titleSmall)), StatusBadge(d.enums.statutContestation[c.statut] ?? c.statut, variant: contestationVariant[c.statut] ?? BadgeVariant.neutral, small: true)]),
-                      const SizedBox(height: 4),
-                      Text(c.motif, style: t.bodyMedium),
-                      Text('${formatDateHeure(c.creeLe, l)}${ligne != null ? ' · ${formatMAD(ligne.montantDu, l)}' : ''}', style: t.labelSmall),
-                      if (c.reponseSyndic != null) Padding(padding: const EdgeInsets.only(top: 8), child: SuBanner(tone: BannerTone.info, title: d.finances.reponseSyndic, body: c.reponseSyndic!)),
-                      if (ctx.isGestion && c.statut == 'OUVERTE') Align(alignment: AlignmentDirectional.centerEnd, child: TextButton(onPressed: () => _repondre(context, ref, c), child: Text(d.finances.repondre))),
+                      ListRow(
+                        leading: IconCircle(Icons.balance_rounded, tone: _toneDe(v)),
+                        title: appel == null ? c.appelDeFondsLotId.substring(0, 8) : '${d.enums.typeAppel[appel.type]} · ${formatPeriode(appel.periode, l)}${lot != null ? ' · ${lot.numero}' : ''}',
+                        subtitle: formatDateHeure(c.creeLe, l),
+                        trailing: ligne != null ? _MontantFin(formatMAD(ligne.montantDu, l), secondaire: badge) : badge,
+                      ),
+                      // Motif en entier, réponse du syndic, action — alignés sous le titre.
+                      Padding(
+                        padding: const EdgeInsetsDirectional.only(start: 62),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(c.motif, style: t.bodyMedium?.copyWith(color: SuColors.ink)),
+                            if (c.reponseSyndic != null) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.info, title: d.finances.reponseSyndic, body: c.reponseSyndic!)),
+                            if (ctx.isGestion && c.statut == 'OUVERTE') Padding(padding: const EdgeInsets.only(top: 4), child: LinkButton(d.finances.repondre, onTap: () => _repondre(context, ref, c))),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 );
@@ -720,102 +793,118 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final resident = !ctx.voitFinancesGlobales;
     final racine = !context.canPop();
+    final titre = resident ? c.monReleve : c.titre;
+    final sousTitre = resident ? c.monReleveSubtitle : c.subtitle;
+    Future<void> refresh() async {
+      ref.invalidate(syntheseProvider);
+      ref.invalidate(paiementsProvider);
+      ref.invalidate(budgetsProvider);
+    }
+
+    final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
+      final visibles = resident ? s.lignes.map((x) => x.appelDeFondsId).toSet() : null;
+      final annees = s.appels.where((a) => visibles == null || visibles.contains(a.id)).map((a) => a.periode.substring(0, 4)).toSet().toList()..sort((a, b) => b.compareTo(a));
+      if (annees.isEmpty) return EmptyState(title: c.aucunExercice, icon: Icons.insights_rounded, illustration: 'empty-appels');
+      final annee = _annee ?? annees.first;
+      final appels = s.appels.where((a) => a.periode.startsWith(annee)).toList();
+      final ids = appels.map((a) => a.id).toSet();
+      final lignes = s.lignes.where((x) => ids.contains(x.appelDeFondsId)).toList();
+      final ligneIds = lignes.map((x) => x.id).toSet();
+      final pays = paiements.where((p) => ligneIds.contains(p.appelDeFondsLotId)).toList()..sort((a, b) => b.horodatage.compareTo(a.horodatage));
+      final du = sommeCentimes(lignes.map((x) => x.montantDu));
+      final paye = sommeCentimes(lignes.map((x) => x.montantPaye));
+      final budget = budgets.where((b) => b.exercice.startsWith(annee) && b.statut == 'ACTIF').firstOrNull ?? budgets.where((b) => b.exercice.startsWith(annee)).firstOrNull;
+      final parPeriode = <String, List<AppelDeFondsLigne>>{};
+      final appelParId = {for (final a in appels) a.id: a};
+      for (final x in lignes) {
+        final a = appelParId[x.appelDeFondsId];
+        if (a != null) parPeriode.putIfAbsent(a.periode, () => []).add(x);
+      }
+      final periodes = parPeriode.keys.toList()..sort();
+      final lotParId = {for (final x in lots) x.id: x};
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          FilterChips<String>(value: annee, options: annees, labelOf: (a) => '${c.exercice} $a', onChanged: (a) => setState(() => _annee = a)),
+          const SizedBox(height: 14),
+          TwoCols([
+            StatTile(icon: Icons.request_quote_rounded, label: resident ? c.appeleResident : c.appele, value: formatMAD(versChaine(du), l), tone: Tone.lilac),
+            StatTile(icon: Icons.payments_rounded, label: resident ? c.regle : c.encaisse, value: formatMAD(versChaine(paye), l), tone: Tone.sage),
+            StatTile(icon: Icons.hourglass_bottom_rounded, label: resident ? c.resteAPayer : c.restant, value: formatMAD(versChaine(du - paye), l), tone: du - paye > BigInt.zero ? Tone.warn : Tone.ok),
+            StatTile(icon: Icons.insights_rounded, label: resident ? c.partReglee : c.taux, value: formatPourcent(ratio(paye, du)), tone: Tone.tosca),
+          ]),
+          if (!resident && budget != null) ...[
+            SectionHeader(c.budget),
+            SuCard(child: Column(children: [
+              KeyValueRow(c.budgetVote, formatMAD(budget.montantTotal, l)),
+              KeyValueRow(c.budgetAppele, formatMAD(versChaine(sommeCentimes(appels.map((a) => a.montantTotal))), l)),
+              KeyValueRow(c.budgetEncaisse, formatMAD(versChaine(paye), l)),
+              KeyValueRow(c.budgetEcart, formatMAD(versChaine(versCentimes(budget.montantTotal) - sommeCentimes(appels.map((a) => a.montantTotal))), l)),
+            ])),
+          ],
+          SectionHeader(c.parMois, subtitle: resident ? c.parMoisAideResident : c.parMoisAide),
+          CardList([
+            for (final p in periodes)
+              Builder(builder: (_) {
+                final ls = parPeriode[p]!;
+                final pd = sommeCentimes(ls.map((x) => x.montantDu));
+                final pp = sommeCentimes(ls.map((x) => x.montantPaye));
+                return ListRow(
+                  leading: IconCircle(Icons.calendar_month_rounded, tone: pp >= pd ? Tone.ok : Tone.sand),
+                  title: formatPeriode(p, l),
+                  subtitle: '${c.colAppels}: ${appels.where((a) => a.periode == p).length} · ${formatPourcent(ratio(pp, pd))}',
+                  trailing: _MontantFin(formatMAD(versChaine(pd), l), secondaire: _sousMontant(context, '${resident ? c.regle : c.encaisse} ${formatMontant(versChaine(pp))}')),
+                );
+              }),
+          ]),
+          if (!resident) ...[
+            SectionHeader(c.parLot, subtitle: c.parLotAide),
+            CardList([
+              for (final e in _parLot(lignes))
+                ListRow(
+                  leading: IconCircle(Icons.home_rounded, tone: e.$3 > BigInt.zero ? Tone.sand : Tone.ok),
+                  title: lotParId[e.$1]?.numero ?? e.$1.substring(0, 8),
+                  subtitle: '${c.colEscalade}: ${d.enums.escalade[e.$4] ?? e.$4}',
+                  trailing: _MontantFin(formatMAD(versChaine(e.$3), l), color: e.$3 > BigInt.zero ? SuColors.danger : SuColors.ok, secondaire: _sousMontant(context, c.restant)),
+                  onTap: () => context.push('/lots/${e.$1}?onglet=finances'),
+                ),
+            ]),
+          ],
+          SectionHeader(c.journal, subtitle: resident ? c.journalAideResident : c.journalAide),
+          if (pays.isEmpty)
+            _vide(context, resident ? c.aucunPaiementResident : c.aucunPaiement)
+          else
+            CardList([
+              for (final p in pays.take(30))
+                ListRow(
+                  leading: IconCircle(p.methode == 'ESPECES' ? Icons.payments_rounded : p.methode == 'CHEQUE' ? Icons.receipt_long_rounded : Icons.account_balance_rounded, tone: Tone.sage),
+                  title: [d.enums.methodePaiement[p.methode] ?? p.methode, if (lotParId[p.lotId] != null) lotParId[p.lotId]!.numero].join(' · '),
+                  subtitle: formatDateHeure(p.horodatage, l),
+                  trailing: _MontantFin(formatMAD(p.montant, l), secondaire: StatusBadge(p.statut, variant: p.statut == 'VALIDE' ? BadgeVariant.ok : BadgeVariant.neutral, small: true)),
+                ),
+            ]),
+          if (resident) ...[
+            const SizedBox(height: 18),
+            SuBanner(tone: BannerTone.info, title: c.residentAideTitre, body: '${c.residentAide1}\n${c.residentAide2}\n${c.residentAide3}'),
+          ],
+        ],
+      );
+    });
+    if (!racine) {
+      return SuPage(title: titre, subtitle: sousTitre, onRefresh: refresh, children: [contenu]);
+    }
     return Scaffold(
-      appBar: racine ? ShellHeader(title: resident ? c.monReleve : c.titre) : AppBar(title: Text(resident ? c.monReleve : c.titre)),
+      appBar: ShellHeader(title: titre),
       body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(syntheseProvider);
-          ref.invalidate(paiementsProvider);
-          ref.invalidate(budgetsProvider);
-        },
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
           children: [
-            Text(resident ? c.monReleveSubtitle : c.subtitle, style: t.bodySmall),
-            const SizedBox(height: 12),
-            AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
-              final visibles = resident ? s.lignes.map((x) => x.appelDeFondsId).toSet() : null;
-              final annees = s.appels.where((a) => visibles == null || visibles.contains(a.id)).map((a) => a.periode.substring(0, 4)).toSet().toList()..sort((a, b) => b.compareTo(a));
-              if (annees.isEmpty) return EmptyState(title: c.aucunExercice, icon: Icons.insights_rounded);
-              final annee = _annee ?? annees.first;
-              final appels = s.appels.where((a) => a.periode.startsWith(annee)).toList();
-              final ids = appels.map((a) => a.id).toSet();
-              final lignes = s.lignes.where((x) => ids.contains(x.appelDeFondsId)).toList();
-              final ligneIds = lignes.map((x) => x.id).toSet();
-              final pays = paiements.where((p) => ligneIds.contains(p.appelDeFondsLotId)).toList()..sort((a, b) => b.horodatage.compareTo(a.horodatage));
-              final du = sommeCentimes(lignes.map((x) => x.montantDu));
-              final paye = sommeCentimes(lignes.map((x) => x.montantPaye));
-              final budget = budgets.where((b) => b.exercice.startsWith(annee) && b.statut == 'ACTIF').firstOrNull ?? budgets.where((b) => b.exercice.startsWith(annee)).firstOrNull;
-              final parPeriode = <String, List<AppelDeFondsLigne>>{};
-              final appelParId = {for (final a in appels) a.id: a};
-              for (final x in lignes) {
-                final a = appelParId[x.appelDeFondsId];
-                if (a != null) parPeriode.putIfAbsent(a.periode, () => []).add(x);
-              }
-              final periodes = parPeriode.keys.toList()..sort();
-              final lotParId = {for (final x in lots) x.id: x};
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  FilterChips<String>(value: annee, options: annees, labelOf: (a) => '${c.exercice} $a', onChanged: (a) => setState(() => _annee = a)),
-                  const SizedBox(height: 12),
-                  TwoCols([
-                    StatTile(label: resident ? c.appeleResident : c.appele, value: formatMAD(versChaine(du), l), tone: Tone.lilac),
-                    StatTile(label: resident ? c.regle : c.encaisse, value: formatMAD(versChaine(paye), l), tone: Tone.sage),
-                    StatTile(label: resident ? c.resteAPayer : c.restant, value: formatMAD(versChaine(du - paye), l), tone: Tone.sand, hintColor: SuColors.danger),
-                    StatTile(label: resident ? c.partReglee : c.taux, value: formatPourcent(ratio(paye, du)), tone: Tone.tosca),
-                  ]),
-                  if (!resident && budget != null) ...[
-                    SectionHeader(c.budget),
-                    SuCard(child: Column(children: [
-                      KeyValueRow(c.budgetVote, formatMAD(budget.montantTotal, l)),
-                      KeyValueRow(c.budgetAppele, formatMAD(versChaine(sommeCentimes(appels.map((a) => a.montantTotal))), l)),
-                      KeyValueRow(c.budgetEncaisse, formatMAD(versChaine(paye), l)),
-                      KeyValueRow(c.budgetEcart, formatMAD(versChaine(versCentimes(budget.montantTotal) - sommeCentimes(appels.map((a) => a.montantTotal))), l)),
-                    ])),
-                  ],
-                  SectionHeader(c.parMois, subtitle: resident ? c.parMoisAideResident : c.parMoisAide),
-                  CardList([
-                    for (final p in periodes)
-                      Builder(builder: (_) {
-                        final ls = parPeriode[p]!;
-                        final pd = sommeCentimes(ls.map((x) => x.montantDu));
-                        final pp = sommeCentimes(ls.map((x) => x.montantPaye));
-                        return ListRow(title: formatPeriode(p, l), subtitle: '${c.colAppels}: ${appels.where((a) => a.periode == p).length}', trailing: SizedBox(width: 130, child: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [MoneyText('${formatMontant(versChaine(pp))} / ${formatMontant(versChaine(pd))}', style: t.labelSmall?.copyWith(color: SuColors.ink)), const SizedBox(height: 5), Gauge(ratio(pp, pd), height: 6)])));
-                      }),
-                  ]),
-                  if (!resident) ...[
-                    SectionHeader(c.parLot, subtitle: c.parLotAide),
-                    CardList([
-                      for (final e in _parLot(lignes))
-                        ListRow(
-                          leading: IconCircle(Icons.home_rounded, tone: e.$3 > BigInt.zero ? Tone.sand : Tone.sage, size: 36),
-                          title: lotParId[e.$1]?.numero ?? e.$1.substring(0, 8),
-                          subtitle: '${c.colEscalade}: ${d.enums.escalade[e.$4] ?? e.$4}',
-                          trailing: MoneyText(formatMAD(versChaine(e.$3), l), style: t.titleSmall?.copyWith(color: e.$3 > BigInt.zero ? SuColors.danger : SuColors.ok)),
-                          onTap: () => context.push('/lots/${e.$1}?onglet=finances'),
-                        ),
-                    ]),
-                  ],
-                  SectionHeader(c.journal, subtitle: resident ? c.journalAideResident : c.journalAide),
-                  pays.isEmpty
-                      ? SuCard(child: Text(resident ? c.aucunPaiementResident : c.aucunPaiement, style: t.bodySmall))
-                      : CardList([
-                          for (final p in pays.take(30))
-                            ListRow(
-                              leading: const IconCircle(Icons.payments_rounded, tone: Tone.sage, size: 36),
-                              title: formatMAD(p.montant, l),
-                              subtitle: '${formatDateHeure(p.horodatage, l)} · ${d.enums.methodePaiement[p.methode] ?? p.methode} · ${lotParId[p.lotId]?.numero ?? ''}',
-                              trailing: StatusBadge(p.statut, variant: p.statut == 'VALIDE' ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
-                            ),
-                        ]),
-                  if (resident) ...[
-                    const SizedBox(height: 14),
-                    SuBanner(tone: BannerTone.info, title: c.residentAideTitre, body: '${c.residentAide1}\n${c.residentAide2}\n${c.residentAide3}'),
-                  ],
-                ],
-              );
-            }),
+            Text(sousTitre, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+            const SizedBox(height: 16),
+            contenu,
           ],
         ),
       ),

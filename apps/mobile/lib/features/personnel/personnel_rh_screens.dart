@@ -39,11 +39,11 @@ class MonDossierScreen extends ConsumerWidget {
     final d = context.dict;
     final list = ref.watch(personnelProvider);
     return list.when(
-      loading: () => Scaffold(appBar: AppBar(title: Text(d.personnel.monDossier)), body: const Padding(padding: EdgeInsets.all(16), child: LoadingList())),
-      error: (e, _) => Scaffold(appBar: AppBar(title: Text(d.personnel.monDossier)), body: Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider)))),
+      loading: () => SuPage(title: d.personnel.monDossier, children: const [LoadingList()]),
+      error: (e, _) => SuPage(title: d.personnel.monDossier, children: [ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider))]),
       data: (ps) {
         final mienne = ps.where((p) => p.utilisateurId == ctx.profil.id).firstOrNull;
-        if (mienne == null) return Scaffold(appBar: AppBar(title: Text(d.personnel.monDossier)), body: EmptyState(title: d.personnel.aucuneFiche, icon: Icons.badge_outlined));
+        if (mienne == null) return SuPage(title: d.personnel.monDossier, children: [EmptyState(title: d.personnel.aucuneFiche, icon: Icons.badge_outlined, illustration: 'empty-personnel')]);
         return PersonnelDetailScreen(id: mienne.id, onglet: onglet);
       },
     );
@@ -92,12 +92,11 @@ class _PersonnelDetailScreenState extends ConsumerState<PersonnelDetailScreen> w
     final tabs = _controller(onglets.length, initial < 0 ? 0 : initial);
     String libelle(String o) => switch (o) { 'paie' => d.personnel.onglets.paie, 'conges' => d.personnel.onglets.conges, 'presences' => d.personnel.onglets.presences, _ => d.personnel.onglets.fiche };
     final titre = x == null ? d.personnel.dossier : (soi && !ctx.isGestion ? d.personnel.monDossier : x.fiche.nomAffiche(d.enumsPersonnelRh.poste[x.fiche.poste] ?? x.fiche.poste));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(titre),
-        actions: [if (ctx.isGestion || ctx.isConseil) IconButton(tooltip: d.personnel.planning, icon: const Icon(Icons.calendar_view_week_rounded), onPressed: () => context.push('/personnel/planning'))],
-        bottom: TabBar(controller: tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final o in onglets) Tab(text: libelle(o))]),
-      ),
+    // Page Wise à onglets : bouton rond de retour, titre compact, action ronde (planning).
+    return SuPage(
+      title: titre,
+      actions: [if (ctx.isGestion || ctx.isConseil) CircleIconButton(tooltip: d.personnel.planning, icon: Icons.calendar_view_week_rounded, onTap: () => context.push('/personnel/planning'))],
+      bottom: TabBar(controller: tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [for (final o in onglets) Tab(text: libelle(o))]),
       body: AsyncView(
         detail,
         onRetry: () => ref.invalidate(personnelDetailProvider(widget.id)),
@@ -134,19 +133,23 @@ class _FicheTab extends ConsumerWidget {
     final pm = detail.presencesMois;
     int? joursFin;
     if (p.dateFinContrat != null) joursFin = DateTime.parse(p.dateFinContrat!).difference(DateTime.now()).inDays + 1;
+    final t = Theme.of(context).textTheme;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 32),
       children: [
-        Row(children: [
-          Avatar(nom, size: 48),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(nom, style: Theme.of(context).textTheme.titleMedium),
-            Text('${e.poste[p.poste] ?? p.poste}${p.typeContrat != null && complet ? ' · ${e.typeContratTravail[p.typeContrat!] ?? p.typeContrat}' : ''}', style: Theme.of(context).textTheme.bodySmall),
-          ])),
-          StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, pulse: p.statut == 'ABSENT'),
-        ]),
-        if (complet && joursFin != null && joursFin >= 0 && joursFin <= 30) Padding(padding: const EdgeInsets.only(top: 12), child: SuBanner(tone: BannerTone.warn, body: fill(d.personnel.finContratProche, {'n': '$joursFin'}))),
+        // Bloc de synthèse Wise : grand avatar, nom en grand, poste, statut.
+        SuEnter(
+          child: Column(children: [
+            Avatar(nom, size: 76),
+            const SizedBox(height: 14),
+            Text(nom, style: t.displaySmall, textAlign: TextAlign.center),
+            const SizedBox(height: 4),
+            Text('${e.poste[p.poste] ?? p.poste}${p.typeContrat != null && complet ? ' · ${e.typeContratTravail[p.typeContrat!] ?? p.typeContrat}' : ''}', style: t.bodyLarge?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
+            const SizedBox(height: 12),
+            StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, pulse: p.statut == 'ABSENT'),
+          ]),
+        ),
+        if (complet && joursFin != null && joursFin >= 0 && joursFin <= 30) Padding(padding: const EdgeInsets.only(top: 20), child: SuBanner(tone: BannerTone.warn, body: fill(d.personnel.finContratProche, {'n': '$joursFin'}))),
         SectionHeader(d.personnel.dossier),
         SuCard(child: Column(children: [
           KeyValueRow(d.personnel.logement, p.logementLotNumero ?? d.personnel.aucuneLoge),
@@ -159,7 +162,16 @@ class _FicheTab extends ConsumerWidget {
             KeyValueRow(d.personnel.contactUrgence, p.contactUrgence ?? '—'),
           ],
         ])),
-        if (complet && (p.notes?.isNotEmpty ?? false)) Padding(padding: const EdgeInsets.only(top: 10), child: SuCard(color: SuColors.canvas, child: Text(p.notes!, style: Theme.of(context).textTheme.bodyMedium))),
+        if (complet && (p.notes?.isNotEmpty ?? false))
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: SuCard(
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                const Padding(padding: EdgeInsetsDirectional.only(top: 2, end: 12), child: Icon(Icons.sticky_note_2_outlined, size: 20, color: SuColors.link)),
+                Expanded(child: Text(p.notes!, style: t.bodyMedium)),
+              ]),
+            ),
+          ),
         SectionHeader(d.personnel.horaires),
         SuCard(child: Column(children: [
           for (final j in _jours)
@@ -175,7 +187,7 @@ class _FicheTab extends ConsumerWidget {
             StatTile(label: d.personnel.acquis, value: '${solde['acquis'] ?? '—'}', icon: Icons.beach_access_rounded, tone: Tone.sage),
             StatTile(label: d.personnel.solde, value: '${solde['solde'] ?? '—'}', icon: Icons.event_available_rounded, tone: Tone.ok, hint: '${d.personnel.pris} ${solde['pris'] ?? '0'}'),
           ]),
-          if (solde['parametres_non_configures'] == true) Padding(padding: const EdgeInsets.only(top: 8), child: Text(d.personnel.soldeNonConfigure, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SuColors.warn))),
+          if (solde['parametres_non_configures'] == true) Padding(padding: const EdgeInsets.only(top: 12), child: SuBanner(tone: BannerTone.warn, body: d.personnel.soldeNonConfigure)),
         ],
         if (complet && pm != null) ...[
           SectionHeader('${d.personnel.presences} · ${formatPeriode('${pm['periode']}', l)}'),
@@ -188,7 +200,7 @@ class _FicheTab extends ConsumerWidget {
           SectionHeader(d.personnel.contratTravail),
           CardList([
             ListRow(
-              leading: const IconCircle(Icons.description_outlined, tone: Tone.ink, size: 40),
+              leading: const IconCircle(Icons.description_rounded, tone: Tone.lilac),
               title: '${p.documentContrat!['nom'] ?? d.personnel.contratTravail}',
               chevron: true,
               onTap: () => ouvrirFichierApi(context, ref, endpoint: '/documents/${p.documentContrat!['id']}/download-url', titre: '${p.documentContrat!['nom'] ?? ''}'),
@@ -211,28 +223,48 @@ class _PaieTab extends ConsumerWidget {
     final langue = context.locale.isAr ? 'ar' : 'fr';
     final fiches = ref.watch(fichesPaieProvider(detail.fiche.id));
     final nonConfigure = gestion && detail.paie != null && detail.paie!['parametres_configures'] == false;
+    final t = Theme.of(context).textTheme;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(fichesPaieProvider(detail.fiche.id)),
-      color: SuColors.action,
+      color: SuColors.link,
+      backgroundColor: SuColors.surface,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           if (nonConfigure) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.warn, title: d.personnel.paieNonConfiguree, body: d.personnel.paieNonConfigureeCorps)),
           AsyncView(fiches, onRetry: () => ref.invalidate(fichesPaieProvider(detail.fiche.id)), data: (fs) {
-            if (fs.isEmpty) return EmptyState(title: d.personnel.aucuneFichePaie, icon: Icons.receipt_long_outlined);
-            return CardList([
-              for (final f in fs)
-                ListRow(
-                  leading: IconCircle(Icons.receipt_long_outlined, tone: f.statut == 'PAYEE' ? Tone.ok : (f.statut == 'VALIDEE' ? Tone.action : Tone.neutral), size: 40),
-                  title: formatPeriode(f.periode, l),
-                  subtitle: '${d.personnel.net} ${formatMAD(f.net, l)} · ${d.personnel.brut} ${formatMAD(f.brut, l)}',
-                  trailing: StatusBadge(d.enumsPersonnelRh.statutFichePaie[f.statut] ?? f.statut, variant: fichePaieVariant[f.statut] ?? BadgeVariant.neutral, small: true),
-                  chevron: true,
-                  onTap: () => ouvrirPdfApi(context, ref, endpoint: '/personnel/${f.personnelId}/fiches-paie/${f.id}/pdf', query: {'langue': langue}, titre: '${d.personnel.fichePaie} ${f.periode}'),
-                ),
+            if (fs.isEmpty) return EmptyState(title: d.personnel.aucuneFichePaie, icon: Icons.receipt_long_outlined, illustration: 'empty-documents');
+            // Solde Wise : dernier net versé en grand chiffre, puis l'historique à plat.
+            final derniere = fs.reduce((a, b) => a.periode.compareTo(b.periode) >= 0 ? a : b);
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              SuCard(
+                padding: const EdgeInsets.all(20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text('${d.personnel.net} · ${formatPeriode(derniere.periode, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft))),
+                    StatusBadge(d.enumsPersonnelRh.statutFichePaie[derniere.statut] ?? derniere.statut, variant: fichePaieVariant[derniere.statut] ?? BadgeVariant.neutral, small: true),
+                  ]),
+                  const SizedBox(height: 10),
+                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(formatMAD(derniere.net, l), style: t.displayMedium)),
+                  const SizedBox(height: 4),
+                  Text('${d.personnel.brut} ${formatMAD(derniere.brut, l)}', style: t.bodySmall),
+                ]),
+              ),
+              SectionHeader(d.personnel.fichesPaie),
+              CardList([
+                for (final f in fs)
+                  ListRow(
+                    leading: IconCircle(Icons.receipt_long_rounded, tone: f.statut == 'PAYEE' ? Tone.ok : (f.statut == 'VALIDEE' ? Tone.action : Tone.neutral)),
+                    title: formatPeriode(f.periode, l),
+                    subtitle: '${d.personnel.net} ${formatMAD(f.net, l)} · ${d.personnel.brut} ${formatMAD(f.brut, l)}',
+                    trailing: StatusBadge(d.enumsPersonnelRh.statutFichePaie[f.statut] ?? f.statut, variant: fichePaieVariant[f.statut] ?? BadgeVariant.neutral, small: true),
+                    chevron: true,
+                    onTap: () => ouvrirPdfApi(context, ref, endpoint: '/personnel/${f.personnelId}/fiches-paie/${f.id}/pdf', query: {'langue': langue}, titre: '${d.personnel.fichePaie} ${f.periode}'),
+                  ),
+              ]),
             ]);
           }),
-          Padding(padding: const EdgeInsets.only(top: 12), child: Text(d.personnel.mentionPaie, style: Theme.of(context).textTheme.bodySmall)),
+          Padding(padding: const EdgeInsets.only(top: 16), child: Text(d.personnel.mentionPaie, style: t.bodySmall)),
         ],
       ),
     );
@@ -256,26 +288,41 @@ class _CongesTab extends ConsumerWidget {
       ref.invalidate(personnelDetailProvider(id));
       ref.invalidate(congesEnAttenteProvider);
     }
+    final t = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: (gestion || soi) && detail.fiche.statut != 'PARTI'
           ? FloatingActionButton.extended(
               onPressed: () => showFormSheet<void>(context, title: d.personnel.demanderCongeTitre, builder: (_) => _CongeForm(personnelId: id, onDone: rafraichir)),
-              backgroundColor: SuColors.ink,
-              foregroundColor: Colors.white,
               icon: const Icon(Icons.add_rounded),
               label: Text(d.personnel.demanderConge),
             )
           : null,
       body: RefreshIndicator(
         onRefresh: () async => rafraichir(),
-        color: SuColors.action,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
-            if (solde != null) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text('${d.personnel.soldeConges} ${solde['annee'] ?? ''} : ${d.personnel.acquis} ${solde['acquis'] ?? '—'} · ${d.personnel.pris} ${solde['pris'] ?? '0'} · ${d.personnel.solde} ${solde['solde'] ?? '—'}', style: Theme.of(context).textTheme.bodySmall)),
+            // Solde Wise : jours restants en grand chiffre, acquis / pris dessous.
+            if (solde != null)
+              SuCard(
+                padding: const EdgeInsets.all(20),
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text('${d.personnel.soldeConges} ${solde['annee'] ?? ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft))),
+                    const IconCircle(Icons.beach_access_rounded, tone: Tone.sage, size: 40, iconSize: 20),
+                  ]),
+                  const SizedBox(height: 6),
+                  AnimatedDigits('${solde['solde'] ?? '—'}', style: t.displayMedium),
+                  const SizedBox(height: 4),
+                  Text('${d.personnel.acquis} ${solde['acquis'] ?? '—'} · ${d.personnel.pris} ${solde['pris'] ?? '0'}', style: t.bodySmall),
+                ]),
+              ),
             AsyncView(conges, onRetry: rafraichir, data: (cs) {
-              if (cs.isEmpty) return EmptyState(title: d.personnel.aucunConge, icon: Icons.beach_access_outlined);
+              if (cs.isEmpty) return EmptyState(title: d.personnel.aucunConge, icon: Icons.beach_access_outlined, illustration: 'empty-personnel');
               return CardList([
                 for (final c in cs)
                   _CongeRow(conge: c, gestion: gestion, soi: soi, onDone: rafraichir, sousTitre: '${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)} · ${c.nbJours} ${d.personnel.nbJours.toLowerCase()}${c.remplacantNom != null ? ' · ${d.personnel.remplacant} ${c.remplacantNom}' : ''}${c.motifRefus != null ? '\n${d.personnel.motifRefus} : ${c.motifRefus}' : ''}', titre: '${e.typeConge[c.type] ?? c.type}${c.motif != null ? ' · ${c.motif}' : ''}'),
@@ -353,7 +400,7 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
       trailing = StatusBadge(d.enumsPersonnelRh.statutConge[c.statut] ?? c.statut, variant: congeVariant[c.statut] ?? BadgeVariant.neutral, small: true);
     }
     return ListRow(
-      leading: IconCircle(c.type == 'MALADIE' ? Icons.medical_services_outlined : Icons.beach_access_outlined, tone: enAttente ? Tone.warn : Tone.sage, size: 40),
+      leading: IconCircle(c.type == 'MALADIE' ? Icons.medical_services_rounded : Icons.beach_access_rounded, tone: enAttente ? Tone.warn : Tone.sage),
       title: widget.titre,
       subtitle: widget.sousTitre,
       trailing: trailing,
@@ -432,8 +479,10 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                   }
                   widget.onDone();
                   if (!context.mounted) return;
+                  // Contexte racine capturé avant de fermer la feuille : l'écran de succès s'y pose.
+                  final racine = Navigator.of(context, rootNavigator: true);
                   Navigator.pop(context);
-                  showToast(context, d.personnel.congeDemande);
+                  if (racine.mounted) showSuccess(racine.context, title: d.personnel.congeDemande, illustration: 'ok-general');
                 },
         ),
       ],
@@ -450,21 +499,23 @@ class _DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    // Même champ que SuSelect : libellé encre, boîte blanche à liseré, glyphe vert profond.
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(label, style: t.labelLarge),
-      const SizedBox(height: 6),
-      InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(SuRadius.field),
-        child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(border: Border.all(color: error != null ? SuColors.danger : SuColors.hairlineStrong), borderRadius: BorderRadius.circular(SuRadius.field), color: SuColors.surface),
-          alignment: AlignmentDirectional.centerStart,
-          child: Row(children: [
-            Expanded(child: Text(value ?? '—', style: t.bodyMedium?.copyWith(color: value == null ? SuColors.soft : SuColors.ink))),
-            const Icon(Icons.calendar_today_outlined, size: 18, color: SuColors.soft),
-          ]),
+      Text(label, style: t.labelMedium?.copyWith(color: SuColors.ink)),
+      const SizedBox(height: 8),
+      Material(
+        color: SuColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(SuRadius.field),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
+            child: Row(children: [
+              Expanded(child: Text(value ?? '—', maxLines: 1, overflow: TextOverflow.ellipsis, style: t.bodyLarge?.copyWith(color: value == null ? SuColors.faint : SuColors.ink))),
+              const Icon(Icons.calendar_today_rounded, size: 18, color: SuColors.link),
+            ]),
+          ),
         ),
       ),
       if (error != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text(error!, style: t.bodySmall?.copyWith(color: SuColors.danger))),
@@ -511,11 +562,13 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     final a = int.parse(_periode.substring(0, 4));
     final m = int.parse(_periode.substring(5, 7));
     final nbJours = DateTime(a, m + 1, 0).day;
+    final t = Theme.of(context).textTheme;
     return RefreshIndicator(
       onRefresh: () async => ref.invalidate(presencesProvider(cle)),
-      color: SuColors.action,
+      color: SuColors.link,
+      backgroundColor: SuColors.surface,
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
           if (widget.soi && widget.detail.fiche.statut != 'PARTI')
             AsyncView(presences, onRetry: () => ref.invalidate(presencesProvider(cle)), loading: const SizedBox.shrink(), data: (ps) {
@@ -530,36 +583,50 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
               padding: const EdgeInsets.only(bottom: 12),
               child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: TextButton(onPressed: () => ref.read(presenceSyncProvider.notifier).flush(), child: Text(d.common.retry))),
             ),
-          Row(children: [
-            IconButton(tooltip: d.personnel.moisPrecedent, icon: const Icon(Icons.chevron_left_rounded), onPressed: () => setState(() => _periode = _decalerMois(_periode, -1))),
-            Expanded(child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleMedium)),
-            IconButton(tooltip: d.personnel.moisSuivant, icon: const Icon(Icons.chevron_right_rounded), onPressed: () => setState(() => _periode = _decalerMois(_periode, 1))),
-          ]),
+          // Sélecteur de mois Wise : boutons ronds (miroir RTL), mois en grand au centre.
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: Row(children: [
+              CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
+              Expanded(child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: t.headlineSmall)),
+              CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
+            ]),
+          ),
+          const SizedBox(height: 12),
           AsyncView(presences, onRetry: () => ref.invalidate(presencesProvider(cle)), data: (ps) {
             final parDate = {for (final p in ps) p.date: p};
-            return Column(children: [
+            return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(spacing: 6, runSpacing: 6, children: [
                 for (final s in const ['PRESENT', 'ABSENT', 'CONGE', 'MALADIE'])
                   StatusBadge('${e.statutPresence[s] ?? s} · ${ps.where((p) => p.statut == s).length}', variant: presenceVariant[s] ?? BadgeVariant.neutral, small: true),
               ]),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               CardList([
                 for (var i = 1; i <= nbJours; i++)
                   Builder(builder: (_) {
                     final iso = '$_periode-${i.toString().padLeft(2, '0')}';
                     final p = parDate[iso];
                     final enFile = file.any((q) => q.date == iso && !q.definitif);
+                    final (IconData icone, Tone ton) = switch (p?.statut) {
+                      'PRESENT' => (Icons.check_rounded, Tone.ok),
+                      'ABSENT' => (Icons.close_rounded, Tone.danger),
+                      'CONGE' => (Icons.beach_access_rounded, Tone.sage),
+                      'MALADIE' => (Icons.medical_services_rounded, Tone.warn),
+                      null => (enFile ? Icons.cloud_upload_rounded : Icons.calendar_today_rounded, Tone.neutral),
+                      _ => (Icons.event_rounded, Tone.neutral),
+                    };
                     return ListRow(
+                      leading: IconCircle(icone, tone: ton),
                       title: formatJourAnnee(iso, l),
                       subtitle: p?.commentaire,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(vertical: 8),
                       trailing: p != null
                           ? StatusBadge(e.statutPresence[p.statut] ?? p.statut, variant: presenceVariant[p.statut] ?? BadgeVariant.neutral, small: true)
-                          : (enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : Text('—', style: TextStyle(color: SuColors.soft))),
+                          : (enFile ? const Icon(Icons.cloud_upload_rounded, size: 18, color: SuColors.soft) : Text('—', style: t.bodyMedium?.copyWith(color: SuColors.faint))),
                     );
                   }),
               ]),
-              if (widget.gestion) Padding(padding: const EdgeInsets.only(top: 12), child: Text(d.personnel.saisirPresencesAide, style: Theme.of(context).textTheme.bodySmall)),
+              if (widget.gestion) Padding(padding: const EdgeInsets.only(top: 12), child: Text(d.personnel.saisirPresencesAide, style: t.bodySmall)),
             ]);
           }),
         ],
@@ -594,20 +661,19 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
       subtitle: x == null ? d.personnel.planningSubtitle : '${formatJourAnnee(x.jours.first, l)} → ${formatJourAnnee(x.jours.last, l)}',
       onRefresh: () async => ref.invalidate(planningProvider(_semaine)),
       children: [
+        // Navigation de semaine Wise : boutons ronds (miroir RTL) de part et d'autre du lien « Aujourd'hui ».
         Row(children: [
-          Expanded(child: OutlinedButton.icon(onPressed: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7)), icon: const Icon(Icons.chevron_left_rounded), label: Text(d.personnel.semainePrecedente, overflow: TextOverflow.ellipsis))),
-          const SizedBox(width: 8),
-          TextButton(onPressed: () => setState(() => _semaine = null), child: Text(d.common.today)),
-          const SizedBox(width: 8),
-          Expanded(child: OutlinedButton.icon(onPressed: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7)), icon: const Icon(Icons.chevron_right_rounded), label: Text(d.personnel.semaineSuivante, overflow: TextOverflow.ellipsis))),
+          CircleIconButton(tooltip: d.personnel.semainePrecedente, icon: Icons.chevron_left_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7))),
+          Expanded(child: Center(child: LinkButton(d.common.today, onTap: () => setState(() => _semaine = null)))),
+          CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
         ]),
-        const SizedBox(height: 12),
+        const SizedBox(height: 4),
         AsyncView(planning, onRetry: () => ref.invalidate(planningProvider(_semaine)), data: (x) {
-          if (x.personnels.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, icon: Icons.calendar_view_week_outlined);
+          if (x.personnels.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, icon: Icons.calendar_view_week_outlined, illustration: 'empty-personnel');
           return Column(children: [
             for (final pp in x.personnels) ...[
               SectionHeader(pp.fiche.nomAffiche(e.poste[pp.fiche.poste] ?? pp.fiche.poste), subtitle: e.poste[pp.fiche.poste] ?? pp.fiche.poste, actionLabel: d.personnel.dossier, onAction: () => context.push('/personnel/${pp.fiche.id}')),
-              SuCard(padding: EdgeInsets.zero, child: Column(children: [
+              SuCard(padding: const EdgeInsets.symmetric(vertical: 6), child: Column(children: [
                 for (var i = 0; i < pp.jours.length; i++)
                   Builder(builder: (_) {
                     final j = pp.jours[i];

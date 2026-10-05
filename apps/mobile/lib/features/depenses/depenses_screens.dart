@@ -70,13 +70,32 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
           depenses,
           onRetry: () => ref.invalidate(depensesProvider(statut)),
           data: (rows) => rows.isEmpty
-              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded)
+              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
               : CardList([for (final x in rows) DepenseRow(x)]),
         ),
       ],
     );
   }
 }
+
+/// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
+class _MontantFin extends StatelessWidget {
+  const _MontantFin(this.montant, {this.secondaire});
+  final String montant;
+  final Widget? secondaire;
+  @override
+  Widget build(BuildContext context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          MoneyText(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          if (secondaire != null) ...[const SizedBox(height: 4), secondaire!],
+        ],
+      );
+}
+
+/// Section secondaire vide : ligne ardoise compacte (pas de carte).
+Widget _vide(BuildContext context, String s) => Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Text(s, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)));
 
 class DepenseRow extends StatelessWidget {
   const DepenseRow(this.x, {super.key});
@@ -87,14 +106,10 @@ class DepenseRow extends StatelessWidget {
     final l = context.locale;
     final sous = [formatDate(x.dateDepense, l), d.enumsDepenses.categorieDepense[x.categorie] ?? x.categorie, if (x.prestataire != null) x.prestataire!.nom].join(' · ');
     return ListRow(
-      leading: IconCircle(Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sage, size: 40),
+      leading: IconCircle(x.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand),
       title: x.libelle,
       subtitle: sous,
-      trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-        MoneyText(formatMAD(x.montantTtc, l)),
-        const SizedBox(height: 4),
-        StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true),
-      ]),
+      trailing: _MontantFin(formatMAD(x.montantTtc, l), secondaire: StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true)),
       onTap: () => context.push('/depenses/${x.id}'),
     );
   }
@@ -135,21 +150,29 @@ class DepenseDetailScreen extends ConsumerWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SuCard(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Wrap(spacing: 6, runSpacing: 6, children: [
+              // En-tête Wise : grande pastille, montant TTC en grand, statuts — puis le détail.
+              Padding(
+                padding: const EdgeInsets.only(top: 4, bottom: 22),
+                child: Column(children: [
+                  SuEnter(child: IconCircle(x.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand, size: 64, iconSize: 30)),
+                  const SizedBox(height: 14),
+                  SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: MoneyText(formatMAD(x.montantTtc, l), style: t.displayMedium))),
+                  Padding(padding: const EdgeInsets.only(top: 4), child: Text(d.depenses.montantTtc, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
+                  const SizedBox(height: 12),
+                  Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
                     StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral),
                     StatusBadge(d.enumsDepenses.sourceFinancement[x.source] ?? x.source, variant: x.source == 'FONDS_RESERVE' ? BadgeVariant.info : BadgeVariant.outline),
                     if (x.budgetPoste != null) StatusBadge(x.budgetPoste!.nom, variant: BadgeVariant.neutral),
                   ]),
-                  const SizedBox(height: 14),
-                  Text(d.depenses.montantTtc, style: t.labelMedium),
-                  MoneyText(formatMAD(x.montantTtc, l), style: t.headlineMedium?.copyWith(fontWeight: FontWeight.w700)),
+                ]),
+              ),
+              SuCard(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (x.montantHt != null) ...[
-                    const SizedBox(height: 8),
                     KeyValueRow(d.depenses.montantHt, formatMAD(x.montantHt, l)),
                     KeyValueRow(d.depenses.tva, formatMAD(x.tva, l)),
                   ],
+                  KeyValueRow(d.depenses.montantTtc, formatMAD(x.montantTtc, l)),
                   KeyValueRow(d.depenses.date, formatDate(x.dateDepense, l)),
                   if (x.description != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(x.description!, style: t.bodyMedium?.copyWith(color: SuColors.ink))),
                 ]),
@@ -174,7 +197,7 @@ class DepenseDetailScreen extends ConsumerWidget {
                 if (peutPayer) SubmitButton(label: d.depenses.payer, icon: Icons.photo_camera_rounded, onPressed: () => _payer(context, ref, x)),
                 if (peutAnnuler) ...[
                   const SizedBox(height: 8),
-                  TextButton(onPressed: () => _annuler(context, ref, x), child: Text(d.depenses.annuler, style: const TextStyle(color: SuColors.danger))),
+                  Center(child: LinkButton(d.depenses.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, x))),
                 ],
               ],
               // Paiement
@@ -205,26 +228,22 @@ class DepenseDetailScreen extends ConsumerWidget {
               // Factures
               SectionHeader(d.depenses.factures),
               if (x.factures.isEmpty)
-                SuCard(child: Text(d.depenses.aucuneFacture, style: t.bodySmall))
+                _vide(context, d.depenses.aucuneFacture)
               else
                 CardList([
                   for (int k = 0; k < x.factures.length; k++)
                     ListRow(
-                      leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.sand, size: 40),
+                      leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.sand),
                       title: x.factures[k].numero ?? d.depenses.facture,
                       subtitle: '${formatDate(x.factures[k].dateFacture, l)}${x.factures[k].dateEcheance != null ? ' · ${d.depenses.dateEcheance} ${formatDate(x.factures[k].dateEcheance, l)}' : ''}',
-                      trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                        MoneyText(formatMAD(x.factures[k].montantTtc, l)),
-                        const SizedBox(height: 4),
-                        StatusBadge(d.enumsDepenses.statutFacture[x.factures[k].statut] ?? x.factures[k].statut, variant: factureVariant[x.factures[k].statut] ?? BadgeVariant.neutral, small: true),
-                      ]),
+                      trailing: _MontantFin(formatMAD(x.factures[k].montantTtc, l), secondaire: StatusBadge(d.enumsDepenses.statutFacture[x.factures[k].statut] ?? x.factures[k].statut, variant: factureVariant[x.factures[k].statut] ?? BadgeVariant.neutral, small: true)),
                       onTap: docs != null && k < docs.factures.length ? () => ouvrirVisionneuse(context, titre: docs.factures[k].nom, url: docs.factures[k].url) : null,
                     ),
                 ]),
               // Journal append-only
               SectionHeader(d.depenses.journal, subtitle: d.depenses.journalAide),
               if (x.logs.isEmpty)
-                SuCard(child: Text(d.depenses.journalVide, style: t.bodySmall))
+                _vide(context, d.depenses.journalVide)
               else
                 SuCard(
                   child: Column(children: [
@@ -287,7 +306,7 @@ class _LogItem extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final ok = log.type == 'PAYEE' || log.type == 'APPROUVEE';
     final ko = log.type == 'REJETEE' || log.type == 'ANNULEE' || log.type == 'FACTURE_CONTESTEE';
-    final couleur = ok ? SuColors.ok : ko ? SuColors.danger : SuColors.action;
+    final couleur = ok ? SuColors.ok : ko ? SuColors.danger : SuColors.link;
     final motif = log.details['motif'];
     final methode = log.details['methode'];
     final reference = log.details['reference'];
@@ -428,7 +447,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         const SizedBox(height: 10),
         ListRow(
           padding: EdgeInsets.zero,
-          leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral, size: 36),
+          leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral),
           title: d.depenses.datePaiement,
           subtitle: formatDate(jourIso(_date), l),
           chevron: true,
@@ -444,10 +463,10 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         const SizedBox(height: 8),
         Wrap(spacing: 8, runSpacing: 8, children: [
           if (_piece != null)
-            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.action), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
+            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
           else
             ActionChip(
-              avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.action),
+              avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link),
               label: Text(d.depenses.prendrePhoto),
               onPressed: () async {
                 final p = await choisirPiece(context);
@@ -485,8 +504,11 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
                   switch (r) {
                     case ApiOk<Depense>():
                       widget.onDone();
+                      // Paiement enregistré → succès plein écran Wise.
+                      final racine = Navigator.of(this.context, rootNavigator: true).context;
                       Navigator.pop(context);
-                      showToast(context, x.source == 'FONDS_RESERVE' ? '${d.depenses.payee} ${d.depenses.payeeReserve}' : d.depenses.payee);
+                      if (!racine.mounted) return;
+                      showSuccess(racine, title: d.depenses.payee, body: x.source == 'FONDS_RESERVE' ? '${x.libelle} · ${formatMAD(x.montantTtc, l)}\n${d.depenses.payeeReserve}' : '${x.libelle} · ${formatMAD(x.montantTtc, l)}', illustration: 'ok-paiement');
                     case ApiFail<Depense>():
                       setState(() {
                         _loading = false;

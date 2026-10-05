@@ -52,43 +52,59 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final incidents = ref.watch(incidentsProvider);
     final titre = ctx.isPrestataire ? d.incidents.mesTickets : ctx.isResident ? d.incidents.mesSignalements : d.incidents.titre;
     final racine = !context.canPop();
+    final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
+    Future<void> refresh() async => ref.invalidate(incidentsProvider);
+    final contenu = <Widget>[
+      FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+      const SizedBox(height: 16),
+      AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
+        final visible = list.where((i) => _statut == 'TOUS' || (_statut == 'OUVERTS' ? i.ouvert : i.statut == _statut)).toList()..sort((a, b) => b.creeLe.compareTo(a.creeLe));
+        if (visible.isEmpty) {
+          // Filtre précis sans résultat : illustration « recherche » ; sinon la boîte à outils.
+          final filtre = _statut != 'OUVERTS' && _statut != 'TOUS';
+          return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: filtre ? 'empty-search' : 'empty-incidents', actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
+        }
+        return CardList([
+          for (final i in visible)
+            ListRow(
+              leading: IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : incidentTone(i.statut)),
+              title: i.sousCategorie,
+              subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie} · ${formatDateHeure(i.creeLe, context.locale)}',
+              trailing: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
+                  const SizedBox(height: 4),
+                  StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
+                ],
+              ),
+              onTap: () => context.push('/incidents/${i.id}'),
+            ),
+        ]);
+      }),
+    ];
+    // Ouverte depuis « Plus » / un lien : page Wise (grand titre, retour rond) ; racine d'onglet : en-tête du shell.
+    if (!racine) return SuPage(title: titre, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: contenu);
     return Scaffold(
-      appBar: racine ? ShellHeader(title: titre) : AppBar(title: Text(titre)),
-      floatingActionButton: ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler)),
+      appBar: ShellHeader(title: titre),
+      floatingActionButton: fab,
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(incidentsProvider),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-          children: [
-            FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
-            const SizedBox(height: 12),
-            AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
-              final visible = list.where((i) => _statut == 'TOUS' || (_statut == 'OUVERTS' ? i.ouvert : i.statut == _statut)).toList()..sort((a, b) => b.creeLe.compareTo(a.creeLe));
-              if (visible.isEmpty) return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
-              return CardList([
-                for (final i in visible)
-                  ListRow(
-                    leading: IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : Tone.tosca, size: 40),
-                    title: i.sousCategorie,
-                    subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie} · ${formatDateHeure(i.creeLe, context.locale)}',
-                    trailing: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
-                        const SizedBox(height: 4),
-                        i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
-                      ],
-                    ),
-                    onTap: () => context.push('/incidents/${i.id}'),
-                  ),
-              ]);
-            }),
-          ],
-        ),
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 96), children: contenu),
       ),
     );
   }
 }
+
+/// Ton de pastille selon le statut (ouvert → sable, en cours → lilas, résolu → ok, fermé → neutre).
+Tone incidentTone(String statut) => switch (statut) {
+      'OUVERT' => Tone.sand,
+      'EN_COURS' => Tone.lilac,
+      'RESOLU' => Tone.ok,
+      _ => Tone.neutral,
+    };
 
 // ── F2 Signalement guidé ──────────────────────────────────────────────────────
 class IncidentFormScreen extends ConsumerStatefulWidget {
@@ -140,61 +156,37 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
     return SuPage(
       title: d.incidents.signaler,
       children: [
-        Text('1 · ${d.incidents.categorie}', style: t.titleSmall),
-        const SizedBox(height: 8),
+        // Étapes numérotées = titres de section Wise.
+        SectionHeader('1 · ${d.incidents.categorie}'),
         GridView.count(
           crossAxisCount: 3,
           shrinkWrap: true,
+          padding: EdgeInsets.zero,
           physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 8,
-          crossAxisSpacing: 8,
-          childAspectRatio: 1.05,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          childAspectRatio: 0.98,
           children: [
             for (final c in d.enums.categorieIncident.keys)
-              Material(
-                color: _categorie == c ? SuColors.actionTint : SuColors.surface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: BorderSide(color: _categorie == c ? SuColors.action : SuColors.hairline, width: _categorie == c ? 1.5 : 1)),
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () => setState(() => _categorie = c),
-                  child: Padding(
-                    padding: const EdgeInsets.all(8),
-                    child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(iconCategorie(c), color: _categorie == c ? SuColors.action : SuColors.body, size: 26), const SizedBox(height: 6), Text(d.enums.categorieIncident[c]!, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: t.labelSmall?.copyWith(color: SuColors.ink))]),
-                  ),
-                ),
-              ),
+              _CategorieTile(icon: iconCategorie(c), label: d.enums.categorieIncident[c]!, selected: _categorie == c, onTap: () => setState(() => _categorie = c)),
           ],
         ),
         if (fieldError(_fail, 'categorie') != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(fieldError(_fail, 'categorie')!, style: t.bodySmall?.copyWith(color: SuColors.danger))),
-        const SizedBox(height: 14),
+        const SizedBox(height: 18),
         SuField(label: d.incidents.sousCategorie, controller: _sous, hint: d.incidents.sousCategorieHint, required: true, error: fieldError(_fail, 'sous_categorie')),
-        const SizedBox(height: 18),
-        Text('2 · ${d.incidents.partie}', style: t.titleSmall),
-        const SizedBox(height: 8),
+        SectionHeader('2 · ${d.incidents.partie}', subtitle: d.incidents.partieAide),
         Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? v, onChanged: (v) => setState(() => _partie = v)),
-        const SizedBox(height: 6),
-        Text(d.incidents.partieAide, style: t.bodySmall),
-        const SizedBox(height: 18),
-        Text('3 · ${d.incidents.urgence}', style: t.titleSmall),
-        const SizedBox(height: 8),
+        SectionHeader('3 · ${d.incidents.urgence}'),
         for (final u in const ['NORMALE', 'URGENTE', 'URGENCE_MAXIMALE'])
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Material(
-              color: _urgence == u ? (u == 'URGENCE_MAXIMALE' ? SuColors.dangerTint : SuColors.actionTint) : SuColors.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14), side: BorderSide(color: _urgence == u ? (u == 'URGENCE_MAXIMALE' ? SuColors.danger : SuColors.action) : SuColors.hairline)),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(14),
-                onTap: () => setState(() => _urgence = u),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  child: Row(children: [Expanded(child: Text(d.enums.urgence[u]!, style: t.titleSmall)), Text(d.enums.urgenceSla[u] ?? '', style: t.labelSmall)]),
-                ),
-              ),
-            ),
+          _ChoixTile(
+            title: d.enums.urgence[u]!,
+            subtitle: d.enums.urgenceSla[u],
+            selected: _urgence == u,
+            danger: u == 'URGENCE_MAXIMALE',
+            onTap: () => setState(() => _urgence = u),
           ),
-        if (_urgence == 'URGENCE_MAXIMALE') SuBanner(tone: BannerTone.danger, body: d.incidents.urgenceMaxAide),
-        const SizedBox(height: 18),
+        if (_urgence == 'URGENCE_MAXIMALE') Padding(padding: const EdgeInsets.only(top: 2), child: SuBanner(tone: BannerTone.danger, body: d.incidents.urgenceMaxAide)),
+        const SizedBox(height: 22),
         SuField(label: d.incidents.description, controller: _desc, hint: d.incidents.descriptionHint, maxLines: 4, optionalLabel: d.common.optional, error: fieldError(_fail, 'description')),
         const SizedBox(height: 14),
         if (mesLots.isNotEmpty) ...[
@@ -223,17 +215,21 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
           SuField(label: d.incidents.immatriculationSignalee, controller: _plaque, hint: '12345-A-6', help: d.incidents.immatriculationSignaleeAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'immatriculation_signalee'), keyboardType: TextInputType.visiblePassword),
           const SizedBox(height: 14),
         ],
-        Text(d.incidents.photos, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 6),
+        SectionHeader(d.incidents.photos, subtitle: d.incidents.photosAide),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: [
             for (final p in _photos)
               Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(p.path), width: 84, height: 84, fit: BoxFit.cover)),
-                  PositionedDirectional(end: 0, top: 0, child: GestureDetector(onTap: () => setState(() => _photos.remove(p)), child: Container(decoration: const BoxDecoration(color: SuColors.ink, shape: BoxShape.circle), padding: const EdgeInsets.all(3), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)))),
+                  ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.file(File(p.path), width: 96, height: 96, fit: BoxFit.cover)),
+                  PositionedDirectional(
+                    end: 6,
+                    top: 6,
+                    child: CircleIconButton(icon: Icons.close_rounded, size: 28, color: SuColors.surface, iconColor: SuColors.ink, tooltip: fill(d.incidents.retirerPhoto, {'n': _photos.indexOf(p) + 1}), onTap: () => setState(() => _photos.remove(p))),
+                  ),
                 ],
               ),
             if (_photos.length < 5) ...[
@@ -242,8 +238,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
             ],
           ],
         ),
-        Padding(padding: const EdgeInsets.only(top: 6), child: Text(d.incidents.photosAide, style: t.bodySmall)),
-        const SizedBox(height: 20),
+        const SizedBox(height: 28),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(label: d.common.send, loading: _loading, onPressed: _categorie == null ? null : _submit),
@@ -295,8 +290,11 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
     switch (r) {
       case ApiOk<Incident>(:final data):
         ref.invalidate(incidentsProvider);
-        showToast(context, _urgence == 'URGENCE_MAXIMALE' ? context.dict.incidents.signaleUrgent : context.dict.incidents.signale);
+        // Succès plein écran (navigateur racine) posé au-dessus de la fiche qui remplace le formulaire.
+        final (titre, corps) = scinderMessage(_urgence == 'URGENCE_MAXIMALE' ? context.dict.incidents.signaleUrgent : context.dict.incidents.signale);
+        final racine = Navigator.of(context, rootNavigator: true).context;
         context.pushReplacement('/incidents/${data.id}');
+        if (racine.mounted) showSuccess(racine, title: titre, body: corps, illustration: 'ok-incident');
       case ApiFail<Incident>():
         setState(() {
           _loading = false;
@@ -312,11 +310,96 @@ class _PhotoBtn extends StatelessWidget {
   final String label;
   final VoidCallback onTap;
   @override
-  Widget build(BuildContext context) => Material(
-        color: SuColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: const BorderSide(color: SuColors.hairlineStrong)),
-        child: InkWell(borderRadius: BorderRadius.circular(12), onTap: onTap, child: SizedBox(width: 84, height: 84, child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(icon, color: SuColors.body), const SizedBox(height: 4), Text(label, style: Theme.of(context).textTheme.labelSmall, textAlign: TextAlign.center, maxLines: 2)]))),
+  Widget build(BuildContext context) => SuCard(
+        onTap: onTap,
+        radius: 18,
+        padding: const EdgeInsets.all(8),
+        child: SizedBox(
+          width: 96,
+          height: 96,
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            Icon(icon, color: SuColors.link, size: 26),
+            const SizedBox(height: 6),
+            Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600, height: 1.2), textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
       );
+}
+
+/// Tuile de catégorie (grille de signalement) : greige plate ; choisie = teinte sauge, liseré vert
+/// profond, pastille encre.
+class _CategorieTile extends StatelessWidget {
+  const _CategorieTile({required this.icon, required this.label, required this.selected, required this.onTap});
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) => Semantics(
+        selected: selected,
+        button: true,
+        child: SuCard(
+          onTap: onTap,
+          radius: 20,
+          color: selected ? SuColors.sageTint : SuColors.tile,
+          border: selected ? SuColors.link : null,
+          padding: const EdgeInsets.all(8),
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+            IconCircle(icon, tone: selected ? Tone.ink : Tone.neutral, size: 44, iconSize: 22),
+            const SizedBox(height: 8),
+            Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: SuColors.ink, fontWeight: selected ? FontWeight.w700 : FontWeight.w500, height: 1.2)),
+          ]),
+        ),
+      );
+}
+
+/// Option exclusive Wise (liste radio) : tuile greige, titre gras, détail ardoise, pastille radio
+/// à la fin ; choisie = liseré vert profond (rouge profond si `danger`).
+class _ChoixTile extends StatelessWidget {
+  const _ChoixTile({required this.title, this.subtitle, required this.selected, required this.onTap, this.danger = false});
+  final String title;
+  final String? subtitle;
+  final bool selected, danger;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final accent = danger ? SuColors.danger : SuColors.link;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Semantics(
+        selected: selected,
+        button: true,
+        child: SuCard(
+          onTap: onTap,
+          radius: 20,
+          color: selected ? (danger ? SuColors.dangerTint : SuColors.sageTint) : SuColors.tile,
+          border: selected ? accent : null,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          child: Row(children: [
+            Expanded(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: t.titleMedium),
+                if (subtitle != null && subtitle!.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(subtitle!, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft))),
+              ]),
+            ),
+            const SizedBox(width: 12),
+            Icon(selected ? Icons.radio_button_checked_rounded : Icons.radio_button_unchecked_rounded, color: selected ? accent : SuColors.faint, size: 24),
+          ]),
+        ),
+      ),
+    );
+  }
+}
+
+/// « Incident signalé. Le syndic a été prévenu. » → titre court + explication (écran de succès).
+(String, String?) scinderMessage(String s) {
+  final m = RegExp(r'\.\s+|\s+—\s+').firstMatch(s);
+  String net(String x) => x.trim().replaceFirst(RegExp(r'[.。]$'), '');
+  if (m == null) return (net(s), null);
+  final reste = s.substring(m.end).trim();
+  if (reste.isEmpty) return (net(s), null);
+  return (net(s.substring(0, m.start)), reste.characters.first.toUpperCase() + reste.characters.skip(1).string);
 }
 
 // ── F3 Détail ─────────────────────────────────────────────────────────────────
@@ -345,61 +428,94 @@ class IncidentDetailScreen extends ConsumerWidget {
           final prest = prestataires.where((p) => p.id == i.assigneAId).firstOrNull;
           final logs = [...i.journal]..sort((a, b) => b.horodatage.compareTo(a.horodatage));
           final peutChanger = ctx.isGestion || ctx.isGardien || (ctx.isPrestataire && i.assigneAId != null);
+          final lotNumero = i.lotId == null ? null : lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull;
+          final appelPrest = prest != null && RegExp(r'^\+?\d{8,}$').hasMatch(prest.contact.replaceAll(' ', ''));
+          final listePhotos = photos.valueOrNull ?? const [];
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SuCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Wrap(spacing: 6, runSpacing: 6, children: [
-                      StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral),
-                      StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
-                      StatusBadge(d.enums.partie[i.partie] ?? i.partie, variant: BadgeVariant.outline),
-                      if (i.lotId != null) StatusBadge('${d.invitations.lot} ${lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull ?? ''}', variant: BadgeVariant.neutral),
-                    ]),
-                    const SizedBox(height: 12),
-                    if (i.slaDeadline != null)
+              // Bloc résumé Wise : grande pastille de catégorie, statut, urgence, description.
+              SuEnter(
+                child: SuCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Row(children: [
-                        Icon(Icons.timer_outlined, size: 18, color: i.slaDepasse ? SuColors.danger : SuColors.soft),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text('${d.incidents.sla} · ${formatDateHeure(i.slaDeadline, l)}', style: t.bodySmall?.copyWith(color: i.slaDepasse ? SuColors.danger : null, fontWeight: i.slaDepasse ? FontWeight.w700 : null))),
-                        if (i.slaDepasse) ...[const SizedBox(width: 8), StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true)],
+                        IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : incidentTone(i.statut), size: 64),
+                        const Spacer(),
+                        if (i.slaDepasse) StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, pulse: true),
                       ]),
-                    if (i.description != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(i.description!, style: t.bodyMedium?.copyWith(color: SuColors.ink))),
-                    const SizedBox(height: 10),
-                    Text('${d.incidents.creePar} ${nomComplet(i.createur?.prenom, i.createur?.nom) ?? '—'} · ${formatDateHeure(i.creeLe, l)}', style: t.labelSmall),
-                    if (i.createur?.telephone != null && (ctx.isGestion || ctx.isPrestataire || ctx.isGardien)) TextButton.icon(style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36)), onPressed: () => launchUrl(Uri.parse('tel:${i.createur!.telephone}')), icon: const Icon(Icons.call_rounded, size: 16), label: Text(formatTelephone(i.createur!.telephone))),
+                      const SizedBox(height: 18),
+                      Text(d.enums.statutIncident[i.statut] ?? i.statut, style: t.displaySmall),
+                      const SizedBox(height: 4),
+                      Text(fill(d.incidents.creeLe, {'date': formatDateHeure(i.creeLe, l)}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                      const SizedBox(height: 14),
+                      Wrap(spacing: 6, runSpacing: 6, children: [
+                        StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
+                        StatusBadge(d.enums.partie[i.partie] ?? i.partie, variant: BadgeVariant.outline),
+                        if (i.lotId != null) StatusBadge('${d.invitations.lot} ${lotNumero ?? ''}', variant: BadgeVariant.outline),
+                      ]),
+                      if (i.description != null) ...[
+                        const SizedBox(height: 16),
+                        Text(i.description!, style: t.bodyLarge?.copyWith(color: SuColors.ink, height: 1.5)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              // Action principale juste sous le résumé.
+              if (peutChanger && i.statut != 'FERME') ...[
+                const SizedBox(height: 16),
+                SubmitButton(label: d.incidents.changerStatut, icon: Icons.swap_vert_rounded, onPressed: () => _changerStatut(context, ref, i)),
+              ],
+              SectionHeader(d.common.details),
+              SuCard(
+                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+                child: Column(
+                  children: [
+                    if (i.slaDeadline != null)
+                      KeyValueRow(
+                        d.incidents.sla,
+                        formatDateHeure(i.slaDeadline, l),
+                        valueWidget: i.slaDepasse ? Text(formatDateHeure(i.slaDeadline, l), textAlign: TextAlign.end, style: t.bodyMedium?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w700)) : null,
+                      ),
+                    if (lotNumero != null) KeyValueRow(d.incidents.lotConcerne, lotNumero),
+                    KeyValueRow(d.incidents.creePar, nomComplet(i.createur?.prenom, i.createur?.nom) ?? '—'),
+                    if (i.createur?.telephone != null && (ctx.isGestion || ctx.isPrestataire || ctx.isGardien))
+                      Align(
+                        alignment: AlignmentDirectional.centerEnd,
+                        child: TextButton.icon(onPressed: () => launchUrl(Uri.parse('tel:${i.createur!.telephone}')), icon: const Icon(Icons.call_rounded, size: 18), label: Text(formatTelephone(i.createur!.telephone), textDirection: TextDirection.ltr)),
+                      ),
                   ],
                 ),
               ),
-              if ((photos.valueOrNull ?? const []).isNotEmpty) ...[
+              if (listePhotos.isNotEmpty) ...[
                 SectionHeader(d.incidents.photos),
                 SizedBox(
-                  height: 120,
+                  height: 132,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: photos.valueOrNull!.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 8),
-                    itemBuilder: (_, k) => GestureDetector(
-                      onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(8), child: InteractiveViewer(child: Image.network(photos.valueOrNull![k].url)))),
-                      child: ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(photos.valueOrNull![k].url, width: 150, height: 120, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 150, color: SuColors.ground))),
+                    itemCount: listePhotos.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 10),
+                    itemBuilder: (_, k) => SuPressable(
+                      child: GestureDetector(
+                        onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(8), child: InteractiveViewer(child: Image.network(listePhotos[k].url)))),
+                        child: ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network(listePhotos[k].url, width: 168, height: 132, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 168, color: SuColors.tile, child: const Icon(Icons.image_not_supported_rounded, color: SuColors.faint)))),
+                      ),
                     ),
                   ),
                 ),
               ],
-              SectionHeader(d.incidents.assigneA),
-              SuCard(
-                child: Row(
-                  children: [
-                    IconCircle(Icons.engineering_rounded, tone: prest == null ? Tone.neutral : Tone.tosca, size: 40),
-                    const SizedBox(width: 12),
-                    Expanded(child: prest == null ? Text(d.incidents.nonAssigne, style: t.bodySmall) : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(prest.nom, style: t.titleSmall), Text('${prest.specialite} · ${prest.contact}', style: t.bodySmall)])),
-                    if (prest != null && RegExp(r'^\+?\d{8,}$').hasMatch(prest.contact.replaceAll(' ', ''))) IconButton(onPressed: () => launchUrl(Uri.parse('tel:${prest.contact.replaceAll(' ', '')}')), icon: const Icon(Icons.call_rounded, color: SuColors.action)),
-                    if (ctx.isGestion && i.ouvert) TextButton(onPressed: () => _assigner(context, ref, i, prestataires), child: Text(d.incidents.assigner)),
-                  ],
+              SectionHeader(d.incidents.assigneA, actionLabel: ctx.isGestion && i.ouvert ? d.incidents.assigner : null, onAction: () => _assigner(context, ref, i, prestataires)),
+              CardList([
+                ListRow(
+                  leading: IconCircle(Icons.engineering_rounded, tone: prest == null ? Tone.neutral : Tone.tosca),
+                  title: prest?.nom ?? d.incidents.nonAssigne,
+                  subtitle: prest == null ? null : '${prest.specialite} · ${prest.contact}',
+                  trailing: appelPrest ? CircleIconButton(icon: Icons.call_rounded, tooltip: prest.contact, onTap: () => launchUrl(Uri.parse('tel:${prest.contact.replaceAll(' ', '')}'))) : null,
                 ),
-              ),
+              ]),
               // M16 — évaluation du prestataire (créateur du ticket ou syndic, incident résolu, une fois).
               if (i.notePrestataire != null)
                 Padding(
@@ -421,35 +537,42 @@ class IncidentDetailScreen extends ConsumerWidget {
                 CardList([for (final x in i.depenses) DepenseRow(x)]),
               ],
               // M23 — plaque signalée / emplacement : le gardien ou le syndic prévient le lot propriétaire.
-              if (i.immatriculationSignalee != null || i.emplacementId != null)
-                SuCard(margin: const EdgeInsets.only(top: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  if (i.immatriculationSignalee != null) KeyValueRow(d.incidents.immatriculationSignalee, i.immatriculationSignalee!, mono: true),
-                  if (i.emplacementId != null) KeyValueRow(d.incidents.emplacementConcerne, d.parkings.titre, valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? TextButton(onPressed: () => context.push('/parkings/${i.emplacementId}'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)), child: Text(d.parkings.titre)) : null),
-                  if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(onPressed: () => notifierVehiculeGenant(context, ref, i), icon: const Icon(Icons.campaign_rounded, size: 18), label: Text(d.incidents.notifierVehicule))),
-                ])),
-              if (peutChanger && i.statut != 'FERME') ...[
-                const SizedBox(height: 12),
-                FilledButton.icon(onPressed: () => _changerStatut(context, ref, i), icon: const Icon(Icons.swap_vert_rounded), label: Text(d.incidents.changerStatut)),
+              if (i.immatriculationSignalee != null || i.emplacementId != null) ...[
+                SectionHeader(d.parkings.titre),
+                SuCard(
+                  padding: const EdgeInsets.fromLTRB(18, 8, 18, 12),
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+                    if (i.immatriculationSignalee != null) KeyValueRow(d.incidents.immatriculationSignalee, i.immatriculationSignalee!, mono: true),
+                    if (i.emplacementId != null)
+                      KeyValueRow(
+                        d.incidents.emplacementConcerne,
+                        d.parkings.titre,
+                        valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? Align(alignment: AlignmentDirectional.centerEnd, child: LinkButton(d.parkings.titre, onTap: () => context.push('/parkings/${i.emplacementId}'))) : null,
+                      ),
+                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(onPressed: () => notifierVehiculeGenant(context, ref, i), icon: const Icon(Icons.campaign_rounded, size: 18), label: Text(d.incidents.notifierVehicule))),
+                  ]),
+                ),
               ],
+              // Journal = fil d'activité Wise : pastilles 48 reliées, plus récent en haut.
               SectionHeader(d.incidents.journal),
               if (logs.isEmpty)
-                SuCard(child: Text(d.incidents.journalVide, style: t.bodySmall))
+                Text(d.incidents.journalVide, style: t.bodyMedium?.copyWith(color: SuColors.soft))
               else
-                SuCard(
-                  child: Column(
-                    children: [
-                      for (int k = 0; k < logs.length; k++)
-                        _TimelineItem(
+                Column(
+                  children: [
+                    for (int k = 0; k < logs.length; k++)
+                      SuEnter(
+                        index: k,
+                        offset: 0.12,
+                        child: _TimelineItem(
                           log: logs[k],
                           last: k == logs.length - 1,
-                          title: logs[k].statutAvant == null ? d.incidents.signale : '${d.incidents.statut} → ${d.enums.statutIncident[logs[k].statutApres] ?? logs[k].statutApres}',
+                          title: logs[k].statutAvant == null ? scinderMessage(d.incidents.signale).$1 : (d.enums.statutIncident[logs[k].statutApres] ?? logs[k].statutApres),
                           who: '${nomComplet(logs[k].acteur?.prenom, logs[k].acteur?.nom) ?? '—'} · ${formatDateHeure(logs[k].horodatage, l)}',
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
-              const SizedBox(height: 6),
-              Text(d.incidents.journal, style: t.labelSmall, textAlign: TextAlign.center),
             ],
           );
         }),
@@ -476,9 +599,30 @@ class IncidentDetailScreen extends ConsumerWidget {
       return;
     }
     final picked = await showModalBottomSheet<Prestataire>(
+      useRootNavigator: true,
       context: context,
       sheetAnimationStyle: SuMotion.sheet,
-      builder: (sheet) => SafeArea(child: ListView(shrinkWrap: true, padding: const EdgeInsets.fromLTRB(8, 0, 8, 12), children: [Padding(padding: const EdgeInsets.all(12), child: Text(d.incidents.assignerAide, style: Theme.of(context).textTheme.bodySmall)), for (final p in actifs) ListTile(leading: const IconCircle(Icons.engineering_rounded, tone: Tone.tosca, size: 36), title: Text(p.nom), subtitle: Text(p.specialite), onTap: () => Navigator.pop(sheet, p))])),
+      isScrollControlled: true,
+      builder: (sheet) => SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * 0.75),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(d.incidents.assigner, style: Theme.of(sheet).textTheme.headlineMedium),
+                  const SizedBox(height: 4),
+                  Text(d.incidents.assignerAide, style: Theme.of(sheet).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
+                ]),
+              ),
+              for (final p in actifs) ListRow(leading: const IconCircle(Icons.engineering_rounded, tone: Tone.tosca), title: p.nom, subtitle: p.specialite, onTap: () => Navigator.pop(sheet, p)),
+            ],
+          ),
+        ),
+      ),
     );
     if (picked == null || !context.mounted) return;
     final r = await ref.read(apiClientProvider).post<dynamic>('/incidents/${i.id}/assign', body: {'prestataire_id': picked.id});
@@ -501,16 +645,41 @@ class _TimelineItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    final premier = log.statutAvant == null;
+    final (IconData icon, Tone tone) = premier
+        ? (Icons.campaign_rounded, Tone.sage)
+        : switch (log.statutApres) {
+            'OUVERT' => (Icons.replay_rounded, Tone.sand),
+            'EN_COURS' => (Icons.construction_rounded, Tone.lilac),
+            'RESOLU' => (Icons.check_rounded, Tone.ok),
+            'FERME' => (Icons.lock_rounded, Tone.neutral),
+            _ => (Icons.swap_vert_rounded, Tone.neutral),
+          };
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Column(children: [Container(width: 12, height: 12, margin: const EdgeInsets.only(top: 4), decoration: BoxDecoration(color: incidentColor(log.statutApres), shape: BoxShape.circle)), if (!last) Expanded(child: Container(width: 2, color: SuColors.hairline))]),
-          const SizedBox(width: 12),
+          // Pastille 48 + fil vertical (voile d'encre) jusqu'à l'événement suivant.
+          Column(children: [
+            IconCircle(icon, tone: tone),
+            if (!last) Expanded(child: Container(width: 2, margin: const EdgeInsets.symmetric(vertical: 4), decoration: BoxDecoration(color: SuColors.washStrong, borderRadius: BorderRadius.circular(1)))),
+          ]),
+          const SizedBox(width: 14),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: last ? 0 : 16),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: t.titleSmall), if (log.commentaire != null) Text(log.commentaire!, style: t.bodyMedium), Text(who, style: t.labelSmall)]),
+              padding: EdgeInsets.only(top: 3, bottom: last ? 4 : 22),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(title, style: t.titleMedium),
+                const SizedBox(height: 3),
+                Text(who, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35)),
+                if (log.commentaire != null && log.commentaire!.trim().isNotEmpty)
+                  Container(
+                    margin: const EdgeInsets.only(top: 10),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(color: SuColors.tile, borderRadius: const BorderRadiusDirectional.only(topEnd: Radius.circular(18), bottomStart: Radius.circular(18), bottomEnd: Radius.circular(18), topStart: Radius.circular(6)).resolve(Directionality.of(context))),
+                    child: Text(log.commentaire!, style: t.bodyMedium?.copyWith(color: SuColors.ink, height: 1.45)),
+                  ),
+              ]),
             ),
           ),
         ],
@@ -590,19 +759,19 @@ class PrestatairesScreen extends ConsumerWidget {
       title: d.incidents.prestataires,
       subtitle: d.incidents.prestatairesSubtitle,
       onRefresh: () async => ref.invalidate(prestatairesProvider),
-      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.incidents.nouveauPrestataire)) : null,
+      fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.nouveauPrestataire)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(prestatairesProvider), data: (ps) {
-          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded);
+          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded, illustration: 'empty-personnel');
           return CardList([
             for (final p in ps)
               ListRow(
-                leading: IconCircle(Icons.engineering_rounded, tone: p.actif ? Tone.tosca : Tone.neutral, size: 40),
+                leading: IconCircle(Icons.engineering_rounded, tone: p.actif ? Tone.tosca : Tone.neutral),
                 title: p.nom,
                 subtitle: '${p.specialite} · ${p.contact}',
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   StatusBadge(p.actif ? d.incidents.actif : d.incidents.inactif, variant: p.actif ? BadgeVariant.ok : BadgeVariant.outline, small: true),
-                  if (ctx.isGestion) IconButton(icon: const Icon(Icons.power_settings_new_rounded, color: SuColors.faint), onPressed: () async {
+                  if (ctx.isGestion) IconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icon(Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint), onPressed: () async {
                     final r = await ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif});
                     if (!context.mounted) return;
                     if (r is ApiFail) showToast(context, r.error.message, error: true); else ref.invalidate(prestatairesProvider);

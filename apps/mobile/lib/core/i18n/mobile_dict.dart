@@ -90,6 +90,25 @@ class MobileDict {
     required this.lcdSejourDe,
     required this.lcdStatutNonDeclare,
     required this.lcdConseilLecture,
+    required this.tabAction,
+    required this.quickTitle,
+    required this.obSkip,
+    required this.obNext,
+    required this.obStart,
+    required this.ob1Title,
+    required this.ob1Body,
+    required this.ob2Title,
+    required this.ob2Body,
+    required this.ob3Title,
+    required this.ob3Body,
+    required this.ob4Title,
+    required this.ob4Body,
+    required this.obAlready,
+    required this.obStep,
+    required this.successDone,
+    required this.successVoir,
+    required this.tabAffichage,
+    required this.docTypes,
   });
 
   final String welcomeTitle, welcomeBody, haveCode, offline, online, queueTitle, queueLocal, queueHint, pendingSend, synced, worksOffline,
@@ -98,10 +117,34 @@ class MobileDict {
       cloisonnement, startScan, scanOrType, calculNote, pdfFr, addToCalendar, cannotAttend, chooseSlot, conflictNote, contactSyndic, copied,
       retryHint, selectLot, selectIdentity, liveResults, tantiemesExprimes, pupitreRule, pending, pushPermission, pushMarquerLu, pushCanalUrgent, pushCanalUrgentAide, pushCanalNormal, pushCanalNormalAide, pushCanalInfo, pushCanalInfoAide, pushCanalSilencieux, pushCanalSilencieuxAide, pushActiver, pushActiverAide, pushActive, langue, networkError, timeoutError, offlineCached, viewerError, viewerUnsupported, photoChanger;
 
+  // Langage Wise : bouton d'action central, onboarding de premier lancement.
+  final String tabAction, quickTitle, obSkip, obNext, obStart, ob1Title, ob1Body, ob2Title, ob2Body, ob3Title, ob3Body, ob4Title, ob4Body, obAlready, obStep, successDone, successVoir, tabAffichage;
+  /// Libellés des types de documents produits par le système (codes techniques de l'API).
+  final Map<String, String> docTypes;
+
   // ── M15 Location courte durée (Doc A §10.2) — chaînes propres au mobile (file hors-ligne, libellés courts) ; le reste vient de `dict.lcd`.
   final String lcdQueueTitle, lcdOfflineConfirm, lcdStatutNonDeclare, lcdConseilLecture, lcdDeclareLe, lcdDecider, lcdInviter, lcdGestionnaireDesigne, lcdAucunLotDeclarable, lcdVoirLot, lcdDeclarationDeLot, lcdSejourDe, lcdGardienInforme;
 
   static const fr = MobileDict(
+    docTypes: {'ANNONCE_PJ': 'Pièce jointe d\'annonce', 'FACTURE': 'Facture', 'FICHE_PAIE': 'Fiche de paie', 'IMPORT_SOURCE': 'Fichier d\'import', 'RAPPORT_GESTION': 'Rapport de gestion', 'REGLEMENT_INTERIEUR': 'Règlement intérieur', 'PV': 'Procès-verbal', 'CONTRAT': 'Contrat', 'QUITTANCE': 'Quittance', 'CONVOCATION': 'Convocation', 'JUSTIFICATIF': 'Justificatif', 'ASSURANCE': 'Assurance', 'DEVIS': 'Devis', 'CV': 'CV'},
+    tabAffichage: 'Annonces',
+    successDone: 'Terminé',
+    successVoir: 'Voir le détail',
+    tabAction: 'Actions',
+    quickTitle: 'Que souhaitez-vous faire ?',
+    obSkip: 'Passer',
+    obNext: 'Continuer',
+    obStart: 'Commencer',
+    ob1Title: 'Votre résidence dans votre poche',
+    ob1Body: 'Charges, assemblées, incidents, visiteurs : toute la vie de l\'immeuble au même endroit, pour chaque résident.',
+    ob2Title: 'Des charges claires, au dirham près',
+    ob2Body: 'Suivez vos appels de fonds et vos paiements, et voyez où va l\'argent de la copropriété.',
+    ob3Title: 'Un souci ? Signalez-le en une photo',
+    ob3Body: 'Le syndic est prévenu tout de suite, et vous suivez la réparation jusqu\'au bout.',
+    ob4Title: 'L\'assemblée générale, sans la paperasse',
+    ob4Body: 'Convocation, ordre du jour, procès-verbal : tout arrive dans l\'application, en français ou en arabe.',
+    obAlready: 'J\'ai déjà un compte',
+    obStep: 'Étape {n} sur {total}',
     welcomeTitle: 'Votre copropriété,\nenfin lisible.',
     welcomeBody: 'Charges, assemblées générales, incidents et visiteurs — au même endroit, pour tous les résidents.',
     haveCode: "J'ai un code d'invitation",
@@ -189,6 +232,25 @@ class MobileDict {
   );
 
   static const ar = MobileDict(
+    docTypes: {'ANNONCE_PJ': 'مرفق إعلان', 'FACTURE': 'فاتورة', 'FICHE_PAIE': 'ورقة الأجر', 'IMPORT_SOURCE': 'ملف الاستيراد', 'RAPPORT_GESTION': 'تقرير التسيير', 'REGLEMENT_INTERIEUR': 'النظام الداخلي', 'PV': 'محضر', 'CONTRAT': 'عقد', 'QUITTANCE': 'توصيل', 'CONVOCATION': 'استدعاء', 'JUSTIFICATIF': 'وثيقة إثبات', 'ASSURANCE': 'تأمين', 'DEVIS': 'عرض أسعار', 'CV': 'سيرة ذاتية'},
+    tabAffichage: 'الإعلانات',
+    successDone: 'تم',
+    successVoir: 'عرض التفاصيل',
+    tabAction: 'إجراءات',
+    quickTitle: 'ماذا تودّون أن تفعلوا؟',
+    obSkip: 'تخطّي',
+    obNext: 'متابعة',
+    obStart: 'لنبدأ',
+    ob1Title: 'إقامتكم في جيبكم',
+    ob1Body: 'الرسوم، الجمعيات العامة، الحوادث والزوار: كل حياة العمارة في مكان واحد، لكل ساكن.',
+    ob2Title: 'رسوم واضحة حتى آخر درهم',
+    ob2Body: 'تابعوا نداءات الأموال ومدفوعاتكم، واعرفوا أين تُصرف أموال الملكية المشتركة.',
+    ob3Title: 'مشكلة؟ أبلغوا عنها بصورة واحدة',
+    ob3Body: 'يتم إخطار السنديك فورًا، وتتابعون الإصلاح حتى النهاية.',
+    ob4Title: 'الجمعية العامة، بلا أوراق',
+    ob4Body: 'الاستدعاء، جدول الأعمال، المحضر: كل شيء يصل إلى التطبيق، بالعربية أو بالفرنسية.',
+    obAlready: 'لديّ حساب بالفعل',
+    obStep: 'الخطوة {n} من {total}',
     welcomeTitle: 'ملكيتكم المشتركة،\nأخيرًا واضحة.',
     welcomeBody: 'الرسوم، الجمعيات العامة، الحوادث والزوار — في مكان واحد، لجميع السكان.',
     haveCode: 'لديّ رمز دعوة',

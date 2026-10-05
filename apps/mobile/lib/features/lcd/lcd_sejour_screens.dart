@@ -46,6 +46,18 @@ IconData iconEvenement(String type) => switch (type) {
       _ => Icons.circle_outlined,
     };
 
+/// Message de succès « Titre. Détail » (ou « Titre — détail ») → titre d'affiche + corps.
+({String title, String? body}) scinderSucces(String s) {
+  for (final sep in const ['. ', ' — ']) {
+    final i = s.indexOf(sep);
+    if (i > 0) {
+      final body = s.substring(i + sep.length).trim();
+      return (title: s.substring(0, i), body: body.isEmpty ? null : body[0].toUpperCase() + body.substring(1));
+    }
+  }
+  return (title: s.endsWith('.') ? s.substring(0, s.length - 1) : s, body: null);
+}
+
 /// Libellé « voyageur → lot » partagé par les listes, la file locale et les toasts.
 String libelleSejour(LcdSejour s) => '${s.voyageurPrincipalNom} → ${s.lotNumero}';
 
@@ -63,7 +75,7 @@ class SejourRow extends StatelessWidget {
     final l = context.locale;
     final heure = s.heureArriveePrevue;
     return ListRow(
-      leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut), size: 40),
+      leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)),
       title: libelleSejour(s),
       subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}${heure != null && s.statut == 'PREVU' ? ' · $heure' : ''}${enAttente ? ' · ${md.pendingSend}' : ''}',
       trailing: trailing ?? StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true, pulse: s.statut == 'EN_COURS'),
@@ -113,14 +125,35 @@ class _ArriveeFormState extends State<_ArriveeForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(libelleSejour(widget.s), style: t.titleSmall),
-        const SizedBox(height: 4),
-        Text('${fill(d.lcd.voyageurs, {'n': widget.s.nbVoyageurs})} · ${formatJour(widget.s.jourArrivee, context.locale)} → ${formatJour(widget.s.jourDepart, context.locale)}', style: t.bodySmall),
-        const SizedBox(height: 14),
+        // Rappel du séjour : pastille + voyageur → lot, dates en ardoise.
+        Row(
+          children: [
+            IconCircle(Icons.luggage_rounded, tone: sejourTone(widget.s.statut)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(libelleSejour(widget.s), style: t.titleMedium),
+                  const SizedBox(height: 2),
+                  Text('${fill(d.lcd.voyageurs, {'n': widget.s.nbVoyageurs})} · ${formatJour(widget.s.jourArrivee, context.locale)} → ${formatJour(widget.s.jourDepart, context.locale)}', style: t.bodySmall),
+                ],
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 18),
         SuField(label: d.lcd.nbVoyageursConstate, controller: _nb, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], optionalLabel: context.dict.common.optional),
-        const SizedBox(height: 10),
-        Text(md.lcdOfflineConfirm, style: t.labelSmall),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.cloud_sync_rounded, size: 20, color: SuColors.soft),
+            const SizedBox(width: 10),
+            Expanded(child: Text(md.lcdOfflineConfirm, style: t.bodySmall)),
+          ],
+        ),
+        const SizedBox(height: 20),
         SubmitButton(
           label: d.lcd.confirmerArrivee,
           icon: Icons.login_rounded,
@@ -145,35 +178,39 @@ class LcdQueueCard extends ConsumerWidget {
     final l = context.locale;
     final t = Theme.of(context).textTheme;
     return SuCard(
-      border: SuColors.warnBorder,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(children: [Expanded(child: Text(fill(md.lcdQueueTitle, {'n': queue.length}), style: t.titleSmall)), Text(md.queueLocal, style: t.labelSmall?.copyWith(color: SuColors.warn, fontFamily: 'GeistMono'))]),
-          const SizedBox(height: 10),
+          Row(children: [
+            const IconCircle(Icons.cloud_upload_rounded, tone: Tone.warn),
+            const SizedBox(width: 14),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(fill(md.lcdQueueTitle, {'n': queue.length}), style: t.titleMedium), Text(md.queueLocal, style: t.labelSmall?.copyWith(color: SuColors.warn, fontFamily: 'GeistMono'))])),
+          ]),
+          const SizedBox(height: 12),
           for (final q in queue)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
-                  Container(width: 9, height: 9, decoration: BoxDecoration(color: q.definitif ? SuColors.danger : SuColors.warn, shape: BoxShape.circle)),
-                  const SizedBox(width: 10),
+                  Container(width: 10, height: 10, decoration: BoxDecoration(color: q.definitif ? SuColors.danger : SuColors.warn, shape: BoxShape.circle)),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('${q.action == 'arrivee' ? d.lcd.confirmerArrivee : d.lcd.confirmerDepart} · ${q.libelle ?? q.sejourId.substring(0, 8)}', style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w500)),
-                        Text('${formatHeure(q.creeLe.toIso8601String(), l)} · ${q.definitif ? md.failedDefinitive : md.pendingSend}', style: t.labelSmall),
+                        Text('${q.action == 'arrivee' ? d.lcd.confirmerArrivee : d.lcd.confirmerDepart} · ${q.libelle ?? q.sejourId.substring(0, 8)}', style: t.titleSmall),
+                        Text('${formatHeure(q.creeLe.toIso8601String(), l)} · ${q.definitif ? md.failedDefinitive : md.pendingSend}', style: t.bodySmall),
                       ],
                     ),
                   ),
-                  if (q.definitif) IconButton(onPressed: () => ref.read(lcdSyncProvider.notifier).retirer(q.id), icon: const Icon(Icons.delete_outline_rounded, color: SuColors.faint), tooltip: md.remove),
+                  if (q.definitif) CircleIconButton(onTap: () => ref.read(lcdSyncProvider.notifier).retirer(q.id), icon: Icons.delete_outline_rounded, color: SuColors.surface, iconColor: SuColors.danger, size: 40, tooltip: md.remove),
                 ],
               ),
             ),
-          Text(md.queueHint, style: t.labelSmall),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(onPressed: () => ref.read(lcdSyncProvider.notifier).flush(), style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(42)), icon: const Icon(Icons.sync_rounded, size: 18), label: Text(md.retryNow)),
+          const SizedBox(height: 6),
+          Text(md.queueHint, style: t.bodySmall),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(onPressed: () => ref.read(lcdSyncProvider.notifier).flush(), icon: const Icon(Icons.sync_rounded, size: 20), label: Text(md.retryNow)),
         ],
       ),
     );
@@ -205,8 +242,29 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
   ApiFail? _fail;
   /// Pièces jointes choisies (photo prise, galerie, fichier) — téléversées à l'envoi.
   final List<PieceLocale> _pieces = [];
+  /// Parcours Wise en trois étapes : séjour → voyageur → pièces et récapitulatif.
+  int _etape = 0;
+  static const _nbEtapes = 3;
 
   bool get _edition => widget.sejourId != null;
+
+  /// Erreur serveur sur un champ : on ramène l'utilisateur à l'étape qui le porte.
+  int? _etapeDe(ApiFail f) {
+    const e0 = {'lot_id', 'date_arrivee', 'date_depart', 'heure_arrivee_prevue', 'nb_voyageurs'};
+    const e1 = {'voyageur_principal_nom', 'voyageur_telephone', 'voyageur_nationalite', 'piece_identite_type', 'piece_identite_fin', 'plaque_vehicule'};
+    final k = f.error.fields.keys;
+    if (k.any(e0.contains)) return 0;
+    if (k.any(e1.contains)) return 1;
+    return null;
+  }
+
+  void _precedent() {
+    if (_etape > 0) {
+      setState(() => _etape--);
+    } else {
+      context.pop();
+    }
+  }
 
   @override
   void initState() {
@@ -268,60 +326,133 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
     if (_lot == null && validees.length == 1 && !_edition) _lot = validees.first.lotId;
     String numero(String lotId) => validees.where((x) => x.lotId == lotId).map((x) => x.lotNumero).firstOrNull ?? (existing?.valueOrNull?.lotNumero ?? lotId.substring(0, 8));
 
-    return SuPage(
-      title: _edition ? d.lcd.modifierSejour : d.lcd.declarerSejour,
-      children: [
-        if (_edition && existing!.isLoading && !_prefilled)
-          const LoadingList(count: 3)
-        else ...[
+    final etapeValide = switch (_etape) {
+      0 => _lot != null && _arrivee != null && _depart != null,
+      1 => _nom.text.trim().isNotEmpty,
+      _ => _lot != null && _arrivee != null && _depart != null,
+    };
+    final titresEtapes = [d.lcd.sejour, d.lcd.voyageurPrincipal, d.lcd.piecesJointes];
+
+    final List<Widget> champs = switch (_etape) {
+      // 1 · Le séjour : lot, dates, heure, voyageurs.
+      0 => [
           if (!_edition && declarations.hasValue && validees.isEmpty) ...[
             SuBanner(tone: BannerTone.warn, body: d.lcd.aucuneDeclarationAide),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
           ],
-          SuSelect<String>(label: d.lcd.lot, value: _lot, options: _edition ? [if (_lot != null) _lot!] : validees.map((x) => x.lotId).toList(), labelOf: numero, onChanged: (v) => setState(() => _lot = v), required: true, placeholder: d.lcd.lotSejour, enabled: !_edition, error: fieldError(_fail, 'lot_id')),
-          const SizedBox(height: 14),
+          SuSelect<String>(label: d.lcd.lot, value: _lot, options: _edition ? [if (_lot != null) _lot!] : validees.map((x) => x.lotId).toList(), labelOf: numero, onChanged: (v) => setState(() => _lot = v), required: true, placeholder: d.lcd.lotSejour, enabled: !_edition, error: fieldError(_fail, 'lot_id'), help: _edition ? null : d.lcd.lotSejourAide),
+          const SizedBox(height: 18),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _DateField(label: d.lcd.dateArrivee, value: _arrivee == null ? null : formatJourAnnee(_arrivee, l), onTap: () => _pickDate(true), required: true, error: fieldError(_fail, 'date_arrivee'))),
               const SizedBox(width: 10),
               Expanded(child: _DateField(label: d.lcd.dateDepart, value: _depart == null ? null : formatJourAnnee(_depart, l), onTap: () => _pickDate(false), required: true, error: fieldError(_fail, 'date_depart'))),
             ],
           ),
-          if (_arrivee != null && _depart != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(fill(d.lcd.nuits, {'n': _nuits()}), style: t.bodySmall)),
-          const SizedBox(height: 14),
+          if (_arrivee != null && _depart != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Row(children: [const Icon(Icons.nights_stay_rounded, size: 18, color: SuColors.link), const SizedBox(width: 8), Text(fill(d.lcd.nuits, {'n': _nuits()}), style: t.titleSmall)]),
+            ),
+          const SizedBox(height: 18),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _DateField(label: d.lcd.heureArrivee, value: _heure, onTap: _pickHeure, icon: Icons.schedule_rounded, onClear: _heure == null ? null : () => setState(() => _heure = null))),
               const SizedBox(width: 10),
               Expanded(child: SuField(label: d.lcd.nbVoyageurs, controller: _nb, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], required: true, error: fieldError(_fail, 'nb_voyageurs'))),
             ],
           ),
-          const SizedBox(height: 14),
-          SuField(label: d.lcd.voyageurNom, controller: _nom, required: true, textInputAction: TextInputAction.next, error: fieldError(_fail, 'voyageur_principal_nom')),
-          const SizedBox(height: 14),
+        ],
+      // 2 · Le voyageur principal.
+      1 => [
+          SuField(label: d.lcd.voyageurNom, controller: _nom, required: true, textInputAction: TextInputAction.next, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'voyageur_principal_nom')),
+          const SizedBox(height: 16),
           SuField(label: d.lcd.voyageurTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'voyageur_telephone')),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: SuField(label: d.lcd.voyageurNationalite, controller: _nat, hint: d.lcd.voyageurNationaliteAide, maxLength: 3, textDirection: TextDirection.ltr, inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z]'))], error: fieldError(_fail, 'voyageur_nationalite'))),
               const SizedBox(width: 10),
               Expanded(child: SuSelect<String?>(label: d.lcd.pieceIdentiteType, value: _piece, options: [null, ...d.enums.typePieceIdentite.keys], labelOf: (v) => v == null ? d.common.none : d.enums.typePieceIdentite[v] ?? v, onChanged: (v) => setState(() => _piece = v), placeholder: d.common.none)),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SuField(label: d.lcd.pieceIdentiteFin, controller: _fin, help: d.lcd.pieceIdentiteAide, maxLength: 4, mono: true, textDirection: TextDirection.ltr, inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z0-9]'))], optionalLabel: d.common.optional, error: fieldError(_fail, 'piece_identite_fin')),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SuField(label: d.lcd.plaqueVehicule, controller: _plaque, mono: true, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'plaque_vehicule')),
-          const SizedBox(height: 20),
-          FormError(_fail),
-          if (_fail != null) const SizedBox(height: 12),
-          Text(md.retryHint, style: t.labelSmall),
-          const SizedBox(height: 10),
-          PiecesPicker(pieces: _pieces, onChanged: () => setState(() {})),
-          const SizedBox(height: 14),
-          SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: _lot == null || _arrivee == null || _depart == null ? null : _submit),
         ],
-      ],
+      // 3 · Pièces jointes, puis récapitulatif avant l'envoi.
+      _ => [
+          PiecesPicker(pieces: _pieces, onChanged: () => setState(() {}), titre: false),
+          const SizedBox(height: 20),
+          SuCard(
+            child: Column(
+              children: [
+                if (_lot != null) KeyValueRow(d.lcd.lot, numero(_lot!)),
+                KeyValueRow(d.lcd.dateArrivee, '${_arrivee == null ? '—' : formatJourAnnee(_arrivee, l)}${_heure != null ? ' · $_heure' : ''}'),
+                KeyValueRow(d.lcd.dateDepart, _depart == null ? '—' : formatJourAnnee(_depart, l)),
+                KeyValueRow(d.lcd.nbVoyageurs, _nb.text.trim().isEmpty ? '1' : _nb.text.trim()),
+                KeyValueRow(d.lcd.voyageurPrincipal, _nom.text.trim()),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(md.retryHint, style: t.bodySmall),
+        ],
+    };
+
+    // Retour (bouton rond comme geste système) : étape précédente avant de quitter le parcours.
+    return PopScope(
+      canPop: _etape == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _etape > 0) setState(() => _etape--);
+      },
+      child: SuPage(
+        title: _edition ? d.lcd.modifierSejour : d.lcd.declarerSejour,
+        leading: _etape == 0 && !context.canPop()
+            ? null
+            : Padding(
+                padding: const EdgeInsetsDirectional.only(start: 16),
+                child: Align(alignment: AlignmentDirectional.centerStart, child: CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: _etape > 0 ? d.common.previous : MaterialLocalizations.of(context).backButtonTooltip, onTap: _precedent)),
+              ),
+        children: [
+          if (_edition && existing!.isLoading && !_prefilled)
+            const LoadingList(count: 3)
+          else ...[
+            // Barre de progression du parcours.
+            Text(fill(md.obStep, {'n': _etape + 1, 'total': _nbEtapes}), style: t.bodySmall?.copyWith(fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Gauge((_etape + 1) / _nbEtapes, height: 6, color: SuColors.link),
+            AnimatedSwitcher(
+              duration: SuMotion.of(context, const Duration(milliseconds: 280)),
+              switchInCurve: SuMotion.easeOut,
+              switchOutCurve: SuMotion.easeIn,
+              transitionBuilder: (c, a) => FadeTransition(opacity: a, child: SlideTransition(position: Tween(begin: const Offset(0.04, 0), end: Offset.zero).animate(a), child: c)),
+              layoutBuilder: (current, previous) => Stack(alignment: AlignmentDirectional.topStart, children: [...previous, if (current != null) current]),
+              child: Column(
+                key: ValueKey(_etape),
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SectionHeader(titresEtapes[_etape], subtitle: _etape == 2 ? d.lcd.piecesJointesAide : null),
+                  if (_fail != null) ...[FormError(_fail), const SizedBox(height: 16)],
+                  ...champs,
+                  const SizedBox(height: 28),
+                  if (_etape < _nbEtapes - 1)
+                    SuPressable(
+                      enabled: etapeValide,
+                      child: FilledButton(onPressed: etapeValide ? () => setState(() => _etape++) : null, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)), child: Text(md.obNext)),
+                    )
+                  else
+                    SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: etapeValide ? _submit : null),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
@@ -381,16 +512,22 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
         ref.invalidate(lcdSejourProvider(data.id));
         ref.invalidate(lcdDeclarationProvider(data.declarationLcdId));
         ref.invalidate(lcdSyntheseProvider(data.lotId));
-        showToast(context, _edition ? context.dict.lcd.sejourModifie : context.dict.lcd.sejourDeclare);
         if (_edition) {
+          showToast(context, context.dict.lcd.sejourModifie);
           context.pop();
         } else {
+          // Moment Wise : écran de succès plein cadre, puis la fiche du séjour.
+          final m = scinderSucces(context.dict.lcd.sejourDeclare);
+          await showSuccess(context, title: m.title, body: m.body, illustration: 'ok-general');
+          if (!mounted) return;
           context.pushReplacement('/location-courte-duree/sejours/${data.id}');
         }
       case ApiFail<LcdSejour>():
+        final etape = _etapeDe(r);
         setState(() {
           _loading = false;
           _fail = r;
+          if (etape != null) _etape = etape;
         });
     }
   }
@@ -409,25 +546,26 @@ class _DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
+    // Même habillage que SuSelect : champ blanc, liseré hairline-strong, glyphe vert profond.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(children: [Flexible(child: Text(label, style: t.labelMedium?.copyWith(color: SuColors.ink), maxLines: 1, overflow: TextOverflow.ellipsis)), if (required) Text(' *', style: t.labelMedium?.copyWith(color: SuColors.danger))]),
-        const SizedBox(height: 6),
+        const SizedBox(height: 8),
         Material(
           color: SuColors.surface,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairline)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
+          clipBehavior: Clip.antiAlias,
           child: InkWell(
-            borderRadius: BorderRadius.circular(SuRadius.field),
             onTap: onTap,
             child: Padding(
-              padding: const EdgeInsetsDirectional.fromSTEB(14, 15, 8, 15),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 17, 10, 17),
               child: Row(
                 children: [
                   Expanded(child: Text(value ?? '—', style: t.bodyLarge?.copyWith(color: value == null ? SuColors.faint : SuColors.ink, fontFeatures: const [FontFeature.tabularFigures()]), maxLines: 1, overflow: TextOverflow.ellipsis)),
                   onClear != null
-                      ? GestureDetector(onTap: onClear, child: const Icon(Icons.close_rounded, color: SuColors.soft, size: 20))
-                      : Icon(icon, color: SuColors.soft, size: 20),
+                      ? Semantics(button: true, label: MaterialLocalizations.of(context).deleteButtonTooltip, child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onClear, child: const Padding(padding: EdgeInsets.all(2), child: Icon(Icons.close_rounded, color: SuColors.link, size: 20))))
+                      : Icon(icon, color: SuColors.link, size: 20),
                 ],
               ),
             ),
@@ -499,20 +637,26 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Résumé Wise : grande pastille, voyageur en grand, lot · nuits · voyageurs, statut.
+              SuEnter(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut), size: 64),
+                    const SizedBox(height: 16),
+                    Text(s.voyageurPrincipalNom, style: t.displaySmall),
+                    const SizedBox(height: 4),
+                    Text('${d.lcd.lot} ${s.lotNumero} · ${fill(d.lcd.nuits, {'n': s.nuits})} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}', style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+                    const SizedBox(height: 12),
+                    StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
               SuCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut), size: 48),
-                        const SizedBox(width: 12),
-                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(s.voyageurPrincipalNom, style: t.titleLarge), Text('${d.lcd.lot} ${s.lotNumero} · ${fill(d.lcd.nuits, {'n': s.nuits})}', style: t.bodySmall)])),
-                        StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    const Divider(height: 16),
                     KeyValueRow(d.lcd.dateArrivee, '${formatJourAnnee(s.jourArrivee, l)}${s.heureArriveePrevue != null ? ' · ${s.heureArriveePrevue}' : ''}'),
                     KeyValueRow(d.lcd.dateDepart, formatJourAnnee(s.jourDepart, l)),
                     KeyValueRow(d.lcd.nbVoyageurs, '${s.nbVoyageurs}'),
@@ -527,18 +671,18 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
               ),
               if (enFile) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.warn, body: '${md.pendingSend} — ${md.queueHint}')],
               if (queue.any((q) => q.definitif)) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, body: queue.firstWhere((q) => q.definitif).derniereErreur ?? md.failedDefinitive)],
-              const SizedBox(height: 14),
+              const SizedBox(height: 20),
               if (peutConfirmer && s.statut == 'PREVU' && !enFile)
                 SubmitButton(label: d.lcd.confirmerArrivee, icon: Icons.login_rounded, loading: _loading, onPressed: () => confirmerSejour(context, ref, s, 'arrivee')),
               if (peutConfirmer && s.statut == 'EN_COURS' && !enFile)
                 SubmitButton(label: d.lcd.confirmerDepart, icon: Icons.logout_rounded, loading: _loading, onPressed: () => confirmerSejour(context, ref, s, 'depart')),
-              if (peutConfirmer && s.actif) ...[const SizedBox(height: 6), Text(md.lcdOfflineConfirm, style: t.labelSmall, textAlign: TextAlign.center), const SizedBox(height: 10)],
+              if (peutConfirmer && s.actif) ...[const SizedBox(height: 8), Text(md.lcdOfflineConfirm, style: t.bodySmall, textAlign: TextAlign.center), const SizedBox(height: 12)],
               if (peutGerer && s.statut == 'PREVU')
                 Row(
                   children: [
                     Expanded(child: SubmitButton(label: d.common.modify, icon: Icons.edit_rounded, secondary: true, onPressed: () => context.push('/location-courte-duree/sejours/nouveau?sejour=${s.id}'))),
                     const SizedBox(width: 10),
-                    Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _annuler(s), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger)), icon: const Icon(Icons.cancel_outlined, size: 18), label: Text(d.lcd.annuler, overflow: TextOverflow.ellipsis))),
+                    Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _annuler(s), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger, width: 1.2)), icon: const Icon(Icons.cancel_outlined, size: 20), label: Text(d.lcd.annuler, overflow: TextOverflow.ellipsis))),
                   ],
                 ),
               if ((s.statut == 'EN_COURS' || s.statut == 'TERMINE') && !ctx.isPrestataire) ...[
@@ -548,7 +692,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
               PiecesJointesSection(sejourId: s.id, peutJoindre: (ctx.declareSejoursLcd || ctx.isGardien || ctx.isGestion) && s.statut != 'ANNULE', peutRetirer: (ctx.declareSejoursLcd || ctx.isGestion) && s.statut != 'ANNULE'),
               SectionHeader(d.lcd.journal),
               if (s.evenements.isEmpty)
-                SuCard(child: Text(d.common.emptyDefault, style: t.bodySmall))
+                Text(d.lcd.journalVide, style: t.bodyMedium?.copyWith(color: SuColors.soft))
               else
                 SuCard(
                   child: Column(
@@ -592,19 +736,20 @@ class _EvenementItem extends StatelessWidget {
         children: [
           Column(
             children: [
-              IconCircle(iconEvenement(e.type), tone: tone, size: 32, iconSize: 16),
-              if (!last) Expanded(child: Container(width: 2, margin: const EdgeInsets.symmetric(vertical: 4), color: SuColors.hairline)),
+              IconCircle(iconEvenement(e.type), tone: tone, size: 40, iconSize: 20),
+              if (!last) Expanded(child: Container(width: 2, margin: const EdgeInsets.symmetric(vertical: 4), decoration: BoxDecoration(color: SuColors.washStrong, borderRadius: BorderRadius.circular(1)))),
             ],
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Padding(
-              padding: EdgeInsets.only(bottom: last ? 0 : 16),
+              padding: EdgeInsets.only(top: 2, bottom: last ? 0 : 18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.enums.typeEvenementSejour[e.type] ?? e.type, style: t.titleSmall),
-                  Text(formatDateHeure(e.horodatage, context.locale), style: t.labelSmall),
+                  Text(d.enums.typeEvenementSejour[e.type] ?? e.type, style: t.titleMedium),
+                  const SizedBox(height: 2),
+                  Text(formatDateHeure(e.horodatage, context.locale), style: t.bodySmall),
                   if (constate != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text('${d.lcd.nbVoyageursConstate} : $constate', style: t.bodySmall)),
                   if (motif is String && motif.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 2), child: Text(motif, style: t.bodySmall)),
                 ],
@@ -634,10 +779,10 @@ class _MotifFormState extends State<_MotifForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(widget.body, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 12),
+        Text(widget.body, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 16),
         SuField(label: widget.label, controller: _motif, maxLines: 3, required: widget.required, optionalLabel: widget.required ? null : d.common.optional, onChanged: (_) => setState(() {})),
-        const SizedBox(height: 14),
+        const SizedBox(height: 20),
         SubmitButton(label: widget.submit, danger: widget.danger, onPressed: widget.required && _motif.text.trim().isEmpty ? null : () => Navigator.pop(context, _motif.text.trim())),
       ],
     );
@@ -677,16 +822,22 @@ String _contentTypeDe(String nom, String? mime) {
 Future<PieceLocale?> choisirPiece(BuildContext context) async {
   final d = context.dict;
   final choix = await showModalBottomSheet<String>(
-    context: context,
+    useRootNavigator: true,
+      context: context,
     sheetAnimationStyle: SuMotion.sheet,
     builder: (ctx) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          ListTile(leading: const Icon(Icons.photo_camera_rounded, color: SuColors.action), title: Text(d.lcd.prendrePhoto), onTap: () => Navigator.pop(ctx, 'camera')),
-          ListTile(leading: const Icon(Icons.photo_library_rounded, color: SuColors.action), title: Text(d.incidents.choisirGalerie), onTap: () => Navigator.pop(ctx, 'galerie')),
-          ListTile(leading: const Icon(Icons.attach_file_rounded, color: SuColors.action), title: Text(d.lcd.choisirFichier), onTap: () => Navigator.pop(ctx, 'fichier')),
-          const SizedBox(height: 8),
+          // Lignes Wise : pastille 48, libellé gras.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            child: CardList([
+              ListRow(leading: const IconCircle(Icons.photo_camera_rounded), title: d.lcd.prendrePhoto, onTap: () => Navigator.pop(ctx, 'camera')),
+              ListRow(leading: const IconCircle(Icons.photo_library_rounded), title: d.incidents.choisirGalerie, onTap: () => Navigator.pop(ctx, 'galerie')),
+              ListRow(leading: const IconCircle(Icons.attach_file_rounded), title: d.lcd.choisirFichier, onTap: () => Navigator.pop(ctx, 'fichier')),
+            ]),
+          ),
         ],
       ),
     ),
@@ -718,9 +869,11 @@ Future<List<String>?> televerserPieces(ApiClient api, List<PieceLocale> pieces) 
 
 /// Bloc « Pièces jointes » du formulaire : liste des fichiers choisis + bouton d'ajout.
 class PiecesPicker extends StatelessWidget {
-  const PiecesPicker({super.key, required this.pieces, required this.onChanged});
+  const PiecesPicker({super.key, required this.pieces, required this.onChanged, this.titre = true});
   final List<PieceLocale> pieces;
   final VoidCallback onChanged;
+  /// Libellé + aide au-dessus (masqués quand l'étape du parcours les porte déjà).
+  final bool titre;
 
   @override
   Widget build(BuildContext context) {
@@ -729,17 +882,19 @@ class PiecesPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(d.lcd.piecesJointes, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 4),
-        Text(d.lcd.piecesJointesAide, style: t.bodySmall),
-        const SizedBox(height: 8),
+        if (titre) ...[
+          Text(d.lcd.piecesJointes, style: t.labelMedium?.copyWith(color: SuColors.ink)),
+          const SizedBox(height: 4),
+          Text(d.lcd.piecesJointesAide, style: t.bodySmall),
+          const SizedBox(height: 8),
+        ],
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
             for (final p in pieces)
               Chip(
-                avatar: Icon(p.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.action),
+                avatar: Icon(p.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link),
                 label: Text(p.nom, overflow: TextOverflow.ellipsis),
                 onDeleted: () {
                   pieces.remove(p);
@@ -748,7 +903,7 @@ class PiecesPicker extends StatelessWidget {
               ),
             if (pieces.length < 10)
               ActionChip(
-                avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.action),
+                avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link),
                 label: Text(d.lcd.ajouterPieces),
                 onPressed: () async {
                   final p = await choisirPiece(context);
@@ -826,10 +981,9 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(d.lcd.piecesJointes, subtitle: d.lcd.piecesJointesAide, actionLabel: widget.peutJoindre && liste.length < 10 ? d.lcd.ajouterPieces : null, onAction: widget.peutJoindre && liste.length < 10 && !_busy ? _ajouter : null),
-        SuCard(
-          child: liste.isEmpty
-              ? Text(pieces.isLoading ? context.mdict.loading : d.lcd.aucunePiece, style: t.bodySmall)
-              : GridView.count(
+        liste.isEmpty
+            ? Text(pieces.isLoading ? context.mdict.loading : d.lcd.aucunePiece, style: t.bodyMedium?.copyWith(color: SuColors.soft))
+            : GridView.count(
                   crossAxisCount: 3,
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
@@ -841,29 +995,25 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
                         fit: StackFit.expand,
                         children: [
                           InkWell(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(18),
                             onTap: () => ouvrirVisionneuse(context, titre: pj.nom, url: pj.url),
                             child: ClipRRect(
-                              borderRadius: BorderRadius.circular(14),
+                              borderRadius: BorderRadius.circular(18),
                               child: pj.estImage
-                                  ? Image.network(pj.url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: SuColors.ground, child: const Icon(Icons.broken_image_outlined, color: SuColors.faint)))
-                                  : Container(color: SuColors.ground, padding: const EdgeInsets.all(8), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.picture_as_pdf_rounded, color: SuColors.action, size: 28), const SizedBox(height: 4), Text(pj.nom, style: t.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, textDirection: TextDirection.ltr)])),
+                                  ? Image.network(pj.url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: SuColors.tile, child: const Icon(Icons.broken_image_outlined, color: SuColors.faint)))
+                                  : Container(color: SuColors.tile, padding: const EdgeInsets.all(8), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.picture_as_pdf_rounded, color: SuColors.link, size: 28), const SizedBox(height: 4), Text(pj.nom, style: t.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, textDirection: TextDirection.ltr)])),
                             ),
                           ),
                           if (widget.peutRetirer)
                             PositionedDirectional(
                               end: 4,
                               top: 4,
-                              child: GestureDetector(
-                                onTap: () => _retirer(pj),
-                                child: Container(decoration: const BoxDecoration(color: SuColors.ink, shape: BoxShape.circle), padding: const EdgeInsets.all(3), child: const Icon(Icons.close_rounded, color: Colors.white, size: 14)),
-                              ),
+                              child: CircleIconButton(onTap: () => _retirer(pj), icon: Icons.close_rounded, size: 30, color: SuColors.surface, iconColor: SuColors.ink, tooltip: d.lcd.retirerPiece),
                             ),
                         ],
                       ),
                   ],
                 ),
-        ),
       ],
     );
   }

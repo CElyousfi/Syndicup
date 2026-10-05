@@ -15,6 +15,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
+import '../incidents/incidents_screens.dart' show scinderMessage;
 import '../shell/app_shell.dart';
 
 IconData _iconEspace(String type) {
@@ -37,62 +38,124 @@ class EspacesScreen extends ConsumerWidget {
     final espaces = ref.watch(espacesProvider);
     final racine = !context.canPop();
     final peutReserver = ctx.isResident && !(ctx.isLocataire && (ctx.copropriete?.reservationProprietairesSeulement ?? false));
+    final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()), icon: const Icon(Icons.add_rounded), label: Text(d.espaces.nouveau)) : null;
+    Future<void> refresh() async => ref.invalidate(espacesProvider);
+    final liste = AsyncView(espaces, onRetry: () => ref.invalidate(espacesProvider), skeletonCount: 2, loading: const LoadingList(count: 2, height: 260), data: (list) {
+      if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations');
+      return Column(
+        children: [
+          for (int k = 0; k < list.length; k++)
+            SuEnter(index: k, child: _EspaceCard(espace: list[k], peutReserver: peutReserver)),
+        ],
+      );
+    });
+    // Ouverte depuis « Plus » : page Wise (grand titre + sous-titre) ; racine d'onglet : en-tête du shell.
+    if (!racine) return SuPage(title: d.espaces.titre, subtitle: d.espaces.subtitle, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [liste]);
     return Scaffold(
-      appBar: racine ? ShellHeader(title: d.espaces.titre) : AppBar(title: Text(d.espaces.titre)),
-      floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()), backgroundColor: SuColors.ink, foregroundColor: Colors.white, icon: const Icon(Icons.add_rounded), label: Text(d.espaces.nouveau)) : null,
+      appBar: ShellHeader(title: d.espaces.titre),
+      floatingActionButton: fab,
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(espacesProvider),
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
-            Text(d.espaces.subtitle, style: t.bodySmall),
-            const SizedBox(height: 12),
-            AsyncView(espaces, onRetry: () => ref.invalidate(espacesProvider), data: (list) {
-              if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded);
-              return Column(
-                children: [
-                  for (final e in list)
-                    SuCard(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      padding: EdgeInsets.zero,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Photo propre à l'espace si le syndic l'a personnalisée, sinon l'emplacement déduit du nom/type.
-                          SizedBox(height: 120, width: double.infinity, child: CoproPhoto('espace:${e.id}', fallbackCle: espacePhotoCle(e.nom, e.type))),
-                          Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    IconCircle(_iconEspace(e.type), tone: Tone.tosca, size: 40),
-                                    const SizedBox(width: 12),
-                                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(e.nom, style: t.titleSmall), Text('${e.type}${e.capacite != null ? ' · ${fill(d.espaces.personnes, {'n': e.capacite})}' : ''}', style: t.bodySmall)])),
-                                  ],
-                                ),
-                                const SizedBox(height: 10),
-                                Wrap(spacing: 6, runSpacing: 6, children: [
-                                  StatusBadge(e.reservable ? d.espaces.reservable : d.espaces.nonReservable, variant: e.reservable ? BadgeVariant.ok : BadgeVariant.outline, small: true),
-                                  if (e.reservable) StatusBadge(e.validationAutomatique ? d.espaces.validationAuto : d.espaces.validationManuelle, variant: e.validationAutomatique ? BadgeVariant.info : BadgeVariant.neutral, small: true),
-                                ]),
-                                if (e.reservable && peutReserver) ...[
-                                  const SizedBox(height: 12),
-                                  FilledButton(onPressed: () => showFormSheet<void>(context, title: '${d.espaces.reserverTitre} · ${e.nom}', builder: (_) => ReservationForm(espace: e)), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)), child: Text(d.espaces.reserver)),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              );
-            }),
+            Text(d.espaces.subtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+            const SizedBox(height: 16),
+            liste,
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Carte d'espace Wise : photo pleine largeur aux coins arrondis dans la tuile greige, nom en
+/// gras, capacité, statuts, pill « Réserver ».
+class _EspaceCard extends StatelessWidget {
+  const _EspaceCard({required this.espace, required this.peutReserver});
+  final EspaceCommun espace;
+  final bool peutReserver;
+  @override
+  Widget build(BuildContext context) {
+    final d = context.dict;
+    final t = Theme.of(context).textTheme;
+    final e = espace;
+    return SuCard(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(8),
+      radius: 28,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Photo propre à l'espace si le syndic l'a personnalisée, sinon l'emplacement déduit du nom/type.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(22),
+            child: SizedBox(height: 156, child: CoproPhoto('espace:${e.id}', fallbackCle: espacePhotoCle(e.nom, e.type))),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 14, 10, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    IconCircle(_iconEspace(e.type), tone: Tone.tosca),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        Text(e.nom, style: t.titleLarge, maxLines: 2, overflow: TextOverflow.ellipsis),
+                        const SizedBox(height: 2),
+                        Text('${e.type}${e.capacite != null ? ' · ${fill(d.espaces.personnes, {'n': e.capacite})}' : ''}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft)),
+                      ]),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Wrap(spacing: 6, runSpacing: 6, children: [
+                  StatusBadge(e.reservable ? d.espaces.reservable : d.espaces.nonReservable, variant: e.reservable ? BadgeVariant.ok : BadgeVariant.outline, small: true),
+                  if (e.reservable) StatusBadge(e.validationAutomatique ? d.espaces.validationAuto : d.espaces.validationManuelle, variant: e.validationAutomatique ? BadgeVariant.info : BadgeVariant.neutral, small: true),
+                ]),
+                if (e.reservable && peutReserver) ...[
+                  const SizedBox(height: 16),
+                  SubmitButton(label: d.espaces.reserver, icon: Icons.event_available_rounded, onPressed: () => showFormSheet<void>(context, title: fill(d.espaces.reserverTitre, {'nom': e.nom}), builder: (_) => ReservationForm(espace: e))),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Champ-sélecteur Wise (date, heure) : tuile greige, pastille, libellé ardoise, valeur grasse,
+/// chevron vert profond.
+class _PickerTile extends StatelessWidget {
+  const _PickerTile({required this.icon, required this.value, required this.onTap, this.label});
+  final IconData icon;
+  final String? label;
+  final String value;
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return SuCard(
+      onTap: onTap,
+      radius: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: Row(children: [
+        IconCircle(icon, tone: Tone.neutral, size: 40, iconSize: 20),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            if (label != null) Text(label!, style: t.bodySmall?.copyWith(color: SuColors.soft)),
+            Text(value, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ]),
+        ),
+        const ChevronEnd(),
+      ]),
     );
   }
 }
@@ -127,41 +190,45 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(widget.espace.validationAutomatique ? d.espaces.validationAuto : d.espaces.validationManuelle, style: t.bodySmall),
-        const SizedBox(height: 12),
+        StatusBadge(widget.espace.validationAutomatique ? d.espaces.validationAuto : d.espaces.validationManuelle, variant: widget.espace.validationAutomatique ? BadgeVariant.info : BadgeVariant.neutral),
+        const SizedBox(height: 18),
         Text(md.chooseSlot, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 6),
-        OutlinedButton.icon(
-          onPressed: () async {
+        const SizedBox(height: 8),
+        _PickerTile(
+          icon: Icons.event_rounded,
+          value: formatDate(_jour.toIso8601String(), l),
+          onTap: () async {
             final p = await showDatePicker(context: context, initialDate: _jour, firstDate: DateTime.now(), lastDate: DateTime.now().add(const Duration(days: 365)));
             if (p != null) setState(() => _jour = p);
           },
-          icon: const Icon(Icons.event_rounded),
-          label: Text(formatDate(_jour.toIso8601String(), l)),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 10),
         Row(
           children: [
-            Expanded(child: OutlinedButton(onPressed: () async {
-              final p = await showTimePicker(context: context, initialTime: _debut);
-              if (p != null) setState(() => _debut = p);
-            }, child: Text('${d.espaces.dateDebut} ${hm(_debut)}'))),
-            const SizedBox(width: 8),
-            Expanded(child: OutlinedButton(onPressed: () async {
-              final p = await showTimePicker(context: context, initialTime: _fin);
-              if (p != null) setState(() => _fin = p);
-            }, child: Text('${d.espaces.dateFin} ${hm(_fin)}'))),
+            Expanded(
+              child: _PickerTile(icon: Icons.schedule_rounded, label: d.espaces.dateDebut, value: hm(_debut), onTap: () async {
+                final p = await showTimePicker(context: context, initialTime: _debut);
+                if (p != null) setState(() => _debut = p);
+              }),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _PickerTile(icon: Icons.schedule_rounded, label: d.espaces.dateFin, value: hm(_fin), onTap: () async {
+                final p = await showTimePicker(context: context, initialTime: _fin);
+                if (p != null) setState(() => _fin = p);
+              }),
+            ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         if (lots.length > 1) ...[
           SuSelect<String>(label: d.espaces.pourLot, value: _lot, options: lots.map((x) => x.id).toList(), labelOf: (id) => lots.firstWhere((x) => x.id == id).numero, onChanged: (v) => setState(() => _lot = v), required: true),
           const SizedBox(height: 12),
         ],
         SuField(label: d.espaces.nombreInvites, controller: _invites, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], optionalLabel: d.common.optional, textDirection: TextDirection.ltr, error: fieldError(_fail, 'nombre_invites')),
         const SizedBox(height: 10),
-        Text(md.conflictNote, style: t.labelSmall),
-        const SizedBox(height: 12),
+        Text(md.conflictNote, style: t.bodySmall?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 18),
         if (_fail != null) (_fail!.status == 409 || _fail!.status == 422) ? SuBanner(tone: BannerTone.warn, title: d.espaces.creneauPris, body: _fail!.error.message) : FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
@@ -187,8 +254,11 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
                   switch (r) {
                     case ApiOk<Reservation>(:final data):
                       ref.invalidate(reservationsProvider);
+                      // Succès plein écran sur le navigateur racine (la feuille se ferme d'abord).
+                      final racine = Navigator.of(this.context, rootNavigator: true).context;
+                      final (titre, corps) = scinderMessage(data.statut == 'CONFIRMEE' ? d.espaces.reservationConfirmee : d.espaces.reservationEnAttente);
                       Navigator.pop(context);
-                      showToast(context, data.statut == 'CONFIRMEE' ? d.espaces.reservationConfirmee : d.espaces.reservationEnAttente);
+                      if (racine.mounted) showSuccess(racine, title: titre, body: corps ?? '${widget.espace.nom} · ${formatDate(debut.toIso8601String(), l)} · ${hm(_debut)} – ${hm(_fin)}', illustration: 'ok-reservation');
                     case ApiFail<Reservation>():
                       setState(() {
                         _loading = false;
@@ -272,54 +342,77 @@ class ReservationsScreen extends ConsumerWidget {
     Widget carte(Reservation r) {
       final e = espaces.where((x) => x.id == r.espaceId).firstOrNull;
       final mienne = r.utilisateurId == ctx.profil.id;
+      final lot = lots.where((x) => x.id == r.lotId).map((x) => x.numero).firstOrNull ?? '';
+      final actions = r.statut == 'EN_ATTENTE' || r.statut == 'CONFIRMEE';
+      // Ligne Wise : pastille 48, nom gras, créneau ardoise, statut en fin ; actions alignées sous le texte.
       return Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-        child: Column(
+        padding: const EdgeInsets.symmetric(vertical: 11),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [IconCircle(_iconEspace(e?.type ?? ''), tone: Tone.tosca, size: 36), const SizedBox(width: 10), Expanded(child: Text(e?.nom ?? r.espaceId.substring(0, 8), style: t.titleSmall)), StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion)]),
-            const SizedBox(height: 6),
-            Text('${formatDateHeure(r.dateDebut, l)} → ${formatHeure(r.dateFin, l)} · ${d.invitations.lot} ${lots.where((x) => x.id == r.lotId).map((x) => x.numero).firstOrNull ?? ''}${r.nombreInvites != null ? ' · ${r.nombreInvites} ${d.espaces.nombreInvites.toLowerCase()}' : ''}', style: t.bodySmall),
-            if (r.statut == 'EN_ATTENTE' && !gestion) Padding(padding: const EdgeInsets.only(top: 4), child: Text(d.espaces.reservationEnAttente, style: t.labelSmall)),
-            if (r.motifRejet != null) Padding(padding: const EdgeInsets.only(top: 6), child: SuBanner(tone: BannerTone.danger, title: d.espaces.motifRejet, body: r.motifRejet!)),
-            if (r.statut == 'EN_ATTENTE' || r.statut == 'CONFIRMEE')
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+            IconCircle(_iconEspace(e?.type ?? ''), tone: r.statut == 'EN_ATTENTE' ? Tone.sand : r.statut == 'CONFIRMEE' ? Tone.tosca : Tone.neutral),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  if (gestion && r.statut == 'EN_ATTENTE') ...[
-                    TextButton(onPressed: () => _rejeter(context, ref, r), style: TextButton.styleFrom(foregroundColor: SuColors.danger), child: Text(d.espaces.rejeter)),
-                    TextButton(onPressed: () => _valider(context, ref, r), child: Text(d.espaces.valider)),
-                  ],
-                  if (mienne || gestion) TextButton(onPressed: () => _annuler(context, ref, r), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.espaces.annulerReservation)),
+                  Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Expanded(child: Text(e?.nom ?? d.espaces.titre, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
+                    const SizedBox(width: 10),
+                    StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion),
+                  ]),
+                  const SizedBox(height: 3),
+                  Text('${formatDateHeure(r.dateDebut, l)} → ${formatHeure(r.dateFin, l)} · ${d.invitations.lot} $lot${r.nombreInvites != null ? ' · ${r.nombreInvites} ${d.espaces.nombreInvites.toLowerCase()}' : ''}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35)),
+                  if (r.statut == 'EN_ATTENTE' && !gestion) Padding(padding: const EdgeInsets.only(top: 4), child: Text(d.espaces.reservationEnAttente, style: t.bodySmall?.copyWith(color: SuColors.warn))),
+                  if (r.motifRejet != null) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.danger, title: d.espaces.motifRejet, body: r.motifRejet!)),
+                  if (actions && (gestion || mienne))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 10),
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (gestion && r.statut == 'EN_ATTENTE') ...[
+                            // Le thème fixe minimumSize = Size.fromHeight(…) : bornée ici (pill compacte).
+                            FilledButton(onPressed: () => _valider(context, ref, r), style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 18)), child: Text(d.espaces.valider)),
+                            LinkButton(d.espaces.rejeter, color: SuColors.danger, onTap: () => _rejeter(context, ref, r)),
+                          ],
+                          LinkButton(d.espaces.annulerReservation, color: SuColors.soft, onTap: () => _annuler(context, ref, r)),
+                        ],
+                      ),
+                    ),
                 ],
               ),
+            ),
           ],
         ),
       );
     }
 
+    final titre = gestion ? d.espaces.reservations : d.espaces.mesReservations;
+    Future<void> refresh() async => ref.invalidate(reservationsProvider);
+    final liste = AsyncView(resas, onRetry: () => ref.invalidate(reservationsProvider), data: (list) {
+      if (list.isEmpty) return EmptyState(title: d.espaces.aucuneReservation, hint: d.espaces.aucuneReservationAide, icon: Icons.calendar_month_rounded, illustration: 'empty-reservations');
+      final sorted = [...list]..sort((a, b) => b.dateDebut.compareTo(a.dateDebut));
+      final attente = sorted.where((r) => r.statut == 'EN_ATTENTE').toList();
+      final autres = sorted.where((r) => r.statut != 'EN_ATTENTE').toList();
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (attente.isNotEmpty) ...[SectionHeader(gestion ? d.espaces.fileAttente : d.enums.statutReservation['EN_ATTENTE']!), CardList([for (final r in attente) carte(r)])],
+          if (autres.isNotEmpty) ...[SectionHeader(d.espaces.planning), CardList([for (final r in autres) carte(r)])],
+        ],
+      );
+    });
+    if (!racine) return SuPage(title: titre, onRefresh: refresh, children: [liste]);
     return Scaffold(
-      appBar: racine ? ShellHeader(title: gestion ? d.espaces.reservations : d.espaces.mesReservations) : AppBar(title: Text(gestion ? d.espaces.reservations : d.espaces.mesReservations)),
+      appBar: ShellHeader(title: titre),
       body: RefreshIndicator(
-        onRefresh: () async => ref.invalidate(reservationsProvider),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
-          children: [
-            AsyncView(resas, onRetry: () => ref.invalidate(reservationsProvider), data: (list) {
-              if (list.isEmpty) return EmptyState(title: d.espaces.aucuneReservation, hint: d.espaces.aucuneReservationAide, icon: Icons.calendar_month_rounded);
-              final sorted = [...list]..sort((a, b) => b.dateDebut.compareTo(a.dateDebut));
-              final attente = sorted.where((r) => r.statut == 'EN_ATTENTE').toList();
-              final autres = sorted.where((r) => r.statut != 'EN_ATTENTE').toList();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (attente.isNotEmpty) ...[SectionHeader(gestion ? d.espaces.fileAttente : d.enums.statutReservation['EN_ATTENTE']!), CardList([for (final r in attente) carte(r)])],
-                  if (autres.isNotEmpty) ...[SectionHeader(d.espaces.planning), CardList([for (final r in autres) carte(r)])],
-                ],
-              );
-            }),
-          ],
-        ),
+        onRefresh: refresh,
+        color: SuColors.link,
+        backgroundColor: SuColors.surface,
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [liste]),
       ),
     );
   }

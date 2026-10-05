@@ -38,30 +38,98 @@ class DashboardScreen extends ConsumerWidget {
   }
 }
 
+/// Haut de l'accueil, d'après l'écran « Account » de Wise : bandeau d'image pleine largeur aux
+/// coins supérieurs arrondis (ici la photo de la résidence, personnalisable par le syndic),
+/// recouvert par la feuille blanche qui porte le GRAND titre (salutation, prénom en gras).
 class _Greeting extends StatelessWidget {
-  const _Greeting({required this.ctx, this.subtitle});
+  const _Greeting({required this.ctx, this.subtitle, this.photo = 'accueil'});
   final AppContext ctx;
   final String? subtitle;
+  final String photo;
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
     final d = context.dict;
-    return Padding(
-      padding: const EdgeInsets.only(top: 6, bottom: 14),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Salutation révélée mot par mot, prénom en gras (comme le tableau de bord web).
-          Builder(builder: (context) {
-            final salut = fill(d.dash.greeting, {'prenom': ''}).trim();
-            final nom = '${ctx.profil.prenom ?? nomCompletProfil(ctx) ?? ''}!';
-            return SuRevealText('$salut $nom', style: t.displayMedium?.copyWith(fontWeight: FontWeight.w400), boldFrom: salut.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length);
-          }),
-          if (subtitle != null) SuEnter(index: 3, child: Padding(padding: const EdgeInsets.only(top: 3), child: Text(subtitle!, style: t.bodyMedium))),
-        ],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          height: 150,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              PositionedDirectional(
+                start: -16,
+                end: -16,
+                top: 0,
+                bottom: 0,
+                child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), child: CoproPhoto(photo)),
+              ),
+              const PositionedDirectional(
+                start: -16,
+                end: -16,
+                bottom: -1,
+                height: 30,
+                child: DecoratedBox(decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.vertical(top: Radius.circular(28)))),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Salutation révélée mot par mot, prénom en gras (comme le tableau de bord web).
+              Builder(builder: (context) {
+                final salut = fill(d.dash.greeting, {'prenom': ''}).trim();
+                final nom = '${ctx.profil.prenom ?? nomCompletProfil(ctx) ?? ''}!';
+                return SuRevealText('$salut $nom', style: t.displayLarge?.copyWith(fontWeight: FontWeight.w500), boldFrom: salut.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length);
+              }),
+              if (subtitle != null) SuEnter(index: 3, child: Padding(padding: const EdgeInsets.only(top: 6), child: Text(subtitle!, style: t.bodyLarge?.copyWith(color: SuColors.soft)))),
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
+
+/// Bouton d'action rond de Wise (« Send », « Add money », « Request ») : disque greige, glyphe
+/// encre, libellé gras dessous. Le premier peut être plein (sauge) : l'action principale.
+class _RoundAction extends StatelessWidget {
+  const _RoundAction({required this.icon, required this.label, required this.onTap, this.primary = false});
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool primary;
+  @override
+  Widget build(BuildContext context) => Expanded(
+        child: Semantics(
+          button: true,
+          label: label,
+          excludeSemantics: true,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: Column(
+              children: [
+                SuPressable(
+                  scale: 0.9,
+                  child: Container(
+                    width: 58,
+                    height: 58,
+                    decoration: BoxDecoration(color: primary ? SuColors.cta : SuColors.tile, shape: BoxShape.circle),
+                    child: Icon(icon, size: 26, color: SuColors.ink),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelMedium?.copyWith(fontSize: 13, color: SuColors.ink, height: 1.25)),
+              ],
+            ),
+          ),
+        ),
+      );
 }
 
 String echeanceRelative(BuildContext context, String iso) {
@@ -122,31 +190,22 @@ class _DashSyndic extends ConsumerWidget {
           if (synthese.hasError) ErrorState(error: synthese.error!, onRetry: refresh),
           // M24 — checklist de démarrage (lecture) : visible tant que tout n'est pas en place.
           const OnboardingCard(),
-          HeroCard(
-            imageWidget: const CoproPhoto('accueil'),
-            label: ctx.copropriete?.nom ?? d.nav.lots,
-            onTap: () => context.push('/lots'),
-            stats: [
-              (value: '${lots.valueOrNull?.length ?? '…'}', caption: d.nav.lots),
-              (value: '${(lots.valueOrNull ?? const <Lot>[]).where((x) => x.statut == 'OCCUPE').length}', caption: d.enums.statutLot['OCCUPE'] ?? ''),
-            ],
-          ),
-          SectionHeader(d.dash.raccourcis),
-          TwoCols([
-            StatTile(label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand, hint: sla.isNotEmpty ? '${sla.length} · ${d.dash.slaDepasse}' : d.incidents.titre, onTap: () => context.push('/incidents')),
-            StatTile(label: d.finances.tauxPaiement, value: synthese.isLoading ? '…' : formatPourcent(tot.taux), tone: Tone.lilac, hint: d.dash.recouvrementHint, onTap: () => context.push('/finances/appels-de-fonds')),
-            StatTile(label: d.dash.impayes, value: synthese.isLoading ? '…' : formatMAD(versChaine(tot.impaye), l), tone: Tone.sage, onTap: () => context.push('/finances/appels-de-fonds')),
-            StatTile(label: d.dash.reservationsAValider, value: '${aValider.length}', tone: Tone.neutral, hint: d.enums.statutReservation['EN_ATTENTE'], onTap: () => context.push('/reservations')),
+          // Soldes Wise : tuiles greige glissables, grand chiffre en bas.
+          TileCarousel(height: 208, children: [
+            StatTile(icon: Icons.payments_rounded, label: d.dash.impayes, value: synthese.isLoading ? '…' : formatMAD(versChaine(tot.impaye), l), tone: Tone.sage, onTap: () => context.push('/finances/appels-de-fonds')),
+            StatTile(icon: Icons.insights_rounded, label: d.finances.tauxPaiement, value: synthese.isLoading ? '…' : formatPourcent(tot.taux), tone: Tone.lilac, hint: d.dash.recouvrementHint, onTap: () => context.push('/finances/appels-de-fonds')),
+            StatTile(icon: Icons.build_rounded, label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand, hint: sla.isNotEmpty ? '${sla.length} · ${d.dash.slaDepasse}' : null, hintColor: sla.isNotEmpty ? SuColors.danger : null, onTap: () => context.push('/incidents')),
+            StatTile(icon: Icons.apartment_rounded, label: d.nav.lots, value: '${lots.valueOrNull?.length ?? '…'}', tone: Tone.tosca, hint: '${(lots.valueOrNull ?? const <Lot>[]).where((x) => x.statut == 'OCCUPE').length} ${(d.enums.statutLot['OCCUPE'] ?? '').toLowerCase()}', onTap: () => context.push('/lots')),
+            StatTile(icon: Icons.event_available_rounded, label: d.dash.reservationsAValider, value: '${aValider.length}', tone: Tone.neutral, onTap: () => context.push('/reservations')),
           ]),
           if (!lectureSeule) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: 22),
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(child: _Quick(icon: Icons.payments_rounded, label: d.finances.enregistrerPaiement, onTap: () => context.push('/finances/appels-de-fonds'))),
-                const SizedBox(width: 8),
-                Expanded(child: _Quick(icon: Icons.vpn_key_rounded, label: d.dash.inviterResident, onTap: () => context.push('/invitations?nouvelle=1'))),
-                const SizedBox(width: 8),
-                Expanded(child: _Quick(icon: Icons.request_quote_rounded, label: d.dash.genererAppel, onTap: () => context.push('/finances/appels-de-fonds?generer=1'))),
+                _RoundAction(primary: true, icon: Icons.payments_rounded, label: d.finances.enregistrerPaiement, onTap: () => context.push('/finances/appels-de-fonds')),
+                _RoundAction(icon: Icons.request_quote_rounded, label: d.dash.genererAppel, onTap: () => context.push('/finances/appels-de-fonds?generer=1')),
+                _RoundAction(icon: Icons.vpn_key_rounded, label: d.dash.inviterResident, onTap: () => context.push('/invitations?nouvelle=1')),
               ],
             ),
           ],
@@ -160,7 +219,7 @@ class _DashSyndic extends ConsumerWidget {
                   for (final n in parNiveau)
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                      decoration: BoxDecoration(color: SuColors.ground, borderRadius: BorderRadius.circular(12)),
+                      decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(16)),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -175,12 +234,12 @@ class _DashSyndic extends ConsumerWidget {
           ],
           SectionHeader(d.finances.appels, subtitle: d.finances.appelsSubtitle, actionLabel: d.common.seeAll, onAction: () => context.push('/finances/appels-de-fonds')),
           if (s.appels.isEmpty)
-            EmptyState(title: d.finances.aucunAppel, hint: d.finances.aucunAppelAide, icon: Icons.request_quote_rounded, actionLabel: lectureSeule ? null : d.finances.genererAppel, onAction: () => context.push('/finances/appels-de-fonds?generer=1'))
+            EmptyState(title: d.finances.aucunAppel, hint: d.finances.aucunAppelAide, icon: Icons.request_quote_rounded, illustration: 'empty-appels', actionLabel: lectureSeule ? null : d.finances.genererAppel, onAction: () => context.push('/finances/appels-de-fonds?generer=1'))
           else
             CardList([
               for (final a in s.appels.take(5))
                 ListRow(
-                  leading: const IconCircle(Icons.request_quote_rounded, tone: Tone.sand, size: 40),
+                  leading: const IconCircle(Icons.request_quote_rounded, tone: Tone.sand),
                   title: formatPeriode(a.periode, l),
                   subtitle: '${d.enums.typeAppel[a.type] ?? a.type} · ${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)}',
                   trailing: SizedBox(
@@ -199,7 +258,7 @@ class _DashSyndic extends ConsumerWidget {
             ]),
           SectionHeader(d.dash.incidentsOuverts, subtitle: sla.isNotEmpty ? '${sla.length} · ${d.dash.slaDepasse}' : null, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
           if (ouverts.isEmpty)
-            SuCard(child: Text(d.incidents.aucunIncident, style: t.bodySmall))
+            _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded)
           else
             CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
           SectionHeader(d.dash.prochaineAg),
@@ -207,39 +266,20 @@ class _DashSyndic extends ConsumerWidget {
           SectionHeader(lectureSeule ? d.dash.litigesOuverts : d.dash.reservationsAValider, actionLabel: d.common.seeAll, onAction: () => context.push(lectureSeule ? '/litiges' : '/reservations')),
           if (lectureSeule)
             litigesOuverts.isEmpty
-                ? SuCard(child: Text(d.litiges.aucun, style: t.bodySmall))
-                : CardList([for (final x in litigesOuverts.take(4)) ListRow(title: x.type, subtitle: d.enums.escaladeLitige['${x.escaladeNiveau}'], onTap: () => context.push('/litiges'))])
+                ? _EmptyLine(d.litiges.aucun, icon: Icons.gavel_rounded)
+                : CardList([for (final x in litigesOuverts.take(4)) ListRow(leading: const IconCircle(Icons.gavel_rounded, tone: Tone.lilac), title: x.type, subtitle: d.enums.escaladeLitige['${x.escaladeNiveau}'], onTap: () => context.push('/litiges'))])
           else
             aValider.isEmpty
-                ? SuCard(child: Text(d.espaces.aucuneReservation, style: t.bodySmall))
+                ? _EmptyLine(d.espaces.aucuneReservation, icon: Icons.event_available_rounded)
                 : CardList([
                     for (final r in aValider.take(4))
-                      ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.tosca, size: 36), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true), onTap: () => context.push('/reservations')),
+                      ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.tosca), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true), onTap: () => context.push('/reservations')),
                   ]),
           DocumentsCard(documents: documents.valueOrNull ?? const []),
         ],
       )),
     );
   }
-}
-
-class _Quick extends StatelessWidget {
-  const _Quick({required this.icon, required this.label, required this.onTap});
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  @override
-  Widget build(BuildContext context) => SuCard(
-        onTap: onTap,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 14),
-        child: Column(
-          children: [
-            IconCircle(icon, tone: Tone.lilac, size: 40),
-            const SizedBox(height: 8),
-            Text(label, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
 }
 
 class _AgCard extends StatelessWidget {
@@ -258,49 +298,25 @@ class _AgCard extends StatelessWidget {
           children: [
             const IconCircle(Icons.how_to_vote_rounded, tone: Tone.lilac),
             const SizedBox(width: 12),
-            Expanded(child: Text(d.dash.aucuneAg, style: t.bodySmall)),
+            Expanded(child: Text(d.dash.aucuneAg, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
             if (creer != null) TextButton(onPressed: creer, child: Text(d.dash.creerAg)),
           ],
         ),
       );
     }
-    return SuCard(
+    // Carte-affiche Wise : salle sombre, date en capitales d'affiche, échéance relative.
+    final rel = echeanceRelative(context, a.dateAg);
+    return PosterCard(
+      art: 'poster-ag',
       onTap: () => context.push('/ag/${a.id}'),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const IconCircle(Icons.how_to_vote_rounded, tone: Tone.lilac),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(d.enums.typeAg[a.type] ?? a.type, style: t.titleSmall),
-                    Text(formatDateLongue(a.dateAg, context.locale), style: t.bodySmall),
-                    if (a.resolutions.isNotEmpty) Text('${a.resolutions.length} ${d.ag.resolutions.toLowerCase()}', style: t.labelSmall),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              StatusBadge(d.enums.statutAg[a.statut] ?? a.statut, variant: agVariant[a.statut] ?? BadgeVariant.neutral, pulse: a.statut == 'EN_COURS'),
-              const Spacer(),
-              Text(echeanceRelative(context, a.dateAg), style: t.labelSmall?.copyWith(fontWeight: FontWeight.w600)),
-            ],
-          ),
-          if (resident && (a.statut == 'CONVOQUEE' || a.statut == 'EN_COURS')) ...[
-            const SizedBox(height: 12),
-            a.statut == 'EN_COURS'
-                ? FilledButton(onPressed: () => context.push('/ag/${a.id}/seance'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(46)), child: Text(d.ag.rejoindreSeance))
-                : OutlinedButton(onPressed: () => context.push('/ag/${a.id}'), style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(46)), child: Text(d.dash.donnerProcuration)),
-          ],
-        ],
-      ),
+      kicker: '${d.enums.typeAg[a.type] ?? a.type}${rel.isEmpty ? '' : ' · $rel'}',
+      title: formatDateLongue(a.dateAg, context.locale),
+      body: [
+        d.enums.statutAg[a.statut] ?? a.statut,
+        if (a.resolutions.isNotEmpty) '${a.resolutions.length} ${d.ag.resolutions.toLowerCase()}',
+      ].join(' · '),
+      ctaLabel: resident && a.statut == 'EN_COURS' ? d.ag.rejoindreSeance : resident && a.statut == 'CONVOQUEE' ? d.dash.donnerProcuration : null,
+      onCta: resident && a.statut == 'EN_COURS' ? () => context.push('/ag/${a.id}/seance') : null,
     );
   }
 }
@@ -313,7 +329,7 @@ class IncidentRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = context.dict;
     return ListRow(
-      leading: IconCircle(Icons.build_rounded, tone: i.slaDepasse ? Tone.danger : Tone.tosca, size: 40),
+      leading: IconCircle(Icons.build_rounded, tone: i.slaDepasse ? Tone.danger : Tone.tosca),
       title: i.sousCategorie,
       subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie}',
       trailing: i.slaDepasse
@@ -335,7 +351,6 @@ class _DashResident extends ConsumerWidget {
     final d = context.dict;
     final md = context.mdict;
     final l = context.locale;
-    final t = Theme.of(context).textTheme;
     final lots = ref.watch(lotsProvider);
     final synthese = locataire ? null : ref.watch(syntheseProvider);
     final ags = locataire ? null : ref.watch(agListProvider);
@@ -382,13 +397,22 @@ class _DashResident extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)}${mesLots.isNotEmpty ? ' · ${mesLots.map((x) => x.numero).join(', ')}' : ''}'),
-          HeroCard(
-            imageWidget: const CoproPhoto('accueil'),
-            label: ctx.copropriete?.nom ?? d.lots.mesLots,
-            onTap: () => context.push('/lots'),
-            stats: [
-              (value: '${lotsAffiches.length}', caption: d.lots.mesLots),
-              if (!locataire) (value: formatMAD(versChaine(totalDu), l), caption: d.dash.monSolde),
+          TileCarousel(height: 196, children: [
+            if (!locataire) StatTile(icon: Icons.account_balance_wallet_rounded, label: d.dash.monSolde, value: synthese?.isLoading ?? false ? '…' : formatMAD(versChaine(totalDu), l), tone: totalDu > BigInt.zero ? Tone.danger : Tone.ok, onTap: lotsAffiches.length == 1 ? () => context.push('/lots/${lotsAffiches.first.id}?onglet=finances') : () => context.push('/lots')),
+            StatTile(icon: Icons.home_rounded, label: d.lots.mesLots, value: '${lotsAffiches.length}', tone: Tone.sage, onTap: () => context.push('/lots')),
+            StatTile(icon: Icons.build_rounded, label: d.nav.incidents, value: '${mesIncidents.length}', tone: Tone.sand, onTap: () => context.push('/incidents')),
+            StatTile(icon: Icons.event_available_rounded, label: d.dash.mesReservations, value: '${mesResas.length}', tone: Tone.lilac, onTap: () => context.push('/reservations')),
+            if (ctx.declareSejoursLcd) StatTile(icon: Icons.luggage_rounded, label: d.lcd.titre, value: '${sejoursLcd.where((s) => s.actif).length}', tone: Tone.tosca, onTap: () => context.push('/location-courte-duree')),
+            StatTile(icon: Icons.description_rounded, label: d.nav.documents, value: '${(documents.valueOrNull ?? const []).length}', tone: Tone.neutral, onTap: () => context.push('/documents')),
+          ]),
+          const SizedBox(height: 22),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!locataire) _RoundAction(primary: true, icon: Icons.account_balance_rounded, label: d.justificatifs.payerTitre, onTap: () => context.push('/payer')),
+              _RoundAction(primary: locataire, icon: Icons.build_rounded, label: d.dash.signalerIncident, onTap: () => context.push('/incidents/nouveau')),
+              if (ctx.role != 'GESTIONNAIRE_LCD') _RoundAction(icon: Icons.event_available_rounded, label: d.espaces.reserver, onTap: () => context.push('/espaces-communs')),
+              if (locataire && ctx.declareSejoursLcd) _RoundAction(icon: Icons.luggage_rounded, label: d.lcd.declarerSejour, onTap: () => context.push('/location-courte-duree/sejours/nouveau')),
             ],
           ),
           if (!locataire) ...[
@@ -397,29 +421,22 @@ class _DashResident extends ConsumerWidget {
             for (final lot in lotsAffiches)
               SuCard(
                 margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
                 onTap: () => context.push('/lots/${lot.id}?onglet=finances'),
                 child: _SoldeCard(lot: lot, du: soldes[lot.id] ?? BigInt.zero, loading: synthese.isLoading),
               ),
-            if (lotsAffiches.isEmpty && !lots.isLoading) SuCard(child: Text(d.lots.aucunLot, style: t.bodySmall)),
+            if (lotsAffiches.isEmpty && !lots.isLoading) _EmptyLine(d.lots.aucunLot, icon: Icons.home_rounded),
           ] else ...[
             SuBanner(tone: BannerTone.info, title: md.noFinancesTitle, body: md.noFinancesBody),
           ],
           SectionHeader(d.communication.titre, subtitle: annoncesNonLues > 0 ? fill(d.communication.nonLues, {'n': '$annoncesNonLues'}) : null, actionLabel: d.common.seeAll, onAction: () => context.push('/affichage')),
-          if (annonces.isEmpty) SuCard(child: Text(d.communication.aucune, style: t.bodySmall)) else for (final a in annonces.take(3)) Padding(padding: const EdgeInsets.only(bottom: 10), child: AnnonceCard(a)),
-          SectionHeader(d.dash.raccourcis),
-          TwoCols([
-            StatTile(label: d.nav.incidents, value: '${mesIncidents.length}', tone: Tone.sand, hint: d.dash.signalerIncident, onTap: () => context.push('/incidents/nouveau')),
-            StatTile(label: d.dash.mesReservations, value: '${mesResas.length}', tone: Tone.lilac, hint: d.espaces.reserver, onTap: () => context.push('/espaces-communs')),
-            if (ctx.declareSejoursLcd) StatTile(label: d.lcd.titre, value: '${sejoursLcd.where((s) => s.actif).length}', tone: Tone.tosca, hint: d.lcd.declarerSejour, onTap: () => context.push('/location-courte-duree')),
-            if (!locataire) StatTile(label: d.dash.prochaineAg, value: prochaine.isEmpty ? '—' : formatDateCourte(prochaine.first.dateAg, l), tone: Tone.sage, hint: prochaine.isEmpty ? d.dash.aucuneAg : d.enums.statutAg[prochaine.first.statut], onTap: () => context.push(prochaine.isEmpty ? '/ag' : '/ag/${prochaine.first.id}')),
-            StatTile(label: d.nav.documents, value: '${(documents.valueOrNull ?? const []).length}', tone: Tone.neutral, hint: d.documents.subtitle, onTap: () => context.push('/documents')),
-          ]),
+          if (annonces.isEmpty) _EmptyLine(d.communication.aucune, icon: Icons.campaign_rounded) else for (final a in annonces.take(3)) Padding(padding: const EdgeInsets.only(bottom: 10), child: AnnonceCard(a)),
           if (visitesEnAttente.isNotEmpty) ...[
             SectionHeader(d.dash.visitesEnAttente),
             CardList([
               for (final v in visitesEnAttente)
                 ListRow(
-                  leading: const IconCircle(Icons.meeting_room_rounded, tone: Tone.warn, size: 40),
+                  leading: const IconCircle(Icons.meeting_room_rounded, tone: Tone.warn),
                   title: fill(d.visites.demandeAcces, {'nom': v.visiteurNom, 'lot': lotsAffiches.where((x) => x.id == v.lotId).firstOrNull?.numero ?? '—'}),
                   subtitle: formatHeure(v.horodatage, l),
                   trailing: StatusBadge(d.visites.autoriser, variant: BadgeVariant.info),
@@ -432,25 +449,25 @@ class _DashResident extends ConsumerWidget {
             _AgCard(ag: prochaine.firstOrNull, resident: true),
           ],
           SectionHeader(d.dash.mesIncidents, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
-          mesIncidents.isEmpty ? SuCard(child: Text(d.incidents.aucunIncident, style: t.bodySmall)) : CardList([for (final i in mesIncidents.take(5)) IncidentRow(i)]),
+          mesIncidents.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in mesIncidents.take(5)) IncidentRow(i)]),
           SectionHeader(d.dash.mesReservations, actionLabel: d.common.seeAll, onAction: () => context.push('/reservations')),
           mesResas.isEmpty
-              ? SuCard(child: Text(d.espaces.aucuneReservation, style: t.bodySmall))
+              ? _EmptyLine(d.espaces.aucuneReservation, icon: Icons.event_available_rounded)
               : CardList([
                   for (final r in mesResas)
-                    ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand, size: 36), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
+                    ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
                 ]),
           if (pvDispo) ...[
             SectionHeader(d.dash.pvDisponibles),
-            SuCard(onTap: () => context.push('/documents'), child: Row(children: [const IconCircle(Icons.gavel_rounded, tone: Tone.lilac, size: 40), const SizedBox(width: 12), Expanded(child: Text(d.dash.pvDisponibles, style: t.titleSmall)), const ChevronEnd()])),
+            CardList([ListRow(leading: const IconCircle(Icons.gavel_rounded, tone: Tone.lilac), title: d.dash.pvDisponibles, onTap: () => context.push('/documents'))]),
           ],
           SectionHeader(d.dash.notificationsRecentes, actionLabel: d.notifs.voirToutes, onAction: () => context.push('/notifications')),
           (notifs.valueOrNull ?? const <NotificationItem>[]).isEmpty
-              ? SuCard(child: Text(d.notifs.aucune, style: t.bodySmall))
+              ? _EmptyLine(d.notifs.aucune, icon: Icons.notifications_none_rounded)
               : CardList([
                   for (final n in notifs.valueOrNull!.take(4))
                     ListRow(
-                      leading: IconCircle(Icons.notifications_rounded, tone: n.lu ? Tone.neutral : Tone.sand, size: 36),
+                      leading: IconCircle(Icons.notifications_rounded, tone: n.lu ? Tone.neutral : Tone.sand),
                       title: n.titre ?? n.templateCode,
                       subtitle: formatDateHeure(n.horodatageEnvoi, l),
                       onTap: () => context.push(lienNotification(n.templateCode, n.contenuJson)),
@@ -463,6 +480,8 @@ class _DashResident extends ConsumerWidget {
   }
 }
 
+/// Bloc de solde Wise (« Australian Dollar · 1 234,56 ») : lot en tête avec sa pastille et son
+/// statut, grand montant gras, libellé et chevron de détail dessous.
 class _SoldeCard extends StatelessWidget {
   const _SoldeCard({required this.lot, required this.du, required this.loading});
   final Lot lot;
@@ -478,19 +497,47 @@ class _SoldeCard extends StatelessWidget {
       children: [
         Row(
           children: [
-            IconCircle(Icons.home_rounded, tone: aJour ? Tone.sage : Tone.sand, size: 40),
+            IconCircle(Icons.home_rounded, tone: aJour ? Tone.sage : Tone.sand, size: 40, iconSize: 20),
             const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('${d.enums.typeLot[lot.typeLot] ?? lot.typeLot} ${lot.numero}', style: t.titleSmall), Text(aJour ? d.dash.monSoldeAJour : d.dash.soldeDu, style: t.bodySmall)])),
-            if (!loading) StatusBadge(aJour ? d.enums.statutLigne['PAYE']! : d.enums.statutLigne['IMPAYE']!, variant: aJour ? BadgeVariant.ok : BadgeVariant.danger),
+            Expanded(child: Text('${d.enums.typeLot[lot.typeLot] ?? lot.typeLot} ${lot.numero}', style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            if (!loading) StatusBadge(aJour ? d.enums.statutLigne['PAYE']! : d.enums.statutLigne['IMPAYE']!, variant: aJour ? BadgeVariant.ok : BadgeVariant.danger, small: true),
           ],
         ),
-        const SizedBox(height: 12),
-        MoneyText(loading ? '…' : formatMAD(versChaine(du), context.locale), style: t.displayLarge?.copyWith(color: aJour ? SuColors.green500 : SuColors.red500)),
-        const SizedBox(height: 6),
-        Align(alignment: AlignmentDirectional.centerEnd, child: Semantics(label: d.dash.voirDetail, child: const CircleArrow())),
+        const SizedBox(height: 26),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: AlignmentDirectional.centerStart,
+          child: loading ? Text('…', style: t.displayLarge) : AnimatedDigits(formatMAD(versChaine(du), context.locale), style: t.displayLarge?.copyWith(fontSize: 38, color: aJour ? SuColors.ink : SuColors.danger)),
+        ),
+        const SizedBox(height: 4),
+        Row(
+          children: [
+            Expanded(child: Text(aJour ? d.dash.monSoldeAJour : d.dash.soldeDu, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
+            Semantics(label: d.dash.voirDetail, child: const ChevronEnd()),
+          ],
+        ),
       ],
     );
   }
+}
+
+/// Section vide compacte (petites sections de l'accueil) : pastille voile d'encre et ligne
+/// ardoise, alignées comme une ligne de liste — jamais une tuile grise de texte.
+class _EmptyLine extends StatelessWidget {
+  const _EmptyLine(this.text, {required this.icon});
+  final String text;
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            IconCircle(icon, tone: Tone.neutral),
+            const SizedBox(width: 14),
+            Expanded(child: Text(text, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft))),
+          ],
+        ),
+      );
 }
 
 // ── B5 gardien ────────────────────────────────────────────────────────────────
@@ -522,22 +569,23 @@ class _DashGardien extends ConsumerWidget {
         key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
-          PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: libelleRole(context, ctx.role)),
+          _Greeting(ctx: ctx, photo: 'entree', subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
           SuCard(
             onTap: () => context.push('/visites?enregistrer=1'),
+            color: SuColors.ink,
+            radius: 28,
             padding: const EdgeInsets.all(22),
             child: Row(
               children: [
-                Container(width: 64, height: 64, decoration: BoxDecoration(color: SuColors.blue600, borderRadius: BorderRadius.circular(SuRadius.row)), child: const Icon(Icons.meeting_room_rounded, color: SuColors.onBrand, size: 30)),
+                Container(width: 64, height: 64, decoration: const BoxDecoration(color: SuColors.cta, shape: BoxShape.circle), child: const Icon(Icons.meeting_room_rounded, color: SuColors.ink, size: 30)),
                 const SizedBox(width: 18),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(d.dash.enregistrerVisiteur, style: t.titleLarge?.copyWith(fontSize: 18)),
+                      Text(d.dash.enregistrerVisiteur, style: t.headlineSmall?.copyWith(color: Colors.white)),
                       const SizedBox(height: 4),
-                      Text(md.worksOffline, style: t.bodySmall),
+                      Text(md.worksOffline, style: t.bodySmall?.copyWith(color: Colors.white70)),
                       const SizedBox(height: 8),
                       StatusBadge(online ? md.online : md.offline, variant: online ? BadgeVariant.ok : BadgeVariant.warn, small: true),
                     ],
@@ -548,14 +596,16 @@ class _DashGardien extends ConsumerWidget {
           ),
           if (queue.isNotEmpty) ...[
             const SizedBox(height: 10),
+            // File d'envoi hors ligne : tuile plate teintée ambre (pas de liseré).
             SuCard(
-              border: SuColors.warnBorder,
+              color: SuColors.warnTint,
               onTap: () => context.push('/visites'),
               child: Row(
                 children: [
-                  const IconCircle(Icons.cloud_upload_rounded, tone: Tone.warn, size: 40),
-                  const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(fill(md.queueTitle, {'n': queue.length}), style: t.titleSmall), Text(md.queueHint, style: t.bodySmall)])),
+                  const IconCircle(Icons.cloud_upload_rounded, tone: Tone.warn),
+                  const SizedBox(width: 14),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(fill(md.queueTitle, {'n': queue.length}), style: t.titleMedium), const SizedBox(height: 2), Text(md.queueHint, style: t.bodySmall)])),
+                  const ChevronEnd(),
                 ],
               ),
             ),
@@ -565,23 +615,24 @@ class _DashGardien extends ConsumerWidget {
             onTap: () => context.push('/incidents/nouveau'),
             padding: const EdgeInsets.all(22),
             child: Row(children: [
-              Container(width: 64, height: 64, decoration: BoxDecoration(color: SuColors.amber500, borderRadius: BorderRadius.circular(SuRadius.row)), child: const Icon(Icons.build_rounded, color: SuColors.onBrand, size: 28)),
+              Container(width: 64, height: 64, decoration: const BoxDecoration(color: SuColors.sandMid, shape: BoxShape.circle), child: const Icon(Icons.build_rounded, color: SuColors.ink, size: 28)),
               const SizedBox(width: 18),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.dash.signalerIncident, style: t.titleLarge?.copyWith(fontSize: 18)), const SizedBox(height: 4), Text(d.incidents.titre, style: t.bodySmall)])),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(d.dash.signalerIncident, style: t.headlineSmall), const SizedBox(height: 4), Text(d.incidents.titre, style: t.bodySmall)])),
+              const ChevronEnd(),
             ]),
           ),
           const SizedBox(height: 10),
           TwoCols([
-            StatTile(label: d.visites.duJour, value: '${duJour.length}', tone: Tone.lilac, onTap: () => context.push('/visites')),
-            StatTile(label: d.dash.visitesEnAttente, value: '${enAttente.length}', tone: Tone.sand, onTap: () => context.push('/visites')),
+            StatTile(icon: Icons.today_rounded, label: d.visites.duJour, value: '${duJour.length}', tone: Tone.lilac, onTap: () => context.push('/visites')),
+            StatTile(icon: Icons.hourglass_top_rounded, label: d.dash.visitesEnAttente, value: '${enAttente.length}', tone: Tone.sand, onTap: () => context.push('/visites')),
           ]),
           SectionHeader(d.dash.visitesEnAttente, actionLabel: d.common.seeAll, onAction: () => context.push('/visites')),
           if (visites.hasError) ErrorState(error: visites.error!, onRetry: () => ref.invalidate(visitesProvider)),
           enAttente.isEmpty
-              ? SuCard(child: Text(d.visites.aucuneVisite, style: t.bodySmall))
-              : CardList([for (final v in enAttente.take(6)) ListRow(leading: Avatar(v.visiteurNom, size: 36), title: v.visiteurNom, subtitle: formatHeure(v.horodatage, l), trailing: StatusBadge(d.enums.statutVisite['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true))]),
+              ? _EmptyLine(d.visites.aucuneVisite, icon: Icons.meeting_room_rounded)
+              : CardList([for (final v in enAttente.take(6)) ListRow(leading: Avatar(v.visiteurNom, size: 48), title: v.visiteurNom, subtitle: formatHeure(v.horodatage, l), trailing: StatusBadge(d.enums.statutVisite['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true))]),
           SectionHeader(d.dash.incidentsOuverts, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
-          ouverts.isEmpty ? SuCard(child: Text(d.incidents.aucunIncident, style: t.bodySmall)) : CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
+          ouverts.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
         ],
       )),
     );
@@ -606,14 +657,13 @@ class _DashPrestataire extends ConsumerWidget {
         key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
-          _Greeting(ctx: ctx, subtitle: d.dash.mesTickets),
-          PhotoBanner('cour', title: ctx.copropriete?.nom, subtitle: libelleRole(context, ctx.role)),
+          _Greeting(ctx: ctx, photo: 'cour', subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
           TwoCols([
-            StatTile(label: d.dash.mesTickets, value: '${tickets.length}', tone: Tone.sage),
-            StatTile(label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand),
+            StatTile(icon: Icons.confirmation_number_rounded, label: d.dash.mesTickets, value: '${tickets.length}', tone: Tone.sage),
+            StatTile(icon: Icons.build_rounded, label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand),
           ]),
           SectionHeader(d.dash.mesTickets),
-          AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) => list.isEmpty ? EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded) : CardList([for (final i in list) IncidentRow(i)])),
+          AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) => list.isEmpty ? EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: 'empty-incidents') : CardList([for (final i in list) IncidentRow(i)])),
           const SizedBox(height: 16),
           SuBanner(tone: BannerTone.info, body: md.cloisonnement),
         ],
@@ -645,26 +695,37 @@ class OnboardingCard extends ConsumerWidget {
           'gardien_cree' => t.etapesOnboarding.gardien_cree,
           _ => cle,
         };
+    // Carte de mise en route Wise (« Finish setting up your account ») : titre gras, compteur,
+    // jauge pleine, puis uniquement les étapes restantes (le compteur dit le reste).
+    final restantes = c.etapes.where((e) => !e.fait).toList();
     return SuCard(
       margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Expanded(child: Text(t.onboarding, style: tt.titleSmall)),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Text(t.onboarding, style: tt.headlineSmall)),
+          const SizedBox(width: 10),
           StatusBadge(fill(t.progressionOnboarding, {'faites': c.faites, 'total': c.total}), variant: BadgeVariant.info, small: true),
         ]),
-        const SizedBox(height: 4),
-        Text(c.estDemo ? t.demo : t.onboardingAide, style: tt.bodySmall),
-        const SizedBox(height: 10),
-        Gauge(c.progression / 100, color: SuColors.action),
-        const SizedBox(height: 10),
-        for (final e in c.etapes)
+        const SizedBox(height: 6),
+        Text(c.estDemo ? t.demo : t.onboardingAide, style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+        const SizedBox(height: 14),
+        Gauge(c.progression / 100, color: SuColors.link),
+        const SizedBox(height: 8),
+        for (final e in restantes)
           Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(children: [
-              Icon(e.fait ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded, size: 18, color: e.fait ? SuColors.ok : SuColors.faint),
-              const SizedBox(width: 8),
-              Expanded(child: Text(libelle(e.cle), style: tt.bodyMedium?.copyWith(color: e.fait ? SuColors.soft : SuColors.ink, decoration: e.fait ? TextDecoration.lineThrough : null))),
-              if (e.detail != null) Text(e.detail!, style: tt.labelSmall),
+            padding: const EdgeInsets.symmetric(vertical: 7),
+            // Détail court (« 0/3 ») à la fin ; détail long sous le libellé, pour ne pas l'écraser.
+            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.radio_button_unchecked_rounded, size: 20, color: SuColors.link)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text(libelle(e.cle), style: tt.bodyMedium?.copyWith(color: SuColors.ink)),
+                  if (e.detail != null && e.detail!.length > 9) Padding(padding: const EdgeInsets.only(top: 2), child: Text(e.detail!, style: tt.labelSmall)),
+                ]),
+              ),
+              if (e.detail != null && e.detail!.length <= 9) Padding(padding: const EdgeInsetsDirectional.only(start: 8), child: Text(e.detail!, style: tt.labelSmall, textDirection: TextDirection.ltr)),
             ]),
           ),
       ]),
