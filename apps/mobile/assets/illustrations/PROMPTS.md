@@ -1,193 +1,340 @@
-# SyndicUp: 2D illustration prompts
+# SyndicUp — all illustration prompts (ready to paste)
 
-All app visuals use one **flat 2D** style built on the new logo: bold geometric shapes and solid colour.
-There is **no 3D, no depth, no gradients and no shadows**. Every image comes from the same visual family as
-the logo's stacked chevron arrow.
+Every prompt below is COMPLETE: copy the whole block into your generator as-is. If your tool has a separate
+"negative prompt" field, paste the line starting with `Avoid:` there instead.
 
-## 1. How to generate (read this first)
+**Order that gives the most consistent set:**
+1. Generate `ok-general` first and pick the best result.
+2. Generate `empty-incidents` and pick the best result.
+3. For every other image, attach those two plus the logo board as **style reference images**
+   (Midjourney `--sref`, Recraft / Ideogram / Higgsfield "style reference"). Recraft "Vector art" style is the best fit.
+4. Save each file with EXACTLY the name shown (`.png`) and put them all in `apps/mobile/assets/illustrations/`.
+   I copy them to the web app myself.
 
-1. Start every prompt with the **STYLE BLOCK** below, then add the image's own SUBJECT line.
-2. **Lock the style before batching.**
-   - Generate `ok-general` first, then `empty-incidents`.
-   - Pick the best of each and use them (plus the logo image) as **style reference images** for every other image.
-     Midjourney: `--sref`. Higgsfield, Ideogram, Recraft: style or image reference.
-3. **Recraft is the best fit if you have it**: set its style to "Vector art / flat" and it can export SVG and
-   transparent PNG directly.
-4. **Background:**
-   - Use a transparent PNG where your tool allows it.
-   - Otherwise use a plain solid white background with nothing touching the edges, and I will cut it out.
-   - Posters are the exception: they have a full background.
-5. Name each file **exactly** as listed and drop it in this folder. The app picks it up automatically.
+**Total: 43 images.**
 
-| Group | Size | Background |
-|---|---|---|
-| Onboarding, success, empty states, offline | 2048×2048 | transparent |
-| Posters | 1600×1000 | full solid colour (green or ink) |
-| Quick actions | 512×512 | transparent |
 
-### Palette (taken from the logo, use ONLY these)
+## 1. Onboarding & welcome (2048x2048, transparent)
 
-| Role | Hex |
-|---|---|
-| Brand green (logo chevron, "up") | `#1E7552` |
-| Lime (logo on green) | `#E3EF8D` |
-| Ink (logo "syndic") | `#121212` |
-| Greige (app background) | `#ECEBE4` |
-| White | `#FFFFFF` |
-| Soft green (light tint, optional) | `#A4C8AE` |
+### 1. `ob-1-residence.png`
 
-Status colours: use a small touch of warm red `#98140B` only in incident or alert scenes, and amber `#8A5A00`
-only for a "pending" detail. Nothing else.
-
-### STYLE BLOCK (paste at the start of every prompt)
-
-```
-Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, NO gradients, NO shadows,
-NO 3D, NO perspective rendering, NO texture, NO grain, NO outlines (shapes defined by colour only), crisp
-straight edges and generous rounded corners, chunky simplified forms like modern fintech brand illustration
-(Wise / Monzo editorial style). Strict palette: brand green #1E7552, lime #E3EF8D, ink black #121212,
-greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Lots of negative space, single centred subject, calm and
-confident, no text, no letters, no numbers, no logos, no watermark. Recurring motif: a bold upward double
-chevron (two stacked "^" shapes over a short vertical bar) used sparingly as a graphic accent.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat Moroccan apartment building, 4 floors, arched windows, brand-green front door, standing next to a large smartphone shape; the phone screen shows the same building simplified as flat blocks; a lime upward double chevron (two stacked ^ shapes above a short vertical bar) rises from the rooftop like a flag; a greige ground strip and one simple olive tree. Architecture is modern Moroccan residential: flat blocks, arched windows, a hint of zellige as simple flat geometric tiles, flat roof terraces, palm or olive trees as simple shapes. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
 ```
 
-People (only in the images that mention them): faceless, simplified flat figures. Use solid-colour bodies,
-round heads with no facial features, and a mix of skin tones in flat colours. Some wear a hijab and some are
-older, as a natural Moroccan mix. Draw them from the waist up or as hands only. No cartoon faces.
+### 2. `ob-2-charges.png`
 
-Architecture: Moroccan modern residential buildings, drawn as flat blocks. Use arched windows, a hint of
-zellige pattern as simple flat geometric tiles, flat roofs with a terrace, and a palm or olive tree as simple
-shapes.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A large flat circle divided into neat pie segments in brand green, lime, soft green and ink, like shared building costs; small flat icons orbit around it (a key, a light bulb, a water drop, a broom); two flat hands come in from both sides, one placing a flat lime coin disc into the circle. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
----
+### 3. `ob-3-incident.png`
 
-## 2. Onboarding & welcome (2048×2048)
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat hand holding a smartphone; the screen shows a camera viewfinder framing a dripping pipe with three flat water drops; a flat brand-green wrench beside the phone; a small lime speech bubble with a check mark pops out of the phone. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-Large hero images; they sit on a white screen above the title.
+### 4. `ob-4-ag.png`
 
-- **`ob-1-residence`**: *"Your residence in your pocket."*
-  - A flat Moroccan apartment building (4 floors, arched windows, green door) with a large phone shape
-    beside it.
-  - The phone screen shows the same building as simple flat blocks.
-  - A lime upward double chevron rises from the rooftop like a flag.
-  - Greige ground strip; one olive tree as a simple shape.
-- **`ob-2-charges`**: *"Clear, shared charges."*
-  - A large flat circle split into neat segments (green, lime, soft green, ink), like a pie of building costs.
-  - Small flat icons orbit the circle: a key, a light bulb, a water drop, a broom.
-  - Two hands from either side, one placing a coin-shaped disc into the circle.
-- **`ob-3-incident`**: *"Report an issue in seconds."*
-  - A flat hand holds a phone; the screen shows a camera viewfinder framing a dripping pipe.
-  - Three simple flat water drops; a wrench beside it.
-  - A small lime check bubble pops out of the phone.
-- **`ob-4-ag`**: *"General assembly, from anywhere."*
-  - Three faceless flat figures in different places: one on a sofa, one at a café table, one in a room.
-  - Each holds up a phone; each phone shows a large green check mark.
-  - The three phones connect with simple lime curved paths to a central ballot box drawn as a flat green cube
-    face (front view only).
-- **`welcome-hero`**: the brand moment.
-  - A tall flat building made of stacked rectangles in green, lime, soft green and ink, with arched windows.
-  - The building's silhouette rises into a giant upward double chevron at the top, so the building becomes the
-    logo symbol.
-  - Small flat clouds, a sun disc in lime. Balanced, iconic, poster-like.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Three faceless flat figures in different places voting from home: one on a sofa, one at a café table, one at a desk; each holds up a phone showing a big brand-green check mark; simple lime curved dotted paths connect the three phones to a central flat brand-green ballot box (front view, flat). People are faceless simplified flat figures: solid-colour bodies, round heads with no facial features, a natural Moroccan mix (some women wearing a hijab, some older people), shown from the waist up. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-## 3. Success screens (2048×2048)
+### 5. `welcome-hero.png`
 
-These are shown full screen after an action, so they should feel celebratory but calm. Common base: a central
-object inside a large soft-green circle, with a ring of small lime confetti made of flat circles, short
-rounded bars and tiny chevrons.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An iconic tall flat building made of stacked rectangles in brand green, lime, soft green and ink with arched windows; the top of the building rises into a giant upward double chevron so the building itself becomes the logo symbol; a few small flat white clouds and a lime sun disc. Balanced, iconic, poster-like. Architecture is modern Moroccan residential: flat blocks, arched windows, a hint of zellige as simple flat geometric tiles, flat roof terraces, palm or olive trees as simple shapes. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-- **`ok-general`**: a big green circle with a lime check mark, surrounded by the confetti ring. Bring a large
-  upward double chevron in from below. (Generate this one first and use it as the style reference.)
-- **`ok-paiement`**: a flat wallet or bank card in green with a lime check badge on its corner. Flat coin
-  discs fly upward along a chevron-shaped path.
-- **`ok-incident`**: a flat clipboard with a wrench and a lime check badge. A small flat toolbox beside it.
-- **`ok-vote`**: a flat hand dropping a folded ballot into a green box; a lime check above the slot.
-- **`ok-reservation`**: a flat calendar page with one day circled in lime and a check. A pool ladder or a room
-  key as a small secondary object.
-- **`ok-invitation`**: a flat envelope opening with a lime card rising out of it. The card shows a simple house
-  shape and a check.
-- **`ok-visiteur`**: a flat door slightly open with a lime badge or pass hanging from the handle; a check
-  bubble.
 
-## 4. Empty states (2048×2048)
+## 2. Success screens (2048x2048, transparent)
 
-Quieter, smaller and more muted. Use mostly soft green, greige and ink, with one lime accent. One simple object
-or small scene only.
+### 6. `ok-general.png`
 
-- **`empty-incidents`**: a calm flat toolbox, closed, with a small lime check. Nothing is broken.
-- **`empty-appels`**: an empty flat envelope tray with a single lime coin resting in it.
-- **`empty-documents`**: an empty flat folder, slightly open, with one blank page peeking out.
-- **`empty-reservations`**: a flat calendar page with no marks; a small lime pool float ring beside it.
-- **`empty-visites`**: a flat front door, closed, with an empty doormat.
-- **`empty-notifications`**: a flat bell, silent, with a small lime "zz" made of shapes (no letters). Use a
-  crescent moon instead of letters.
-- **`empty-ag`**: an empty flat chair facing a small lectern.
-- **`empty-annonces`**: an empty flat noticeboard (cork shown as greige) with a single lime pin.
-- **`empty-lots`**: a flat building outline with all windows empty (greige) and one lime "plus" shape beside it.
-- **`empty-taches`**: a flat checklist clipboard with empty boxes; a pencil lying across it.
-- **`empty-parkings`**: an empty flat parking bay seen from above, white lines on ink tarmac, with one lime
-  marker.
-- **`empty-lcd`**: a flat suitcase standing alone next to a key on a ring.
-- **`empty-personnel`**: a flat empty coat hook with a cap, and a broom leaning against the wall.
-- **`empty-litiges`**: a flat balance scale perfectly level, calm.
-- **`empty-search`**: a flat magnifying glass over an empty greige rectangle; one tiny lime spark.
-- **`offline`**: a flat cloud shape with a small unplugged cable, the two plug ends apart, and a lime spark
-  gap between them.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A big brand-green circle with a bold lime check mark in the middle, sitting inside a larger soft-green circle; around it a ring of small lime confetti (flat dots, short rounded bars and tiny ^ chevrons); a large lime upward double chevron rises from behind the bottom of the circle. Celebratory but calm. (Generate this one FIRST and use it as the style reference for all others.) Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-## 5. Posters (1600×1000, full background)
+### 7. `ok-paiement.png`
 
-These are the dark "poster" cards and fill the whole frame. Alternate the two backgrounds. Keep the **left
-half calm and empty** because the app writes the title there (on the right in Arabic). Put the illustration in
-the right ~45%. Do not mirror the images; the app handles that.
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat brand-green bank card with a lime circular check badge on its corner, inside a large soft-green circle; flat lime coin discs fly upward along a chevron-shaped path; small lime confetti dots and chevrons around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-- **`poster-ag`**:
-  - Background: brand green `#1E7552`.
-  - Lime and white flat shapes: a lectern, three raised hands, a ballot box.
-  - A giant lime double chevron rising behind them.
-- **`poster-onboarding`**:
-  - Background: ink `#121212`.
-  - A lime-and-green flat building whose roofline forms the double chevron.
-  - Small soft-green stars as simple dots.
-- **`poster-transparence`**:
-  - Background: brand green.
-  - A flat bar chart of 4 rising lime bars, the last topped by an upward chevron.
-  - A white magnifying glass resting on the bars.
-- **`poster-annonce`**:
-  - Background: ink.
-  - A large lime flat megaphone with three simple green arcs coming out.
-- **`poster-securite`**:
-  - Background: brand green.
-  - A lime flat shield with a white keyhole.
-  - A white flat key crossing in front of it.
+### 8. `ok-incident.png`
 
-## 6. Quick actions (512×512, transparent)
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat clipboard with a brand-green wrench lying across it and a lime circular check badge, inside a large soft-green circle; a small flat ink toolbox beside it; small lime confetti around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-These are small tiles in the "+" action sheet. Make them **icon-like**: one chunky object, very simple, and
-readable at 48 px. Draw the object in ink and brand green with one lime highlight, on transparent.
+### 9. `ok-vote.png`
 
-| File | Object |
-|---|---|
-| `quick-paiement` | a bank card with a lime check |
-| `quick-payer` | a flat coin stack with an upward chevron above |
-| `quick-appel` | an envelope with a coin on it |
-| `quick-invitation` | an envelope with a lime "+" |
-| `quick-incident` | a wrench crossed over a water drop |
-| `quick-sejour` | a suitcase with a lime tag |
-| `quick-reservation` | a calendar with one lime day |
-| `quick-ag` | a ballot box with a lime ballot |
-| `quick-visiteur` | a door with a lime pass hanging |
-| `quick-copropriete` | a small building with a lime "+" |
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat hand dropping a folded white ballot into a brand-green ballot box (front view), a lime check mark above the slot, inside a large soft-green circle; small lime confetti around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
----
+### 10. `ok-reservation.png`
 
-## 7. Logo files I need (separate from the illustrations)
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat calendar page with one day circled in lime and a check mark on it, inside a large soft-green circle; a small flat pool ladder or room key as a secondary object; small lime confetti around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-The logo board you shared looks AI-rendered (soft edges, slightly uneven letters), so it can't be used directly
-for the app icon or the splash screen. I need clean files:
+### 11. `ok-invitation.png`
 
-- **Symbol** (double chevron + bar) as **SVG**, in green, lime, ink and white versions.
-- **Wordmark** "syndicup" as **SVG**, in two versions: ink + green "up", and all lime.
-- **App icon** 1024×1024 PNG: lime symbol on green `#1E7552`, square, no rounded corners (the phone rounds it).
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat envelope opening, with a lime card rising out of it; the card shows a simple flat house shape and a small check mark; inside a large soft-green circle; small lime confetti around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
 
-If you only have the PNG, I can redraw the symbol as a clean SVG myself, since it is simple geometry. The
-wordmark is best exported from the original design tool.
+### 12. `ok-visiteur.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat front door slightly open, brand-green, with a lime visitor badge hanging from the handle and a lime check bubble above; inside a large soft-green circle; small lime confetti around. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+
+## 3. Empty states (2048x2048, transparent) — quieter: mostly soft green, greige and ink, ONE small lime accent, one simple object only
+
+### 13. `empty-incidents.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A calm closed flat toolbox in soft green and ink with one small lime check mark on it. Nothing broken, peaceful. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 14. `empty-appels.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An empty flat letter tray in greige and soft green with a single lime coin resting in it. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 15. `empty-documents.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An empty flat folder in soft green, slightly open, with one blank white page peeking out and a tiny lime tab. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 16. `empty-reservations.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat calendar page with no marks, in greige and ink, with a small lime pool float ring leaning on it. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 17. `empty-visites.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A closed flat front door in soft green with an empty greige doormat and a small lime door handle. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 18. `empty-notifications.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A silent flat bell in soft green with a small lime crescent moon floating next to it (sleeping, nothing new). Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 19. `empty-ag.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An empty flat chair facing a small flat lectern in greige and soft green, one lime detail on the lectern. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 20. `empty-annonces.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An empty flat noticeboard (greige board, soft-green frame) with a single lime pin and nothing pinned. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 21. `empty-lots.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat building outline in soft green with all windows empty greige, and one lime plus-sign shape floating beside it. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 22. `empty-taches.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat clipboard with a checklist of empty boxes in greige and ink, a simple pencil lying across it with a lime tip. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 23. `empty-parkings.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An empty parking bay seen from directly above: ink tarmac rectangle with white lines, one small lime marker. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 24. `empty-lcd.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat suitcase standing alone in soft green and ink, next to a key on a ring with a lime tag. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 25. `empty-personnel.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat empty wall coat hook holding a cap, and a broom leaning against the wall, soft green and ink, one lime detail. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 26. `empty-litiges.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat balance scale, perfectly level and calm, in soft green and ink with lime plates. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 27. `empty-search.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat magnifying glass in ink over an empty greige rectangle, with one tiny lime spark. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 28. `offline.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A flat soft-green cloud with a small unplugged cable below it, the two plug ends apart, a tiny lime spark in the gap between them. Square 1:1 image, 2048x2048 px, single subject centred with wide empty margins, transparent background (if transparency is impossible: plain solid pure white background, nothing touching the edges).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+
+## 4. Posters (1600x1000, full background — NOT transparent)
+
+### 29. `poster-ag.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Solid brand green #1E7552 background. In the right part: lime and white flat shapes — a lectern, three raised hands, a ballot box, with a giant lime upward double chevron rising behind them. Wide 16:10 image, 1600x1000 px, full-bleed solid background colour edge to edge. Keep the LEFT 55% of the image completely empty (plain background only, text will be placed there); place the whole illustration in the RIGHT 45%.
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 30. `poster-onboarding.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Solid ink #121212 background. In the right part: a lime and brand-green flat building whose roofline forms the upward double chevron; small soft-green dots as stars. Architecture is modern Moroccan residential: flat blocks, arched windows, a hint of zellige as simple flat geometric tiles, flat roof terraces, palm or olive trees as simple shapes. Wide 16:10 image, 1600x1000 px, full-bleed solid background colour edge to edge. Keep the LEFT 55% of the image completely empty (plain background only, text will be placed there); place the whole illustration in the RIGHT 45%.
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 31. `poster-transparence.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Solid brand green #1E7552 background. In the right part: a flat bar chart of 4 rising lime bars, the last one topped by an upward chevron, with a white flat magnifying glass resting on the bars. Wide 16:10 image, 1600x1000 px, full-bleed solid background colour edge to edge. Keep the LEFT 55% of the image completely empty (plain background only, text will be placed there); place the whole illustration in the RIGHT 45%.
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 32. `poster-annonce.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Solid ink #121212 background. In the right part: a large lime flat megaphone with three simple brand-green sound arcs coming out of it. Wide 16:10 image, 1600x1000 px, full-bleed solid background colour edge to edge. Keep the LEFT 55% of the image completely empty (plain background only, text will be placed there); place the whole illustration in the RIGHT 45%.
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 33. `poster-securite.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: Solid brand green #1E7552 background. In the right part: a lime flat shield with a white keyhole, and a white flat key crossing in front of it. Wide 16:10 image, 1600x1000 px, full-bleed solid background colour edge to edge. Keep the LEFT 55% of the image completely empty (plain background only, text will be placed there); place the whole illustration in the RIGHT 45%.
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+
+## 5. Quick actions (512x512, transparent) — icon-like, ink and brand green with ONE lime highlight
+
+### 34. `quick-paiement.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A bank card with a lime check mark. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 35. `quick-payer.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A stack of three flat coins with a lime upward chevron above it. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 36. `quick-appel.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An envelope with a lime coin on it. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 37. `quick-invitation.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: An envelope with a lime plus sign. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 38. `quick-incident.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A wrench crossed over a lime water drop. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 39. `quick-sejour.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A suitcase with a lime luggage tag. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 40. `quick-reservation.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A calendar with one lime day. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 41. `quick-ag.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A ballot box with a lime ballot going in. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 42. `quick-visiteur.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A door with a lime pass hanging on the handle. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+### 43. `quick-copropriete.png`
+
+```text
+Flat 2D vector illustration, bold geometric shapes, solid flat colour fills only, crisp clean edges, generous rounded corners, chunky simplified forms, modern fintech brand illustration style (like Wise or Monzo), no outlines (shapes defined by colour only), lots of negative space, calm and confident mood. Strict colour palette, use ONLY: brand green #1E7552, lime #E3EF8D, ink black #121212, greige #ECEBE4, white #FFFFFF, soft green #A4C8AE. Subject: A small building with a lime plus sign. Square 1:1 icon, 512x512 px, one single chunky object centred and filling about 70% of the frame, extremely simple so it reads at 48 px, transparent background (or plain pure white if transparency is impossible).
+Avoid: No 3D, no gradients, no shadows, no glow, no perspective rendering, no texture, no grain, no noise, no outlines or strokes, no text, no letters, no numbers, no logos, no watermark, no photorealism, no cartoon faces.
+```
+
+
+## Logo files (not generated — export from your logo design tool)
+
+- `symbole.svg` — the double chevron + bar symbol alone (any single colour).
+- `wordmark.svg` — "syndicup" wordmark.
+- `app-icon-1024.png` — lime symbol on brand green #1E7552, square, no rounded corners.
+
+(Not blocking: I already redrew the symbol and wordmark in code, so the app and icons work today.
+Real exports only make them pixel-identical to your master files.)
