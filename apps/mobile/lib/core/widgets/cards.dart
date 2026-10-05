@@ -259,7 +259,7 @@ class PosterCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final image = this.image ?? (art != null && SuIllustration.has(art!) ? SuIllustration(art!, fit: BoxFit.cover, fallback: const SizedBox.shrink()) : null);
+    final image = this.image ?? (art != null && SuIllustration.has(art!) ? PosterArt(art!) : null);
     return SuCard(
       onTap: onTap,
       color: color,
@@ -296,6 +296,28 @@ class PosterCard extends StatelessWidget {
               child: CircleIconButton(icon: Icons.close_rounded, onTap: onClose, size: 36, color: Colors.white, iconColor: SuColors.ink, tooltip: MaterialLocalizations.of(context).closeButtonTooltip),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// Bande d'affiche (`poster-*`, 1600×1000, visuel sur la moitié de fin) : recadrée vers le
+/// visuel, miroir en RTL comme sur le web. Rien si l'asset n'est pas livré.
+class PosterArt extends StatelessWidget {
+  const PosterArt(this.name, {super.key, this.height});
+  final String name;
+  final double? height;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!SuIllustration.has(name)) return const SizedBox.shrink();
+    final rtl = Directionality.of(context) == TextDirection.rtl;
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: Transform.flip(
+        flipX: rtl,
+        child: Image.asset(SuIllustration.path(name), fit: BoxFit.cover, alignment: Alignment.centerRight, excludeFromSemantics: true, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
       ),
     );
   }

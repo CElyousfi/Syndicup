@@ -67,7 +67,23 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
         const SizedBox(height: 12),
         AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
           if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: _categorie == null ? 'empty-annonces' : 'empty-search');
-          return Column(children: [for (int i = 0; i < rows.length; i++) SuEnter(index: i, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: AnnonceCard(rows[i])))]);
+          // Affiche « à la une » : l'annonce épinglée publiée la plus récente (elle reste aussi dans la liste).
+          final epinglees = rows.where((a) => a.epingle && a.statut == 'PUBLIEE').toList()..sort((a, b) => (b.publieLe ?? b.creeLe).compareTo(a.publieLe ?? a.creeLe));
+          final une = epinglees.firstOrNull;
+          return Column(children: [
+            if (une != null)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: PosterCard(
+                  color: SuColors.ink,
+                  art: 'poster-annonce',
+                  kicker: '${e.categorieAnnonce[une.categorie] ?? une.categorie} · ${c.epinglee}',
+                  title: une.titre,
+                  body: une.apercu.characters.length > 140 ? '${une.apercu.characters.take(140).toString().trimRight()}…' : une.apercu,
+                  onTap: () => context.push('/affichage/${une.id}'),
+                ),
+              ),
+            for (int i = 0; i < rows.length; i++) SuEnter(index: i, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: AnnonceCard(rows[i])))]);
         }),
         if (sondages.isNotEmpty) ...[
           SectionHeader(c.sondages, actionLabel: gestion ? c.nouveauSondage : null, onAction: gestion ? () => showFormSheet<void>(context, title: c.nouveauSondage, builder: (_) => SondageComposer(onDone: () => _rafraichirAffichage(ref))) : null),

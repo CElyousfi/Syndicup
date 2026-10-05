@@ -180,6 +180,24 @@ class DonneesScreen extends ConsumerStatefulWidget {
 class _DonneesScreenState extends ConsumerState<DonneesScreen> {
   bool _loading = false;
   ApiFail? _fail;
+
+  Future<void> _exporter() async {
+    setState(() {
+      _loading = true;
+      _fail = null;
+    });
+    final r = await ref.read(apiClientProvider).get<Map<String, dynamic>>('/users/me/export', parse: asMap);
+    if (!mounted) return;
+    setState(() => _loading = false);
+    switch (r) {
+      case ApiOk<Map<String, dynamic>>(:final data):
+        final json = const JsonEncoder.withIndent('  ').convert(data);
+        await Share.share(json, subject: 'SyndicUp — export CNDP');
+      case ApiFail<Map<String, dynamic>>():
+        setState(() => _fail = r);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
@@ -187,38 +205,23 @@ class _DonneesScreenState extends ConsumerState<DonneesScreen> {
     return SuPage(
       title: d.profil.donneesTitre,
       children: [
-        // Wise : grande pastille, explication, conservation, puis l'action.
-        const SuEnter(child: Align(alignment: AlignmentDirectional.centerStart, child: IconCircle(Icons.shield_rounded, tone: Tone.sage, size: 72))),
-        const SizedBox(height: 18),
-        Text(d.profil.donneesCorps, style: t.bodyLarge?.copyWith(color: SuColors.body, height: 1.5)),
+        // Carte-affiche « poster-securite » : explication + l'action d'export (désactivée pendant l'envoi).
+        SuEnter(
+          child: PosterCard(
+            art: 'poster-securite',
+            title: d.profil.donneesTitre,
+            body: d.profil.donneesCorps,
+            ctaLabel: d.profil.exporter,
+            onCta: _loading ? null : _exporter,
+          ),
+        ),
         const SizedBox(height: 16),
         SuBanner(tone: BannerTone.info, body: d.profil.donneesConservation),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Text(d.profil.exportFormat, style: t.bodySmall),
+        if (_loading) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
         const SizedBox(height: 12),
         FormError(_fail),
-        if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(
-          label: d.profil.exporter,
-          icon: Icons.download_rounded,
-          loading: _loading,
-          onPressed: () async {
-            setState(() {
-              _loading = true;
-              _fail = null;
-            });
-            final r = await ref.read(apiClientProvider).get<Map<String, dynamic>>('/users/me/export', parse: asMap);
-            if (!mounted) return;
-            setState(() => _loading = false);
-            switch (r) {
-              case ApiOk<Map<String, dynamic>>(:final data):
-                final json = const JsonEncoder.withIndent('  ').convert(data);
-                await Share.share(json, subject: 'SyndicUp — export CNDP');
-              case ApiFail<Map<String, dynamic>>():
-                setState(() => _fail = r);
-            }
-          },
-        ),
         const SizedBox(height: 8),
         TextButton.icon(onPressed: () async {
           final r = await ref.read(apiClientProvider).get<Map<String, dynamic>>('/users/me/export', parse: asMap);

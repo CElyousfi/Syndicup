@@ -207,7 +207,7 @@ class _AppShellState extends ConsumerState<AppShell> {
 class QuickAction {
   const QuickAction(this.icon, this.label, this.path, {this.hint, this.tone = Tone.sage, this.art});
   final IconData icon;
-  /// Pictogramme 3D (`quick-…`) si livré.
+  /// Pictogramme 2D (`quick-…`).
   final String? art;
   final String label;
   final String path;

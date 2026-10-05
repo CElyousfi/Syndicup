@@ -11,6 +11,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -389,6 +390,10 @@ class _DashResident extends ConsumerWidget {
     final visitesEnAttente = (visites.valueOrNull ?? const <Visite>[]).where((v) => v.statut == 'EN_ATTENTE' && mesLotIds.contains(v.lotId)).toList();
     final totalDu = lotsAffiches.fold(BigInt.zero, (acc, x) => acc + (soldes[x.id] ?? BigInt.zero));
     final pvDispo = locataire && (ctx.copropriete?.locataireVoitPv ?? false);
+    // Affiche « Où va mon argent » quand aucune affiche d'AG n'est montrée (liste des AG chargée),
+    // si la navigation du rôle expose la transparence.
+    final voitTransparence = buildNav(ctx, d).expand((s) => s.items).any((i) => i.path == '/rapports/transparence');
+    final afficheTransparence = voitTransparence && prochaine.isEmpty && (locataire || (ags?.hasValue ?? false));
 
     return RefreshIndicator(
       onRefresh: refresh,
@@ -448,6 +453,17 @@ class _DashResident extends ConsumerWidget {
             SectionHeader(d.dash.prochaineAg),
             _AgCard(ag: prochaine.firstOrNull, resident: true),
           ],
+          if (afficheTransparence)
+            Padding(
+              padding: EdgeInsets.only(top: locataire ? 30 : 12),
+              child: PosterCard(
+                art: 'poster-transparence',
+                title: d.rapports.transparenceTitre,
+                body: d.rapports.transparenceSubtitle,
+                ctaLabel: d.common.see,
+                onTap: () => context.push('/rapports/transparence'),
+              ),
+            ),
           SectionHeader(d.dash.mesIncidents, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
           mesIncidents.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in mesIncidents.take(5)) IncidentRow(i)]),
           SectionHeader(d.dash.mesReservations, actionLabel: d.common.seeAll, onAction: () => context.push('/reservations')),
@@ -698,36 +714,44 @@ class OnboardingCard extends ConsumerWidget {
     // Carte de mise en route Wise (« Finish setting up your account ») : titre gras, compteur,
     // jauge pleine, puis uniquement les étapes restantes (le compteur dit le reste).
     final restantes = c.etapes.where((e) => !e.fait).toList();
+    // Bande d'affiche « poster-onboarding » en tête (coins supérieurs arrondis, miroir RTL).
     return SuCard(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Expanded(child: Text(t.onboarding, style: tt.headlineSmall)),
-          const SizedBox(width: 10),
-          StatusBadge(fill(t.progressionOnboarding, {'faites': c.faites, 'total': c.total}), variant: BadgeVariant.info, small: true),
-        ]),
-        const SizedBox(height: 6),
-        Text(c.estDemo ? t.demo : t.onboardingAide, style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
-        const SizedBox(height: 14),
-        Gauge(c.progression / 100, color: SuColors.link),
-        const SizedBox(height: 8),
-        for (final e in restantes)
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 7),
-            // Détail court (« 0/3 ») à la fin ; détail long sous le libellé, pour ne pas l'écraser.
-            child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.radio_button_unchecked_rounded, size: 20, color: SuColors.link)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text(libelle(e.cle), style: tt.bodyMedium?.copyWith(color: SuColors.ink)),
-                  if (e.detail != null && e.detail!.length > 9) Padding(padding: const EdgeInsets.only(top: 2), child: Text(e.detail!, style: tt.labelSmall)),
+      padding: EdgeInsets.zero,
+      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+        if (SuIllustration.has('poster-onboarding'))
+          const ClipRRect(borderRadius: BorderRadius.vertical(top: Radius.circular(SuRadius.card)), child: PosterArt('poster-onboarding', height: 120)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: Text(t.onboarding, style: tt.headlineSmall)),
+              const SizedBox(width: 10),
+              StatusBadge(fill(t.progressionOnboarding, {'faites': c.faites, 'total': c.total}), variant: BadgeVariant.info, small: true),
+            ]),
+            const SizedBox(height: 6),
+            Text(c.estDemo ? t.demo : t.onboardingAide, style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+            const SizedBox(height: 14),
+            Gauge(c.progression / 100, color: SuColors.link),
+            const SizedBox(height: 8),
+            for (final e in restantes)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                // Détail court (« 0/3 ») à la fin ; détail long sous le libellé, pour ne pas l'écraser.
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.radio_button_unchecked_rounded, size: 20, color: SuColors.link)),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                      Text(libelle(e.cle), style: tt.bodyMedium?.copyWith(color: SuColors.ink)),
+                      if (e.detail != null && e.detail!.length > 9) Padding(padding: const EdgeInsets.only(top: 2), child: Text(e.detail!, style: tt.labelSmall)),
+                    ]),
+                  ),
+                  if (e.detail != null && e.detail!.length <= 9) Padding(padding: const EdgeInsetsDirectional.only(start: 8), child: Text(e.detail!, style: tt.labelSmall, textDirection: TextDirection.ltr)),
                 ]),
               ),
-              if (e.detail != null && e.detail!.length <= 9) Padding(padding: const EdgeInsetsDirectional.only(start: 8), child: Text(e.detail!, style: tt.labelSmall, textDirection: TextDirection.ltr)),
-            ]),
-          ),
+          ]),
+        ),
       ]),
     );
   }
