@@ -45,35 +45,42 @@ export function ConnectivityBanner({ offline, online }: { offline: string; onlin
   );
 }
 
-/** Pose `data-reveal` sur les blocs de `.page-root` hors écran au chargement, puis les révèle une fois. */
+/**
+ * Révélation au défilement : les blocs de `.page-root` situés sous la ligne de flottaison glissent
+ * et apparaissent la PREMIÈRE fois qu'ils approchent de l'écran — jamais rejoué. Web Animations
+ * API : aucun attribut n'est posé sur le DOM rendu par React (aucun écart d'hydratation, même
+ * pendant une page servie en flux), et rien ne bouge hors écran.
+ */
 export function useScrollReveal() {
   const pathname = usePathname();
   useEffect(() => {
     const d = document.documentElement;
     const ambiance =
       d.dataset.alive !== "0" && d.dataset.lite !== "1" && d.dataset.motion !== "reduced" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!ambiance || typeof IntersectionObserver === "undefined") return;
+    if (!ambiance || typeof IntersectionObserver === "undefined" || !("animate" in Element.prototype)) return;
     const root = document.querySelector(".page-root");
     if (!root) return;
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
           if (!e.isIntersecting) continue;
-          (e.target as HTMLElement).dataset.reveal = "in";
           io.unobserve(e.target);
+          e.target.animate(
+            [
+              { opacity: 0, transform: "translateY(16px)" },
+              { opacity: 1, transform: "none" },
+            ],
+            { duration: 400, easing: "cubic-bezier(0.22, 1, 0.36, 1)" }
+          );
         }
       },
-      { rootMargin: "0px 0px -8% 0px" }
+      // Déclenché juste AVANT l'entrée à l'écran : le premier pixel visible est déjà animé.
+      { rootMargin: "0px 0px 48px 0px" }
     );
     const h = window.innerHeight;
     root.querySelectorAll<HTMLElement>(":scope > *, :scope > .grid > *").forEach((el) => {
-      if (el.dataset.reveal) return;
-      if (el.getBoundingClientRect().top > h) {
-        el.dataset.reveal = "wait";
-        io.observe(el);
-      }
+      if (el.getBoundingClientRect().top > h + 48) io.observe(el);
     });
     return () => io.disconnect();
   }, [pathname]);
 }
-
