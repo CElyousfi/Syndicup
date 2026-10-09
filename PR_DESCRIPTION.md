@@ -47,6 +47,18 @@ en développement.
 phase 3 posait `data-reveal` sur le DOM avant la fin de l'hydratation d'une page servie en flux, ce
 qui produisait un avertissement React en développement. Les règles CSS correspondantes sont retirées.
 
+## Recette finale (incluse dans cette PR)
+`docs/ALIVE_QA.md` contient la matrice FR/AR, clair/sombre (sans objet), animations réduites,
+sons/vibrations et interrupteur, ainsi que la fluidité mesurée sur émulateur. L'outil opt-in
+`FRAME_STATS` (`lib/core/feel/frame_stats.dart`) sert à relever les chiffres sur un vrai téléphone.
+
+Enregistrements à joindre (dossier local `alive-recordings/`, non versionné) :
+`mobile-signature-moments.mp4`, `mobile-otp-handoff-welcome-dashboard.mp4`,
+`mobile-rtl-tabs-refresh.mp4`, `web-signature-moments.webm`.
+
+Correctif après revue visuelle : sans solde à faire rouler, le montant du paiement « atterrit »
+désormais dans le reçu, au lieu de laisser une carte vide sous le sceau (mobile et web).
+
 ## Vérifications
 - **Mobile**
   - `flutter analyze` : aucune erreur, aucun avertissement.

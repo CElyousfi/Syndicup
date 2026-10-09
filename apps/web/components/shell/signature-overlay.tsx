@@ -127,11 +127,16 @@ export function MomentContent({ moment, labels, locale, clair = false }: { momen
     contenu = (
       <div className={s.card} style={{ paddingBottom: 64 }}>
         <p className="mb-4 text-center text-[15px] font-semibold text-ink">{labels.paiementEnregistre}</p>
-        {moment.balanceAfter || moment.balanceBefore ? (
-          <div className={s.balance}>
+        {/* Solde qui roule ; sans solde, le montant « atterrit » dans le reçu. */}
+        <div className={s.balance}>
+          {moment.balanceAfter || moment.balanceBefore ? (
             <SoldeQuiRoule avant={moment.balanceBefore} apres={moment.balanceAfter} locale={locale} />
-          </div>
-        ) : null}
+          ) : (
+            <span className={s.landed}>
+              <Amount value={moment.amount} locale={locale} />
+            </span>
+          )}
+        </div>
         <div className={s.chip}>
           <Amount value={moment.amount} locale={locale} />
         </div>

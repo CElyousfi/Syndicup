@@ -275,13 +275,17 @@ class _PaymentMoment extends StatelessWidget {
                     children: [
                       Text(label, style: tt.titleMedium, textAlign: TextAlign.center),
                       const SizedBox(height: 18),
-                      if (before != null || after != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                          decoration: BoxDecoration(color: SuColors.tile, borderRadius: BorderRadius.circular(14)),
-                          child: Center(child: AnimatedAmount(showAfter ? after : (before ?? after), style: tt.titleLarge)),
+                      // Solde qui roule ; sans solde, le montant « atterrit » dans le reçu.
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        decoration: BoxDecoration(color: SuColors.tile, borderRadius: BorderRadius.circular(14)),
+                        child: Center(
+                          child: before != null || after != null
+                              ? AnimatedAmount(showAfter ? after : (before ?? after), style: tt.titleLarge)
+                              : Opacity(opacity: _seg(t, 0.5, 0.6), child: AnimatedAmount(amount, style: tt.titleLarge)),
                         ),
-                      SizedBox(height: before != null || after != null ? 60 : 24),
+                      ),
+                      const SizedBox(height: 60),
                     ],
                   ),
                 ),

@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/auth/session.dart';
 import 'core/feel/feel.dart';
+import 'core/feel/frame_stats.dart';
 import 'core/i18n/i18n.dart';
 import 'core/push/push_service.dart';
 import 'core/widgets/illustration.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
   await Future.wait([initializeDateFormatting('fr'), initializeDateFormatting('ar')]);
   final prefs = await SharedPreferences.getInstance();
   await Feel.init(prefs);
+  installFrameStats();
   await SuIllustration.init();
   final session = await SessionStorage().read();
   await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));

@@ -105,6 +105,7 @@
   0% { opacity: 1; transform: none; }
   100% { opacity: 0; transform: translateY(-58px) scale(0.7); }
 }
+.landed { display: inline-block; animation: fade 200ms var(--ease-out) 640ms both; }
 .balance {
   border-radius: 14px;
   background: var(--color-tile);
