@@ -133,9 +133,9 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 12),
               SuEnter(index: 3, child: Text(d.brand.subtitle, textAlign: TextAlign.center, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5))),
               const SizedBox(height: 26),
-              SuEnter(index: 4, child: SuPressable(child: FilledButton(onPressed: () => context.push('/connexion'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)), child: Text(d.auth.signIn)))),
+              SuEnter(index: 4, child: SuButton(label: d.auth.signIn, onPressed: () => context.push('/connexion'), size: SuButtonSize.lg, expand: true)),
               const SizedBox(height: 10),
-              SuEnter(index: 5, child: OutlinedButton.icon(onPressed: () => context.push('/invitation'), style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(56)), icon: const Icon(Icons.qr_code_scanner_rounded, size: 20), label: Text(md.haveCode))),
+              SuEnter(index: 5, child: SuButton(label: md.haveCode, icon: Icons.qr_code_scanner_rounded, variant: SuButtonVariant.secondary, onPressed: () => context.push('/invitation'), size: SuButtonSize.lg, expand: true)),
               const SizedBox(height: 14),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -165,7 +165,7 @@ class LocaleSwitch extends StatelessWidget {
     return Material(
       color: SuColors.tile,
       shape: const StadiumBorder(),
-      child: InkWell(
+      child: SuTap(
         customBorder: const StadiumBorder(),
         onTap: () => LocaleSwitchScope.of(context)?.call(isAr ? const Locale('fr') : const Locale('ar')),
         child: Padding(

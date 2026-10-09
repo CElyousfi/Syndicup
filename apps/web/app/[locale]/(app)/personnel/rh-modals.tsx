@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../components/ui/button";
@@ -244,10 +245,10 @@ export function PresencesForm({ dict, locale, personnelId, jours, existantes }: 
         {jours.map((j) => (
           <label key={j} className="flex items-center justify-between gap-2 rounded-[14px] bg-surface px-3 py-1.5 text-[13px]">
             <span className="tnum text-body">{formatDate(j, locale)}</span>
-            <select name={`p_${j}`} defaultValue={existantes[j] ?? ""} className="h-8 rounded-full border border-hairline-strong bg-surface px-2.5 text-[12.5px] font-medium">
+            <Select name={`p_${j}`} defaultValue={existantes[j] ?? ""} className="!h-8 w-auto !appearance-auto !rounded-full !px-2.5 !text-[12.5px] font-medium">
               <option value="">—</option>
               {statuts.map((s) => <option key={s} value={s}>{dict.enumsPersonnelRh.statutPresence[s]}</option>)}
-            </select>
+            </Select>
           </label>
         ))}
       </div>

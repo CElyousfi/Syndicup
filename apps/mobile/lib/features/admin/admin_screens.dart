@@ -34,14 +34,14 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
     return Scaffold(
       appBar: ShellHeader(title: d.admin.titre),
       floatingActionButton: FloatingActionButton.extended(onPressed: () => context.push('/admin/coproprietes/nouvelle'), icon: const Icon(Icons.add_rounded), label: Text(d.admin.creer)),
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: () async => ref.invalidate(coproprietesProvider),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
             Text(d.admin.subtitle, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
             const SizedBox(height: 14),
-            TextField(onChanged: (v) => setState(() => _q = v.toLowerCase()), decoration: InputDecoration(hintText: d.common.search, prefixIcon: const Icon(Icons.search_rounded))),
+            SuSearchField(hint: d.common.search, onChanged: (v) => setState(() => _q = v.toLowerCase())),
             const SizedBox(height: 12),
             AsyncView(copros, onRetry: () => ref.invalidate(coproprietesProvider), data: (list) {
               final visible = list.where((c) => _q.isEmpty || c.nom.toLowerCase().contains(_q) || c.ville.toLowerCase().contains(_q)).toList();
@@ -50,6 +50,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
               return CardList([
                 for (final c in visible)
                   ListRow(
+                    key: ValueKey(c.id),
                     leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac),
                     title: c.nom,
                     subtitle: '${c.ville} · ${d.enums.typeResidence[c.typeResidence] ?? c.typeResidence} · ${c.nbLots} ${d.nav.lots.toLowerCase()}',
@@ -111,7 +112,7 @@ class _AdminCoproFormScreenState extends ConsumerState<AdminCoproFormScreen> {
             SectionHeader(d.admin.etapeSyndic, subtitle: d.admin.syndicAide),
             FormError(_fail),
             if (_fail != null) const SizedBox(height: 12),
-            SubmitButton(label: d.admin.inviterSyndic, loading: _loading, icon: Icons.vpn_key_rounded, onPressed: () async {
+            SubmitButton(label: d.admin.inviterSyndic, loading: _loading, fail: _fail, icon: Icons.vpn_key_rounded, onPressed: () async {
               setState(() {
                 _loading = true;
                 _fail = null;
@@ -134,15 +135,15 @@ class _AdminCoproFormScreenState extends ConsumerState<AdminCoproFormScreen> {
               }
             }),
             const SizedBox(height: 8),
-            TextButton(onPressed: () => context.go('/admin'), child: Text(d.admin.plusTard)),
+            SuButton(variant: SuButtonVariant.ghost, onPressed: () => context.go('/admin'), label: d.admin.plusTard),
           ] else ...[
             SectionHeader(d.admin.codePret),
             CodeCard(invitation: _invitation!),
             const SizedBox(height: 16),
-            FilledButton(onPressed: () {
+            SuButton(onPressed: () {
               ref.invalidate(coproprietesProvider);
               context.go('/admin');
-            }, child: Text(d.admin.terminer)),
+            }, label: d.admin.terminer),
           ],
         ],
       );
@@ -163,7 +164,7 @@ class _AdminCoproFormScreenState extends ConsumerState<AdminCoproFormScreen> {
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.create, loading: _loading, onPressed: () async {
+        SubmitButton(label: d.common.create, loading: _loading, fail: _fail, onPressed: () async {
           setState(() {
             _loading = true;
             _fail = null;
@@ -235,7 +236,7 @@ class AdminCoproDetailScreen extends ConsumerWidget {
               StatTile(label: d.nav.documents, value: '${s.documents}', tone: Tone.neutral, icon: Icons.description_rounded),
             ]),
             SectionHeader(d.nav.finances),
-            SuCard(child: Column(children: [KeyValueRow(d.admin.appele, formatMAD(s.montantDu, l)), KeyValueRow(d.admin.encaisse, formatMAD(s.montantPaye, l))])),
+            SuCard(child: Column(children: [KeyValueRow.amount(d.admin.appele, s.montantDu), KeyValueRow.amount(d.admin.encaisse, s.montantPaye)])),
             SectionHeader(d.dash.prochaineAg),
             s.prochaineAg == null
                 ? Text(d.dash.aucuneAg, style: t.bodyMedium?.copyWith(color: SuColors.soft))
@@ -252,15 +253,16 @@ class AdminCoproDetailScreen extends ConsumerWidget {
               ListRow(leading: const IconCircle(Icons.history_rounded, tone: Tone.neutral), title: s.derniereActivite == null ? d.admin.aucuneActivite : formatDateHeure(s.derniereActivite, l)),
             ]),
             const SizedBox(height: 24),
-            OutlinedButton.icon(
+            SuButton(
+              variant: SuButtonVariant.secondary,
               onPressed: () async {
                 final ctx = ref.read(appContextProvider);
                 await ref.read(sessionProvider.notifier).chooseCopropriete(id);
                 await ref.read(appStateProvider.notifier).reload();
                 if (context.mounted && ctx.isSuperAdmin) context.push('/invitations?nouvelle=1');
               },
-              icon: const Icon(Icons.vpn_key_rounded),
-              label: Text(d.admin.inviterSyndic),
+              icon: Icons.vpn_key_rounded,
+              label: d.admin.inviterSyndic,
             ),
           ],
         )),

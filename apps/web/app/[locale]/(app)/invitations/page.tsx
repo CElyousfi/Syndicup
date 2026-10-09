@@ -17,6 +17,7 @@ import { CreerInvitationModal, RegenererModal } from "./invitation-modals";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { annulerInvitation } from "./actions";
 import { InvitationsMasseModal } from "../import/import-client";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -97,7 +98,7 @@ export default async function InvitationsPage({
                 <TH>{inv.expiration}</TH>
                 <TH align="end" />
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {invitations.map((i) => (
                   <TR key={i.id}>
                     <TD>
@@ -159,7 +160,7 @@ export default async function InvitationsPage({
                     </TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
           {invitationsRes.ok ? (

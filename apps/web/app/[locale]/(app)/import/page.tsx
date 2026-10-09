@@ -20,6 +20,7 @@ import { IconCircle, CFile } from "../../../../components/ui/color-icons";
 import { importVariant } from "../../../../lib/status";
 import { OnboardingCard, chargerOnboarding } from "./onboarding-card";
 import { InvitationsMasseModal } from "./import-client";
+import { LiveList } from "../../../../components/ui/live-list";
 
 type Onglet = "demarrer" | "imports" | "invitations";
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -75,7 +76,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
         imports.length === 0 ? <EmptyState title={t.aucunImport} hint={t.aucunImportAide} illustration="empty-documents" action={gestion ? <ButtonLink href={p("/import/nouveau")}><IconPlus width={16} height={16} />{t.nouvelImport}</ButtonLink> : undefined} /> : (
           <TableCard><Table>
             <THead><TH>{t.fichierSource}</TH><TH>{t.typeImport}</TH><TH>{dict.lots.statut}</TH><TH align="end">{t.nbLignes}</TH><TH align="end">{t.nbErreurs}</TH><TH>{t.lancePar}</TH><TH>{dict.lots.dateDebut}</TH></THead>
-            <tbody>{imports.map((j) => (
+            <LiveList as="tbody">{imports.map((j) => (
               <TR key={j.id}>
                 <TD><Link href={p(`/import/${j.id}`)} className="inline-flex max-w-full items-center gap-3 font-bold text-ink hover:text-link"><IconCircle tone="sage" size={40}><CFile width={20} height={20} /></IconCircle><span className="min-w-0 truncate">{j.nomFichier}</span></Link></TD>
                 <TD className="text-body">{t.typesImport[j.type]}</TD>
@@ -85,7 +86,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
                 <TD className="text-body">{j.lancePar ? nomComplet(j.lancePar) ?? "—" : "—"}</TD>
                 <TD className="text-[12px] text-soft tnum">{formatDateHeure(j.creeLe, ctx.locale)}</TD>
               </TR>
-            ))}</tbody>
+            ))}</LiveList>
           </Table></TableCard>
         )
       ) : null}
@@ -94,7 +95,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
         <section>
           <SectionHeader title={t.invitationsEnAttente} subtitle={t.invitationsMasseAide} action={<InvitationsMasseModal dict={dict} locale={ctx.locale} nb={nonEnvoyees.length} />} />
           {preRemplies.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneInvitationMasse}</p> : (
-            <ul className="stagger-grid -mx-3 mt-3">
+            <LiveList as="ul" className="stagger-grid -mx-3 mt-3">
               {preRemplies.map((i) => {
                 const nom = `${i.preRempliJson?.prenom ?? ""} ${i.preRempliJson?.nom ?? ""}`.trim();
                 return (
@@ -112,7 +113,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
                   </li>
                 );
               })}
-            </ul>
+            </LiveList>
           )}
         </section>
       ) : null}

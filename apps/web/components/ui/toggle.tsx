@@ -1,7 +1,7 @@
 "use client";
 
 import type { ComponentProps, ReactNode } from "react";
-import { haptic } from "../../lib/feel/haptics";
+import { hapticLazy as haptic } from "../../lib/feel/haptic-lazy";
 
 /**
  * Interrupteur et case à cocher VIVANTS (couche Alive) — inputs natifs (formulaires serveur,

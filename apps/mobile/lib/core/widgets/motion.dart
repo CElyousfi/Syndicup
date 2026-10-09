@@ -23,6 +23,9 @@ class _EntranceWindow {
   }
 }
 
+/// Vrai pendant la fenêtre d'entrée de l'écran courant (cascade d'arrivée en cours).
+bool isEntranceWindowOpen(BuildContext context) => _EntranceWindow.open(context);
+
 /// Apparition en cascade : fondu + léger soulèvement, décalé selon `index` (plafonné).
 class SuEnter extends StatelessWidget {
   const SuEnter({super.key, required this.child, this.index = 0, this.offset = 0.06, this.delay = Duration.zero});

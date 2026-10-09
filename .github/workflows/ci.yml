@@ -72,7 +72,7 @@ jobs:
       - name: Jetons de mouvement à jour (tokens.json → CSS / TS / Dart)
         run: node packages/config/motion/gen.mjs --check
       - name: Écrans vivants (primitives brutes interdites)
-        run: node scripts/alive/check-alive.mjs --warn
+        run: node scripts/alive/check-alive.mjs
 
   validate-openapi-contract:
     runs-on: ubuntu-latest

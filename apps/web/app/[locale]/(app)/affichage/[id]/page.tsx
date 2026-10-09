@@ -19,6 +19,7 @@ import { FileViewerButton } from "../../../../../components/documents/document-v
 import { annonceVariant, categorieAnnonceVariant } from "../../../../../lib/status";
 import { Markdown } from "../markdown";
 import { ArchiverModal, CommentaireForm, MarquerLu, MasquerBouton, PublierModal, SupprimerBouton } from "../affichage-client";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -72,7 +73,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
           <Card>
             <SectionHeader title={`${c.commentaires}${a.commentaires.length ? ` · ${a.commentaires.length}` : ""}`} className="mb-4" />
             {a.commentaires.length === 0 ? <p className="text-[13px] text-soft">{c.aucunCommentaire}</p> : (
-              <ul className="space-y-2">
+              <LiveList as="ul" className="space-y-2">
                 {a.commentaires.map((k) => (
                   <li key={k.id} className={`flex gap-3 rounded-2xl bg-surface p-3.5 ${k.masque ? "opacity-60" : ""}`}>
                     <Avatar nom={nomComplet(k.auteur) ?? "?"} size={36} />
@@ -84,7 +85,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
                     </div>
                   </li>
                 ))}
-              </ul>
+              </LiveList>
             )}
             <div className="mt-5">
               {a.statut === "PUBLIEE" && a.commentairesActives ? <CommentaireForm dict={dict} locale={ctx.locale} annonceId={a.id} /> : <p className="text-[13px] text-soft">{c.commentairesDesactives}</p>}

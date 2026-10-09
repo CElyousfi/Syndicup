@@ -54,6 +54,7 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
         ],
         TwoCols([
           StatTile(label: d.contrats.aRenouveler, value: '${aRenouveler.length}', icon: Icons.event_repeat_rounded, tone: aRenouveler.isNotEmpty ? Tone.warn : Tone.sage, hint: d.contrats.aRenouvelerAide, onTap: () => setState(() => _onglet = 'A_RENOUVELER')),
+          // alive:allow StatTile.hint n'accepte qu'une chaîne (montant secondaire, valeur principale déjà vivante)
           StatTile(label: d.contrats.echeances30, value: '${prochaines.length}', icon: Icons.calendar_month_rounded, tone: Tone.tosca, hint: prochaines.isEmpty ? null : formatMAD(_somme(prochaines), l)),
         ]),
         const SizedBox(height: 12),
@@ -62,10 +63,11 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
           CardList([
             for (final e in prochaines.take(6))
               ListRow(
+                key: ValueKey(e.id),
                 leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : Tone.tosca),
                 title: e.contratLibelle ?? d.contrats.titre,
                 subtitle: '${formatDateCourte(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
-                trailing: e.montant != null ? MoneyText(formatMAD(e.montant, l)) : StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
+                trailing: e.montant != null ? AnimatedAmount(e.montant, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null) : StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
                 onTap: () => context.push('/contrats/${e.contratId}'),
               ),
           ]),
@@ -73,12 +75,15 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
         SectionHeader(d.contrats.liste),
         FilterChips<String>(value: _onglet, options: _onglets, labelOf: (s) => s == 'TOUS' ? d.contrats.tous : s == 'A_RENOUVELER' ? d.contrats.aRenouveler : (d.enumsContrats.statutContrat[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
-        AsyncView(
-          contrats,
-          onRetry: () => ref.invalidate(contratsProvider(statut)),
-          data: (rows) => rows.isEmpty
-              ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
-              : CardList([for (final c in rows) _ContratRow(c)]),
+        SuFadeSwitch(
+          value: _onglet,
+          child: AsyncView(
+            contrats,
+            onRetry: () => ref.invalidate(contratsProvider(statut)),
+            data: (rows) => rows.isEmpty
+                ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
+                : CardList([for (final c in rows) _ContratRow(c, key: ValueKey(c.id))]),
+          ),
         ),
         const SizedBox(height: 16),
         Text(d.contrats.echeancierAide, style: t.bodySmall),
@@ -117,19 +122,20 @@ IconData _iconeContrat(String type) => switch (type) {
     };
 
 class _ContratRow extends StatelessWidget {
-  const _ContratRow(this.c);
+  const _ContratRow(this.c, {super.key});
   final Contrat c;
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
     final l = context.locale;
+    final t = Theme.of(context).textTheme;
     final fin = c.dateFin == null ? d.contrats.dureeIndeterminee : '${d.contrats.dateFin} ${formatDateCourte(c.dateFin, l)}';
     return ListRow(
       leading: IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral),
       title: c.libelle,
       subtitle: [d.enumsContrats.typeContrat[c.type] ?? c.type, if (c.prestataireNom != null) c.prestataireNom!, fin].join(' · '),
       trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-        if (c.montantPeriode != null) MoneyText(formatMAD(c.montantPeriode, l)),
+        if (c.montantPeriode != null) AnimatedAmount(c.montantPeriode, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
         const SizedBox(height: 4),
         StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? c.statut, variant: contratVariant[c.statut] ?? BadgeVariant.neutral, small: true),
       ]),
@@ -167,7 +173,7 @@ class ContratDetailScreen extends ConsumerWidget {
                 ]),
                 const SizedBox(height: 18),
                 if (c.montantPeriode != null) ...[
-                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(formatMAD(c.montantPeriode, l), style: t.displayMedium)),
+                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: AnimatedAmount(c.montantPeriode, style: t.displayMedium, textDirection: TextDirection.ltr, maxLines: null)),
                   const SizedBox(height: 2),
                   Text(d.contrats.montantPeriode, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                   const SizedBox(height: 14),
@@ -203,8 +209,8 @@ class ContratDetailScreen extends ConsumerWidget {
                   : Column(children: [
                       KeyValueRow(d.contrats.assureur, (det['assureur'] ?? '—').toString()),
                       KeyValueRow(d.contrats.numeroPolice, (det['numero_police'] ?? '—').toString(), mono: true),
-                      if (det['franchise'] != null) KeyValueRow(d.contrats.franchise, formatMAD(det['franchise'].toString(), l)),
-                      if (det['capital_assure'] != null) KeyValueRow(d.contrats.capitalAssure, formatMAD(det['capital_assure'].toString(), l)),
+                      if (det['franchise'] != null) KeyValueRow.amount(d.contrats.franchise, det['franchise'].toString()),
+                      if (det['capital_assure'] != null) KeyValueRow.amount(d.contrats.capitalAssure, det['capital_assure'].toString()),
                       if ((det['garanties'] as List?)?.isNotEmpty ?? false)
                         Padding(padding: const EdgeInsets.only(top: 8), child: Align(alignment: AlignmentDirectional.centerStart, child: Wrap(spacing: 6, runSpacing: 6, children: [for (final g in (det['garanties'] as List)) StatusBadge(g.toString(), variant: BadgeVariant.neutral, small: true)]))),
                     ])),
@@ -223,11 +229,12 @@ class ContratDetailScreen extends ConsumerWidget {
               CardList([
                 for (final e in c.echeances)
                   ListRow(
+                    key: ValueKey(e.id),
                     leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : e.statut == 'A_VENIR' ? Tone.tosca : Tone.sage),
                     title: '${formatDate(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
                     subtitle: e.depenseLibelle != null ? '${e.depenseLibelle} · ${d.enumsDepenses.statutDepense[e.depenseStatut ?? ''] ?? ''}' : null,
                     trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-                      if (e.montant != null) MoneyText(formatMAD(e.montant, l)),
+                      if (e.montant != null) AnimatedAmount(e.montant, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
                       const SizedBox(height: 4),
                       StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
                     ]),
@@ -236,7 +243,7 @@ class ContratDetailScreen extends ConsumerWidget {
               ]),
             if (c.depenses.isNotEmpty) ...[
               SectionHeader(d.contrats.depensesLiees),
-              CardList([for (final dep in c.depenses) ListRow(leading: const IconCircle(Icons.receipt_long_rounded, tone: Tone.sand), title: dep.nom, chevron: true, onTap: () => context.push('/depenses/${dep.id}'))]),
+              CardList([for (final dep in c.depenses) ListRow(key: ValueKey(dep.id), leading: const IconCircle(Icons.receipt_long_rounded, tone: Tone.sand), title: dep.nom, chevron: true, onTap: () => context.push('/depenses/${dep.id}'))]),
             ],
             if (c.logs.isNotEmpty) ...[
               SectionHeader(d.contrats.journal),

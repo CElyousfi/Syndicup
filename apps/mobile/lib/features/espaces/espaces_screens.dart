@@ -45,7 +45,7 @@ class EspacesScreen extends ConsumerWidget {
       return Column(
         children: [
           for (int k = 0; k < list.length; k++)
-            SuEnter(index: k, child: _EspaceCard(espace: list[k], peutReserver: peutReserver)),
+            SuEnter(key: ValueKey(list[k].id), index: k, child: _EspaceCard(espace: list[k], peutReserver: peutReserver)),
         ],
       );
     });
@@ -54,10 +54,8 @@ class EspacesScreen extends ConsumerWidget {
     return Scaffold(
       appBar: ShellHeader(title: d.espaces.titre),
       floatingActionButton: fab,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: refresh,
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
@@ -266,6 +264,7 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
                       });
                   }
                 },
+          fail: _fail,
         ),
       ],
     );
@@ -319,6 +318,7 @@ class _EspaceFormState extends ConsumerState<_EspaceForm> {
             ref.invalidate(espacesProvider);
             Navigator.pop(context);
           },
+          fail: _fail,
         ),
       ],
     );
@@ -375,7 +375,7 @@ class ReservationsScreen extends ConsumerWidget {
                         children: [
                           if (gestion && r.statut == 'EN_ATTENTE') ...[
                             // Le thème fixe minimumSize = Size.fromHeight(…) : bornée ici (pill compacte).
-                            FilledButton(onPressed: () => _valider(context, ref, r), style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 18)), child: Text(d.espaces.valider)),
+                            SuButton(label: d.espaces.valider, size: SuButtonSize.sm, onPressed: () => _valider(context, ref, r), style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 18))),
                             LinkButton(d.espaces.rejeter, color: SuColors.danger, onTap: () => _rejeter(context, ref, r)),
                           ],
                           LinkButton(d.espaces.annulerReservation, color: SuColors.soft, onTap: () => _annuler(context, ref, r)),
@@ -400,18 +400,16 @@ class ReservationsScreen extends ConsumerWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (attente.isNotEmpty) ...[SectionHeader(gestion ? d.espaces.fileAttente : d.enums.statutReservation['EN_ATTENTE']!), CardList([for (final r in attente) carte(r)])],
-          if (autres.isNotEmpty) ...[SectionHeader(d.espaces.planning), CardList([for (final r in autres) carte(r)])],
+          if (attente.isNotEmpty) ...[SectionHeader(gestion ? d.espaces.fileAttente : d.enums.statutReservation['EN_ATTENTE']!), CardList([for (final r in attente) KeyedSubtree(key: ValueKey(r.id), child: carte(r))])],
+          if (autres.isNotEmpty) ...[SectionHeader(d.espaces.planning), CardList([for (final r in autres) KeyedSubtree(key: ValueKey(r.id), child: carte(r))])],
         ],
       );
     });
     if (!racine) return SuPage(title: titre, onRefresh: refresh, children: [liste]);
     return Scaffold(
       appBar: ShellHeader(title: titre),
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: refresh,
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 32), children: [liste]),
       ),
     );

@@ -20,7 +20,6 @@ import '../../core/widgets/widgets.dart';
 import '../depenses/depenses_screens.dart';
 import '../parkings/parkings_screens.dart' show notifierVehiculeGenant;
 import '../shell/app_shell.dart';
-import '../../core/theme/motion.dart';
 
 IconData iconCategorie(String c) => switch (c) {
       'PLOMBERIE' => Icons.water_drop_rounded,
@@ -67,6 +66,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
         return CardList([
           for (final i in visible)
             ListRow(
+              key: ValueKey(i.id),
               leading: IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : incidentTone(i.statut)),
               title: i.sousCategorie,
               subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie} · ${formatDateHeure(i.creeLe, context.locale)}',
@@ -88,10 +88,8 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     return Scaffold(
       appBar: ShellHeader(title: titre),
       floatingActionButton: fab,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: refresh,
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 96), children: contenu),
       ),
     );
@@ -224,7 +222,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
               Stack(
                 clipBehavior: Clip.none,
                 children: [
-                  ClipRRect(borderRadius: BorderRadius.circular(18), child: Image.file(File(p.path), width: 96, height: 96, fit: BoxFit.cover)),
+                  ClipRRect(borderRadius: BorderRadius.circular(18), child: SuImage.file(File(p.path), width: 96, height: 96, fit: BoxFit.cover)),
                   PositionedDirectional(
                     end: 6,
                     top: 6,
@@ -241,7 +239,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         const SizedBox(height: 28),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.send, loading: _loading, onPressed: _categorie == null ? null : _submit),
+        SubmitButton(label: d.common.send, loading: _loading, onPressed: _categorie == null ? null : _submit, fail: _fail),
       ],
     );
   }
@@ -485,7 +483,7 @@ class IncidentDetailScreen extends ConsumerWidget {
                     if (i.createur?.telephone != null && (ctx.isGestion || ctx.isPrestataire || ctx.isGardien))
                       Align(
                         alignment: AlignmentDirectional.centerEnd,
-                        child: TextButton.icon(onPressed: () => launchUrl(Uri.parse('tel:${i.createur!.telephone}')), icon: const Icon(Icons.call_rounded, size: 18), label: Text(formatTelephone(i.createur!.telephone), textDirection: TextDirection.ltr)),
+                        child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => launchUrl(Uri.parse('tel:${i.createur!.telephone}')), child: Row(mainAxisSize: MainAxisSize.min, children: [const Icon(Icons.call_rounded, size: 18), const SizedBox(width: 8), Text(formatTelephone(i.createur!.telephone), textDirection: TextDirection.ltr)])),
                       ),
                   ],
                 ),
@@ -498,11 +496,10 @@ class IncidentDetailScreen extends ConsumerWidget {
                     scrollDirection: Axis.horizontal,
                     itemCount: listePhotos.length,
                     separatorBuilder: (_, __) => const SizedBox(width: 10),
-                    itemBuilder: (_, k) => SuPressable(
-                      child: GestureDetector(
-                        onTap: () => showDialog<void>(context: context, builder: (_) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(8), child: InteractiveViewer(child: Image.network(listePhotos[k].url)))),
-                        child: ClipRRect(borderRadius: BorderRadius.circular(20), child: Image.network(listePhotos[k].url, width: 168, height: 132, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 168, color: SuColors.tile, child: const Icon(Icons.image_not_supported_rounded, color: SuColors.faint)))),
-                      ),
+                    itemBuilder: (_, k) => SuTap(
+                      ink: false,
+                      onTap: () => showSuDialog<void>(context, builder: (_) => Dialog(backgroundColor: Colors.black, insetPadding: const EdgeInsets.all(8), child: InteractiveViewer(child: SuImage.network(listePhotos[k].url, fit: BoxFit.scaleDown)))),
+                      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: SuImage.network(listePhotos[k].url, width: 168, height: 132, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(width: 168, color: SuColors.tile, child: const Icon(Icons.image_not_supported_rounded, color: SuColors.faint)))),
                     ),
                   ),
                 ),
@@ -529,12 +526,12 @@ class IncidentDetailScreen extends ConsumerWidget {
               else if (i.resolu && i.assigneAId != null && (ctx.isGestion || i.creePar == ctx.profil.id))
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: OutlinedButton.icon(onPressed: () => _evaluer(context, ref, i), icon: const Icon(Icons.star_rate_rounded), label: Text(d.depenses.evaluer)),
+                  child: SuButton(label: d.depenses.evaluer, icon: Icons.star_rate_rounded, variant: SuButtonVariant.secondary, onPressed: () => _evaluer(context, ref, i)),
                 ),
               // M16 — dépenses nées de l'incident (syndic / conseil).
               if (ctx.voitDepenses && i.depenses.isNotEmpty) ...[
                 SectionHeader(d.depenses.depensesLiees, subtitle: i.totalDepenses == null ? null : '${d.depenses.totalDepensesLiees} : ${formatMAD(i.totalDepenses, l)}'),
-                CardList([for (final x in i.depenses) DepenseRow(x)]),
+                CardList([for (final x in i.depenses) DepenseRow(x, key: ValueKey(x.id))]),
               ],
               // M23 — plaque signalée / emplacement : le gardien ou le syndic prévient le lot propriétaire.
               if (i.immatriculationSignalee != null || i.emplacementId != null) ...[
@@ -549,7 +546,7 @@ class IncidentDetailScreen extends ConsumerWidget {
                         d.parkings.titre,
                         valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? Align(alignment: AlignmentDirectional.centerEnd, child: LinkButton(d.parkings.titre, onTap: () => context.push('/parkings/${i.emplacementId}'))) : null,
                       ),
-                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: OutlinedButton.icon(onPressed: () => notifierVehiculeGenant(context, ref, i), icon: const Icon(Icons.campaign_rounded, size: 18), label: Text(d.incidents.notifierVehicule))),
+                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: SuButton(label: d.incidents.notifierVehicule, icon: Icons.campaign_rounded, variant: SuButtonVariant.secondary, onPressed: () => notifierVehiculeGenant(context, ref, i))),
                   ]),
                 ),
               ],
@@ -598,11 +595,9 @@ class IncidentDetailScreen extends ConsumerWidget {
       showToast(context, d.incidents.aucunPrestataire, error: true);
       return;
     }
-    final picked = await showModalBottomSheet<Prestataire>(
-      useRootNavigator: true,
-      context: context,
-      sheetAnimationStyle: SuMotion.sheet,
-      isScrollControlled: true,
+    final picked = await showSuSheet<Prestataire>(
+      context,
+      useSafeArea: false,
       builder: (sheet) => SafeArea(
         child: ConstrainedBox(
           constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(sheet).height * 0.75),
@@ -618,7 +613,7 @@ class IncidentDetailScreen extends ConsumerWidget {
                   Text(d.incidents.assignerAide, style: Theme.of(sheet).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
                 ]),
               ),
-              for (final p in actifs) ListRow(leading: const IconCircle(Icons.engineering_rounded, tone: Tone.tosca), title: p.nom, subtitle: p.specialite, onTap: () => Navigator.pop(sheet, p)),
+              for (final p in actifs) ListRow(key: ValueKey(p.id), leading: const IconCircle(Icons.engineering_rounded, tone: Tone.tosca), title: p.nom, subtitle: p.specialite, onTap: () => Navigator.pop(sheet, p)),
             ],
           ),
         ),
@@ -741,6 +736,7 @@ class _StatutFormState extends ConsumerState<_StatutForm> {
             Navigator.pop(context);
             showToast(context, d.incidents.statutChange);
           },
+          fail: _fail,
         ),
       ],
     );
@@ -766,12 +762,13 @@ class PrestatairesScreen extends ConsumerWidget {
           return CardList([
             for (final p in ps)
               ListRow(
+                key: ValueKey(p.id),
                 leading: IconCircle(Icons.engineering_rounded, tone: p.actif ? Tone.tosca : Tone.neutral),
                 title: p.nom,
                 subtitle: '${p.specialite} · ${p.contact}',
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   StatusBadge(p.actif ? d.incidents.actif : d.incidents.inactif, variant: p.actif ? BadgeVariant.ok : BadgeVariant.outline, small: true),
-                  if (ctx.isGestion) IconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icon(Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint), onPressed: () async {
+                  if (ctx.isGestion) SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () async {
                     final r = await ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif});
                     if (!context.mounted) return;
                     if (r is ApiFail) showToast(context, r.error.message, error: true); else ref.invalidate(prestatairesProvider);
@@ -831,6 +828,7 @@ class _PrestataireFormState extends ConsumerState<_PrestataireForm> {
             ref.invalidate(prestatairesProvider);
             Navigator.pop(context);
           },
+          fail: _fail,
         ),
       ],
     );

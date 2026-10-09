@@ -10,6 +10,7 @@ import { IconCircle, CKey } from "../../../../../components/ui/color-icons";
 import { IconCar, IconChevronEnd } from "../../../../../components/ui/icons";
 import { badgeAccesVariant } from "../../../../../lib/status";
 import { BadgeModal, BadgePerduModal, BadgeRestituerModal, RetirerVehiculeModal, VehiculeModal } from "../../parkings/parkings-client";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict: Dict; locale: Locale; lot: Lot; gestion: boolean }) {
   const t = dict.parkings;
@@ -29,7 +30,7 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
       <section>
         <SectionHeader title={t.onglets.mesAttributions} action={<Link href={`/${locale}/parkings`} className="link text-[14px]">{t.titre}</Link>} />
         {attributions.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneAttribution}</p> : (
-          <ul className="-mx-3 mt-2">
+          <LiveList as="ul" className="-mx-3 mt-2">
             {attributions.map((a) => (
               <li key={a.id}>
                 <Link href={`/${locale}/parkings/${a.emplacementId}`} className={ligne}>
@@ -44,14 +45,14 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
                 </Link>
               </li>
             ))}
-          </ul>
+          </LiveList>
         )}
       </section>
       <div className="grid gap-8 lg:grid-cols-2">
         <section className="min-w-0">
           <SectionHeader title={t.vehicules} action={gestion ? <VehiculeModal dict={dict} locale={locale} lots={lots} /> : undefined} />
           {vehicules.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunVehicule}</p> : (
-            <ul className="-mx-3 mt-2">
+            <LiveList as="ul" className="-mx-3 mt-2">
               {vehicules.map((v) => (
                 <li key={v.id} className={ligne}>
                   <IconCircle tone="sand" size={44}><IconCar width={20} height={20} className="text-sand" /></IconCircle>
@@ -63,13 +64,13 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
                   {gestion && v.actif ? <RetirerVehiculeModal dict={dict} locale={locale} vehicule={v} /> : null}
                 </li>
               ))}
-            </ul>
+            </LiveList>
           )}
         </section>
         <section className="min-w-0">
           <SectionHeader title={t.badges} action={gestion ? <BadgeModal dict={dict} locale={locale} lots={lots} /> : undefined} />
           {badges.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunBadge}</p> : (
-            <ul className="-mx-3 mt-2">
+            <LiveList as="ul" className="-mx-3 mt-2">
               {badges.map((b) => (
                 <li key={b.id} className={ligne}>
                   <IconCircle tone="tosca" size={44}><CKey width={20} height={20} /></IconCircle>
@@ -81,7 +82,7 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
                   {gestion ? <span className="inline-flex gap-1">{b.statut === "ACTIF" ? <BadgePerduModal dict={dict} locale={locale} badge={b} /> : null}{b.statut !== "RESTITUE" ? <BadgeRestituerModal dict={dict} locale={locale} badge={b} /> : null}</span> : null}
                 </li>
               ))}
-            </ul>
+            </LiveList>
           )}
         </section>
       </div>

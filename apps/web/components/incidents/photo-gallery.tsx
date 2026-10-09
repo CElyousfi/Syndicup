@@ -7,6 +7,9 @@
  */
 import { useState } from "react";
 import { Modal } from "../ui/modal";
+import { IconButton, Pressable } from "../ui/pressable";
+import { Figure } from "../ui/amount";
+import { FadeImg } from "../ui/motion/fade-img";
 import { IconChevronEnd } from "../ui/icons";
 import { fill } from "../../lib/i18n";
 
@@ -34,20 +37,20 @@ export function PhotoGallery({
       <ul className="grid grid-cols-3 gap-2.5 sm:flex sm:flex-wrap sm:gap-3">
         {photos.map((p, i) => (
           <li key={p.path}>
-            <button
+            <Pressable
               type="button"
               onClick={() => setOuverte(i)}
-              className="block w-full overflow-hidden rounded-2xl bg-tile focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2"
+              className="su-btn block w-full overflow-hidden rounded-2xl bg-tile focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-link focus-visible:ring-offset-2"
               aria-label={fill(altTemplate, { n: i + 1 })}
             >
               {/* URL signée courte durée — next/image inapplicable. */}
-              <img
+              <FadeImg
                 src={p.url}
                 alt={fill(altTemplate, { n: i + 1 })}
                 loading="lazy"
                 className="aspect-square w-full object-cover transition-transform duration-300 hover:scale-105 sm:size-32"
               />
-            </button>
+            </Pressable>
           </li>
         ))}
       </ul>
@@ -67,7 +70,7 @@ export function PhotoGallery({
               if (e.key === "ArrowLeft") naviguer(-1);
             }}
           >
-            <img
+            <FadeImg
               key={ouverte}
               src={photos[ouverte]!.url}
               alt={fill(altTemplate, { n: ouverte + 1 })}
@@ -75,23 +78,25 @@ export function PhotoGallery({
             />
             {photos.length > 1 ? (
               <div className="mt-4 flex items-center justify-center gap-3">
-                <button
-                  type="button"
+                <IconButton
+                  tone="none"
+                  label={fill(altTemplate, { n: ((ouverte - 1 + photos.length) % photos.length) + 1 })}
                   onClick={() => naviguer(-1)}
-                  className="flex size-11 items-center justify-center rounded-full bg-tile text-link transition-colors hover:bg-wash-strong"
+                  className="size-11 bg-tile text-link transition-colors hover:bg-wash-strong"
                 >
                   <IconChevronEnd width={16} height={16} className="rotate-180" />
-                </button>
+                </IconButton>
                 <span className="tnum text-[13px] font-medium text-soft">
-                  {ouverte + 1} / {photos.length}
+                  <Figure value={`${ouverte + 1} / ${photos.length}`} />
                 </span>
-                <button
-                  type="button"
+                <IconButton
+                  tone="none"
+                  label={fill(altTemplate, { n: ((ouverte + 1) % photos.length) + 1 })}
                   onClick={() => naviguer(1)}
-                  className="flex size-11 items-center justify-center rounded-full bg-tile text-link transition-colors hover:bg-wash-strong"
+                  className="size-11 bg-tile text-link transition-colors hover:bg-wash-strong"
                 >
                   <IconChevronEnd width={16} height={16} />
-                </button>
+                </IconButton>
               </div>
             ) : null}
           </div>

@@ -18,6 +18,7 @@ import { IconPlus } from "../../../../components/ui/icons";
 import { CAlert, CCalendar, CWrench } from "../../../../components/ui/color-icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { prioriteVariant, tacheVariant } from "../../../../lib/status";
+import { LiveList } from "../../../../components/ui/live-list";
 
 const STATUTS: StatutTache[] = ["A_FAIRE", "EN_COURS", "BLOQUEE", "TERMINEE", "ANNULEE"];
 const COLONNES: StatutTache[] = ["A_FAIRE", "EN_COURS", "BLOQUEE", "TERMINEE"];
@@ -96,7 +97,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
             return (
               <div key={col} className="card p-3">
                 <div className="mb-3 flex items-center justify-between px-1 pt-1"><span className="text-[15px] font-bold text-ink">{e.statut[col]}</span><Badge variant={tacheVariant[col]}>{items.length}</Badge></div>
-                <div className="space-y-2">{items.map(ligne)}</div>
+                <LiveList as="div" className="space-y-2">{items.map(ligne)}</LiveList>
               </div>
             );
           })}
@@ -105,7 +106,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
         <TableCard>
           <Table>
             <THead><TH>{t.titreChamp}</TH><TH>{t.origine}</TH><TH>{t.priorite}</TH><TH>{t.assignee}</TH><TH>{t.echeance}</TH><TH>{t.statut}</TH></THead>
-            <tbody>
+            <LiveList as="tbody">
               {rows.map((x) => (
                 <TR key={x.id}>
                   <TD><Link href={p(`/taches/${x.id}`)} className="font-semibold text-ink hover:text-link">{x.titre}</Link>{x.checklist?.length ? <span className="ms-2 text-[12px] text-soft">{fill(t.checklistProgres, { n: x.checklistFaits, total: x.checklist.length })}</span> : null}</TD>
@@ -116,7 +117,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
                   <TD><div className="flex items-center gap-1"><Badge variant={tacheVariant[x.statut]}>{e.statut[x.statut]}</Badge>{x.enRetard ? <Badge variant="danger">{t.enRetard}</Badge> : null}</div></TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

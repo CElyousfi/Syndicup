@@ -17,6 +17,8 @@ import { CCoins, CHandshake, CWrench, IconCircle } from "../../../../../componen
 import { depenseVariant, incidentVariant } from "../../../../../lib/status";
 import { ModifierPrestataireModal } from "../prestataire-modal";
 import { RibButton } from "./rib-button";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 type Onglet = "identite" | "interventions" | "depenses" | "evaluations";
 
@@ -143,7 +145,7 @@ export default async function PrestataireDetailPage({
                 <TH>{i.statut}</TH>
                 <TH align="end">{i.creeLe.replace(" {date}", "")}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {x.interventions.map((inc) => (
                   <TR key={inc.id}>
                     <TD className="font-medium text-ink">
@@ -155,7 +157,7 @@ export default async function PrestataireDetailPage({
                     <TD align="end" className="tnum text-soft">{formatDate(inc.creeLe, ctx.locale)}</TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         )
@@ -174,17 +176,17 @@ export default async function PrestataireDetailPage({
                 <TH>{d.date}</TH>
                 <TH align="end">{d.montantTtc}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {x.depenses.recentes.map((dep) => (
                   <TR key={dep.id}>
                     <TD className="font-medium text-ink"><Link href={p(`/finances/depenses/${dep.id}`)} className="font-semibold hover:text-link">{dep.libelle}</Link></TD>
                     <TD className="text-body">{dict.enumsDepenses.categorieDepense[dep.categorie]}</TD>
                     <TD><Badge variant={depenseVariant[dep.statut]}>{dict.enumsDepenses.statutDepense[dep.statut]}</Badge></TD>
                     <TD className="tnum text-soft">{formatDate(dep.dateDepense, ctx.locale)}</TD>
-                    <TD align="end" className="tnum font-medium text-ink">{formatMAD(dep.montantTtc, ctx.locale)}</TD>
+                    <TD align="end" className="tnum font-medium text-ink"><Amount value={dep.montantTtc} locale={ctx.locale} /></TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         )

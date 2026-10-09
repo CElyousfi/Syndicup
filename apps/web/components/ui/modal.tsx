@@ -54,33 +54,13 @@ export function Modal({
     return () => window.clearTimeout(t);
   }, [open]);
 
-  // Feuille du bas (< md) : on la tire vers le bas pour la fermer ; au-delà du seuil (ou d'un
-  // geste vif) elle se ferme, sinon elle revient en ressort. Vers le haut : résistance.
-  const drag = useRef<{ y0: number; t0: number; dy: number } | null>(null);
+  // Feuille du bas (< md) : glisser vers le bas pour fermer — module chargé à l'ouverture.
+  const glisser = useRef<typeof import("../../lib/feel/lazy") | null>(null);
+  useEffect(() => {
+    if (open && !glisser.current) void import("../../lib/feel/lazy").then((m) => (glisser.current = m));
+  }, [open]);
   const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!window.matchMedia("(max-width: 767px)").matches) return;
-    if (document.documentElement.dataset.alive === "0") return;
-    drag.current = { y0: e.clientY, t0: performance.now(), dy: 0 };
-    e.currentTarget.setPointerCapture(e.pointerId);
-    ref.current?.setAttribute("data-dragging", "");
-  };
-  const onDragMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    const d = drag.current;
-    const dialog = ref.current;
-    if (!d || !dialog) return;
-    const raw = e.clientY - d.y0;
-    d.dy = raw < 0 ? -Math.sqrt(-raw) * 2 : raw;
-    dialog.style.transform = `translateY(${d.dy}px)`;
-  };
-  const onDragEnd = () => {
-    const d = drag.current;
-    const dialog = ref.current;
-    drag.current = null;
-    if (!d || !dialog) return;
-    dialog.removeAttribute("data-dragging");
-    const vitesse = d.dy / Math.max(1, performance.now() - d.t0);
-    dialog.style.transform = "";
-    if (d.dy > 120 || vitesse > 0.6) onClose();
+    if (ref.current) glisser.current?.suivreGlisser(e.nativeEvent, e.currentTarget, ref.current, onClose);
   };
 
   const onBackdrop = useCallback(
@@ -102,13 +82,7 @@ export function Modal({
       onMouseDown={onBackdrop}
       className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-[28px] bg-surface p-0 text-ink-strong shadow-pop`}
     >
-      <div
-        className="sheet-drag touch-none md:touch-auto"
-        onPointerDown={onDragStart}
-        onPointerMove={onDragMove}
-        onPointerUp={onDragEnd}
-        onPointerCancel={onDragEnd}
-      >
+      <div className="touch-none md:touch-auto" onPointerDown={onDragStart}>
       <div className="sheet-handle md:hidden" aria-hidden />
       <div className="flex items-start justify-between gap-4 px-5 pb-1 pt-5 md:px-7 md:pt-6">
         <div className="min-w-0">
@@ -117,7 +91,6 @@ export function Modal({
         </div>
         <button
           type="button"
-          onPointerDown={(e) => e.stopPropagation()}
           onClick={onClose}
           aria-label={closeLabel}
           className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:rotate-90 hover:bg-[#e3e2da]"
@@ -131,15 +104,3 @@ export function Modal({
   );
 }
 
-/**
- * Bloc de confirmation d'action irréversible — obligatoire sur transfert, clôture d'AG,
- * activation de budget, anonymisation (brief §2.4). S'utilise DANS un <form action={…}> :
- * le parent gère l'ouverture ; ce bloc rappelle l'irréversibilité et porte les boutons.
- */
-export function IrreversibleNotice({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-danger/25 bg-danger-tint px-4 py-3 text-[13px] leading-relaxed text-ink-strong">
-      {children}
-    </div>
-  );
-}

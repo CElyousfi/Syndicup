@@ -108,6 +108,7 @@ export function OtpForm({
 
         <OtpGrid echecs={echecs}>
           {digits.map((d, i) => (
+            // alive:allow case OTP à un chiffre (saisie/collage/navigation clavier spécialisés), déjà vivante via .otp-box[data-filled] ; Input imposerait hauteur et padding de champ
             <input
               key={i}
               ref={(el) => {
@@ -145,6 +146,7 @@ export function OtpForm({
         {countdown > 0 ? (
           <p className="tnum text-[14px] text-soft">{fill(dict.auth.otpResendIn, { s: countdown })}</p>
         ) : (
+          // alive:allow lien textuel « renvoyer le code » (style .link) : SubmitButton n'a pas de variante lien et la page publique doit rester légère
           <button type="submit" className="link text-[14px]">
             {dict.auth.otpResend}
           </button>

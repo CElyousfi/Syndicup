@@ -2,8 +2,9 @@
 import { apiFetch } from "../../../../lib/api/client";
 import type { MandatCopropriete } from "../../../../lib/api/types";
 import type { Dict, Locale } from "../../../../lib/i18n";
-import { formatDate, formatMontant, nomComplet } from "../../../../lib/format";
+import { formatDate, nomComplet } from "../../../../lib/format";
 import { Badge } from "../../../../components/ui/badge";
+import { Amount } from "../../../../components/ui/amount";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { mandatVariant } from "../../../../lib/status";
 import { ConfirmerMandatModal } from "../cabinet/cabinet-client";
@@ -21,7 +22,7 @@ export async function CabinetMandatCard({ dict, locale, coproprieteId }: { dict:
           <div><dt className="text-[13px] text-soft">{dict.lots.statut}</dt><dd><Badge variant={mandatVariant[m.statut]}>{t.statuts[m.statut]}</Badge></dd></div>
           <div><dt className="text-[13px] text-soft">{t.gestionnaireDesigne}</dt><dd className="text-sm text-ink-strong">{m.gestionnairePrincipal ? nomComplet(m.gestionnairePrincipal) ?? "—" : "—"}</dd></div>
           <div><dt className="text-[13px] text-soft">{t.dateDebut}</dt><dd className="text-sm text-ink-strong tnum">{formatDate(m.dateDebutMandat, locale)}{m.dateFinMandat ? ` → ${formatDate(m.dateFinMandat, locale)}` : ""}</dd></div>
-          {m.honorairesMensuels ? <div><dt className="text-[13px] text-soft">{t.honoraires}</dt><dd className="text-sm text-ink-strong tnum">{formatMontant(m.honorairesMensuels)} MAD</dd></div> : null}
+          {m.honorairesMensuels ? <div><dt className="text-[13px] text-soft">{t.honoraires}</dt><dd className="text-sm text-ink-strong tnum"><Amount value={m.honorairesMensuels} locale={locale} currency={false} /> MAD</dd></div> : null}
         </dl>
       )}
     </Card>

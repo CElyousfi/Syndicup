@@ -120,6 +120,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
               const SizedBox(height: 12),
               for (final q in queue)
                 Padding(
+                  key: ValueKey(q.id),
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     children: [
@@ -133,7 +134,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
               const SizedBox(height: 6),
               Text(md.queueHint, style: t.bodySmall),
               const SizedBox(height: 14),
-              OutlinedButton.icon(onPressed: () => ref.read(visitesSyncProvider.notifier).flush(), icon: const Icon(Icons.sync_rounded, size: 20), label: Text(md.retryNow)),
+              SuButton(label: md.retryNow, icon: Icons.sync_rounded, variant: SuButtonVariant.secondary, onPressed: () => ref.read(visitesSyncProvider.notifier).flush()),
             ],
           ),
         ),
@@ -155,8 +156,8 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
                 StatTile(label: d.visites.duJour, value: '${duJour.length}', tone: Tone.sand, icon: Icons.meeting_room_rounded),
                 StatTile(label: d.enums.statutVisite['EN_ATTENTE']!, value: '${attente.length}', tone: Tone.warn, icon: Icons.notifications_active_rounded),
               ]),
-            if (duJour.isNotEmpty) ...[SectionHeader(d.visites.duJour), CardList([for (final v in duJour) carte(v)])],
-            if (histo.isNotEmpty) ...[SectionHeader(d.visites.historique), CardList([for (final v in histo.take(50)) carte(v)])],
+            if (duJour.isNotEmpty) ...[SectionHeader(d.visites.duJour), CardList([for (final v in duJour) KeyedSubtree(key: ValueKey(v.id), child: carte(v))])],
+            if (histo.isNotEmpty) ...[SectionHeader(d.visites.historique), CardList([for (final v in histo.take(50)) KeyedSubtree(key: ValueKey(v.id), child: carte(v))])],
           ],
         );
       }),
@@ -167,10 +168,8 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
     return Scaffold(
       appBar: ShellHeader(title: titre),
       floatingActionButton: fab,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: refresh,
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 112), physics: const AlwaysScrollableScrollPhysics(), children: contenu),
       ),
     );
@@ -207,7 +206,7 @@ class StatutReseauTile extends StatelessWidget {
                 ],
               ),
             ),
-            if (syncing) ...[const SizedBox(width: 12), const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: SuColors.link))],
+            if (syncing) ...[const SizedBox(width: 12), const SizedBox(width: 22, height: 22, child: Center(child: LoadingOrb(size: 8, color: SuColors.link)))],
           ],
         ),
       ),
@@ -365,7 +364,7 @@ class _VisiteRepondreScreenState extends ConsumerState<VisiteRepondreScreen> {
       body: SafeArea(
         top: false,
         child: visites.isLoading && v == null
-            ? const Center(child: LoadingOrb())
+            ? const Padding(padding: EdgeInsets.fromLTRB(24, 24, 24, 16), child: LoadingList(count: 3))
             : v == null
                 ? Padding(padding: const EdgeInsets.all(16), child: ErrorState(error: visites.error ?? const ApiException(ApiError(code: 'NOT_FOUND', message: ''), 404), onRetry: () => ref.invalidate(visitesProvider)))
                 : Padding(
@@ -405,21 +404,15 @@ class _VisiteRepondreScreenState extends ConsumerState<VisiteRepondreScreen> {
                         if (_reponse != null || v.statut != 'EN_ATTENTE') ...[
                           SuBanner(tone: autorise ? BannerTone.ok : BannerTone.danger, title: d.visites.reponseDonnee, body: d.enums.statutVisite[reponse] ?? ''),
                           const SizedBox(height: 16),
-                          FilledButton(onPressed: fermer, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)), child: Text(d.common.close)),
+                          SuButton(label: d.common.close, onPressed: fermer, size: SuButtonSize.lg, expand: true),
                         ] else ...[
                           if (_fail != null) ...[_fail!.status == 422 ? SuBanner(tone: BannerTone.warn, body: d.visites.dejaRepondu) : FormError(_fail), const SizedBox(height: 12)],
                           Text(d.visites.reponseUnique, style: t.bodySmall, textAlign: TextAlign.center),
                           const SizedBox(height: 16),
                           // Deux réponses, grandes cibles : autoriser (pill principale), refuser (contour rouge).
-                          SuPressable(
-                            enabled: !_loading,
-                            child: FilledButton.icon(onPressed: _loading ? null : () => _repondre('AUTORISE'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(60)), icon: const Icon(Icons.check_rounded), label: Text(d.visites.autoriser)),
-                          ),
+                          SuButton(label: d.visites.autoriser, icon: Icons.check_rounded, expand: true, onPressed: _loading ? null : () => _repondre('AUTORISE'), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(60))),
                           const SizedBox(height: 10),
-                          SuPressable(
-                            enabled: !_loading,
-                            child: OutlinedButton.icon(onPressed: _loading ? null : () => _repondre('REFUSE'), style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(60), foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger, width: 1.2)), icon: const Icon(Icons.close_rounded), label: Text(d.visites.refuser)),
-                          ),
+                          SuButton(label: d.visites.refuser, icon: Icons.close_rounded, variant: SuButtonVariant.secondary, expand: true, onPressed: _loading ? null : () => _repondre('REFUSE'), style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(60), foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger, width: 1.2))),
                         ],
                         const SizedBox(height: 16),
                       ],

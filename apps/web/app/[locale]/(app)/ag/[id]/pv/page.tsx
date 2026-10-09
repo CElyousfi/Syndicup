@@ -11,6 +11,7 @@ import { CopyButton } from "../../../../../../components/ui/copy";
 import { resolutionVariant } from "../../../../../../lib/status";
 import { IconShield } from "../../../../../../components/ui/icons";
 import { IconCircle } from "../../../../../../components/ui/color-icons";
+import { Figure } from "../../../../../../components/ui/amount";
 
 /** E7 — procès-verbal : document légal, hash d'intégrité mis en avant (confiance). */
 export default async function PvPage({
@@ -76,13 +77,13 @@ export default async function PvPage({
             {contenu.quorum_requis ? (
               <div className="rounded-2xl bg-surface px-4 py-3.5">
                 <p className="text-[13px] text-soft">{a.quorum}</p>
-                <p className="tnum mt-0.5 text-[24px] font-bold leading-tight text-ink">{formatPourcent(contenu.quorum_requis)}</p>
+                <p className="tnum mt-0.5 text-[24px] font-bold leading-tight text-ink"><Figure value={formatPourcent(contenu.quorum_requis)} /></p>
               </div>
             ) : null}
             {contenu.quorum_atteint ? (
               <div className="rounded-2xl bg-surface px-4 py-3.5">
                 <p className="text-[13px] text-soft">{dict.enums.statutAg.CLOTUREE}</p>
-                <p className="tnum mt-0.5 text-[24px] font-bold leading-tight text-ink">{formatPourcent(contenu.quorum_atteint)}</p>
+                <p className="tnum mt-0.5 text-[24px] font-bold leading-tight text-ink"><Figure value={formatPourcent(contenu.quorum_atteint)} /></p>
               </div>
             ) : null}
           </div>

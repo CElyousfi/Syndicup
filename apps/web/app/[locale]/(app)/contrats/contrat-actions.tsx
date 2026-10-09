@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../components/ui/button";
@@ -166,6 +167,7 @@ export function EcheanceActions({ dict, locale, contrat, echeance }: Props & { e
         </form>
       ) : null}
       {stateM.status === "error" ? <FormAlert state={stateM} /> : null}
+      {/* alive:allow texte réservé aux lecteurs d'écran (sr-only), jamais visible donc jamais animé */}
       <span className="sr-only">{formatMAD(echeance.montant, locale)}</span>
     </div>
   );

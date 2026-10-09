@@ -19,6 +19,8 @@ import { IconPlus } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { contratVariant } from "../../../../lib/status";
 import { FiltreType } from "./filtre-type";
+import { LiveList } from "../../../../components/ui/live-list";
+import { Amount } from "../../../../components/ui/amount";
 
 const ONGLETS = ["TOUS", "ACTIF", "A_RENOUVELER", "BROUILLON", "SUSPENDU", "EXPIRE", "RESILIE"] as const;
 
@@ -76,19 +78,19 @@ export default async function ContratsPage({ params, searchParams }: { params: P
         <TableCard>
           <Table>
             <THead><TH>{c.libelle}</TH><TH>{c.type}</TH><TH>{c.prestataire}</TH><TH>{c.periodicite}</TH><TH align="end">{c.montantPeriode}</TH><TH>{c.dateFin}</TH><TH>{c.statut}</TH></THead>
-            <tbody>
+            <LiveList as="tbody">
               {rows.map((x) => (
                 <TR key={x.id}>
                   <TD className="font-semibold text-ink"><Link href={p(`/contrats/${x.id}`)} className="hover:text-link">{x.libelle}</Link>{x.reference ? <span className="block text-[12px] text-faint" dir="ltr">{x.reference}</span> : null}</TD>
                   <TD className="text-body">{e.typeContrat[x.type]}</TD>
                   <TD className="text-body">{x.prestataire?.nom ?? "—"}</TD>
                   <TD className="text-body">{e.periodicite[x.periodicite]}{x.tacite ? <span className="block text-[11px] text-faint">{c.tacite}</span> : null}</TD>
-                  <TD align="end" className="tnum text-ink">{mad(x.montantPeriode)}</TD>
+                  <TD align="end" className="tnum text-ink"><Amount value={x.montantPeriode} locale={ctx.locale} /></TD>
                   <TD className="tnum text-soft">{x.dateFin ? formatDate(x.dateFin, ctx.locale) : c.dureeIndeterminee}{x.jours_avant_fin !== null && x.statut === "ACTIF" ? <span className={`block text-[11px] ${x.jours_avant_fin <= 30 ? "text-danger" : x.jours_avant_fin <= 90 ? "text-warn" : "text-faint"}`}>{fill(c.joursAvantFin, { n: x.jours_avant_fin })}</span> : null}{x.statut === "EXPIRE" && x.jours_avant_fin !== null ? <span className="block text-[11px] text-danger">{fill(c.expireDepuis, { n: -x.jours_avant_fin })}</span> : null}</TD>
                   <TD><Badge variant={contratVariant[x.statut]}>{e.statutContrat[x.statut]}</Badge></TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

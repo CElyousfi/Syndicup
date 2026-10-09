@@ -4,6 +4,7 @@ import { useActionState, useEffect, useMemo, useState, type ReactNode } from "re
 import { useRouter } from "next/navigation";
 import { Banner } from "../../../../../../components/ui/banner";
 import { Button } from "../../../../../../components/ui/button";
+import { IconButton } from "../../../../../../components/ui/pressable";
 import { Field, Select } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Modal } from "../../../../../../components/ui/modal";
@@ -186,13 +187,14 @@ export function VueVotant({
             {gestes.map(({ v, pastille, icone }) => {
               const choisi = choix === v;
               return (
-                <button
+                <IconButton
                   key={v}
-                  type="button"
+                  tone="none"
+                  label={dict.enums.valeurVote[v]}
                   onClick={() => setChoix(v)}
                   disabled={!identite}
                   aria-pressed={choisi}
-                  className={`group flex h-16 items-center gap-3 rounded-full ps-2 pe-5 text-start transition-colors disabled:opacity-40 sm:h-[68px] ${
+                  className={`group h-16 w-full justify-start gap-3 ps-2 pe-5 text-start transition-colors sm:h-[68px] ${
                     choisi ? "bg-cta text-ink" : "bg-surface text-ink hover:bg-lime-hover/40"
                   }`}
                 >
@@ -206,7 +208,7 @@ export function VueVotant({
                   <span className="min-w-0 flex-1 truncate text-[17px] font-bold">
                     {dict.enums.valeurVote[v]}
                   </span>
-                </button>
+                </IconButton>
               );
             })}
           </div>

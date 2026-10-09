@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
-import { Field, Input, Select, Textarea, Checkbox } from "../../../../components/ui/field";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
+import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
+import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
@@ -49,7 +51,7 @@ export function TacheForm({ dict, locale, assignees, tache }: { dict: Dict; loca
           <div className="space-y-2">
             {etapes.map((it, i) => (
               <div key={i} className="flex items-center gap-2">
-                <input type="checkbox" name={`etape_fait_${i + 1}`} defaultChecked={it.fait} className="size-[18px] shrink-0 accent-brand" />
+                <Checkbox name={`etape_fait_${i + 1}`} defaultChecked={it.fait} aria-label={`${t.checklist} ${i + 1}`} label={null} className="shrink-0 self-center" />
                 <Input name={`etape_${i + 1}`} defaultValue={it.libelle} maxLength={200} className="!h-9" />
                 <Button type="button" variant="ghost" size="sm" onClick={() => setEtapes(etapes.filter((_, k) => k !== i))}>✕</Button>
               </div>
@@ -150,10 +152,13 @@ export function Checklist({ dict, locale, tache, editable }: { dict: Dict; local
       <ul className="space-y-1.5">
         {items.map((it) => (
           <li key={it.id}>
-            <label className={`flex items-center gap-3 rounded-2xl bg-surface px-4 py-3 text-[15px] transition-colors ${editable ? "cursor-pointer hover:bg-hover" : ""}`}>
-              <input type="checkbox" checked={it.fait} disabled={!editable || pending} onChange={(ev) => start(() => basculerEtape(locale, tache.id, it.id, ev.target.checked))} className="size-[18px] shrink-0 accent-brand" />
-              <span className={it.fait ? "text-soft line-through" : "font-medium text-ink"}>{it.libelle}</span>
-            </label>
+            <Checkbox
+              checked={it.fait}
+              disabled={!editable || pending}
+              onChange={(ev) => start(() => basculerEtape(locale, tache.id, it.id, ev.target.checked))}
+              className={`rounded-2xl bg-surface px-4 py-3 transition-colors ${editable ? "hover:bg-hover" : "cursor-default"}`}
+              label={<span className={`text-[15px] ${it.fait ? "font-normal text-soft line-through" : "font-medium text-ink"}`}>{it.libelle}</span>}
+            />
           </li>
         ))}
       </ul>

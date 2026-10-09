@@ -15,6 +15,7 @@ import { Input, Select } from "../../../../components/ui/field";
 import { IconCircle, CUsers, CHome, CKey, CShield } from "../../../../components/ui/color-icons";
 import { IconChevronEnd, IconSearch } from "../../../../components/ui/icons";
 import { compteVariant } from "../../../../lib/status";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -137,7 +138,7 @@ export default async function MembresPage({
           }
         />
       ) : (
-        <ul className="stagger-grid -mx-3">
+        <LiveList as="ul" className="stagger-grid -mx-3">
           {membres.map((u) => {
             const nom = nomComplet(u) ?? u.raison_sociale ?? u.email ?? u.id.slice(0, 8);
             const fiche = p(`/membres/${u.id}`);
@@ -204,7 +205,7 @@ export default async function MembresPage({
               </li>
             );
           })}
-        </ul>
+        </LiveList>
       )}
     </div>
   );

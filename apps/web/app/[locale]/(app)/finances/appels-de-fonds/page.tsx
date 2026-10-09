@@ -16,6 +16,8 @@ import { CChart, CCoins, CMoneyBag, IconCircle } from "../../../../../components
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { appelVariant } from "../../../../../lib/status";
 import { GenererAppelModal } from "./generer-modal";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -122,7 +124,7 @@ export default async function AppelsPage({
                 <TH className="w-44">{f.tauxPaiement}</TH>
                 <TH>{dict.lots.statut}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {appels.map((a) => {
                   const t = totaux.get(a.id) ?? { du: 0n, paye: 0n, ratio: 0 };
                   const paye = t.paye;
@@ -146,7 +148,7 @@ export default async function AppelsPage({
                         <Badge variant="outline">{dict.enums.typeAppel[a.type]}</Badge>
                       </TD>
                       <TD align="end" className="tnum font-medium text-ink">
-                        {formatMAD(a.montantTotal, ctx.locale)}
+                        <Amount value={a.montantTotal} locale={ctx.locale} />
                       </TD>
                       <TD className="text-body">{formatDate(a.dateEcheance, ctx.locale)}</TD>
                       <TD>
@@ -157,7 +159,7 @@ export default async function AppelsPage({
                             className="w-24"
                           />
                           <span className="tnum whitespace-nowrap text-[12px] font-medium text-soft">
-                            {formatMAD(versChaine(paye), ctx.locale)}
+                            <Amount value={versChaine(paye)} locale={ctx.locale} />
                           </span>
                         </div>
                       </TD>
@@ -169,7 +171,7 @@ export default async function AppelsPage({
                     </TR>
                   );
                 })}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         </>

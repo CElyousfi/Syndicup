@@ -41,7 +41,7 @@ class _CabinetScreenState extends ConsumerState<CabinetScreen> with SingleTicker
         return Column(children: [
           if (liste.length > 1)
             Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: FilterChips<String>(value: cabinet.id, options: liste.map((c) => c.id).toList(), labelOf: (id) => liste.firstWhere((c) => c.id == id).nom, onChanged: (id) => setState(() => _cabinetId = id))),
-          Expanded(child: TabBarView(controller: _tabs, children: [_PortefeuilleTab(cabinet: cabinet), _AlertesTab(cabinetId: cabinet.id), _AgendaTab(cabinetId: cabinet.id)])),
+          Expanded(child: SuFadeSwitch(value: cabinet.id, child: TabBarView(controller: _tabs, children: [_PortefeuilleTab(cabinet: cabinet), _AlertesTab(cabinetId: cabinet.id), _AgendaTab(cabinetId: cabinet.id)]))),
         ]);
       }),
     );
@@ -59,9 +59,8 @@ class _PortefeuilleTab extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final lignes = ref.watch(portefeuilleProvider(cabinet.id));
     Color couleurTaux(double? x) => x == null ? SuColors.faint : x >= 80 ? SuColors.ok : x >= 60 ? SuColors.warn : SuColors.danger;
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(portefeuilleProvider(cabinet.id)),
-      color: SuColors.link,
       child: AsyncView(lignes, onRetry: () => ref.invalidate(portefeuilleProvider(cabinet.id)), data: (rows) {
         if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, hint: t.aucuneCoproprieteAide, icon: Icons.apartment_rounded, illustration: 'empty-lots')]);
         final alertes = rows.fold<int>(0, (a, r) => a + r.alertes.length);
@@ -76,7 +75,7 @@ class _PortefeuilleTab extends ConsumerWidget {
           SectionHeader(t.onglets.portefeuille),
           // Une tuile greige plate par copropriété ; l'alerte se lit à la pastille, pas à un liseré.
           for (final r in rows)
-            SuCard(margin: const EdgeInsets.only(bottom: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            SuCard(key: ValueKey(r.mandatId), margin: const EdgeInsets.only(bottom: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 IconCircle(Icons.apartment_rounded, tone: r.alertes.isNotEmpty ? Tone.warn : Tone.lilac),
                 const SizedBox(width: 14),
@@ -90,7 +89,7 @@ class _PortefeuilleTab extends ConsumerWidget {
                 StatusBadge(r.assuranceActive ? t.assuranceOk : t.assuranceAbsente, variant: r.assuranceActive ? BadgeVariant.ok : BadgeVariant.danger, small: true),
               ]),
               const SizedBox(height: 14),
-              Row(children: [Expanded(child: Text(t.recouvrement, style: tt.bodySmall)), Text(r.tauxRecouvrement == null ? '—' : '${r.tauxRecouvrement!.toStringAsFixed(0)} %', style: tt.titleSmall?.copyWith(color: couleurTaux(r.tauxRecouvrement)))]),
+              Row(children: [Expanded(child: Text(t.recouvrement, style: tt.bodySmall)), AnimatedFigureText(r.tauxRecouvrement == null ? '—' : '${r.tauxRecouvrement!.toStringAsFixed(0)} %', style: tt.titleSmall?.copyWith(color: couleurTaux(r.tauxRecouvrement)))]),
               const SizedBox(height: 6),
               Gauge((r.tauxRecouvrement ?? 0) / 100, color: couleurTaux(r.tauxRecouvrement)),
               const SizedBox(height: 12),
@@ -117,12 +116,11 @@ class _AlertesTab extends ConsumerWidget {
     final t = context.dict.cabinet;
     final liste = ref.watch(alertesCabinetProvider(cabinetId));
     String libelle(AlerteCabinet a) => fill(t.codesAlerte[a.code] ?? a.code, {'v': a.valeur ?? ''});
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(alertesCabinetProvider(cabinetId)),
-      color: SuColors.link,
       child: AsyncView(liste, onRetry: () => ref.invalidate(alertesCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
           ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneAlerte, icon: Icons.check_circle_outline_rounded, tone: Tone.ok, illustration: 'empty-notifications')])
-          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [CardList([for (final a in rows) ListRow(leading: IconCircle(a.niveau == 'danger' ? Icons.error_outline_rounded : Icons.warning_amber_rounded, tone: a.niveau == 'danger' ? Tone.danger : Tone.warn), title: libelle(a), subtitle: a.copropriete)])])),
+          : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [CardList([for (final a in rows) ListRow(key: ValueKey('${a.coproprieteId}-${a.code}-${a.valeur}'), leading: IconCircle(a.niveau == 'danger' ? Icons.error_outline_rounded : Icons.warning_amber_rounded, tone: a.niveau == 'danger' ? Tone.danger : Tone.warn), title: libelle(a), subtitle: a.copropriete)])])),
     );
   }
 }
@@ -135,15 +133,14 @@ class _AgendaTab extends ConsumerWidget {
     final t = context.dict.cabinet;
     final l = context.locale;
     final liste = ref.watch(agendaCabinetProvider(cabinetId));
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(agendaCabinetProvider(cabinetId)),
-      color: SuColors.link,
       child: AsyncView(liste, onRetry: () => ref.invalidate(agendaCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
           ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucunEvenement, hint: t.agendaAide, icon: Icons.event_note_rounded, illustration: 'empty-ag')])
           : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
               Text(t.agendaAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
               const SizedBox(height: 8),
-              CardList([for (final e in rows) ListRow(leading: IconCircle(switch (e.type) { 'AG' => Icons.how_to_vote_rounded, 'ECHEANCE_CONTRAT' => Icons.handshake_rounded, 'TACHE' => Icons.task_alt_rounded, 'PAIE' => Icons.payments_rounded, _ => Icons.flag_rounded }, tone: e.retard ? Tone.danger : Tone.sage), title: e.titre, subtitle: '${formatJourAnnee(e.date.substring(0, 10), l)} · ${e.copropriete} · ${t.typesEvenement[e.type] ?? e.type}${e.retard ? ' · ${t.enRetard}' : ''}')]),
+              CardList([for (final e in rows) ListRow(key: ValueKey('${e.type}-${e.id}'), leading: IconCircle(switch (e.type) { 'AG' => Icons.how_to_vote_rounded, 'ECHEANCE_CONTRAT' => Icons.handshake_rounded, 'TACHE' => Icons.task_alt_rounded, 'PAIE' => Icons.payments_rounded, _ => Icons.flag_rounded }, tone: e.retard ? Tone.danger : Tone.sage), title: e.titre, subtitle: '${formatJourAnnee(e.date.substring(0, 10), l)} · ${e.copropriete} · ${t.typesEvenement[e.type] ?? e.type}${e.retard ? ' · ${t.enRetard}' : ''}')]),
             ])),
     );
   }

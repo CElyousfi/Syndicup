@@ -8,6 +8,7 @@ import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { CLES_PHOTO, PHOTOS_DEFAUT, type ClePhoto } from "../../../../lib/photos";
 import { retirerPhoto, televerserPhoto } from "./actions";
+import { FadeImg } from "../../../../components/ui/motion/fade-img";
 
 export interface EspacePhoto {
   id: string;
@@ -117,7 +118,7 @@ function PhotoSlot({
   return (
     <div className="flex flex-col gap-4 rounded-[20px] bg-surface p-3 sm:flex-row sm:items-start">
       <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-2xl bg-wash sm:w-40">
-        <img src={apercu ?? src} alt="" className="size-full object-cover" />
+        <FadeImg src={apercu ?? src} alt="" className="size-full object-cover" />
       </div>
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-center gap-2">
@@ -133,8 +134,7 @@ function PhotoSlot({
           <div className="flex flex-wrap items-center gap-2">
             <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
-              <input
-                type="file"
+              <input type="file"
                 name="fichier"
                 accept="image/png,image/jpeg,image/webp"
                 className="sr-only"

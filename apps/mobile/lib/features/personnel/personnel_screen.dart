@@ -52,12 +52,12 @@ class PersonnelScreen extends ConsumerWidget {
                     tone: BannerTone.info,
                     title: '${d.personnel.conges} · ${enAttente.length}',
                     body: enAttente.map((c) => '${c.personnelNom ?? (d.enumsPersonnelRh.poste[c.personnelPoste ?? ''] ?? '')} · ${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)}').join('\n'),
-                    action: TextButton(onPressed: () => context.push('/personnel/${enAttente.first.personnelId}?onglet=conges'), child: Text(d.personnel.approuverConge)),
+                    action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => context.push('/personnel/${enAttente.first.personnelId}?onglet=conges'), label: d.personnel.approuverConge),
                   ),
                 ),
               CardList([
                 for (final p in ps)
-                  Builder(builder: (_) {
+                  Builder(key: ValueKey(p.id), builder: (_) {
                     final estMoi = p.utilisateurId == ctx.profil.id;
                     final ouvrable = ctx.isGestion || estMoi;
                     final poste = d.enumsPersonnelRh.poste[p.poste] ?? p.poste;
@@ -67,7 +67,7 @@ class PersonnelScreen extends ConsumerWidget {
                       subtitle: '$poste · ${d.personnel.logement} : ${p.logementLotNumero ?? lots.where((x) => x.id == p.logementLotId).map((x) => x.numero).firstOrNull ?? d.personnel.aucuneLoge}',
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                         StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, small: true),
-                        if (ctx.isGestion) IconButton(tooltip: d.personnel.changerStatut, icon: const Icon(Icons.swap_horiz_rounded, size: 20), onPressed: () => showFormSheet<void>(context, title: d.personnel.changerStatut, builder: (_) => _StatutForm(p: p, lots: lots))),
+                        if (ctx.isGestion) SuIconButton(tooltip: d.personnel.changerStatut, icon: Icons.swap_horiz_rounded, iconSize: 20, onPressed: () => showFormSheet<void>(context, title: d.personnel.changerStatut, builder: (_) => _StatutForm(p: p, lots: lots))),
                       ]),
                       chevron: ouvrable,
                       onTap: ouvrable ? () => context.push('/personnel/${p.id}') : null,
@@ -113,6 +113,7 @@ class _PersonnelFormState extends ConsumerState<_PersonnelForm> {
         SubmitButton(
           label: d.common.create,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -169,6 +170,7 @@ class _StatutFormState extends ConsumerState<_StatutForm> {
         SubmitButton(
           label: d.common.save,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;

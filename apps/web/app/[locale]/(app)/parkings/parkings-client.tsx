@@ -2,8 +2,10 @@
 
 /** Parkings (M23) — modales : emplacement, attribution, libération, véhicule, badge (remise, perdu, restitution, désactivation), place visiteur, recherche de plaque, véhicule gênant. */
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
-import { Field, Input, Select, Textarea, Checkbox } from "../../../../components/ui/field";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
+import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
+import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Badge } from "../../../../components/ui/badge";

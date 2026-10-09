@@ -50,15 +50,17 @@ Tone _toneDe(BadgeVariant v) => switch (v) {
 
 /// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
 class _MontantFin extends StatelessWidget {
-  const _MontantFin(this.montant, {this.secondaire});
-  final String montant;
+  const _MontantFin(this.montant, {this.secondaire, this.upIsGood = true});
+  /// Montant BRUT de l'API (formaté par AnimatedAmount, comme formatMAD).
+  final String? montant;
   final Widget? secondaire;
+  final bool upIsGood;
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          MoneyText(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          AnimatedAmount(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), textDirection: TextDirection.ltr, maxLines: null, upIsGood: upIsGood),
           if (secondaire != null) ...[const SizedBox(height: 4), secondaire!],
         ],
       );
@@ -79,7 +81,7 @@ class JustificatifRow extends StatelessWidget {
       leading: IconCircle(_iconeMethode(x.methode), tone: x.enAttente ? Tone.warn : _toneDe(v)),
       title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? x.methode}',
       subtitle: '${formatDate(x.datePaiementDeclaree, l)}${x.reference != null ? ' · ${x.reference}' : ''}${x.declareParNom != null ? ' · ${x.declareParNom}' : ''}',
-      trailing: _MontantFin(formatMAD(x.montant, l), secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: v, small: true)),
+      trailing: _MontantFin(x.montant, secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: v, small: true)),
       onTap: () => context.push('/justificatifs/${x.id}'),
     );
   }
@@ -109,7 +111,7 @@ class PayerScreen extends ConsumerWidget {
           _vide(context, d.justificatifs.aucunCompte)
         else
           CardList([
-            for (final c in comptes) ListRow(leading: const IconCircle(Icons.account_balance_rounded, tone: Tone.tosca), title: c.libelle, subtitle: c.banque, trailing: Text(c.ribMasque, style: t.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr)),
+            for (final c in comptes) ListRow(key: ValueKey(c.index), leading: const IconCircle(Icons.account_balance_rounded, tone: Tone.tosca), title: c.libelle, subtitle: c.banque, trailing: Text(c.ribMasque, style: t.titleSmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr)),
           ]),
         const SizedBox(height: 16),
         SubmitButton(
@@ -122,7 +124,7 @@ class PayerScreen extends ConsumerWidget {
         const SizedBox(height: 10),
         SuBanner(tone: BannerTone.info, title: d.justificatifs.cmi, body: d.justificatifs.cmiBientot),
         SectionHeader(d.justificatifs.mesDeclarations),
-        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (rows) => rows.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.receipt_rounded, illustration: 'empty-appels') : CardList([for (final x in rows) JustificatifRow(x)])),
+        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (rows) => rows.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.receipt_rounded, illustration: 'empty-appels') : CardList([for (final x in rows) JustificatifRow(x, key: ValueKey(x.id))])),
       ],
     );
   }
@@ -226,6 +228,7 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
         SubmitButton(
           label: especes ? j.especesSaisir : j.declarer,
           loading: _loading,
+          fail: _fail,
           icon: Icons.send_rounded,
           onPressed: !peutEnvoyer
               ? null
@@ -306,7 +309,7 @@ class _JustificatifsScreenState extends ConsumerState<JustificatifsScreen> {
       children: [
         FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
-        AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x)])),
+        SuFadeSwitch(value: _onglet, child: AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x, key: ValueKey(x.id))]))),
       ],
     );
   }
@@ -327,7 +330,7 @@ class EspecesScreen extends ConsumerWidget {
       children: [
         SubmitButton(label: d.justificatifs.especesSaisir, icon: Icons.payments_rounded, onPressed: lots.isEmpty ? null : () => showFormSheet<void>(context, title: d.justificatifs.especesSaisir, builder: (_) => DeclarationForm(lots: lots, comptes: const [], mode: 'especes', onDone: () => ref.invalidate(justificatifsProvider)))),
         SectionHeader(d.justificatifs.mesSaisies),
-        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.payments_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x)])),
+        AsyncView(mes, onRetry: () => ref.invalidate(justificatifsProvider(null)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucuneDeclaration, icon: Icons.payments_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x, key: ValueKey(x.id))])),
       ],
     );
   }
@@ -366,7 +369,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
               child: Column(children: [
                 SuEnter(child: IconCircle(_iconeMethode(y.methode), tone: _toneDe(v), size: 64, iconSize: 30)),
                 const SizedBox(height: 14),
-                SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: MoneyText(formatMAD(y.montant, l), style: t.displayMedium))),
+                SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: AnimatedAmount(y.montant, style: t.displayMedium, textDirection: TextDirection.ltr, maxLines: null))),
                 Padding(padding: const EdgeInsets.only(top: 4), child: Text('${y.lotNumero ?? j.lot} · ${formatDate(y.datePaiementDeclaree, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
                 const SizedBox(height: 12),
                 Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
@@ -376,7 +379,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
               ]),
             ),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              KeyValueRow(j.montant, formatMAD(y.montant, l), mono: true),
+              KeyValueRow.amount(j.montant, y.montant),
               KeyValueRow(j.datePaiement, formatDate(y.datePaiementDeclaree, l)),
               if (y.banqueEmettrice != null) KeyValueRow(j.banqueEmettrice, y.banqueEmettrice!),
               KeyValueRow(j.beneficiaire, y.beneficiaire),
@@ -408,15 +411,16 @@ class JustificatifDetailScreen extends ConsumerWidget {
               CardList([
                 for (final li in y.lignesOuvertes)
                   ListRow(
+                    key: ValueKey(li.appelDeFondsLotId),
                     leading: IconCircle(Icons.request_quote_rounded, tone: li.appelDeFondsLotId == y.appelDeFondsLotId ? Tone.sage : Tone.neutral),
                     title: formatPeriode(li.periode, l),
                     subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? li.type}',
-                    trailing: _MontantFin(formatMAD(li.restant, l), secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
+                    trailing: _MontantFin(li.restant, upIsGood: false, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
                   ),
               ]),
             if (affectations.isNotEmpty) ...[
               SectionHeader(j.affectations),
-              SuCard(child: Column(children: [for (final a in affectations) KeyValueRow(d.enums.statutLigne[a['statut']?.toString()] ?? a['statut']?.toString() ?? '', formatMAD(a['montant']?.toString(), l), mono: true)])),
+              SuCard(child: Column(children: [for (final a in affectations) KeyValueRow.amount(d.enums.statutLigne[a['statut']?.toString()] ?? a['statut']?.toString() ?? '', a['montant']?.toString())])),
             ],
           ]);
         }),
@@ -461,7 +465,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
     final l = context.locale;
     final y = widget.justificatif;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Text('${y.lotNumero ?? ''} · ${formatMAD(y.montant, l)}', style: Theme.of(context).textTheme.titleMedium),
+      AnimatedFigureText('${y.lotNumero ?? ''} · ${formatMAD(y.montant, l)}', style: Theme.of(context).textTheme.titleMedium),
       const SizedBox(height: 8),
       Text(widget.valider ? j.validerCorps : j.rejeterMotifAide, style: Theme.of(context).textTheme.bodySmall),
       if (!widget.valider) ...[const SizedBox(height: 12), SuField(label: j.rejeterMotif, controller: _motif, maxLines: 3, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'motif'))],
@@ -473,6 +477,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
       SubmitButton(
         label: widget.valider ? j.valider : j.rejeter,
         loading: _loading,
+        fail: _fail,
         danger: !widget.valider,
         onPressed: !widget.valider && _motif.text.trim().isEmpty
             ? null

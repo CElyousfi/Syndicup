@@ -17,6 +17,7 @@ import { IconCircle, type IconTone } from "../../../../components/ui/color-icons
 import { IconChevronEnd, IconMegaphone, IconPlus } from "../../../../components/ui/icons";
 import { PosterCard } from "../../../../components/ui/poster-card";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
+import { LiveList } from "../../../../components/ui/live-list";
 import { annonceVariant, categorieAnnonceVariant, sondageVariant } from "../../../../lib/status";
 
 const CATEGORIES: CategorieAnnonce[] = ["INFORMATION", "TRAVAUX", "COUPURE", "SECURITE", "URGENCE", "AG", "CONVIVIALITE", "REGLEMENT"];
@@ -94,7 +95,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
             </div>
           ) : null}
           {annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
-            <ul className="-mx-2 space-y-1 sm:-mx-3">
+            <LiveList as="ul" className="-mx-2 space-y-1 sm:-mx-3">
               {annonces.map((a) => {
                 const nonLue = !a.lu && a.statut === "PUBLIEE";
                 return (
@@ -127,14 +128,14 @@ export default async function AffichagePage({ params, searchParams }: { params: 
                   </li>
                 );
               })}
-            </ul>
+            </LiveList>
           )}
         </div>
         <div className="min-w-0 space-y-4">
           <Card>
             <SectionHeader title={c.sondages} className="mb-3" />
             {sondages.length === 0 ? <p className="text-[13px] text-soft">{c.aucunSondage}</p> : (
-              <ul className="-mx-2 space-y-1">
+              <LiveList as="ul" className="-mx-2 space-y-1">
                 {sondages.slice(0, 6).map((s) => (
                   <li key={s.id}>
                     <Link href={p(`/affichage/sondages/${s.id}`)} className="group flex items-center gap-3 rounded-2xl px-2 py-2.5 transition-colors hover:bg-wash">
@@ -147,7 +148,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
                     </Link>
                   </li>
                 ))}
-              </ul>
+              </LiveList>
             )}
           </Card>
           <Card>

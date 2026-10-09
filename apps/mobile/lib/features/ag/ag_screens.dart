@@ -18,7 +18,6 @@ import '../../core/widgets/widgets.dart';
 import '../taches/taches_screens.dart';
 import '../documents/document_viewer_screen.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../../core/theme/motion.dart';
 
 // ── E1 Liste ──────────────────────────────────────────────────────────────────
 class AgListScreen extends ConsumerWidget {
@@ -42,6 +41,7 @@ class AgListScreen extends ConsumerWidget {
           return CardList([
             for (final a in sorted)
               ListRow(
+                key: ValueKey(a.id),
                 leading: IconCircle(Icons.how_to_vote_rounded, tone: a.statut == 'EN_COURS' ? Tone.warn : a.statut == 'ANNULEE' ? Tone.neutral : Tone.lilac),
                 title: d.enums.typeAg[a.type] ?? a.type,
                 subtitle: '${formatDateLongue(a.dateAg, l)}${a.quorumAtteint != null ? ' · ${d.ag.quorum} ${formatPourcent(double.tryParse(a.quorumAtteint!))}' : ''}',
@@ -104,6 +104,7 @@ class _AgFormScreenState extends ConsumerState<AgFormScreen> {
         SubmitButton(
           label: d.ag.creer,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -190,7 +191,7 @@ class AgDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       Text(d.ag.quorum, style: t.labelMedium?.copyWith(color: SuColors.soft)),
                       const SizedBox(height: 2),
-                      if (a.quorumAtteint != null) Text(formatPourcent(double.tryParse(a.quorumAtteint!)), style: t.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr),
+                      if (a.quorumAtteint != null) AnimatedFigureText(formatPourcent(double.tryParse(a.quorumAtteint!)), style: t.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr),
                       if (a.quorumRequis != null) Text(fill(d.ag.quorumRequis, {'val': formatPourcent(double.tryParse(a.quorumRequis!))}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                     ],
                     if (a.statut == 'ANNULEE' && a.motifAnnulation != null) Padding(padding: const EdgeInsets.only(top: 14), child: SuBanner(tone: BannerTone.warn, title: d.ag.motifAnnulation, body: a.motifAnnulation!)),
@@ -211,7 +212,7 @@ class AgDetailScreen extends ConsumerWidget {
               ],
               if (a.statut == 'CLOTUREE') ...[
                 const SizedBox(height: 12),
-                FilledButton.icon(onPressed: () => context.push('/ag/$id/pv'), icon: const Icon(Icons.gavel_rounded), label: Text(d.ag.pv)),
+                SuButton(onPressed: () => context.push('/ag/$id/pv'), icon: Icons.gavel_rounded, label: d.ag.pv),
               ],
               SectionHeader(d.ag.resolutions, subtitle: '${resolutions.length} ${d.ag.resolutions.toLowerCase()}', actionLabel: ctx.isGestion && a.statut == 'PLANIFIEE' ? d.ag.ajouterResolution : null, onAction: () => _ajouterResolution(context, ref, a)),
               if (resolutions.isEmpty)
@@ -220,6 +221,7 @@ class AgDetailScreen extends ConsumerWidget {
                 CardList([
                   for (final r in resolutions) ...[
                     ListRow(
+                      key: ValueKey(r.id),
                       leading: OrdreResolution(r.ordre),
                       title: r.texte,
                       subtitle: '${d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite} — ${d.enums.typeMajoriteAide[r.typeMajorite] ?? ''}',
@@ -227,7 +229,7 @@ class AgDetailScreen extends ConsumerWidget {
                       onTap: a.statut == 'CLOTUREE' || a.statut == 'EN_COURS' ? () => _resultats(context, ref, a, r, ctx) : null,
                     ),
                     // M22 — suivi d'exécution d'une résolution adoptée (copropriétaires inclus).
-                    if (r.resultat == 'ADOPTEE') ExecutionResolutionLigne(agId: a.id, resolution: r),
+                    if (r.resultat == 'ADOPTEE') ExecutionResolutionLigne(key: ValueKey('execution-${r.id}'), agId: a.id, resolution: r),
                   ],
                 ]),
               // E4 — procurations (résidents propriétaires ; AG convoquée).
@@ -237,13 +239,14 @@ class AgDetailScreen extends ConsumerWidget {
                   CardList([
                     for (final p in mesProcs)
                       ListRow(
+                        key: ValueKey(p.id),
                         leading: const IconCircle(Icons.assignment_ind_rounded, tone: Tone.lilac),
                         title: '${d.ag.mandataire} :${membres.where((m) => m.id == p.mandataireId).map((m) => m.nom).firstOrNull ?? p.mandataireId.substring(0, 8)}',
                         subtitle: '${d.invitations.lot} ${lots.where((x) => x.id == p.lotId).map((x) => x.numero).firstOrNull ?? ''} · ${formatDateCourte(p.creeLe, l)}',
                         trailing: a.statut != 'EN_COURS' ? LinkButton(d.ag.revoquer, color: SuColors.danger, onTap: () => _revoquer(context, ref, p)) : null,
                       ),
                   ]),
-                if (mesProcs.isEmpty && mesLots.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: FilledButton.icon(onPressed: () => _donnerProcuration(context, ref, a, mesLots, membres, ctx), icon: const Icon(Icons.assignment_ind_rounded), label: Text(d.ag.donnerProcuration))),
+                if (mesProcs.isEmpty && mesLots.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: SuButton(onPressed: () => _donnerProcuration(context, ref, a, mesLots, membres, ctx), icon: Icons.assignment_ind_rounded, label: d.ag.donnerProcuration)),
                 if (recues.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.info, body: '${recues.length} × ${d.ag.viaProcuration.replaceAll('{nom}', '').trim()}')),
               ],
               if (ctx.isGestion && procs.isNotEmpty) ...[
@@ -251,6 +254,7 @@ class AgDetailScreen extends ConsumerWidget {
                 CardList([
                   for (final p in procs)
                     ListRow(
+                      key: ValueKey(p.id),
                       leading: const IconCircle(Icons.assignment_ind_rounded, tone: Tone.lilac),
                       title: '${membres.where((m) => m.id == p.mandantId).map((m) => m.nom).firstOrNull ?? p.mandantId.substring(0, 8)} → ${membres.where((m) => m.id == p.mandataireId).map((m) => m.nom).firstOrNull ?? p.mandataireId.substring(0, 8)}',
                       subtitle: '${d.invitations.lot} ${lots.where((x) => x.id == p.lotId).map((x) => x.numero).firstOrNull ?? ''}',
@@ -267,9 +271,9 @@ class AgDetailScreen extends ConsumerWidget {
                 }),
                 if (a.statut == 'PLANIFIEE' || a.statut == 'CONVOQUEE') ...[
                   const SizedBox(height: 8),
-                  OutlinedButton.icon(onPressed: () => _annuler(context, ref, a), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger), icon: const Icon(Icons.cancel_outlined), label: Text(d.ag.annuler)),
+                  SuButton(variant: SuButtonVariant.secondary, onPressed: () => _annuler(context, ref, a), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger), icon: Icons.cancel_outlined, label: d.ag.annuler),
                 ],
-                if (a.statut == 'ANNULEE' || a.statut == 'CLOTUREE') OutlinedButton.icon(onPressed: () => context.push('/ag/nouvelle'), icon: const Icon(Icons.replay_rounded), label: Text(d.ag.recreer)),
+                if (a.statut == 'ANNULEE' || a.statut == 'CLOTUREE') SuButton(variant: SuButtonVariant.secondary, onPressed: () => context.push('/ag/nouvelle'), icon: Icons.replay_rounded, label: d.ag.recreer),
               ],
             ],
           );
@@ -306,10 +310,9 @@ class AgDetailScreen extends ConsumerWidget {
 
   Future<void> _resultats(BuildContext context, WidgetRef ref, AssembleeGenerale a, AgResolution r, AppContext ctx) async {
     final d = context.dict;
-    await showModalBottomSheet<void>(
-      useRootNavigator: true,
-      context: context,
-      sheetAnimationStyle: SuMotion.sheet,
+    await showSuSheet<void>(
+      context,
+      isScrollControlled: false,
       builder: (sheet) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
@@ -378,6 +381,7 @@ class _ActionAgState extends ConsumerState<_ActionAg> {
           label: widget.label,
           icon: widget.icon,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             final ok = await confirmDialog(context, title: widget.label, body: widget.hint);
             if (!ok) return;
@@ -460,13 +464,14 @@ class ResultatsWidget extends ConsumerWidget {
         final pour = tant('POUR'), contre = tant('CONTRE'), abst = tant('ABSTENTION');
         final total = pour + contre + abst;
         Widget row(String v, BigInt val, Color c) => Padding(
+              key: ValueKey(v),
               padding: const EdgeInsets.symmetric(vertical: 7),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
                     Expanded(child: Text(d.enums.valeurVote[v] ?? v, style: t.titleSmall?.copyWith(color: fg))),
-                    Text('${formatEntier(val.toString())} t. · ${nb(v)}', textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
+                    AnimatedFigureText('${formatEntier(val.toString())} t. · ${nb(v)}', tint: false, textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
                   ]),
                   const SizedBox(height: 6),
                   Gauge(total == BigInt.zero ? 0 : (val * BigInt.from(1000) ~/ total).toInt() / 1000, color: c, height: 8),
@@ -480,7 +485,7 @@ class ResultatsWidget extends ConsumerWidget {
             row('CONTRE', contre, SuColors.danger),
             row('ABSTENTION', abst, SuColors.faint),
             const SizedBox(height: 6),
-            Text('${fill(d.ag.votants, {'n': nb('POUR') + nb('CONTRE') + nb('ABSTENTION')})} · ${formatEntier(total.toString())} ${d.ag.tantiemes}', style: t.bodySmall?.copyWith(color: dark ? Colors.white70 : SuColors.soft)),
+            AnimatedFigureText('${fill(d.ag.votants, {'n': nb('POUR') + nb('CONTRE') + nb('ABSTENTION')})} · ${formatEntier(total.toString())} ${d.ag.tantiemes}', maxLines: null, tint: false, style: t.bodySmall?.copyWith(color: dark ? Colors.white70 : SuColors.soft)),
           ],
         );
       },
@@ -521,6 +526,7 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
         SubmitButton(
           label: d.common.add,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -571,6 +577,7 @@ class _AnnulerFormState extends ConsumerState<_AnnulerForm> {
           label: d.ag.annuler,
           danger: true,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -620,7 +627,6 @@ class _ProcurationFormState extends ConsumerState<_ProcurationForm> {
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
-    final t = Theme.of(context).textTheme;
     final visibles = widget.membres.where((m) => _q.isEmpty || m.nom.toLowerCase().contains(_q)).toList();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -631,9 +637,7 @@ class _ProcurationFormState extends ConsumerState<_ProcurationForm> {
           SuSelect<String>(label: d.invitations.lot, value: _lot, options: widget.mesLots.map((x) => x.id).toList(), labelOf: (id) => widget.mesLots.firstWhere((x) => x.id == id).numero, onChanged: (v) => setState(() => _lot = v), required: true),
           const SizedBox(height: 12),
         ],
-        Text(d.ag.mandataire, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 6),
-        TextField(onChanged: (v) => setState(() => _q = v.toLowerCase()), decoration: InputDecoration(hintText: d.common.search, prefixIcon: const Icon(Icons.search_rounded))),
+        SuField(label: d.ag.mandataire, hint: d.common.search, prefix: const Icon(Icons.search_rounded), onChanged: (v) => setState(() => _q = v.toLowerCase())),
         const SizedBox(height: 8),
         // Liste bornée et défilante (au-delà de 260 px, la colonne débordait).
         ConstrainedBox(
@@ -642,6 +646,7 @@ class _ProcurationFormState extends ConsumerState<_ProcurationForm> {
             child: CardList([
               for (final m in visibles.take(30))
                 ListRow(
+                  key: ValueKey(m.id),
                   leading: Avatar(m.nom, size: 48),
                   title: m.nom,
                   subtitle: m.lots.join(', '),
@@ -657,6 +662,7 @@ class _ProcurationFormState extends ConsumerState<_ProcurationForm> {
         SubmitButton(
           label: d.ag.donnerProcuration,
           loading: _loading,
+          fail: _fail,
           onPressed: _lot == null || _mandataire == null
               ? null
               : () async {
@@ -722,7 +728,7 @@ class AgPvScreen extends ConsumerWidget {
                     Text('${d.enums.typeAg[p.typeAg ?? ''] ?? ''} · ${formatDate(p.dateAg, l)}', style: t.headlineSmall),
                     const SizedBox(height: 14),
                     Text(d.ag.quorum, style: t.labelMedium?.copyWith(color: SuColors.soft)),
-                    Text(formatPourcent(double.tryParse(p.quorumAtteint ?? '')), textDirection: TextDirection.ltr, style: t.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
+                    AnimatedFigureText(formatPourcent(double.tryParse(p.quorumAtteint ?? '')), textDirection: TextDirection.ltr, style: t.displaySmall?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
                     Text(fill(d.ag.quorumRequis, {'val': formatPourcent(double.tryParse(p.quorumRequis ?? ''))}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                     const SizedBox(height: 10),
                     Text('${d.ag.cloturee} · ${formatDateHeure(p.horodatageGeneration, l)}', style: t.bodySmall),
@@ -767,10 +773,10 @@ class AgPvScreen extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              FilledButton.icon(
+              SuButton(
                 onPressed: () => ouvrirPdfApi(context, ref, endpoint: '/ag/$id/pv/pdf', titre: d.ag.pvTitre, messageErreur: d.ag.pvIndisponible),
-                icon: const Icon(Icons.picture_as_pdf_rounded),
-                label: Text(d.ag.pvTelecharger),
+                icon: Icons.picture_as_pdf_rounded,
+                label: d.ag.pvTelecharger,
               ),
               const SizedBox(height: 6),
               Text(md.pdfFr, style: t.labelSmall, textAlign: TextAlign.center),
@@ -804,6 +810,7 @@ class AgVotesScreen extends ConsumerWidget {
           return CardList([
             for (final v in list)
               ListRow(
+                key: ValueKey(v.id),
                 leading: Avatar(membres.where((m) => m.id == v.utilisateurId).map((m) => m.nom).firstOrNull ?? '?', size: 48),
                 title: membres.where((m) => m.id == v.utilisateurId).map((m) => m.nom).firstOrNull ?? v.utilisateurId.substring(0, 8),
                 subtitle: '${d.invitations.lot} ${lots.where((x) => x.id == v.lotId).map((x) => x.numero).firstOrNull ?? ''} · ${formatEntier(v.tantiemesRepresentes)} t. · ${formatDateHeure(v.horodatage, l)}',

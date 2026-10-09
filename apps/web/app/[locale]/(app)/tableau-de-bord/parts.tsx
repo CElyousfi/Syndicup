@@ -16,6 +16,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { PosterCard } from "../../../../components/ui/poster-card";
 import { ProgressBar } from "../../../../components/ui/progress";
 import { IconCircle, type IconTone } from "../../../../components/ui/color-icons";
+import { FadeImg } from "../../../../components/ui/motion/fade-img";
 import {
   IconBuilding,
   IconCalendar,
@@ -258,7 +259,7 @@ export function ChecklistTile({
       {/* Bandeau d'affiche (fond encre) en tête de tuile : l'affiche entière, calée à l'extrémité
           (sa moitié vide se fond dans l'encre), miroitée en arabe. */}
       <div aria-hidden className="relative h-[120px] overflow-hidden bg-ink sm:h-[140px]">
-        <img
+        <FadeImg
           src="/illustrations/poster-onboarding.png"
           alt=""
           className="absolute end-0 top-1/2 h-[118%] w-auto max-w-none -translate-y-1/2 rtl:-scale-x-100"

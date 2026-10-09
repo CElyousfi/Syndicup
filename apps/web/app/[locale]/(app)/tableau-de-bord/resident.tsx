@@ -42,6 +42,7 @@ import { AgPoster, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section, tra
 import { PosterCard } from "../../../../components/ui/poster-card";
 import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
+import { Amount } from "../../../../components/ui/amount";
 
 export async function DashboardResident({
   ctx,
@@ -170,7 +171,7 @@ export async function DashboardResident({
                       </Badge>
                     </div>
                     <p className={`tnum mt-6 truncate text-[30px] font-bold leading-none tracking-[-0.02em] ${aJour ? "text-ink" : "text-danger"}`}>
-                      {formatMAD(versChaine(du), locale)}
+                      <Amount value={versChaine(du)} locale={locale} upIsGood={false} />
                     </p>
                     <div className="mt-2 flex items-center justify-between gap-2">
                       <p className="text-[14px] text-soft">{aJour ? dict.dash.monSoldeAJour : dict.dash.soldeDu}</p>

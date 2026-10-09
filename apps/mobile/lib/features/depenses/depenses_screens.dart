@@ -66,13 +66,13 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
         ],
         FilterChips<String>(value: _onglet, options: _statutsOnglets, labelOf: (s) => s == 'TOUS' ? d.depenses.tous : (d.enumsDepenses.statutDepense[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
-        AsyncView(
+        SuFadeSwitch(value: _onglet, child: AsyncView(
           depenses,
           onRetry: () => ref.invalidate(depensesProvider(statut)),
           data: (rows) => rows.isEmpty
               ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
-              : CardList([for (final x in rows) DepenseRow(x)]),
-        ),
+              : CardList([for (final x in rows) DepenseRow(x, key: ValueKey(x.id))]),
+        )),
       ],
     );
   }
@@ -81,14 +81,15 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
 /// Fin de ligne Wise (transactions) : montant gras aligné en fin, ligne secondaire dessous.
 class _MontantFin extends StatelessWidget {
   const _MontantFin(this.montant, {this.secondaire});
-  final String montant;
+  /// Montant BRUT de l'API (formaté par AnimatedAmount, comme formatMAD).
+  final String? montant;
   final Widget? secondaire;
   @override
   Widget build(BuildContext context) => Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisSize: MainAxisSize.min,
         children: [
-          MoneyText(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          AnimatedAmount(montant, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700), textDirection: TextDirection.ltr, maxLines: null),
           if (secondaire != null) ...[const SizedBox(height: 4), secondaire!],
         ],
       );
@@ -109,7 +110,7 @@ class DepenseRow extends StatelessWidget {
       leading: IconCircle(x.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand),
       title: x.libelle,
       subtitle: sous,
-      trailing: _MontantFin(formatMAD(x.montantTtc, l), secondaire: StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true)),
+      trailing: _MontantFin(x.montantTtc, secondaire: StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true)),
       onTap: () => context.push('/depenses/${x.id}'),
     );
   }
@@ -156,7 +157,7 @@ class DepenseDetailScreen extends ConsumerWidget {
                 child: Column(children: [
                   SuEnter(child: IconCircle(x.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand, size: 64, iconSize: 30)),
                   const SizedBox(height: 14),
-                  SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: MoneyText(formatMAD(x.montantTtc, l), style: t.displayMedium))),
+                  SuEnter(index: 1, child: FittedBox(fit: BoxFit.scaleDown, child: AnimatedAmount(x.montantTtc, style: t.displayMedium, textDirection: TextDirection.ltr, maxLines: null))),
                   Padding(padding: const EdgeInsets.only(top: 4), child: Text(d.depenses.montantTtc, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
                   const SizedBox(height: 12),
                   Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
@@ -169,10 +170,10 @@ class DepenseDetailScreen extends ConsumerWidget {
               SuCard(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   if (x.montantHt != null) ...[
-                    KeyValueRow(d.depenses.montantHt, formatMAD(x.montantHt, l)),
-                    KeyValueRow(d.depenses.tva, formatMAD(x.tva, l)),
+                    KeyValueRow.amount(d.depenses.montantHt, x.montantHt),
+                    KeyValueRow.amount(d.depenses.tva, x.tva),
                   ],
-                  KeyValueRow(d.depenses.montantTtc, formatMAD(x.montantTtc, l)),
+                  KeyValueRow.amount(d.depenses.montantTtc, x.montantTtc),
                   KeyValueRow(d.depenses.date, formatDate(x.dateDepense, l)),
                   if (x.description != null) Padding(padding: const EdgeInsets.only(top: 10), child: Text(x.description!, style: t.bodyMedium?.copyWith(color: SuColors.ink))),
                 ]),
@@ -208,9 +209,9 @@ class DepenseDetailScreen extends ConsumerWidget {
                     KeyValueRow(d.depenses.payeLe, formatDate(x.payeLe, l)),
                     KeyValueRow(d.depenses.methode, d.enumsDepenses.methodePaiementDepense[x.methodePaiement ?? ''] ?? '—'),
                     KeyValueRow(d.depenses.reference, x.referencePaiement ?? '—', mono: true),
-                    if (x.mouvementReserve != null) KeyValueRow(d.depenses.mouvementReserve, formatMAD(x.mouvementReserve, l), mono: true),
+                    if (x.mouvementReserve != null) KeyValueRow.amount(d.depenses.mouvementReserve, x.mouvementReserve),
                     if (docs?.justificatif != null)
-                      Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(onPressed: () => ouvrirVisionneuse(context, titre: docs!.justificatif!.nom, url: docs.justificatif!.url), icon: const Icon(Icons.receipt_rounded, size: 18), label: Text(d.depenses.voirPreuve))),
+                      Align(alignment: AlignmentDirectional.centerStart, child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ouvrirVisionneuse(context, titre: docs!.justificatif!.nom, url: docs.justificatif!.url), icon: Icons.receipt_rounded, label: d.depenses.voirPreuve)),
                   ]),
                 ),
               ],
@@ -233,10 +234,11 @@ class DepenseDetailScreen extends ConsumerWidget {
                 CardList([
                   for (int k = 0; k < x.factures.length; k++)
                     ListRow(
+                      key: ValueKey(x.factures[k].id),
                       leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.sand),
                       title: x.factures[k].numero ?? d.depenses.facture,
                       subtitle: '${formatDate(x.factures[k].dateFacture, l)}${x.factures[k].dateEcheance != null ? ' · ${d.depenses.dateEcheance} ${formatDate(x.factures[k].dateEcheance, l)}' : ''}',
-                      trailing: _MontantFin(formatMAD(x.factures[k].montantTtc, l), secondaire: StatusBadge(d.enumsDepenses.statutFacture[x.factures[k].statut] ?? x.factures[k].statut, variant: factureVariant[x.factures[k].statut] ?? BadgeVariant.neutral, small: true)),
+                      trailing: _MontantFin(x.factures[k].montantTtc, secondaire: StatusBadge(d.enumsDepenses.statutFacture[x.factures[k].statut] ?? x.factures[k].statut, variant: factureVariant[x.factures[k].statut] ?? BadgeVariant.neutral, small: true)),
                       onTap: docs != null && k < docs.factures.length ? () => ouvrirVisionneuse(context, titre: docs.factures[k].nom, url: docs.factures[k].url) : null,
                     ),
                 ]),
@@ -363,7 +365,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
       children: [
         Text(x.libelle, style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 4),
-        MoneyText(formatMAD(x.montantTtc, l), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+        AnimatedAmount(x.montantTtc, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700), textDirection: TextDirection.ltr, maxLines: null),
         const SizedBox(height: 12),
         Text(widget.approuver ? fill(d.depenses.approuverCorps, {'libelle': x.libelle, 'montant': formatMAD(x.montantTtc, l)}) : d.depenses.rejeterMotifAide, style: Theme.of(context).textTheme.bodySmall),
         if (motifRequis) ...[
@@ -378,6 +380,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
         SubmitButton(
           label: widget.approuver ? d.depenses.approuver : d.depenses.rejeter,
           loading: _loading,
+          fail: _fail,
           danger: !widget.approuver,
           onPressed: motifRequis && _motif.text.trim().isEmpty
               ? null
@@ -437,7 +440,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('${x.libelle} · ${formatMAD(x.montantTtc, l)}', style: Theme.of(context).textTheme.titleMedium),
+        AnimatedFigureText('${x.libelle} · ${formatMAD(x.montantTtc, l)}', style: Theme.of(context).textTheme.titleMedium, maxLines: null),
         const SizedBox(height: 6),
         Text(d.depenses.payerCorps, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 14),
@@ -480,6 +483,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         SubmitButton(
           label: d.depenses.payer,
           loading: _loading,
+          fail: _fail,
           icon: Icons.check_rounded,
           onPressed: referenceRequise && _reference.text.trim().isEmpty
               ? null
@@ -589,11 +593,12 @@ class _EvaluationPrestataireFormState extends ConsumerState<EvaluationPrestatair
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               for (int n = 1; n <= 5; n++)
-                IconButton(
+                SuIconButton(
                   iconSize: 36,
                   tooltip: '$n/5',
                   onPressed: () => setState(() => _note = n),
-                  icon: Icon(n <= _note ? Icons.star_rounded : Icons.star_border_rounded, color: n <= _note ? SuColors.warn : SuColors.hairlineStrong),
+                  icon: n <= _note ? Icons.star_rounded : Icons.star_border_rounded,
+                  color: n <= _note ? SuColors.warn : SuColors.hairlineStrong,
                 ),
             ],
           ),
@@ -606,6 +611,7 @@ class _EvaluationPrestataireFormState extends ConsumerState<EvaluationPrestatair
         SubmitButton(
           label: d.common.send,
           loading: _loading,
+          fail: _fail,
           onPressed: _note == 0
               ? null
               : () async {

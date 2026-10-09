@@ -4,7 +4,7 @@ import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { AssembleeGenerale, BudgetAg } from "../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../lib/i18n";
-import { formatDate, formatMAD } from "../../../../../lib/format";
+import { formatDate } from "../../../../../lib/format";
 import { PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
@@ -15,6 +15,8 @@ import { CWallet, IconCircle } from "../../../../../components/ui/color-icons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { budgetVariant } from "../../../../../lib/status";
 import { CreerBudgetModal, ModifierBudgetModal, ActiverBudgetModal } from "./budget-modals";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -115,7 +117,7 @@ export default async function BudgetsPage({
                   {dict.dash.depensesBudget} · <span className="tnum">{f.exercice} {budgetActif.exercice}</span>
                 </p>
                 <p className="tnum mt-1.5 text-[28px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">
-                  {formatMAD(budgetActif.montantTotal, ctx.locale)}
+                  <Amount value={budgetActif.montantTotal} locale={ctx.locale} />
                 </p>
                 <Badge variant="ok" className="mt-3">{dict.enums.statutBudget.ACTIF}</Badge>
               </div>
@@ -131,7 +133,7 @@ export default async function BudgetsPage({
                 <TH>{f.agLiee}</TH>
                 {gestion ? <TH align="end" /> : null}
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {budgets.map((b) => (
                   <TR key={b.id}>
                     <TD>
@@ -145,7 +147,7 @@ export default async function BudgetsPage({
                       </span>
                     </TD>
                     <TD align="end" className="tnum font-medium text-ink">
-                      {formatMAD(b.montantTotal, ctx.locale)}
+                      <Amount value={b.montantTotal} locale={ctx.locale} />
                     </TD>
                     <TD>
                       <Badge variant={budgetVariant[b.statut]}>
@@ -185,7 +187,7 @@ export default async function BudgetsPage({
                     ) : null}
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
           {budgetsRes.ok ? (

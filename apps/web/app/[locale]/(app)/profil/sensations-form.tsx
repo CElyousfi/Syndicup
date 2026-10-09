@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Dict } from "../../../../lib/i18n";
 import { Segmented } from "../../../../components/ui/tabs";
-import { Switch } from "../../../../components/ui/field";
+import { Switch } from "../../../../components/ui/toggle";
 import { Banner } from "../../../../components/ui/banner";
 import { haptic, hapticsSupported, readSensations, useSensations, writeSensations } from "../../../../lib/feel";
 

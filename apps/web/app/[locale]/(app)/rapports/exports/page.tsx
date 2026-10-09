@@ -15,6 +15,7 @@ import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { RapportsTabs } from "../onglets";
 import { FacturesToggle } from "../rapport-modals";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -68,7 +69,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
           <TableCard>
             <Table>
               <THead><TH>{r.quand}</TH><TH>{r.qui}</TH><TH>{r.quoi}</TH><TH>{r.format}</TH><TH align="end">{r.nbLignesCol}</TH></THead>
-              <tbody>
+              <LiveList as="tbody">
                 {journal.data.map((e) => (
                   <TR key={e.id}>
                     <TD className="tnum text-soft">{formatDateHeure(e.horodatage, ctx.locale)}</TD>
@@ -78,7 +79,7 @@ export default async function ExportsPage({ params }: { params: Promise<{ locale
                     <TD align="end" className="tnum text-body">{e.nb_lignes}</TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         )}

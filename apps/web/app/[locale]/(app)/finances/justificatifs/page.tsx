@@ -15,6 +15,8 @@ import { justificatifVariant } from "../../../../../lib/status";
 import { ComptesModal, RibCompteButton } from "./justificatif-modals";
 import { DeclarerForm } from "./declarer-form";
 import { comptesBancaires, justificatifs, lotsEtLignesOuvertes } from "./data";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 const ONGLETS = ["EN_ATTENTE", "VALIDE", "REJETE", "TOUS"] as const;
 
@@ -51,7 +53,7 @@ export default async function JustificatifsPage({ params, searchParams }: { para
         <TableCard>
           <Table>
             <THead><TH>{j.lot}</TH><TH>{j.declarePar}</TH><TH>{j.methode}</TH><TH>{j.reference}</TH><TH>{j.datePaiement}</TH><TH>{dict.lots.statut}</TH><TH align="end">{j.montant}</TH></THead>
-            <tbody>
+            <LiveList as="tbody">
               {rows.map((x) => (
                 <TR key={x.id}>
                   <TD className="font-semibold text-ink"><Link href={p(`/finances/justificatifs/${x.id}`)} className="hover:text-link">{x.lot?.numero ?? "—"}</Link></TD>
@@ -60,10 +62,10 @@ export default async function JustificatifsPage({ params, searchParams }: { para
                   <TD className="text-body"><span dir="ltr">{x.reference ?? "—"}</span></TD>
                   <TD className="tnum text-soft">{formatDate(x.datePaiementDeclaree, ctx.locale)}</TD>
                   <TD><Badge variant={justificatifVariant[x.statut]}>{e.statutJustificatif[x.statut]}</Badge></TD>
-                  <TD align="end" className="tnum font-medium text-ink">{formatMAD(x.montant, ctx.locale)}</TD>
+                  <TD align="end" className="tnum font-medium text-ink"><Amount value={x.montant} locale={ctx.locale} /></TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

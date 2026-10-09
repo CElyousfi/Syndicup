@@ -1,10 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { Pressable } from "../../../../../../components/ui/pressable";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Banner } from "../../../../../../components/ui/banner";
 import { SectionHeader } from "../../../../../../components/ui/card";
-import { FormAlert, SubmitButton, Spinner } from "../../../../../../components/ui/form";
+import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
+import { Figure } from "../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../components/ui/live-list";
 import { Donut } from "../../../../../../components/ui/charts";
 import { IDLE } from "../../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
@@ -112,14 +115,14 @@ export function Pupitre({
         {/* Ordre du jour */}
         <div className="min-w-0">
           <SectionHeader title={a.resolutions} className="mb-3" />
-          <ul className="-mx-2 space-y-1">
+          <LiveList as="ul" className="-mx-2 space-y-1">
             {resolutions.map((r, i) => (
               <li key={r.id}>
-                <button
+                <Pressable
                   type="button"
                   onClick={() => choisir(i)}
                   aria-current={i === index ? "true" : undefined}
-                  className={`flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-start transition-colors ${
+                  className={`su-btn flex w-full items-center gap-3 rounded-2xl px-2 py-2.5 text-start transition-colors ${
                     i === index ? "bg-wash" : "hover:bg-wash"
                   }`}
                 >
@@ -136,10 +139,10 @@ export function Pupitre({
                   <Badge variant={resolutionVariant[r.resultat]}>
                     {dict.enums.resultatResolution[r.resultat]}
                   </Badge>
-                </button>
+                </Pressable>
               </li>
             ))}
-          </ul>
+          </LiveList>
         </div>
 
         {/* Résolution active : agrégats live + finalisation */}
@@ -150,11 +153,11 @@ export function Pupitre({
               action={
                 <p className="tnum pt-1 text-[13px] text-soft">
                   {chargement ? (
-                    <Spinner className="inline-block" />
+                    <span aria-hidden className="skeleton inline-block h-3.5 w-36 rounded-full align-middle" />
                   ) : (
                     <>
-                      {fill(a.votants, { n: totalVotants })} ·{" "}
-                      {formatEntier(totalTantiemes)} {a.tantiemes}
+                      <Figure value={fill(a.votants, { n: totalVotants })} /> ·{" "}
+                      <Figure value={formatEntier(totalTantiemes)} /> {a.tantiemes}
                     </>
                   )}
                 </p>
@@ -163,7 +166,7 @@ export function Pupitre({
             <div className="mt-5 rounded-2xl bg-surface p-4 sm:p-5">
               <Donut
                 size={148}
-                centerLabel={formatEntier(totalTantiemes)}
+                centerLabel={<Figure value={formatEntier(totalTantiemes)} />}
                 centerSub={a.tantiemes}
                 items={ordre.map((v) => {
                   const ligne = (resultats ?? []).find((r) => r.valeur === v);
@@ -173,8 +176,8 @@ export function Pupitre({
                     value: tantiemes,
                     display: (
                       <>
-                        {ligne ? ligne.nb_votants : 0} ·{" "}
-                        {formatEntier(tantiemes)}{" "}
+                        <Figure value={String(ligne ? ligne.nb_votants : 0)} /> ·{" "}
+                        <Figure value={formatEntier(tantiemes)} />{" "}
                         <span className="font-normal text-soft">{a.tantiemes}</span>
                       </>
                     ),

@@ -5,6 +5,7 @@ import { Modal } from "../../../../../components/ui/modal";
 import { Field, Input, Select, Textarea } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
+import { IconButton } from "../../../../../components/ui/pressable";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { BudgetPoste } from "../../../../../lib/api/types";
@@ -91,17 +92,17 @@ export function EvaluerPrestataireModal({ dict, locale, incidentId, prestataireN
             <Field label={d.note} htmlFor="note_etoiles" required error={fieldError(state, "note")}>
               <div id="note_etoiles" role="radiogroup" aria-label={d.note} className="flex gap-1" dir="ltr">
                 {[1, 2, 3, 4, 5].map((n) => (
-                  <button
+                  <IconButton
                     key={n}
-                    type="button"
+                    tone="none"
                     role="radio"
                     aria-checked={note === n}
-                    aria-label={`${n}/5`}
+                    label={`${n}/5`}
                     onClick={() => setNote(n)}
-                    className={`size-11 rounded-btn text-[24px] leading-none transition ${n <= note ? "text-warn" : "text-hairline-strong hover:text-warn"}`}
+                    className={`size-11 text-[24px] leading-none ${n <= note ? "text-warn" : "text-hairline-strong hover:text-warn"}`}
                   >
                     ★
-                  </button>
+                  </IconButton>
                 ))}
               </div>
             </Field>

@@ -12,6 +12,7 @@ import { ButtonLink } from "../../../../../components/ui/button";
 import { TableCard } from "../../../../../components/ui/table";
 import { EmptyState } from "../../../../../components/ui/empty-state";
 import { presenceVariant } from "../../../../../lib/status";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -47,7 +48,7 @@ export default async function PlanningPage({ params, searchParams }: { params: P
         <TableCard>
           <table className="w-full min-w-[880px] text-[12.5px]">
             <thead><tr className="text-[12px] text-soft"><th className="rounded-s-[14px] bg-tile px-3 py-3 text-start font-semibold">{pe.titre}</th>{x.jours.map((j, i) => <th key={j} className={`bg-tile px-2 py-2 text-start font-semibold last:rounded-e-[14px] ${j === aujourdhui ? "text-ink" : ""}`}><span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 ${j === aujourdhui ? "bg-cta" : ""}`}><span>{en.jour[JOURS[i]!]}</span><span className={`tnum ${j === aujourdhui ? "text-ink" : "text-faint"}`}>{j.slice(8, 10)}/{j.slice(5, 7)}</span></span></th>)}</tr></thead>
-            <tbody>
+            <LiveList as="tbody">
               {x.personnels.map((pp) => {
                 const nom = (pp.utilisateur ? nomComplet(pp.utilisateur) : null) ?? en.poste[pp.poste];
                 return (
@@ -62,7 +63,7 @@ export default async function PlanningPage({ params, searchParams }: { params: P
                   </tr>
                 );
               })}
-            </tbody>
+            </LiveList>
           </table>
         </TableCard>
       )}

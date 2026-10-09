@@ -8,6 +8,7 @@ import type { Copropriete, Profil } from "../../../lib/api/types";
 import { Brand } from "../../../components/brand";
 import { LocaleSwitch } from "../../../components/locale-switch";
 import { Button } from "../../../components/ui/button";
+import { Pressable } from "../../../components/ui/pressable";
 import { IconChevronEnd } from "../../../components/ui/icons";
 import { IconCircle, CBuilding } from "../../../components/ui/color-icons";
 
@@ -74,9 +75,8 @@ export default async function ChoisirCoproPage({
               <form key={c.id} action={choisirCopropriete}>
                 <input type="hidden" name="locale" value={locale} />
                 <input type="hidden" name="copropriete_id" value={c.id} />
-                <button
-                  type="submit"
-                  className="group flex w-full items-center gap-4 rounded-[20px] px-3 py-3 text-start transition-colors hover:bg-wash"
+                <Pressable type="submit"
+                  className="su-btn group flex w-full items-center gap-4 rounded-[20px] px-3 py-3 text-start transition-colors hover:bg-wash"
                 >
                   <IconCircle tone="sage" size={48}>
                     <CBuilding width={24} height={24} />
@@ -90,7 +90,7 @@ export default async function ChoisirCoproPage({
                     </span>
                   </span>
                   <IconChevronEnd className="shrink-0 text-link transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
-                </button>
+                </Pressable>
               </form>
             ))}
           </div>

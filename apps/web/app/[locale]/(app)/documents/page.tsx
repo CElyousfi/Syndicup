@@ -16,6 +16,8 @@ import { DocumentViewerButton } from "../../../../components/documents/document-
 import { DocumentModal } from "./document-modal";
 import { telechargerDocument, supprimerDocument } from "./actions";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
+import { LiveList } from "../../../../components/ui/live-list";
+import { Button } from "../../../../components/ui/button";
 
 export async function generateMetadata({
   params,
@@ -74,7 +76,7 @@ export default async function DocumentsPage({
                 <TH>{d.date}</TH>
                 <TH align="end" />
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {documents.map((doc) => (
                   <TR key={doc.id}>
                     <TD>
@@ -111,16 +113,16 @@ export default async function DocumentsPage({
                         />
                         <form action={telechargerDocument} className="inline">
                           <input type="hidden" name="document_id" value={doc.id} />
-                          <button
-                            type="submit"
+                          {/* Téléchargement (nouvel onglet, pas d'état serveur à annoncer) : Button et non SubmitButton. */}
+                          <Button type="submit" variant="ghost" size="sm"
                             formTarget="_blank"
                             title={d.telechargement}
                             aria-label={`${dict.common.download} · ${doc.nom}`}
-                            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash"
+                            className="px-3 text-link transition-colors hover:bg-action-wash"
                           >
                             <IconDownload width={15} height={15} />
                             <span className="hidden 2xl:inline">{dict.common.download}</span>
-                          </button>
+                          </Button>
                         </form>
                         {gestion && doc.storagePath?.includes("/documents/") ? (
                           <ConfirmDelete
@@ -137,7 +139,7 @@ export default async function DocumentsPage({
                     </TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
           <p className="mt-4 text-[13px] text-soft">{d.telechargement}</p>

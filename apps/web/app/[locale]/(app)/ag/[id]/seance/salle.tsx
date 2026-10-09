@@ -1,6 +1,8 @@
 "use client";
 
 import { Badge } from "../../../../../../components/ui/badge";
+import { Figure } from "../../../../../../components/ui/amount";
+import { IconButton, Pressable } from "../../../../../../components/ui/pressable";
 import type { Dict } from "../../../../../../lib/i18n";
 import type { AgResolution } from "../../../../../../lib/api/types";
 import { resolutionVariant } from "../../../../../../lib/status";
@@ -56,7 +58,7 @@ export function SalleSeance({
           const cls =
             k === index ? "bg-white" : x.resultat !== "EN_ATTENTE" ? "bg-lime" : "bg-white/20";
           return onSelect ? (
-            <button
+            <Pressable
               key={x.id}
               type="button"
               tabIndex={-1}
@@ -72,7 +74,7 @@ export function SalleSeance({
       <div className="mt-4 flex items-center gap-3">
         <NavRond label={a.resolutionPrecedente} onClick={onPrev} sens="prev" />
         <span className="tnum flex-1 text-center text-[15px] font-semibold text-white" dir="ltr">
-          {index + 1} / {resolutions.length}
+          <Figure value={`${index + 1} / ${resolutions.length}`} />
         </span>
         <NavRond label={a.resolutionSuivante} onClick={onNext} sens="next" />
       </div>
@@ -82,13 +84,12 @@ export function SalleSeance({
 
 function NavRond({ label, onClick, sens }: { label: string; onClick?: () => void; sens: "prev" | "next" }) {
   return (
-    <button
-      type="button"
+    <IconButton
+      tone="none"
       onClick={onClick}
       disabled={!onClick}
-      aria-label={label}
-      title={label}
-      className="flex size-11 shrink-0 items-center justify-center rounded-full bg-white/15 text-white transition-colors hover:bg-white/25 disabled:bg-white/5 disabled:text-white/30"
+      label={label}
+      className="size-11 bg-white/15 text-white transition-colors hover:bg-white/25"
     >
       <svg
         width="20"
@@ -104,6 +105,6 @@ function NavRond({ label, onClick, sens }: { label: string; onClick?: () => void
       >
         {sens === "prev" ? <path d="M19 12H5M11 5l-7 7 7 7" /> : <path d="M5 12h14M13 5l7 7-7 7" />}
       </svg>
-    </button>
+    </IconButton>
   );
 }

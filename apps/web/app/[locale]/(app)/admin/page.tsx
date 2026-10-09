@@ -15,6 +15,7 @@ import { coproVariant } from "../../../../lib/status";
 import { IconChevronEnd, IconPlus, IconSearch } from "../../../../components/ui/icons";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { IconCircle, CBuilding, CFile, CShield } from "../../../../components/ui/color-icons";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -105,7 +106,7 @@ export default async function AdminPage({
               <TH>{dict.lots.statut}</TH>
               <TH align="end" />
             </THead>
-            <tbody>
+            <LiveList as="tbody">
               {copros.map((c) => (
                 <TR key={c.id}>
                   <TD className="font-semibold text-ink">
@@ -142,7 +143,7 @@ export default async function AdminPage({
                   </TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

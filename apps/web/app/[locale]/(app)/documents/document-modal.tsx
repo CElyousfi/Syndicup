@@ -51,8 +51,7 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
                 <span className={`min-w-0 flex-1 truncate text-[15px] ${nomFichier ? "font-semibold text-ink" : "text-body"}`}>
                   {nomFichier ?? d.fichierAide}
                 </span>
-                <input
-                  type="file"
+                <input type="file"
                   name="fichier"
                   required
                   className="sr-only"

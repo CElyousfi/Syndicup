@@ -7,7 +7,7 @@ import { formatDateHeure, formatHeure, nomComplet } from "../../../../lib/format
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { SectionHeader } from "../../../../components/ui/card";
-import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
+import { Ligne, Lignes, type LigneLive } from "../../../../components/espaces/ligne-liste";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { CBell, CCalendar, CHandshake } from "../../../../components/ui/color-icons";
@@ -59,8 +59,9 @@ export default async function ReservationsPage({
 
   const confirmees = autres.filter((r) => r.statut === "CONFIRMEE");
 
-  const CarteReservation = ({ r, actions }: { r: Reservation; actions?: React.ReactNode }) => (
+  const CarteReservation = ({ r, actions, ...live }: LigneLive & { r: Reservation; actions?: React.ReactNode }) => (
     <Ligne
+      {...live}
       icon={<CCalendar width={22} height={22} />}
       tone={r.statut === "EN_ATTENTE" ? "warn" : r.statut === "CONFIRMEE" ? "sage" : "tosca"}
       title={espaceParId.get(r.espaceId) ?? e.espace}

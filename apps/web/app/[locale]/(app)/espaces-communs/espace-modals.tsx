@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../../../../components/ui/modal";
-import { Field, Input, Select, Switch } from "../../../../components/ui/field";
+import { Field, Input, Select } from "../../../../components/ui/field";
+import { Switch } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";

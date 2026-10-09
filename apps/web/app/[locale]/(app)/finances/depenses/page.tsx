@@ -20,6 +20,8 @@ import { IconPlus } from "../../../../../components/ui/icons";
 import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { depenseVariant } from "../../../../../lib/status";
 import { FiltresDepenses } from "./filtres";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -130,7 +132,7 @@ export default async function DepensesPage({
                 <TH>{d.statut}</TH>
                 <TH align="end">{d.montantTtc}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {depenses.map((x) => (
                   <TR key={x.id}>
                     <TD className="tnum text-soft">{formatDate(x.dateDepense, ctx.locale)}</TD>
@@ -142,15 +144,15 @@ export default async function DepensesPage({
                     <TD className="text-body">{e.categorieDepense[x.categorie as CategorieDepense]}</TD>
                     <TD className="text-body">{x.prestataire ? <Link href={p(`/prestataires/${x.prestataire.id}`)} className="hover:text-link">{x.prestataire.nom}</Link> : <span className="text-faint">{dict.common.none}</span>}</TD>
                     <TD><Badge variant={depenseVariant[x.statut]}>{e.statutDepense[x.statut]}</Badge></TD>
-                    <TD align="end" className="tnum font-medium text-ink">{formatMAD(x.montantTtc, ctx.locale)}</TD>
+                    <TD align="end" className="tnum font-medium text-ink"><Amount value={x.montantTtc} locale={ctx.locale} /></TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
               {totaux ? (
                 <tfoot>
                   <TR>
                     <TD colSpan={5} className="text-[13px] text-soft">{fill(d.totalFiltre, {})}</TD>
-                    <TD align="end" className="tnum font-semibold text-ink">{formatMAD(totaux.montant_ttc, ctx.locale)}</TD>
+                    <TD align="end" className="tnum font-semibold text-ink"><Amount value={totaux.montant_ttc} locale={ctx.locale} /></TD>
                   </TR>
                 </tfoot>
               ) : null}

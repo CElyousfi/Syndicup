@@ -4,12 +4,13 @@ import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, Quittance } from "../../../../../../lib/api/types";
 import { getLots, getSynthese } from "../../../../../../lib/finances-data";
 import { fill } from "../../../../../../lib/i18n";
-import { formatDate, formatMAD, formatPeriode } from "../../../../../../lib/format";
+import { formatDate, formatPeriode } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { Brand } from "../../../../../../components/brand";
 import { CFile, IconCircle } from "../../../../../../components/ui/color-icons";
 import { PrintButton } from "./print-button";
+import { Amount } from "../../../../../../components/ui/amount";
 
 /** D5 — mise en page « document officiel » (valeur fiscale, conservation 10 ans). */
 export default async function QuittancePage({
@@ -89,7 +90,7 @@ export default async function QuittancePage({
           <div className="mt-7 rounded-[20px] bg-surface px-5 py-5 print:border print:border-hairline-strong">
             <p className="text-sm font-medium text-soft">{f.montant}</p>
             <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">
-              {formatMAD(contexte.montant, ctx.locale)}
+              <Amount value={contexte.montant} locale={ctx.locale} />
             </p>
           </div>
         ) : null}

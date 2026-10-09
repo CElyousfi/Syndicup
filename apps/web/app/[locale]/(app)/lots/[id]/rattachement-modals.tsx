@@ -2,7 +2,8 @@
 
 import { useActionState, useState } from "react";
 import { Modal } from "../../../../../components/ui/modal";
-import { Field, Input, Select, Checkbox } from "../../../../../components/ui/field";
+import { Field, Input, Select } from "../../../../../components/ui/field";
+import { Checkbox } from "../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
 import { ProgressBar } from "../../../../../components/ui/progress";
@@ -157,13 +158,9 @@ export function AjouterProprietaireModal({
                       {fill(dict.lots.coproprietaireN, { n: i + 1 })}
                     </p>
                     {lignes.length > 1 ? (
-                      <button
-                        type="button"
-                        onClick={() => retirerLigne(l.cle)}
-                        className="text-[13px] font-semibold text-danger hover:underline"
-                      >
+                      <Button type="button" variant="dangerGhost" size="sm" onClick={() => retirerLigne(l.cle)}>
                         {dict.lots.retirerLigne}
-                      </button>
+                      </Button>
                     ) : null}
                   </div>
                   <div className="grid gap-4 sm:grid-cols-[1fr_130px]">
@@ -213,6 +210,7 @@ export function AjouterProprietaireModal({
                   </div>
                   {typePropriete === "INDIVISION" ? (
                     <label className="mt-3 flex cursor-pointer items-center gap-2.5 text-[13px] text-ink-strong">
+                      {/* alive:allow radio réparti une ligne par copropriétaire (liste dynamique) : RadioGroup exige des options regroupées */}
                       <input
                         type="radio"
                         name="representant_index"

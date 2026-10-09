@@ -13,6 +13,9 @@ import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { justificatifVariant, ligneAppelVariant } from "../../../../../../lib/status";
 import { ValiderModal, RejeterModal, AnnulerBouton } from "../justificatif-modals";
+import { Amount } from "../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../components/ui/live-list";
+import { FadeImg } from "../../../../../../components/ui/motion/fade-img";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -49,7 +52,7 @@ export default async function JustificatifDetailPage({ params }: { params: Promi
             {x.preuve ? (
               <div className="mt-3 space-y-3">
                 <FileViewerButton src={`/api/justificatif-preuve?id=${id}`} nom={x.preuve.nom} labels={viewer} label={j.voirPreuve} variant="primary" size="md" />
-                {/\.(jpe?g|png|webp)$/i.test(x.preuve.nom) ? <img src={`/api/justificatif-preuve?id=${id}`} alt={x.preuve.nom} className="max-h-[520px] w-full rounded-[18px] bg-surface object-contain" /> : null}
+                {/\.(jpe?g|png|webp)$/i.test(x.preuve.nom) ? <FadeImg src={`/api/justificatif-preuve?id=${id}`} alt={x.preuve.nom} className="max-h-[520px] w-full rounded-[18px] bg-surface object-contain" /> : null}
               </div>
             ) : <p className="mt-3 text-sm text-soft">{j.aucunePreuve}</p>}
           </Card>
@@ -70,22 +73,22 @@ export default async function JustificatifDetailPage({ params }: { params: Promi
           <Card>
             <SectionHeader title={j.lignesOuvertes} subtitle={<Link href={`/${locale}/lots/${x.lotId}?onglet=finances`} className="link">{dict.invitations.lot} {x.lot?.numero}</Link>} />
             {x.lignes_ouvertes.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucuneLigneOuverte}</p> : (
-              <ul className="mt-4 space-y-1.5">
+              <LiveList as="ul" className="mt-4 space-y-1.5">
                 {x.lignes_ouvertes.map((l) => (
                   <li key={l.appel_de_fonds_lot_id} className={`flex flex-wrap items-center justify-between gap-3 rounded-[18px] px-3 py-2.5 ${l.appel_de_fonds_lot_id === x.appelDeFondsLotId ? "bg-surface ring-[1.5px] ring-link" : "bg-surface"}`}>
                     <div><p className="text-[15px] font-semibold text-ink">{formatPeriode(l.periode, ctx.locale)}</p><p className="tnum text-[12px] text-faint">{formatDate(l.date_echeance, ctx.locale)} · {dict.enums.typeAppel[l.type as keyof typeof dict.enums.typeAppel] ?? l.type}</p></div>
-                    <div className="flex items-center gap-2"><Badge variant={ligneAppelVariant[l.statut as keyof typeof ligneAppelVariant]}>{dict.enums.statutLigne[l.statut as keyof typeof dict.enums.statutLigne]}</Badge><span className="tnum text-[15px] font-bold text-ink">{formatMAD(l.restant, ctx.locale)}</span></div>
+                    <div className="flex items-center gap-2"><Badge variant={ligneAppelVariant[l.statut as keyof typeof ligneAppelVariant]}>{dict.enums.statutLigne[l.statut as keyof typeof dict.enums.statutLigne]}</Badge><span className="tnum text-[15px] font-bold text-ink"><Amount value={l.restant} locale={ctx.locale} upIsGood={false} /></span></div>
                   </li>
                 ))}
-              </ul>
+              </LiveList>
             )}
           </Card>
           {affectations.length > 0 ? (
             <Card>
               <SectionHeader title={j.affectations} />
-              <ul className="mt-3 divide-y divide-wash-strong text-sm">
-                {affectations.map((a) => <li key={a.appel_de_fonds_lot_id} className="flex justify-between gap-3 py-2.5"><span className="text-body">{dict.enums.statutLigne[a.statut as keyof typeof dict.enums.statutLigne] ?? a.statut}</span><span className="tnum font-semibold text-ink">{formatMAD(a.montant, ctx.locale)}</span></li>)}
-              </ul>
+              <LiveList as="ul" className="mt-3 divide-y divide-wash-strong text-sm">
+                {affectations.map((a) => <li key={a.appel_de_fonds_lot_id} className="flex justify-between gap-3 py-2.5"><span className="text-body">{dict.enums.statutLigne[a.statut as keyof typeof dict.enums.statutLigne] ?? a.statut}</span><span className="tnum font-semibold text-ink"><Amount value={a.montant} locale={ctx.locale} /></span></li>)}
+              </LiveList>
               {x.detailsJson?.quittance_id ? <Link href={`/${locale}/finances/quittances/${x.detailsJson.quittance_id}`} className="link mt-3 inline-block text-[14px]">{j.quittance}</Link> : null}
             </Card>
           ) : null}

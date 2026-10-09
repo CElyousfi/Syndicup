@@ -1,128 +1,122 @@
-# feat(alive): phase 1 — fondations (jetons, haptique, sons, drapeau alive_v1, Sensations)
+# feat(alive): phase 2 — chaque élément vivant (primitives + migration de tous les écrans)
 
-Branche : `feature/alive-foundations` → `main`. Première des quatre PR de la couche « Alive »
-(audit : `docs/ALIVE_AUDIT.md`). **Aucune logique métier, aucun calcul monétaire, aucune donnée
-touchée.** La seule surface d'API ajoutée est `GET /v1/config/client`, approuvée en D1.
+Branche : `feature/alive-components`, empilée sur `feature/alive-foundations` (phase 1). À merger
+après elle, ou viser `feature/alive-foundations` pour une revue du seul diff de la phase 2.
+**Présentation uniquement** : aucun appel d'API, aucune logique métier, aucun calcul monétaire n'est
+modifié. Tous les nouveaux comportements s'éteignent avec `ALIVE_V1=false`.
 
-## Ce qui change
+## Résultat
 
-### API : `GET /v1/config/client` (décision D1)
-- Public, lecture seule, sans authentification. Enveloppe standard
-  `{ data: { flags: { alive_v1 } }, meta }`, `Cache-Control: public, max-age=60`.
-- Lu depuis la variable d'environnement **`ALIVE_V1`** (`true`/`false`, absente ⇒ `true`). Aucune
-  base, aucune migration. La variable est validée par Zod au démarrage (`lib/config/env.ts`) et
-  déclarée dans `render.yaml` pour les deux services API.
-- Le contrat est d'abord écrit dans `openapi.yaml` (nouveau tag `Config`). La conformité contrat ↔
-  routes donne 318/318.
-- La forme est générique : un futur drapeau = une clé de plus dans `flags`. Un client qui ne
-  connaît pas un drapeau l'ignore.
-- **Couper la couche** : `ALIVE_V1=false` sur Render puis redémarrer l'API. Tous les clients
-  suivent en 60 s au plus (web : au prochain rendu ; mobile : au retour au premier plan).
+| | Avant (phase 0) | Après |
+|---|---|---|
+| Mobile — primitives vivantes | 80,5 % (226 usages bruts) | **100 %** (1 095 usages, 0 brut, 2 exceptions motivées) |
+| Web — primitives vivantes | 93,9 % (96 usages bruts) | **100 %** (1 652 usages, 0 brut, 7 exceptions motivées) |
+| Montants animés au changement | 4 mobile / 15 web (odomètres de tuiles) | **tous les montants affichés** (≈ 100 mobile, ≈ 160 web) |
+| Spinners plein écran | 5 mobile / 2 web | **0** |
+| CI | — | `check:alive` **bloquant** (et plus en avertissement) |
 
-### Jetons de mouvement partagés (décision D6)
-- Source unique : `packages/config/motion/tokens.json`.
-- Un générateur (`npm run motion:tokens`) produit :
-  - `apps/web/app/motion-tokens.css`
-  - `apps/web/lib/motion-tokens.ts`
-  - `apps/mobile/lib/core/theme/motion_tokens.g.dart`
-- `--check` en CI fait échouer la build si un fichier généré n'est pas à jour.
+Rapport détaillé écran × élément : `docs/ALIVE_COVERAGE.md`, généré par `npm run alive:report`.
+Exceptions restantes, toutes motivées sur la ligne même :
+- le champ OTP invisible sous les six cases ;
+- une aide de tuile qui n'accepte que du texte ;
+- les cases OTP du web ;
+- le lien « renvoyer le code » ;
+- deux `<option>` natives ;
+- un texte réservé aux lecteurs d'écran ;
+- une option de sondage `required` ;
+- un radio réparti sur une liste dynamique.
 
-| Jeton | Avant (web = mobile) | Après | Usage |
-|---|---|---|---|
-| `press` (nouveau) | 120 ms (via `fast`) | **100 ms** | Enfoncement sous le doigt : retour tactile, reste vif |
-| `toggle` (nouveau) | 120 ms (via `fast`) | **120 ms** | Interrupteurs, cases, segments, puces : inchangé |
-| `release` (nouveau) | web 360 ms / mobile 380 ms | **360 ms** | Relâchement en ressort, unifié |
-| `fast` | 120 ms | **180 ms** | Fondus courts (textes, badges). Plus utilisé pour le toucher |
-| `base` | 220 ms | **260 ms** | Transitions standard |
-| `page` | 320 ms | 320 ms | Inchangé |
-| `slow` | 350 ms | **400 ms** | Entrées, jauges, révélations |
-| `sheetIn` / `sheetOut` | 420 / 260 ms (mobile seul) | **400 / 260 ms** | Feuilles du bas (montée / descente) |
-| `number` (nouveau) | — | 900 ms | Roulement d'un montant qui change |
-| `highlight` (nouveau) | — | 1 200 ms | Surlignage d'une donnée arrivée en direct |
-| `signature` / `signatureMax` (nouveaux) | — | 700 / 1 200 ms | Moments signature (plafond 1,2 s) |
-| `stagger` | 45 ms | **35 ms** | Décalage d'une cascade |
-| `maxStagger` | 12 éléments | **8** | Au-delà, même délai (brief : max 8 animés) |
-| `distances` (nouveau) | — | 8 / 16 / 24 px | Glissements |
-| `pressScale` (nouveau) | 0,965 / 0,97 / 0,985 / 0,94 / 0,9 dispersés | idem, nommés | bouton / carte / ligne / puce / icône |
-| Courbes `easeOut` / `easeIn` / `spring` | inchangées | inchangées | — |
-| Ressorts (nouveaux sur mobile) | web : `SPRING_PRESS`, `SPRING_LAYOUT` | `snappy` (520/34/0,7), `smooth` (380/34/0,9), `gentle` (180/22/1) | Physique réelle, mêmes valeurs des deux côtés |
-| `hapticThrottle` (nouveau) | — | 80 ms | Anti-rafale haptique |
+## Primitives (contrat complet : `docs/ALIVE_GUIDE.md` §3)
 
-Le retour tactile (`.su-btn:active`, cartes, `SuPressable`) passe sur `press` (100 ms) et `release`.
-Il ne ralentit jamais.
+**Mobile** (`lib/core/widgets/alive.dart` + mises à niveau de `forms`, `cards`, `page`, `states`, `badge`, `success`, `toast`) :
+- **Toucher**
+  - `SuTap` : enfoncement en ressort ; un appui long soulève l'élément.
+  - `SuButton` : le chargement s'affiche DANS le bouton, coche tracée à la fin d'un envoi réussi, secousse + `warning()` à chaque nouvel échec.
+  - `SubmitButton(fail:)` délègue à `SuButton`.
+  - `SuIconButton` : l'icône se transforme quand elle change.
+- **Montants** : `AnimatedAmount` / `AnimatedFigureText` / `KeyValueRow.amount` / `MoneyText`.
+  - Texte simple au premier affichage. À chaque changement, seuls les chiffres qui changent roulent, avec une teinte verte ou rouge (`upIsGood: false` pour les impayés).
+  - Comparaison exacte en `BigInt` sur la chaîne formatée : **jamais de float**.
+- **Formulaires**
+  - `SuField` : l'erreur, serveur ou validateur, secoue le champ en miroir RTL ; coche de validité.
+  - `SuSearchField` : bouton d'effacement qui éclot.
+  - `SuCheckbox` (coche qui se trace, style de libellé animé), `SuRadioGroup`, `SuSwitchRow` ; `select()` sur `Segmented` et `FilterChips`.
+- **Listes**
+  - `SuLiveColumn` (utilisée par `CardList`) : une ligne clée insérée se déplie avec un surlignage lime, une ligne retirée se replie. Toutes les listes de données ont reçu des clés `ValueKey(id)`.
+  - `SuSwipeAction` : glisser pour marquer une notification comme lue, avec l'action existante.
+- **Surfaces**
+  - `SuRefresh` : indicateur SyndicUp, `select()` au seuil, coche à la fin.
+  - `SuImage` : apparition en fondu et dézoom.
+  - `SuRing` / `Gauge`, `showSuSheet`, `showSuDialog` (entrée en ressort).
+  - `SuFadeSwitch` : plus aucun contenu qui change d'un coup.
+- **Coque**
+  - Indicateur d'onglet qui glisse en ressort (miroir en arabe), `select()` au changement d'onglet.
+  - Notifications en direct en toast avec action « Ouvrir » + son `notify` ; les menus en `showSuSheet`.
+- **Badges** : plus de pulsation en boucle (19 points). Une seule pulsation, et une éclosion quand le statut change.
+- **Succès** : `showSuccess` émet `success()` + le son `success`.
 
-### Services « feel »
-- **Mobile** `lib/core/feel/` : `Feel.init` au démarrage, `ClientFlags`, `Sensations`, `LiteMode`,
-  `Haptics`, `Sounds`.
-- **Web** `lib/feel/` : `flags` (serveur), script d'amorçage, `prefs`, `haptics`, `sounds`.
-- **Haptique sémantique** : `tap`, `select`, `success`, `warning`, `error`, `heavy`.
-  - Anti-rafale de 80 ms, jamais au défilement ni à la frappe.
-  - Muette si le réglage « Vibrations » est coupé ou si `alive_v1` est désactivé.
-  - Reste active en « animations réduites » : on réduit le mouvement, pas le toucher.
-  - Web : `navigator.vibrate`, donc Android uniquement ; ailleurs, aucun effet.
-- **Sons sémantiques** : `confirm`, `success`, `sent`, `notify`, `error`, `signature`.
-  - Préchargés, volume bas.
-  - Mobile : catégorie iOS **ambient**, qui respecte le bouton silencieux et ne coupe ni la
-    musique ni un appel. Android : *sonification* sans prise de focus audio.
-  - Web : Web Audio, déverrouillé au premier geste.
-  - Les six fichiers sont des placeholders synthétisés (`apps/mobile/tool/gen_sounds.mjs`, ≤ 390 ms,
-    ≤ 17 Ko). Le brief des sons définitifs est dans `docs/SOUNDS.md`.
-- **Mode lite automatique** : les effets d'ambiance sont coupés ; les retours tactiles et les
-  compteurs sont gardés.
-  - Mobile : Android `isLowRamDevice` ou ≤ 3 Go de RAM, ou économiseur de batterie (relu au retour
-    au premier plan).
-  - Web : `deviceMemory ≤ 2`, `hardwareConcurrency ≤ 2` ou `saveData`.
-- **Drapeau côté clients (D1)** :
-  - Dernière valeur connue sur l'appareil (mobile `shared_preferences`, web `localStorage` via le
-    script d'amorçage) et en mémoire côté serveur web.
-  - Endpoint injoignable ⇒ dernière valeur ; installation neuve sans valeur ⇒ ON.
+**Web** (`components/ui/`) :
+- **Toucher**
+  - `Button` / `ButtonLink` : 100 ms à l'enfoncement.
+  - `IconButton`, et `Pressable` pour les tuiles à mise en page libre (`ui/pressable`).
+  - `SubmitButton` + `FormAlert` : coche après succès, secousse après refus, haptique.
+- **Montants** : `Amount` / `Figure`, même contrat que le mobile. Les montants roulent après l'actualisation live (25 s), une action ou le retour sur l'onglet.
+- **Formulaires**
+  - `Field` : secousse en miroir RTL, coche de validité en CSS.
+  - `Switch` / `Checkbox` / `RadioGroup` (`ui/toggle`) : coche tracée, `select()`.
+- **Listes** : `LiveList` (dont 30 tables et listes migrées). Une ligne arrivée en direct se déplie avec un surlignage, une ligne retirée se replie.
+- **Badges** : restent des composants serveur sans JS ; la coque connectée les fait éclore quand leur statut change (`useBadgePop`).
+- **Surfaces**
+  - `Modal` : la feuille du bas se ferme en glissant (mobile).
+  - `ProgressBar` / `RingGauge` : remplissage par `transform`, jamais de reflow.
+  - Trésorerie : la ligne se trace et se transforme quand l'exercice change, les barres et les points glissent.
+  - Toast d'erreur → `error()` ; notification en direct → son `notify`.
+- **D5** : `motion` est autorisé dans `components/ui/**` et reste interdit dans `(public)` et `components/auth` (ESLint).
 
-### Réglages « Sensations » (décision D2 : sur l'appareil)
-- Profil → **Sensations** sur mobile et sur web : Animations (Complètes / Réduites), Vibrations, Sons.
-  Tout est activé par défaut et s'applique immédiatement.
-- « Réduites » est fusionné avec la préférence système :
-  - mobile : `MediaQuery.disableAnimations`, déjà lu par tout le code existant ;
-  - web : `data-motion="reduced"` + même règle CSS que `prefers-reduced-motion` +
-    `MotionConfig reducedMotion="always"`.
-- **Écran caché « Tester les sensations »** : il joue chaque son et chaque vibration en ignorant
-  les réglages, pour juger sur un vrai téléphone.
-  - Mobile : visible dans Profil en debug, ou avec `--dart-define=SENSATIONS_TEST=true`.
-  - Web : `/fr/debug/sensations`, en développement ou avec `SENSATIONS_TEST=true`.
-- Textes FR/AR ajoutés dans `lib/i18n/{fr,ar}.ts` (section `alive`), puis `dict.dart` mobile régénéré.
+## Poids JS des pages publiques (D5 — mesuré, gzip, premier chargement)
 
-### Garde-fou « écrans vivants » + rapport de couverture
-- `npm run check:alive` (`scripts/alive/check-alive.mjs`) interdit, dans les écrans, les
-  primitives mortes qui ont un équivalent vivant : `InkWell`, boutons Material bruts,
-  `RefreshIndicator`, spinners, montants en texte figé, `<button>`, `<img>`, `HapticFeedback`…
-  - Exception motivée possible : `alive:allow <raison>`.
-  - `npm run alive:report` écrit `docs/ALIVE_COVERAGE.md` (tableau écran × élément).
-- **Phase 1 : la CI l'exécute en avertissement** (`--warn`). Il passe en **bloquant** à la fin de
-  la phase 2, une fois la migration faite.
-- Point de départ mesuré : mobile 80,5 % vivant (226 usages bruts), web 93,9 % (96).
+Builds de production comparés, `main` contre cette branche (`app-build-manifest`, somme gzip des
+fragments chargés au premier affichage) :
 
-### Documents
-- `docs/ALIVE_AUDIT.md` (phase 0), `docs/SOUNDS.md`, `docs/PRESENCE_TICKET.md` (D3 : présence
-  hors périmètre ; ticket backend pour plus tard).
+| Page | `main` | Phase 2 | Δ |
+|---|---:|---:|---:|
+| `/connexion` | 118,63 kB | 118,57 kB | **−0,06 kB** |
+| `/connexion/code` | 116,94 kB | 117,04 kB | +0,10 kB |
+| `/invitation` | 115,10 kB | 115,17 kB | +0,07 kB |
+| `/invitation/[code]` | 116,73 kB | 116,65 kB | **−0,08 kB** |
+| `/compte/sans-acces`, `/` | 112,90 / 113,13 kB | 112,92 / 113,15 kB | +0,02 kB |
 
-## Dépendances ajoutées (mobile)
-`audioplayers ^6.6.0` (sons, contexte audio ambient), `battery_plus ^7.1.2` (économiseur),
-`device_info_plus ^12.4.0` (RAM Android). Aucune dépendance web.
+Ce qui a été fait pour tenir la contrainte :
+- Tout ce qui se déclenche après un geste vit dans un seul module différé, `lib/feel/lazy.ts` : haptique, résultat de formulaire, glisser de feuille.
+- Coches en CSS (masque SVG).
+- `Badge` reste un composant serveur.
+- `Switch`, `Checkbox`, `IconButton`, `Pressable` et `IrreversibleNotice` sont sortis des modules importés par les pages publiques.
+
+Ce qui reste :
+- **+20 octets sur toutes les pages** : l'entrée de ce module différé dans la table du runtime webpack.
+- **+70 à +100 octets sur deux pages** : le code d'annonce du résultat dans `FormAlert` et le crochet de glisser de `Modal`.
+
+Pour revenir strictement à zéro, il faudrait retirer la coche et la secousse du bouton d'envoi sur les pages publiques. **À décider** : je ne l'ai pas fait sans votre accord.
 
 ## Vérifications
-- API : `vitest tests/config-client.test.ts` passe (5 tests : 200 sans jeton, cache 60 s, `false`,
-  défaut ON sur valeur absente ou invalide, booléens uniquement, schéma d'environnement), et
-  `tsc` est propre. Testé en local avec `curl /v1/config/client`, qui renvoie 200 et
-  `cache-control: public, max-age=60`.
-- Mobile : `flutter analyze` ne montre aucune erreur ni avertissement (61 infos, toutes antérieures).
-  `flutter test` passe (37/37), dont 6 nouveaux : drapeau (défaut, cache, hors-ligne, 500, type
-  invalide), persistance Sensations, haptique (intention → moteur, anti-rafale 80 ms, réglage
-  coupé, drapeau OFF).
-- Web : `tsc --noEmit` et ESLint sont propres. Rendu vérifié : `<html data-alive="1"
-  data-alive-src="api">` et script d'amorçage présent.
-- Jetons : `node packages/config/motion/gen.mjs --check` passe.
+- **Mobile**
+  - `flutter analyze` : aucune erreur, aucun avertissement (infos antérieures uniquement).
+  - `flutter test` : 45/45, dont 8 nouveaux tests de contrat — `compareFigures` sans float, aucune animation au premier affichage, roulement + valeur finale exacte pour les lecteurs d'écran, `alive_v1` coupé ⇒ pas de roulement, bouton chargement → coche → libellé, secousse sur échec, case cochée, liste vivante insertion / retrait.
+  - Un vrai bogue trouvé et corrigé : `BigInt.compareTo` ne renvoie pas −1/0/1.
+- **Web**
+  - `tsc --noEmit`, ESLint et `next build` de production sont propres.
+  - **Parcours de 220 pages authentifiées (FR + AR) sur le serveur de dev : 0 erreur.**
+  - Firefox (Playwright), 12 pages clés FR/AR : 0 erreur console, `data-alive="1"` lu depuis l'API.
+- **Test de bout en bout du direct (web)**
+  - Incidents ouverts dans le navigateur, puis création d'un incident par l'API. La ligne arrive animée (`data-live="in"`) sans recharger la page, 22,6 s après sa création, par l'actualisation de 25 s.
+  - Enregistrement : `web-incidents-live-row.webm`, joint à la PR.
+  - Note : cet essai a créé l'incident « Fuite (test Alive) » dans la base de développement.
+- `npm run check:alive` passe à 100 % sur les deux plateformes, et le job CI `alive-layer` est maintenant bloquant.
 
-## Hors de cette PR
-Phase 2 (primitives vivantes + migration de tous les écrans, AnimatedAmount, rapport à 100 %),
-phase 3 (ambiance), phase 4 (moments signature).
+## Changements visibles à connaître
+- Quelques boutons convertis prennent l'icône à 20 px (au lieu de 18) et les marges des primitives.
+- Le lien rouge « détacher » d'un rattachement est devenu un bouton `dangerGhost` (`sm`).
+- Deux surfaces pressables mobiles s'enfoncent au lieu de faire une onde : l'option de sondage et le champ de date de congé.
+- Le zoom de la photo depuis sa vignette n'est **pas** fait sur mobile. Les photos d'incident s'ouvrent dans un dialogue (qui, lui, entre en zoom ressort) et le visualiseur télécharge le fichier avant de l'afficher.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

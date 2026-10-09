@@ -5,13 +5,14 @@ import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { Echeancier } from "../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../lib/i18n";
-import { formatMAD, formatPeriode } from "../../../../../lib/format";
+import { formatPeriode } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
 import { ButtonLink } from "../../../../../components/ui/button";
 import { Card } from "../../../../../components/ui/card";
 import { echeanceVariant } from "../../../../../lib/status";
+import { Amount } from "../../../../../components/ui/amount";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -35,7 +36,6 @@ export default async function CalendrierPage({ params, searchParams }: { params:
   const decal = (n: number) => { const d = new Date(Date.UTC(y, m - 1 + n, 1)); return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`; };
   const res = await apiFetch<Echeancier>("/contrats/echeancier", { searchParams: { from: iso(debut), to: iso(fin) } });
   const p = (path: string) => `/${locale}${path}`;
-  const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   const parJour = new Map<string, Echeancier["echeances"]>();
   for (const ec of res.ok ? res.data.echeances : []) {
     const k = ec.dateEcheance.slice(0, 10);
@@ -67,7 +67,7 @@ export default async function CalendrierPage({ params, searchParams }: { params:
                   {ecs.map((ec) => (
                     <Link key={ec.id} href={p(`/contrats/${ec.contrat?.id ?? ec.contratId}`)} className="block rounded-lg bg-surface px-1.5 py-1 text-[11px] leading-tight transition-colors hover:bg-hover" title={`${ec.contrat?.libelle ?? ""} · ${e.typeEcheance[ec.type]}`}>
                       <span className="block truncate font-semibold text-ink">{ec.contrat?.libelle}</span>
-                      <span className="flex items-center justify-between gap-1 text-soft"><span className="truncate">{e.typeEcheance[ec.type]}</span>{ec.montant ? <span className="tnum shrink-0 whitespace-nowrap">{mad(ec.montant)}</span> : null}</span>
+                      <span className="flex items-center justify-between gap-1 text-soft"><span className="truncate">{e.typeEcheance[ec.type]}</span>{ec.montant ? <span className="tnum shrink-0 whitespace-nowrap"><Amount value={ec.montant} locale={ctx.locale} /></span> : null}</span>
                     </Link>
                   ))}
                 </div>
@@ -80,7 +80,7 @@ export default async function CalendrierPage({ params, searchParams }: { params:
       </Card>
       {res.ok ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-soft">{res.data.echeances.length === 0 ? c.aucuneEcheanceMois : `${c.totalMois} : `}<b className="tnum text-ink">{res.data.echeances.length ? mad(res.data.total_montant) : ""}</b></span>
+          <span className="text-soft">{res.data.echeances.length === 0 ? c.aucuneEcheanceMois : `${c.totalMois} : `}<b className="tnum text-ink">{res.data.echeances.length ? <Amount value={res.data.total_montant} locale={ctx.locale} /> : ""}</b></span>
           <div className="flex flex-wrap gap-1.5">{(["A_VENIR", "DEPENSE_GENEREE", "REALISEE", "MANQUEE"] as const).map((s) => <Badge key={s} variant={echeanceVariant[s]}>{e.statutEcheance[s]} · {res.data.echeances.filter((x) => x.statut === s).length}</Badge>)}</div>
         </div>
       ) : null}

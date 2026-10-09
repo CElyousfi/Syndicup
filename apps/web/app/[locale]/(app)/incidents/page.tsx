@@ -18,6 +18,7 @@ import { CategorieIcon } from "../../../../components/incidents/categorie-icon";
 import { incidentVariant, urgenceVariant } from "../../../../lib/status";
 import { IconChevronEnd, IconPlus } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -177,7 +178,7 @@ export default async function IncidentsPage({
                 {gestion ? <TH>{i.assigneA}</TH> : null}
                 <TH>{dict.documents.date}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {incidents.map((inc) => {
                   const enRetard =
                     inc.slaDeadline &&
@@ -245,7 +246,7 @@ export default async function IncidentsPage({
                     </TR>
                   );
                 })}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
           {incidentsRes.ok ? (

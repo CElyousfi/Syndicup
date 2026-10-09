@@ -25,6 +25,7 @@ import { Ligne, Lignes } from "../../../../../../components/espaces/ligne-liste"
 import { ConfirmerArriveeForm, ConfirmerDepartForm } from "../../lcd-modals";
 import { AnnulerSejourModal, PiecesJointesCard } from "./sejour-actions";
 import type { LcdPieceJointe } from "../../../../../../lib/api/types";
+import { LiveList } from "../../../../../../components/ui/live-list";
 
 type SejourDetail = LcdSejour & { evenements?: LcdSejourEvenement[] };
 
@@ -217,7 +218,7 @@ export default async function SejourDetailPage({
             {evenements.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{l.journalVide}</p>
             ) : (
-              <ol className="mt-6 ms-2">
+              <LiveList as="ol" className="mt-6 ms-2">
                 {evenements.map((ev, idx) => {
                   const dernier = idx === evenements.length - 1;
                   const tone = TONE_EVENEMENT[ev.type];
@@ -248,7 +249,7 @@ export default async function SejourDetailPage({
                     </li>
                   );
                 })}
-              </ol>
+              </LiveList>
             )}
           </Card>
         </div>

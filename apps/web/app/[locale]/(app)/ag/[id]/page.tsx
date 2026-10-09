@@ -32,6 +32,8 @@ import {
 } from "./ag-actions";
 import { EcheanceRelative } from "../../tableau-de-bord/syndic";
 import { IconClock, IconVote } from "../../../../../components/ui/icons";
+import { LiveList } from "../../../../../components/ui/live-list";
+import { Figure } from "../../../../../components/ui/amount";
 
 export default async function AgDetailPage({
   params,
@@ -145,11 +147,15 @@ export default async function AgDetailPage({
           <div className="rounded-[20px] bg-surface p-5">
             <p className="text-[13px] font-medium text-soft">{a.quorum}</p>
             <p className="tnum mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] text-ink">
-              {quorumAtteint !== null
-                ? formatPourcent(ag.quorumAtteint)
-                : quorumRequis !== null
-                  ? formatPourcent(ag.quorumRequis)
-                  : "—"}
+              <Figure
+                value={
+                  quorumAtteint !== null
+                    ? formatPourcent(ag.quorumAtteint)
+                    : quorumRequis !== null
+                      ? formatPourcent(ag.quorumRequis)
+                      : "—"
+                }
+              />
             </p>
             {quorumAtteint !== null || quorumRequis !== null ? (
               <QuorumJauge atteint={quorumAtteint} requis={quorumRequis} />
@@ -215,10 +221,11 @@ export default async function AgDetailPage({
               className="py-8"
             />
           ) : (
-            resolutions.map((r) => {
+            <LiveList as="div" className="space-y-4">
+            {resolutions.map((r) => {
               const resultats = resultatsParResolution.get(r.id);
               return (
-                <Card key={r.id}>
+                <div key={r.id}><Card>
                   <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
                     <div className="flex min-w-0 flex-1 basis-64 items-start gap-3.5">
                       <span className="tnum flex size-9 shrink-0 items-center justify-center rounded-full bg-surface text-[15px] font-bold text-ink">
@@ -269,9 +276,10 @@ export default async function AgDetailPage({
                       </a>
                     </p>
                   ) : null}
-                </Card>
+                </Card></div>
               );
-            })
+            })}
+            </LiveList>
           )}
         </div>
 
@@ -303,7 +311,7 @@ export default async function AgDetailPage({
               <SectionHeader title={a.procurations} subtitle={a.procurationsAide} />
               <div className="mt-4 space-y-3">
                 {procurations.length > 0 ? (
-                  <ul className="space-y-2">
+                  <LiveList as="ul" className="space-y-2">
                     {procurations.map((proc) => (
                       <li
                         key={proc.id}
@@ -341,7 +349,7 @@ export default async function AgDetailPage({
                         ) : null}
                       </li>
                     ))}
-                  </ul>
+                  </LiveList>
                 ) : (
                   <p className="text-[13px] text-soft">{dict.common.emptyDefault}</p>
                 )}
@@ -405,7 +413,7 @@ function ResultatsAgreges({ dict, resultats }: { dict: Dict; resultats: AgResult
     <div className="mt-5 rounded-2xl bg-surface p-4 sm:p-5">
       <Donut
         size={124}
-        centerLabel={formatEntier(total)}
+        centerLabel={<Figure value={formatEntier(total)} />}
         centerSub={dict.ag.tantiemes}
         items={ordre.map((v) => {
           const ligne = resultats.find((r) => r.valeur === v);
@@ -415,7 +423,7 @@ function ResultatsAgreges({ dict, resultats }: { dict: Dict; resultats: AgResult
             value: tantiemes,
             display: (
               <>
-                {formatEntier(tantiemes)}{" "}
+                <Figure value={formatEntier(tantiemes)} />{" "}
                 <span className="font-normal text-soft">{dict.ag.tantiemes}</span>
               </>
             ),

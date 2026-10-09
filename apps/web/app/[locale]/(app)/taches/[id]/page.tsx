@@ -18,6 +18,7 @@ import { FileViewerButton } from "../../../../../components/documents/document-v
 import { prioriteVariant, tacheVariant } from "../../../../../lib/status";
 import { AnnulerModal, AssignerModal, Checklist, CommentaireForm, StatutModal } from "../taches-client";
 import { assigneesPossibles } from "../references";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -68,7 +69,7 @@ export default async function TachePage({ params, searchParams }: { params: Prom
           <Card>
             <SectionHeader title={`${t.commentaires}${x.commentaires.length ? ` · ${x.commentaires.length}` : ""}`} className="mb-4" />
             {x.commentaires.length === 0 ? <p className="text-[14px] text-soft">{t.aucunCommentaire}</p> : (
-              <ul className="space-y-4">{x.commentaires.map((k) => <li key={k.id} className="flex gap-3"><Avatar nom={nomComplet(k.auteur) ?? "?"} size={36} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-[14px] font-bold text-ink">{nomComplet(k.auteur) ?? "—"}</p><span className="text-[11px] text-faint">{formatDateHeure(k.creeLe, ctx.locale)}</span></div><p className="mt-0.5 whitespace-pre-line text-[14px] leading-relaxed text-body">{k.contenu}</p></div></li>)}</ul>
+              <LiveList as="ul" className="space-y-4">{x.commentaires.map((k) => <li key={k.id} className="flex gap-3"><Avatar nom={nomComplet(k.auteur) ?? "?"} size={36} /><div className="min-w-0 flex-1"><div className="flex flex-wrap items-baseline justify-between gap-2"><p className="text-[14px] font-bold text-ink">{nomComplet(k.auteur) ?? "—"}</p><span className="text-[11px] text-faint">{formatDateHeure(k.creeLe, ctx.locale)}</span></div><p className="mt-0.5 whitespace-pre-line text-[14px] leading-relaxed text-body">{k.contenu}</p></div></li>)}</LiveList>
             )}
             <div className="mt-5 border-t border-wash-strong pt-4"><CommentaireForm dict={dict} locale={ctx.locale} tacheId={x.id} /></div>
           </Card>
@@ -90,7 +91,7 @@ export default async function TachePage({ params, searchParams }: { params: Prom
           </Card>
           <Card>
             <SectionHeader title={t.journal} className="mb-3" />
-            <ul className="divide-y divide-wash-strong text-[13px] text-body">{x.journal.slice(-12).reverse().map((l) => <li key={l.id} className="flex justify-between gap-3 py-2"><span className="min-w-0">{l.type}{l.details && "vers" in l.details ? ` → ${e.statut[l.details.vers as keyof typeof e.statut] ?? String(l.details.vers)}` : ""}{l.acteur ? ` · ${nomComplet(l.acteur) ?? ""}` : ""}</span><span className="tnum shrink-0 text-[12px] text-soft">{formatDateHeure(l.horodatage, ctx.locale)}</span></li>)}</ul>
+            <LiveList as="ul" className="divide-y divide-wash-strong text-[13px] text-body">{x.journal.slice(-12).reverse().map((l) => <li key={l.id} className="flex justify-between gap-3 py-2"><span className="min-w-0">{l.type}{l.details && "vers" in l.details ? ` → ${e.statut[l.details.vers as keyof typeof e.statut] ?? String(l.details.vers)}` : ""}{l.acteur ? ` · ${nomComplet(l.acteur) ?? ""}` : ""}</span><span className="tnum shrink-0 text-[12px] text-soft">{formatDateHeure(l.horodatage, ctx.locale)}</span></li>)}</LiveList>
           </Card>
         </div>
       </div>

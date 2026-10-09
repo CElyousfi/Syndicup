@@ -189,6 +189,7 @@ class LcdQueueCard extends ConsumerWidget {
           const SizedBox(height: 12),
           for (final q in queue)
             Padding(
+              key: ValueKey(q.id),
               padding: const EdgeInsets.symmetric(vertical: 6),
               child: Row(
                 children: [
@@ -210,7 +211,7 @@ class LcdQueueCard extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(md.queueHint, style: t.bodySmall),
           const SizedBox(height: 14),
-          OutlinedButton.icon(onPressed: () => ref.read(lcdSyncProvider.notifier).flush(), icon: const Icon(Icons.sync_rounded, size: 20), label: Text(md.retryNow)),
+          SuButton(label: md.retryNow, icon: Icons.sync_rounded, variant: SuButtonVariant.secondary, onPressed: () => ref.read(lcdSyncProvider.notifier).flush()),
         ],
       ),
     );
@@ -441,12 +442,9 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
                   ...champs,
                   const SizedBox(height: 28),
                   if (_etape < _nbEtapes - 1)
-                    SuPressable(
-                      enabled: etapeValide,
-                      child: FilledButton(onPressed: etapeValide ? () => setState(() => _etape++) : null, style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)), child: Text(md.obNext)),
-                    )
+                    SuButton(label: md.obNext, size: SuButtonSize.lg, expand: true, onPressed: etapeValide ? () => setState(() => _etape++) : null)
                   else
-                    SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: etapeValide ? _submit : null),
+                    SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: etapeValide ? _submit : null, fail: _fail),
                 ],
               ),
             ),
@@ -556,15 +554,16 @@ class _DateField extends StatelessWidget {
           color: SuColors.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
+          child: SuTap(
             onTap: onTap,
+            customBorder: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field)),
             child: Padding(
               padding: const EdgeInsetsDirectional.fromSTEB(16, 17, 10, 17),
               child: Row(
                 children: [
                   Expanded(child: Text(value ?? '—', style: t.bodyLarge?.copyWith(color: value == null ? SuColors.faint : SuColors.ink, fontFeatures: const [FontFeature.tabularFigures()]), maxLines: 1, overflow: TextOverflow.ellipsis)),
                   onClear != null
-                      ? Semantics(button: true, label: MaterialLocalizations.of(context).deleteButtonTooltip, child: GestureDetector(behavior: HitTestBehavior.opaque, onTap: onClear, child: const Padding(padding: EdgeInsets.all(2), child: Icon(Icons.close_rounded, color: SuColors.link, size: 20))))
+                      ? Semantics(button: true, label: MaterialLocalizations.of(context).deleteButtonTooltip, child: SuTap(ink: false, onTap: onClear, child: const Padding(padding: EdgeInsets.all(2), child: Icon(Icons.close_rounded, color: SuColors.link, size: 20))))
                       : Icon(icon, color: SuColors.link, size: 20),
                 ],
               ),
@@ -682,7 +681,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                   children: [
                     Expanded(child: SubmitButton(label: d.common.modify, icon: Icons.edit_rounded, secondary: true, onPressed: () => context.push('/location-courte-duree/sejours/nouveau?sejour=${s.id}'))),
                     const SizedBox(width: 10),
-                    Expanded(child: OutlinedButton.icon(onPressed: _loading ? null : () => _annuler(s), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger, width: 1.2)), icon: const Icon(Icons.cancel_outlined, size: 20), label: Text(d.lcd.annuler, overflow: TextOverflow.ellipsis))),
+                    Expanded(child: SuButton(label: d.lcd.annuler, icon: Icons.cancel_outlined, variant: SuButtonVariant.secondary, onPressed: _loading ? null : () => _annuler(s), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: const BorderSide(color: SuColors.danger, width: 1.2)))),
                   ],
                 ),
               if ((s.statut == 'EN_COURS' || s.statut == 'TERMINE') && !ctx.isPrestataire) ...[
@@ -821,10 +820,10 @@ String _contentTypeDe(String nom, String? mime) {
 /// Sélection : caméra, galerie ou fichier (image / PDF). 10 pièces au plus.
 Future<PieceLocale?> choisirPiece(BuildContext context) async {
   final d = context.dict;
-  final choix = await showModalBottomSheet<String>(
-    useRootNavigator: true,
-      context: context,
-    sheetAnimationStyle: SuMotion.sheet,
+  final choix = await showSuSheet<String>(
+    context,
+    isScrollControlled: false,
+    useSafeArea: false,
     builder: (ctx) => SafeArea(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -994,13 +993,13 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
                       Stack(
                         fit: StackFit.expand,
                         children: [
-                          InkWell(
+                          SuTap(
                             borderRadius: BorderRadius.circular(18),
                             onTap: () => ouvrirVisionneuse(context, titre: pj.nom, url: pj.url),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(18),
                               child: pj.estImage
-                                  ? Image.network(pj.url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: SuColors.tile, child: const Icon(Icons.broken_image_outlined, color: SuColors.faint)))
+                                  ? SuImage.network(pj.url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: SuColors.tile, child: const Icon(Icons.broken_image_outlined, color: SuColors.faint)))
                                   : Container(color: SuColors.tile, padding: const EdgeInsets.all(8), child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [const Icon(Icons.picture_as_pdf_rounded, color: SuColors.link, size: 28), const SizedBox(height: 4), Text(pj.nom, style: t.labelSmall, maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center, textDirection: TextDirection.ltr)])),
                             ),
                           ),

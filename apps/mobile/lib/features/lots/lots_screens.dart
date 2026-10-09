@@ -20,7 +20,6 @@ import '../rapports/rapports_screens.dart' show ReleveButton;
 import '../lcd/lcd_screens.dart';
 import '../parkings/parkings_screens.dart' show VehiculeForm;
 import '../shell/app_shell.dart';
-import '../../core/theme/motion.dart';
 
 /// C1 — liste des lots (résident : ses lots ; syndic : tous, avec solde).
 class LotsScreen extends ConsumerStatefulWidget {
@@ -37,7 +36,6 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
   Widget build(BuildContext context) {
     final ctx = ref.watch(appContextProvider);
     final d = context.dict;
-    final l = context.locale;
     final t = Theme.of(context).textTheme;
     final lots = ref.watch(lotsProvider);
     final synthese = ctx.voitFinancesGlobales || ctx.isProprietaire ? ref.watch(syntheseProvider) : null;
@@ -46,7 +44,7 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
     return Scaffold(
       appBar: racine ? ShellHeader(title: ctx.isResident ? d.lots.mesLots : d.lots.title) : AppBar(title: Text(ctx.isResident ? d.lots.mesLots : d.lots.title)),
       floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: () async {
           ref.invalidate(lotsProvider);
           ref.invalidate(syntheseProvider);
@@ -56,17 +54,18 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
           children: [
             PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: ctx.copropriete?.adresse),
             if (ctx.copropriete != null && !ctx.isResident) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(fill(d.lots.subtitle, {'count': lots.valueOrNull?.length ?? '…', 'tantiemes': formatEntier(ctx.copropriete!.totalTantiemes)}), style: t.bodyMedium?.copyWith(color: SuColors.soft))),
-            TextField(onChanged: (v) => setState(() => _q = v.toLowerCase()), decoration: InputDecoration(hintText: d.common.search, prefixIcon: const Icon(Icons.search_rounded))),
+            SuSearchField(hint: d.common.search, onChanged: (v) => setState(() => _q = v.toLowerCase())),
             const SizedBox(height: 10),
             FilterChips<String>(value: _type, options: ['TOUS', ...d.enums.typeLot.keys], labelOf: (v) => v == 'TOUS' ? d.common.all : d.enums.typeLot[v]!, onChanged: (v) => setState(() => _type = v)),
             const SizedBox(height: 12),
-            AsyncView(lots, onRetry: () => ref.invalidate(lotsProvider), data: (list) {
+            SuFadeSwitch(value: _type, child: AsyncView(lots, onRetry: () => ref.invalidate(lotsProvider), data: (list) {
               final visible = list.where((x) => (_type == 'TOUS' || x.typeLot == _type) && (_q.isEmpty || x.numero.toLowerCase().contains(_q))).toList();
               // Liste vide → illustration lots ; filtre / recherche sans résultat → illustration recherche.
               if (visible.isEmpty) return EmptyState(title: d.lots.aucunLot, hint: ctx.isGestion && list.isEmpty ? d.lots.aucunLotAide : null, icon: Icons.apartment_rounded, illustration: list.isEmpty ? 'empty-lots' : 'empty-search');
               return CardList([
                 for (final x in visible)
                   ListRow(
+                    key: ValueKey(x.id),
                     leading: IconCircle(_iconLot(x.typeLot), tone: Tone.lilac),
                     title: '${d.enums.typeLot[x.typeLot] ?? x.typeLot} ${x.numero}',
                     subtitle: [
@@ -78,13 +77,13 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         StatusBadge(d.enums.statutLot[x.statut] ?? x.statut, variant: lotVariant[x.statut] ?? BadgeVariant.neutral, small: true),
-                        if (soldes.containsKey(x.id) && soldes[x.id]! > BigInt.zero) Padding(padding: const EdgeInsets.only(top: 4), child: MoneyText(formatMAD(versChaine(soldes[x.id]!), l), style: t.labelSmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w700))),
+                        if (soldes.containsKey(x.id) && soldes[x.id]! > BigInt.zero) Padding(padding: const EdgeInsets.only(top: 4), child: AnimatedAmount(versChaine(soldes[x.id]!), style: t.labelSmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w700), textDirection: TextDirection.ltr, maxLines: null, upIsGood: false)),
                       ],
                     ),
                     onTap: () => context.push('/lots/${x.id}'),
                   ),
               ]);
-            }),
+            })),
           ],
         ),
       ),
@@ -247,6 +246,7 @@ class _Propriete extends StatelessWidget {
     final actifs = lot.proprietaires.where((p) => p.actif).toList();
     final anciens = lot.proprietaires.where((p) => !p.actif).toList();
     Widget ligne(LotProprietaire p) => ListRow(
+          key: ValueKey(p.id),
           leading: Avatar(nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? '?', size: 48),
           title: nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? p.utilisateurId.substring(0, 8),
           subtitle: '${d.enums.typePropriete[p.typePropriete] ?? p.typePropriete} · ${d.lots.quotePart} ${p.quotePart} % · ${fill(d.common.sinceDate, {'date': formatDateCourte(p.dateDebut, l)})}${p.dateFin != null ? ' → ${formatDateCourte(p.dateFin, l)}' : ''}',
@@ -282,6 +282,7 @@ class _Occupation extends StatelessWidget {
             : CardList([
                 for (final o in lot.occupants)
                   ListRow(
+                    key: ValueKey(o.id),
                     leading: Avatar(nomComplet(o.utilisateur?.prenom, o.utilisateur?.nom) ?? '?', size: 48),
                     title: nomComplet(o.utilisateur?.prenom, o.utilisateur?.nom) ?? o.utilisateurId.substring(0, 8),
                     subtitle: '${d.enums.typeOccupation[o.typeOccupation] ?? o.typeOccupation} · ${fill(d.common.sinceDate, {'date': formatDateCourte(o.dateDebut, l)})}${o.accesFinancesAccorde ? ' · ${d.lots.accesFinances}' : ''}',
@@ -312,7 +313,7 @@ class _Finances extends ConsumerWidget {
     final appelParId = {for (final a in s.appels) a.id: a};
     final ligneParId = {for (final x in s.lignes) x.id: x};
     final peutContester = lot.estProprietaire(ctx.profil.id) && !ctx.isGestion;
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async {
         ref.invalidate(soldeLotProvider(lot.id));
         ref.invalidate(syntheseProvider);
@@ -338,12 +339,12 @@ class _Finances extends ConsumerWidget {
                     children: [
                       Row(children: [Expanded(child: Text(d.finances.solde, style: t.titleMedium)), StatusBadge(aJour ? d.finances.soldeAJour : d.finances.soldeDu, variant: aJour ? BadgeVariant.ok : BadgeVariant.danger)]),
                       const SizedBox(height: 10),
-                      FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(formatMAD(so.soldeDu, l), style: t.displayMedium?.copyWith(fontSize: 34, color: aJour ? SuColors.ink : SuColors.danger))),
+                      FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: AnimatedAmount(so.soldeDu, style: t.displayMedium?.copyWith(fontSize: 34, color: aJour ? SuColors.ink : SuColors.danger), textDirection: TextDirection.ltr, maxLines: null, upIsGood: false)),
                       const SizedBox(height: 18),
                       Row(children: [
-                        Expanded(child: _Mini(d.finances.du, formatMontant(versChaine(appele)))),
-                        Expanded(child: _Mini(d.finances.paye, formatMontant(versChaine(paye)))),
-                        Expanded(child: _Mini(d.finances.restant, formatMontant(versChaine(du)))),
+                        Expanded(child: _Mini(d.finances.du, versChaine(appele))),
+                        Expanded(child: _Mini(d.finances.paye, versChaine(paye))),
+                        Expanded(child: _Mini(d.finances.restant, versChaine(du), upIsGood: false)),
                       ]),
                       // M18 — relevé de charges (« état daté ») : propriétaire du lot, syndic, conseil.
                       if (ctx.isGestion || ctx.isConseil || lot.estProprietaire(ctx.profil.id)) ...[
@@ -359,7 +360,7 @@ class _Finances extends ConsumerWidget {
                 else
                   CardList([
                     for (final li in so.lignes)
-                      Builder(builder: (context) {
+                      Builder(key: ValueKey(li.appelDeFondsLotId), builder: (context) {
                         final full = ligneParId[li.appelDeFondsLotId];
                         final appel = full == null ? null : appelParId[full.appelDeFondsId];
                         final restant = versCentimes(li.montantDu) - versCentimes(li.montantPaye);
@@ -394,7 +395,7 @@ class _Finances extends ConsumerWidget {
                                         Column(
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
-                                            MoneyText(formatMontant(li.montantDu), style: t.titleMedium),
+                                            AnimatedAmount(li.montantDu, currency: false, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
                                             Padding(padding: const EdgeInsets.only(top: 3), child: Text('${d.finances.paye.toLowerCase()} ${formatMontant(li.montantPaye)}', style: t.bodySmall)),
                                           ],
                                         ),
@@ -410,10 +411,11 @@ class _Finances extends ConsumerWidget {
                                         if (full != null) StatusBadge(d.enums.escalade[full.niveauEscalade] ?? full.niveauEscalade, variant: escaladeVariant(full.niveauEscalade), small: true),
                                         if (li.conteste) StatusBadge(d.enums.conteste, variant: BadgeVariant.warn, small: true),
                                         if (peutContester && !li.conteste && li.statut != 'PAYE')
-                                          TextButton(
+                                          SuButton(
+                                            variant: SuButtonVariant.ghost,
                                             style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8), minimumSize: const Size(0, 32)),
                                             onPressed: () => _contester(context, ref, li, appel, restant),
-                                            child: Text(d.finances.contester),
+                                            label: d.finances.contester,
                                           ),
                                       ],
                                     ),
@@ -444,12 +446,15 @@ class _Finances extends ConsumerWidget {
 }
 
 class _Mini extends StatelessWidget {
-  const _Mini(this.label, this.value);
-  final String label, value;
+  const _Mini(this.label, this.montant, {this.upIsGood = true});
+  final String label;
+  /// Montant BRUT (formaté sans devise par AnimatedAmount, comme formatMontant).
+  final String montant;
+  final bool upIsGood;
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: t.bodySmall), const SizedBox(height: 2), MoneyText(value, style: t.titleMedium)]);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: t.bodySmall), const SizedBox(height: 2), AnimatedAmount(montant, currency: false, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null, upIsGood: upIsGood)]);
   }
 }
 
@@ -482,6 +487,7 @@ class _ContesterFormState extends ConsumerState<_ContesterForm> {
         SubmitButton(
           label: d.finances.contester,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -525,7 +531,7 @@ class _Historique extends StatelessWidget {
             ? EmptyState(title: d.lots.historiqueVide, icon: Icons.swap_horiz_rounded, illustration: 'empty-lots')
             : CardList([
                 for (final p in termines)
-                  ListRow(leading: const IconCircle(Icons.swap_horiz_rounded, tone: Tone.neutral), title: nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? p.utilisateurId.substring(0, 8), subtitle: '${formatDateCourte(p.dateDebut, l)} → ${formatDateCourte(p.dateFin, l)}'),
+                  ListRow(key: ValueKey(p.id), leading: const IconCircle(Icons.swap_horiz_rounded, tone: Tone.neutral), title: nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? p.utilisateurId.substring(0, 8), subtitle: '${formatDateCourte(p.dateDebut, l)} → ${formatDateCourte(p.dateFin, l)}'),
               ]),
       ],
     );
@@ -558,15 +564,15 @@ class _Parkings extends ConsumerWidget {
         SectionHeader(p.onglets.mesAttributions, actionLabel: ctx.isGestion || ctx.isConseil || ctx.isGardien ? p.titre : null, onAction: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings') : null),
         AsyncView(attributions, onRetry: () => ref.invalidate(attributionsProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucuneAttribution)
-            : CardList([for (final a in rows) ListRow(leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral), title: '${a.emplacementCode} · ${e.typeAttribution[a.type] ?? a.type}', subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : p.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}', trailing: StatusBadge(a.active ? p.active : p.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true), onTap: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings/${a.emplacementId}') : null)])),
+            : CardList([for (final a in rows) ListRow(key: ValueKey(a.id), leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral), title: '${a.emplacementCode} · ${e.typeAttribution[a.type] ?? a.type}', subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : p.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}', trailing: StatusBadge(a.active ? p.active : p.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true), onTap: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings/${a.emplacementId}') : null)])),
         SectionHeader(p.vehicules, actionLabel: peutDeclarer ? p.declarerVehicule : null, onAction: peutDeclarer ? declarer : null),
         AsyncView(vehicules, onRetry: () => ref.invalidate(vehiculesProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucunVehicule)
-            : CardList([for (final v in rows) ListRow(leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral), title: v.immatriculation, subtitle: '${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}', trailing: StatusBadge(v.actif ? p.actif : p.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true))])),
+            : CardList([for (final v in rows) ListRow(key: ValueKey(v.id), leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral), title: v.immatriculation, subtitle: '${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}', trailing: StatusBadge(v.actif ? p.actif : p.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true))])),
         SectionHeader(p.badges),
         AsyncView(badges, onRetry: () => ref.invalidate(badgesProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucunBadge)
-            : CardList([for (final b in rows) ListRow(leading: IconCircle(Icons.badge_rounded, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral), title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}', subtitle: '${p.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${p.caution} ${formatMAD(b.cautionMontant, l)}' : ''}', trailing: StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true))])),
+            : CardList([for (final b in rows) ListRow(key: ValueKey(b.id), leading: IconCircle(Icons.badge_rounded, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral), title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}', subtitle: '${p.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${p.caution} ${formatMAD(b.cautionMontant, l)}' : ''}', trailing: StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true))])),
       ],
     );
   }
@@ -630,7 +636,7 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
         const SizedBox(height: 18),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.save, loading: _loading, onPressed: _submit),
+        SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: _submit),
       ],
     );
   }
@@ -721,8 +727,8 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
                 Column(
                   children: [
                     const SizedBox(height: 22),
-                    IconButton(onPressed: () => setState(() { for (final r in _rows) { r.rep = false; } _rows[i].rep = true; }), icon: Icon(_rows[i].rep ? Icons.star_rounded : Icons.star_border_rounded, color: SuColors.warn), tooltip: d.lots.representantIndivision),
-                    if (_rows.length > 1) IconButton(onPressed: () => setState(() => _rows.removeAt(i)), icon: const Icon(Icons.remove_circle_outline_rounded, color: SuColors.faint)),
+                    SuIconButton(onPressed: () => setState(() { for (final r in _rows) { r.rep = false; } _rows[i].rep = true; }), icon: _rows[i].rep ? Icons.star_rounded : Icons.star_border_rounded, color: SuColors.warn, tooltip: d.lots.representantIndivision),
+                    if (_rows.length > 1) SuIconButton(onPressed: () => setState(() => _rows.removeAt(i)), icon: Icons.remove_circle_outline_rounded, color: SuColors.faint),
                   ],
                 ),
               ],
@@ -731,9 +737,9 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
           const SizedBox(height: 10),
         ],
         if (_type == 'INDIVISION') ...[
-          OutlinedButton.icon(onPressed: () => setState(() => _rows.add(_Copro())), icon: const Icon(Icons.add_rounded), label: Text(d.lots.ajouterIndivisaire)),
+          SuButton(variant: SuButtonVariant.secondary, onPressed: () => setState(() => _rows.add(_Copro())), icon: Icons.add_rounded, label: d.lots.ajouterIndivisaire),
           const SizedBox(height: 10),
-          Row(children: [Expanded(child: Gauge(ratio100, color: total == BigInt.from(10000) ? SuColors.ok : SuColors.warn)), const SizedBox(width: 10), Text('${formatMontant(versChaine(total))} %', style: t.labelMedium)]),
+          Row(children: [Expanded(child: Gauge(ratio100, color: total == BigInt.from(10000) ? SuColors.ok : SuColors.warn)), const SizedBox(width: 10), AnimatedFigureText('${formatMontant(versChaine(total))} %', style: t.labelMedium)]),
           Padding(padding: const EdgeInsets.only(top: 4), child: Text('${d.lots.quotePartRegle} · ★ ${d.lots.representantAide}', style: t.bodySmall)),
           const SizedBox(height: 10),
         ],
@@ -741,7 +747,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.add, loading: _loading, onPressed: _submit),
+        SubmitButton(label: d.common.add, loading: _loading, fail: _fail, onPressed: _submit),
       ],
     );
   }
@@ -799,14 +805,13 @@ class _MembreField extends StatelessWidget {
       required: true,
       suffix: membres.isEmpty
           ? null
-          : IconButton(
-              icon: const Icon(Icons.person_search_rounded),
+          : SuIconButton(
+              icon: Icons.person_search_rounded,
               onPressed: () async {
-                final picked = await showModalBottomSheet<MembreOption>(
-                  useRootNavigator: true,
-      context: context,
-                  sheetAnimationStyle: SuMotion.sheet,
-                  isScrollControlled: true,
+                final picked = await showSuSheet<MembreOption>(
+                  context,
+                  useSafeArea: false,
+                  showDragHandle: false,
                   builder: (ctx) => SafeArea(
                     child: ConstrainedBox(
                       constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(ctx).height * 0.7),
@@ -815,7 +820,7 @@ class _MembreField extends StatelessWidget {
                         padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                         children: [
                           Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(label, style: Theme.of(ctx).textTheme.headlineMedium)),
-                          CardList([for (final m in membres) ListRow(leading: Avatar(m.nom, size: 48), title: m.nom, subtitle: m.lots.join(', '), onTap: () => Navigator.pop(ctx, m))]),
+                          CardList([for (final m in membres) ListRow(key: ValueKey(m.id), leading: Avatar(m.nom, size: 48), title: m.nom, subtitle: m.lots.join(', '), onTap: () => Navigator.pop(ctx, m))]),
                         ],
                       ),
                     ),
@@ -863,6 +868,7 @@ class _OccupantFormState extends ConsumerState<_OccupantForm> {
         SubmitButton(
           label: d.common.add,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;
@@ -928,12 +934,12 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
             ),
           ),
           const SizedBox(height: 14),
-          OutlinedButton.icon(onPressed: () {
+          SuButton(variant: SuButtonVariant.secondary, onPressed: () {
             Clipboard.setData(ClipboardData(text: _code!));
             showToast(context, context.mdict.copied);
-          }, icon: const Icon(Icons.copy_rounded), label: Text(d.common.copy)),
+          }, icon: Icons.copy_rounded, label: d.common.copy),
           const SizedBox(height: 8),
-          FilledButton(onPressed: () => Navigator.pop(context), child: Text(d.common.close)),
+          SuButton(onPressed: () => Navigator.pop(context), label: d.common.close),
         ],
       );
     }
@@ -942,7 +948,7 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
       children: [
         Text(d.lots.transfertEtape1, style: t.headlineSmall),
         const SizedBox(height: 10),
-        if (solde == null) const LinearProgressIndicator() else if (du <= BigInt.zero) SuBanner(tone: BannerTone.ok, body: d.lots.transfertSoldeNul) else ...[
+        if (solde == null) const Align(alignment: AlignmentDirectional.centerStart, child: LoadingOrb(size: 8)) else if (du <= BigInt.zero) SuBanner(tone: BannerTone.ok, body: d.lots.transfertSoldeNul) else ...[
           SuBanner(tone: BannerTone.warn, title: fill(d.lots.transfertDette, {'montant': formatMAD(solde.soldeDu, context.locale)}), body: d.lots.transfertDetteRepriseAide),
           SuCheckbox(value: _dette, onChanged: (v) => setState(() => _dette = v), label: d.lots.transfertDetteReprise),
         ],
@@ -960,6 +966,7 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
         SubmitButton(
           label: d.lots.transferer,
           loading: _loading,
+          fail: _fail,
           danger: true,
           onPressed: (du > BigInt.zero && !_dette) ? null : () async {
             final ok = await confirmDialog(context, title: d.lots.transfertEtape3, body: d.lots.transfertConfirmeAide, confirmLabel: d.lots.transfertConfirme, danger: true, irreversible: true);

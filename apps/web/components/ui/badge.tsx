@@ -1,7 +1,3 @@
-"use client";
-
-import { useEffect, useRef, useState } from "react";
-
 /**
  * Badges de statut — pills pleines (rayon 999) : fond couleur franche, texte blanc
  * (ou encre sur fond clair) — jamais de texte coloré sur teinte. Les statuts sont
@@ -32,20 +28,13 @@ export function Badge({
   className?: string;
   pulse?: boolean;
 }) {
-  // Vivant : quand le statut CHANGE (actualisation live), la pastille éclot en ressort et le
-  // point « en cours » pulse UNE fois — jamais de boucle (motion.css `.pulse-halo`).
-  const sig = `${variant}|${typeof children === "string" || typeof children === "number" ? children : ""}`;
-  const prev = useRef(sig);
-  const [pop, setPop] = useState(0);
-  useEffect(() => {
-    if (prev.current === sig) return;
-    prev.current = sig;
-    setPop((n) => n + 1);
-  }, [sig]);
+  // Vivant : composant serveur sans JS. Quand le statut CHANGE (actualisation live), la coque
+  // connectée le fait éclore (`data-badge` observé par useBadgePop, components/shell/ambient.tsx) ;
+  // le point « en cours » ne pulse que deux fois (motion.css) — jamais de boucle.
   return (
     <span
-      key={pop}
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STYLES[variant]} ${pop ? "badge-pop" : ""} ${className}`}
+      data-badge=""
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold whitespace-nowrap ${STYLES[variant]} ${className}`}
     >
       {pulse ? <span className="pulse-halo size-1.5 rounded-full bg-current" aria-hidden /> : null}
       {children}

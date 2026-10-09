@@ -65,7 +65,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
       children: [
         FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? v), onChanged: (v) => setState(() => _categorie = v)),
         const SizedBox(height: 12),
-        AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
+        SuFadeSwitch(value: _categorie, child: AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
           if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: _categorie == null ? 'empty-annonces' : 'empty-search');
           // Affiche « à la une » : l'annonce épinglée publiée la plus récente (elle reste aussi dans la liste).
           final epinglees = rows.where((a) => a.epingle && a.statut == 'PUBLIEE').toList()..sort((a, b) => (b.publieLe ?? b.creeLe).compareTo(a.publieLe ?? a.creeLe));
@@ -83,13 +83,14 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
                   onTap: () => context.push('/affichage/${une.id}'),
                 ),
               ),
-            for (int i = 0; i < rows.length; i++) SuEnter(index: i, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: AnnonceCard(rows[i])))]);
-        }),
+            for (int i = 0; i < rows.length; i++) SuEnter(key: ValueKey(rows[i].id), index: i, child: Padding(padding: const EdgeInsets.only(bottom: 12), child: AnnonceCard(rows[i])))]);
+        })),
         if (sondages.isNotEmpty) ...[
           SectionHeader(c.sondages, actionLabel: gestion ? c.nouveauSondage : null, onAction: gestion ? () => showFormSheet<void>(context, title: c.nouveauSondage, builder: (_) => SondageComposer(onDone: () => _rafraichirAffichage(ref))) : null),
           CardList([
             for (final s in sondages.take(5))
               ListRow(
+                key: ValueKey(s.id),
                 leading: IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral),
                 title: s.question,
                 subtitle: s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateCourte(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)}),
@@ -107,6 +108,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
           CardList([
             for (final x in contacts)
               ListRow(
+                key: ValueKey(x.id),
                 leading: const IconCircle(Icons.call_rounded, tone: Tone.sage),
                 title: x.libelle,
                 subtitle: x.telephone,
@@ -269,18 +271,18 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                 if (gestion) ...[
                   SectionHeader(c.lectures, subtitle: c.lecteursAide),
                   SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(a.nbLectures != null && a.nbDestinataires != null ? fill(c.luPar, {'n': '${a.nbLectures}', 'total': '${a.nbDestinataires}'}) : '—', style: t.headlineSmall),
+                    AnimatedFigureText(a.nbLectures != null && a.nbDestinataires != null ? fill(c.luPar, {'n': '${a.nbLectures}', 'total': '${a.nbDestinataires}'}) : '—', maxLines: null, style: t.headlineSmall),
                     if (a.nbDestinataires != null && a.nbDestinataires! > 0) ...[const SizedBox(height: 12), Gauge((a.nbLectures ?? 0) / a.nbDestinataires!)],
                   ])),
                   if (peutModifier) Padding(
                     padding: const EdgeInsets.only(top: 16),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                      if (a.statut == 'BROUILLON') FilledButton.icon(onPressed: () async {
+                      if (a.statut == 'BROUILLON') SuButton(onPressed: () async {
                         if (await confirmDialog(context, title: c.publierTitre, body: c.publierCorps, confirmLabel: c.publier)) await _action('/annonces/${a.id}/publier', idempotent: true, succes: c.enregistree, corps: c.publierCorps);
-                      }, icon: const Icon(Icons.send_rounded, size: 18), label: Text(c.publier)),
-                      if (a.statut == 'PUBLIEE') OutlinedButton.icon(onPressed: () async {
+                      }, icon: Icons.send_rounded, label: c.publier),
+                      if (a.statut == 'PUBLIEE') SuButton(variant: SuButtonVariant.secondary, onPressed: () async {
                         if (await confirmDialog(context, title: c.archiver, body: c.archiverCorps, danger: true)) await _action('/annonces/${a.id}/archiver', succes: c.archivee);
-                      }, icon: const Icon(Icons.archive_outlined, size: 18), label: Text(c.archiver)),
+                      }, icon: Icons.archive_outlined, label: c.archiver),
                     ]),
                   ),
                 ],
@@ -311,7 +313,7 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                   const SizedBox(height: 8),
                   FormError(_fail),
                   if (_fail != null) const SizedBox(height: 12),
-                  SubmitButton(label: c.commenter, icon: Icons.send_rounded, loading: _envoi, onPressed: () async {
+                  SubmitButton(label: c.commenter, icon: Icons.send_rounded, loading: _envoi, fail: _fail, onPressed: () async {
                     if (_commentaire.text.trim().isEmpty) return;
                     setState(() { _envoi = true; _fail = null; });
                     final r = await ref.read(apiClientProvider).post<dynamic>('/annonces/${a.id}/commentaires', body: {'contenu': _commentaire.text.trim()});
@@ -430,7 +432,7 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
       const SizedBox(height: 16),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
-      SubmitButton(label: _programme == null ? c.publierMaintenant : c.programmer, loading: _loading, onPressed: () => _envoyer(publier: true)),
+      SubmitButton(label: _programme == null ? c.publierMaintenant : c.programmer, loading: _loading, fail: _fail, onPressed: () => _envoyer(publier: true)),
       const SizedBox(height: 8),
       SubmitButton(label: c.enregistrerBrouillon, secondary: true, onPressed: _loading ? null : () => _envoyer(publier: false)),
     ]);
@@ -494,8 +496,8 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
               if (gestion && (s.statut == 'BROUILLON' || s.statut == 'OUVERT')) Padding(
                 padding: const EdgeInsets.only(top: 16),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  if (s.statut == 'BROUILLON') FilledButton.icon(onPressed: () async { if (await confirmDialog(context, title: c.ouvrir, body: c.ouvrirCorps)) await _transition('ouvrir', c.ouvert); }, icon: const Icon(Icons.play_arrow_rounded, size: 18), label: Text(c.ouvrir)),
-                  if (s.statut == 'OUVERT') OutlinedButton.icon(onPressed: () async { if (await confirmDialog(context, title: c.clore, body: c.cloreCorps, danger: true)) await _transition('clore', c.clos); }, icon: const Icon(Icons.stop_circle_outlined, size: 18), label: Text(c.clore)),
+                  if (s.statut == 'BROUILLON') SuButton(onPressed: () async { if (await confirmDialog(context, title: c.ouvrir, body: c.ouvrirCorps)) await _transition('ouvrir', c.ouvert); }, icon: Icons.play_arrow_rounded, label: c.ouvrir),
+                  if (s.statut == 'OUVERT') SuButton(variant: SuButtonVariant.secondary, onPressed: () async { if (await confirmDialog(context, title: c.clore, body: c.cloreCorps, danger: true)) await _transition('clore', c.clos); }, icon: Icons.stop_circle_outlined, label: c.clore),
                 ]),
               ),
               SectionHeader(s.maReponse != null || !s.ouvertEncore ? c.resultats : c.repondre, subtitle: s.choixMultiple ? c.choixMultiple : null),
@@ -540,7 +542,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                   Row(children: [
                     Expanded(child: Text(o.libelle, style: t.titleSmall)),
                     if (s.maReponse?.contains(o.id) ?? false) const Padding(padding: EdgeInsetsDirectional.only(end: 6), child: Icon(Icons.check_circle_rounded, size: 18, color: SuColors.link)),
-                    Text('${o.nb} · ${o.pourcentage} %', textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
+                    AnimatedFigureText('${o.nb} · ${o.pourcentage} %', tint: false, textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
                   ]),
                   const SizedBox(height: 6),
                   Gauge(o.pourcentage / 100, color: SuColors.link),
@@ -571,22 +573,22 @@ class _OptionSondage extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
-      child: SuPressable(
+      child: SuTap(
         scale: 0.98,
+        ink: false,
+        borderRadius: BorderRadius.circular(20),
+        onTap: onTap,
         child: Material(
           color: selected ? SuColors.sageTint : SuColors.tile,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: selected ? SuColors.link : Colors.transparent, width: 1.5)),
           clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: onTap,
-            child: Padding(
+          child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
               child: Row(children: [
                 Icon(icon, color: selected ? SuColors.link : SuColors.faint, size: 24),
                 const SizedBox(width: 12),
                 Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium)),
               ]),
-            ),
           ),
         ),
       ),
@@ -664,7 +666,7 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
       const SizedBox(height: 12),
       Text(c.options, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.ink)),
       for (var i = 0; i < _options.length; i++) Padding(padding: const EdgeInsets.only(top: 8), child: SuField(label: fill(c.option, {'n': '${i + 1}'}), controller: _options[i], required: i < 2, maxLength: 200)),
-      if (_options.length < 10) Align(alignment: AlignmentDirectional.centerStart, child: TextButton.icon(onPressed: () => setState(() => _options.add(TextEditingController())), icon: const Icon(Icons.add_rounded, size: 18), label: Text(fill(c.option, {'n': '${_options.length + 1}'})))),
+      if (_options.length < 10) Align(alignment: AlignmentDirectional.centerStart, child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => setState(() => _options.add(TextEditingController())), icon: Icons.add_rounded, label: fill(c.option, {'n': '${_options.length + 1}'}))),
       const SizedBox(height: 8),
       SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? v, onChanged: (v) => setState(() => _audience = v)),
       if (_audience == 'BATIMENT') ...[const SizedBox(height: 12), SuField(label: c.batiment, controller: _batiment, required: true, error: fieldError(_fail, 'batiment'))],
@@ -694,7 +696,7 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
       const SizedBox(height: 12),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
-      SubmitButton(label: c.ouvrir, loading: _loading, onPressed: () => _envoyer(ouvrir: true)),
+      SubmitButton(label: c.ouvrir, loading: _loading, fail: _fail, onPressed: () => _envoyer(ouvrir: true)),
       const SizedBox(height: 8),
       SubmitButton(label: c.enregistrerBrouillon, secondary: true, onPressed: _loading ? null : () => _envoyer(ouvrir: false)),
     ]);
@@ -756,15 +758,15 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       if (_calmes) ...[
         const SizedBox(height: 8),
         Row(children: [
-          Expanded(child: OutlinedButton.icon(onPressed: () => _choisirHeure(true), icon: const Icon(Icons.bedtime_outlined, size: 18), label: Text('${c.heuresCalmesDebut} · $_calmesDebut'))),
+          Expanded(child: SuButton(variant: SuButtonVariant.secondary, onPressed: () => _choisirHeure(true), icon: Icons.bedtime_outlined, label: '${c.heuresCalmesDebut} · $_calmesDebut')),
           const SizedBox(width: 8),
-          Expanded(child: OutlinedButton.icon(onPressed: () => _choisirHeure(false), icon: const Icon(Icons.wb_sunny_outlined, size: 18), label: Text('${c.heuresCalmesFin} · $_calmesFin'))),
+          Expanded(child: SuButton(variant: SuButtonVariant.secondary, onPressed: () => _choisirHeure(false), icon: Icons.wb_sunny_outlined, label: '${c.heuresCalmesFin} · $_calmesFin')),
         ]),
       ],
       const SizedBox(height: 12),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
-      SubmitButton(label: d.common.save, loading: _loading, onPressed: () async {
+      SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: () async {
         setState(() { _loading = true; _fail = null; });
         final r = await ref.read(apiClientProvider).request<dynamic>('PUT', '/users/me/preferences-notification', body: PreferencesNotification(digestHebdo: _digest, canalDigest: _canal, annoncesPush: _push, pushNormal: _pushNormal, pushInfo: _pushInfo, pushSon: _pushSon, heuresCalmes: _calmes ? HeuresCalmes(debut: _calmesDebut, fin: _calmesFin) : null).toJson());
         if (!mounted) return;

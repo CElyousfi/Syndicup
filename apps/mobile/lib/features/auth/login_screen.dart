@@ -8,6 +8,7 @@ import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/auth/session.dart';
+import '../../core/feel/feel.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
@@ -108,6 +109,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             children: [
               Segmented<String>(value: _mode, options: const ['phone', 'email'], labelOf: (m) => m == 'phone' ? d.auth.tabPhone : d.auth.tabEmail, onChanged: (m) => setState(() { _mode = m; _fail = null; })),
               const SizedBox(height: 20),
+              SuFadeSwitch(
+                value: _mode,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
               if (_mode == 'phone') ...[
                 SuField(
                   label: d.auth.phoneLabel,
@@ -126,7 +132,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 FormError(_fail),
                 if (_fail != null) const SizedBox(height: 12),
-                SubmitButton(label: d.auth.sendCode, loading: _loading, onPressed: _sendOtp),
+                SubmitButton(label: d.auth.sendCode, loading: _loading, onPressed: _sendOtp, fail: _fail),
               ] else ...[
                 SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, error: fieldError(_fail, 'email'), autofillHints: const [AutofillHints.email], textInputAction: TextInputAction.next),
                 const SizedBox(height: 14),
@@ -134,15 +140,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: 16),
                 if (_fail?.status == 401) SuBanner(tone: BannerTone.danger, body: d.auth.invalidCredentials) else FormError(_fail),
                 if (_fail != null) const SizedBox(height: 12),
-                SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: _loginEmail),
+                SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: _loginEmail, fail: _fail),
               ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-        OutlinedButton.icon(onPressed: () => context.push('/invitation/scan'), icon: const Icon(Icons.qr_code_scanner_rounded, size: 18), label: Text(md.startScan)),
+        SuButton(label: md.startScan, icon: Icons.qr_code_scanner_rounded, variant: SuButtonVariant.secondary, onPressed: () => context.push('/invitation/scan')),
         const SizedBox(height: 12),
-        Center(child: TextButton(onPressed: () => context.push('/invitation'), child: Text(d.auth.inviteEnterCode))),
+        Center(child: SuButton(label: d.auth.inviteEnterCode, variant: SuButtonVariant.ghost, onPressed: () => context.push('/invitation'))),
       ],
     );
   }
@@ -209,7 +218,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
     if (!mounted) return;
     switch (res) {
       case ApiOk<SessionTokens>(:final data):
-        HapticFeedback.lightImpact();
+        Haptics.tap();
         setState(() => _succes = true);
         if (!SuMotion.reduced(context)) await Future<void>.delayed(const Duration(milliseconds: 420));
         if (!mounted) return;
@@ -217,7 +226,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         if (!mounted) return;
         if (widget.next != null) context.go(widget.next!);
       case ApiFail<SessionTokens>():
-        if (res.status == 401) HapticFeedback.mediumImpact();
+        if (res.status == 401) Haptics.error();
         setState(() {
           _loading = false;
           _fail = res;
@@ -265,7 +274,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              GestureDetector(
+              SuTap(
+                ink: false,
+                scale: 1,
                 onTap: () => _focus.requestFocus(),
                 child: Stack(
                   children: [
@@ -304,6 +315,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
                     ),
                     Opacity(
                       opacity: 0,
+                      // alive:allow champ OTP invisible (opacité 0) sous les 6 cases dessinées — SuField afficherait libellé/cadre
                       child: TextField(
                         controller: _code,
                         focusNode: _focus,
@@ -327,7 +339,7 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
               ],
               if (_resent) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.ok, body: d.auth.otpResend)],
               const SizedBox(height: 20),
-              SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: digits.length == 6 ? _verify : null),
+              SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: digits.length == 6 ? _verify : null, fail: _fail),
             ],
           ),
         ),
@@ -335,9 +347,9 @@ class _OtpScreenState extends ConsumerState<OtpScreen> {
         Center(
           child: _countdown > 0
               ? Text(fill(d.auth.otpResendIn, {'s': _countdown}), style: t.labelSmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w400))
-              : TextButton(onPressed: _resend, child: Text(d.auth.otpResend)),
+              : SuButton(label: d.auth.otpResend, variant: SuButtonVariant.ghost, onPressed: _resend),
         ),
-        Center(child: TextButton(onPressed: () => context.pop(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.auth.otpChangeNumber))),
+        Center(child: SuButton(label: d.auth.otpChangeNumber, variant: SuButtonVariant.ghost, onPressed: () => context.pop(), style: TextButton.styleFrom(foregroundColor: SuColors.soft))),
       ],
     );
   }

@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../../components/ui/modal";
+import { Modal } from "../../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../../components/ui/irreversible-notice";
 import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";

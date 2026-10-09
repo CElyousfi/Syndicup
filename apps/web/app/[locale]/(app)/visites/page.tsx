@@ -7,7 +7,7 @@ import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { SectionHeader } from "../../../../components/ui/card";
-import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
+import { Ligne, Lignes, type LigneLive } from "../../../../components/espaces/ligne-liste";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { CBell, CDoor } from "../../../../components/ui/color-icons";
@@ -69,13 +69,14 @@ export default async function VisitesPage({
     (x) => new Date(x.horodatage).toDateString() !== aujourdhui
   );
 
-  const CarteVisite = ({ visite }: { visite: Visite }) => {
+  const CarteVisite = ({ visite, ...live }: LigneLive & { visite: Visite }) => {
     const peutRepondre =
       visite.statut === "EN_ATTENTE" && (resident ? mesLotIds.has(visite.lotId) : false);
     const peutPlacer =
       (gardien || gestion) && placesVisiteurs.length > 0 && new Date(visite.horodatage).toDateString() === aujourdhui;
     return (
       <Ligne
+        {...live}
         icon={<CDoor width={22} height={22} />}
         tone={visite.statut === "EN_ATTENTE" ? "warn" : visite.statut === "AUTORISE" ? "sage" : "sand"}
         title={

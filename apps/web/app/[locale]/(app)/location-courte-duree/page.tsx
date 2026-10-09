@@ -28,6 +28,7 @@ import { declarationLcdVariant, regimeLcdVariant } from "../../../../lib/status"
 import { SejourListe } from "../../../../components/lcd/sejour-list";
 import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
 import { ConfirmerArriveeForm, ConfirmerDepartForm, DeclarerLotModal } from "./lcd-modals";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -323,7 +324,7 @@ export default async function LocationCourteDureePage({
                     <TH>{l.statut}</TH>
                     <TH>{l.dateDebut}</TH>
                   </THead>
-                  <tbody>
+                  <LiveList as="tbody">
                     {declarations.map((d) => (
                       <TR key={d.id}>
                         <TD>
@@ -352,7 +353,7 @@ export default async function LocationCourteDureePage({
                         <TD className="tnum text-[13px] text-soft">{formatDate(d.dateDebut, ctx.locale)}</TD>
                       </TR>
                     ))}
-                  </tbody>
+                  </LiveList>
                 </Table>
               </TableCard>
             )}

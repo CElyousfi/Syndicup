@@ -439,13 +439,9 @@ function PiedDeCarte({
         </div>
       </div>
       <div className="mt-3 flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={onSkip}
-          className="rounded-full px-3 py-1.5 text-[13px] font-semibold text-soft transition-colors hover:bg-wash hover:text-ink"
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onSkip} className="px-3 text-soft hover:text-ink">
           {labels.skip}
-        </button>
+        </Button>
         <span className="ms-auto" />
         {idx > 0 ? (
           <Button type="button" variant="ghost" size="sm" onClick={onBack}>

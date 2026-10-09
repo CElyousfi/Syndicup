@@ -2,7 +2,8 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { Card, SectionHeader } from "../../../../components/ui/card";
-import { Field, Input, Select, Textarea, Checkbox } from "../../../../components/ui/field";
+import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
+import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";

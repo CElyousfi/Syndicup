@@ -101,22 +101,22 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               SuField(label: p.nbLots, controller: _nbLots, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], textDirection: TextDirection.ltr, error: fieldError(_fail, 'nb_lots')),
               const SizedBox(height: 12),
               err('identite'),
-              SubmitButton(label: d.common.save, loading: _loading && _section == 'identite', onPressed: () => _save('identite', {'nom': _nom.text.trim(), 'adresse': _adresse.text.trim(), 'ville': _ville.text.trim(), 'nb_lots': _int(_nbLots)})),
+              SubmitButton(label: d.common.save, loading: _loading && _section == 'identite', fail: _section == 'identite' ? _fail : null, onPressed: () => _save('identite', {'nom': _nom.text.trim(), 'adresse': _adresse.text.trim(), 'ville': _ville.text.trim(), 'nb_lots': _int(_nbLots)})),
             ])),
             SectionHeader(p.reglement),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               SuField(label: p.totalTantiemes, controller: _tantiemes, help: p.totalTantiemesAide, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'total_tantiemes')),
               const SizedBox(height: 12),
               err('reglement'),
-              SubmitButton(label: d.common.save, loading: _loading && _section == 'reglement', onPressed: () => _save('reglement', {'total_tantiemes': _tantiemes.text.trim().isEmpty ? null : _tantiemes.text.trim()})),
+              SubmitButton(label: d.common.save, loading: _loading && _section == 'reglement', fail: _section == 'reglement' ? _fail : null, onPressed: () => _save('reglement', {'total_tantiemes': _tantiemes.text.trim().isEmpty ? null : _tantiemes.text.trim()})),
             ])),
             SectionHeader(p.options),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-              SwitchListTile(contentPadding: EdgeInsets.zero, value: _locPv, onChanged: (v) => setState(() => _locPv = v), title: Text(p.optLocatairesPv, style: t.titleMedium)),
-              SwitchListTile(contentPadding: EdgeInsets.zero, value: _resaProprio, onChanged: (v) => setState(() => _resaProprio = v), title: Text(p.optReservationProprio, style: t.titleMedium)),
+              SuSwitchRow(label: p.optLocatairesPv, value: _locPv, onChanged: (v) => setState(() => _locPv = v)),
+              SuSwitchRow(label: p.optReservationProprio, value: _resaProprio, onChanged: (v) => setState(() => _resaProprio = v)),
               const SizedBox(height: 12),
               err('options'),
-              SubmitButton(label: d.common.save, loading: _loading && _section == 'options', onPressed: () => _save('options', {'config_json': {...?c.configJson, 'locataire_voit_pv': _locPv, 'reservation_espaces_proprietaires_only': _resaProprio}})),
+              SubmitButton(label: d.common.save, loading: _loading && _section == 'options', fail: _section == 'options' ? _fail : null, onPressed: () => _save('options', {'config_json': {...?c.configJson, 'locataire_voit_pv': _locPv, 'reservation_espaces_proprietaires_only': _resaProprio}})),
             ])),
             SectionHeader(p.recouvrement, subtitle: p.recouvrementAide),
             // Politique de relance : une ligne clé / valeur par niveau.
@@ -141,6 +141,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               SubmitButton(
                 label: d.common.save,
                 loading: _loading && _section == 'legaux',
+                fail: _section == 'legaux' ? _fail : null,
                 onPressed: () async {
                   final ok = await confirmDialog(context, title: p.legaux, body: p.legauxBanner, confirmLabel: d.common.save);
                   if (!ok) return;
@@ -254,6 +255,7 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
     final perso = _photos.containsKey(cle);
     final busy = _enCours == cle;
     return SuCard(
+      key: ValueKey(cle),
       margin: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -280,10 +282,10 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: OutlinedButton.icon(onPressed: busy ? null : () => _changer(cle), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)), icon: busy ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.photo_library_rounded, size: 18), label: Text(perso ? context.mdict.photoChanger : d.parametres.logoChoisir))),
+              Expanded(child: SuButton(variant: SuButtonVariant.secondary, loading: busy, showSuccess: false, onPressed: () => _changer(cle), style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)), icon: Icons.photo_library_rounded, label: perso ? context.mdict.photoChanger : d.parametres.logoChoisir)),
               if (perso) ...[
                 const SizedBox(width: 8),
-                TextButton(onPressed: busy ? null : () => _retirer(cle), style: TextButton.styleFrom(foregroundColor: SuColors.danger), child: Text(d.parametres.photoRetirer)),
+                SuButton(variant: SuButtonVariant.ghost, onPressed: busy ? null : () => _retirer(cle), style: TextButton.styleFrom(foregroundColor: SuColors.danger), label: d.parametres.photoRetirer),
               ],
             ],
           ),

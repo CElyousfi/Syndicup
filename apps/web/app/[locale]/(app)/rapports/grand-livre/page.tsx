@@ -15,6 +15,8 @@ import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/u
 import { CCoins, CMoneyBag, CWallet } from "../../../../../components/ui/color-icons";
 import { ligneGrandLivreVariant } from "../../../../../lib/status";
 import { RapportsTabs, ExerciceLinks } from "../onglets";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -47,7 +49,7 @@ export default async function GrandLivrePage({ params, searchParams }: { params:
             <TableCard>
               <Table>
                 <THead><TH>{r.date}</TH><TH>{r.type}</TH><TH>{r.libelle}</TH><TH>{r.tiers}</TH><TH>{r.reference}</TH><TH align="end">{r.entree}</TH><TH align="end">{r.sortie}</TH><TH align="end">{r.soldeCourant}</TH><TH align="end">{r.soldeReserve}</TH></THead>
-                <tbody>
+                <LiveList as="tbody">
                   {res.data.lignes.map((l) => (
                     <TR key={`${l.entite}-${l.entite_id}`}>
                       <TD className="tnum whitespace-nowrap text-soft">{formatDate(l.date, ctx.locale)}</TD>
@@ -55,13 +57,13 @@ export default async function GrandLivrePage({ params, searchParams }: { params:
                       <TD className="font-semibold text-ink">{l.libelle}{l.categorie ? <span className="block text-[12px] text-faint">{l.categorie}</span> : null}</TD>
                       <TD className="text-body">{l.tiers ?? "—"}</TD>
                       <TD className="text-body"><span dir="ltr">{l.reference ?? "—"}</span></TD>
-                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ok">{l.entree ? mad(l.entree) : ""}</TD>
-                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-danger">{l.sortie ? mad(l.sortie) : ""}</TD>
-                      <TD align="end" className="tnum whitespace-nowrap font-bold text-ink">{mad(l.solde_compte_courant)}</TD>
-                      <TD align="end" className="tnum whitespace-nowrap text-body">{mad(l.solde_reserve)}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ok">{l.entree ? <Amount value={l.entree} locale={ctx.locale} /> : ""}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-danger">{l.sortie ? <Amount value={l.sortie} locale={ctx.locale} /> : ""}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-bold text-ink"><Amount value={l.solde_compte_courant} locale={ctx.locale} /></TD>
+                      <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={l.solde_reserve} locale={ctx.locale} /></TD>
                     </TR>
                   ))}
-                </tbody>
+                </LiveList>
               </Table>
             </TableCard>
           )}

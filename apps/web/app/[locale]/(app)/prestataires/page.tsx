@@ -12,6 +12,7 @@ import { Avatar } from "../../../../components/ui/avatar";
 import { PrestataireModal, ModifierPrestataireModal } from "./prestataire-modal";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { supprimerPrestataire } from "./actions";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -62,7 +63,7 @@ export default async function PrestatairesPage({
               <TH>{dict.lots.statut}</TH>
               {gestion ? <TH align="end">{dict.common.actions}</TH> : null}
             </THead>
-            <tbody>
+            <LiveList as="tbody">
               {prestataires.map((p) => (
                 <TR key={p.id}>
                   <TD className="font-semibold text-ink">
@@ -99,7 +100,7 @@ export default async function PrestatairesPage({
                   ) : null}
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

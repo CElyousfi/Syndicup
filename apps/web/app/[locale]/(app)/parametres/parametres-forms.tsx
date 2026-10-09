@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState } from "react";
-import { Field, Input, Select, Switch } from "../../../../components/ui/field";
+import { Field, Input, Select } from "../../../../components/ui/field";
+import { Switch } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
 import { Button } from "../../../../components/ui/button";

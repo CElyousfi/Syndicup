@@ -30,6 +30,8 @@ import { depenseVariant, incidentVariant, urgenceVariant } from "../../../../../
 import { AssignerModal, ChangerStatutModal } from "./incident-actions";
 import { CreerDepenseIncidentModal, EvaluerPrestataireModal } from "./incident-depense-modals";
 import { NotifierVehiculeModal } from "../../parkings/parkings-client";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 type IncidentAvecJournal = Incident & { logs: IncidentLog[]; createur?: IncidentCreateur | null };
 
@@ -263,7 +265,7 @@ export default async function IncidentDetailPage({
             {incident.logs.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{i.journalVide}</p>
             ) : (
-              <ol className="mt-5">
+              <LiveList as="ol" className="mt-5">
                 {incident.logs.map((log, idx) => {
                   const clos = log.statutApres === "RESOLU" || log.statutApres === "FERME";
                   const enCours = log.statutApres === "EN_COURS";
@@ -309,7 +311,7 @@ export default async function IncidentDetailPage({
                     </li>
                   );
                 })}
-              </ol>
+              </LiveList>
             )}
           </section>
 
@@ -326,7 +328,7 @@ export default async function IncidentDetailPage({
               {depenses.length === 0 ? (
                 <p className="mt-3 text-sm text-soft">{d.aucuneDepenseLiee}</p>
               ) : (
-                <ul className="-mx-3 mt-3">
+                <LiveList as="ul" className="-mx-3 mt-3">
                   {depenses.map((dep) => (
                     <li key={dep.id}>
                       <Link
@@ -341,14 +343,14 @@ export default async function IncidentDetailPage({
                           <span className="tnum block text-[13px] text-soft">{formatDate(dep.dateDepense, ctx.locale)}</span>
                         </span>
                         <span className="flex shrink-0 flex-col items-end gap-1 sm:flex-row sm:items-center sm:gap-3">
-                          <span className="tnum text-[15px] font-semibold text-ink">{formatMAD(dep.montantTtc, ctx.locale)}</span>
+                          <span className="tnum text-[15px] font-semibold text-ink"><Amount value={dep.montantTtc} locale={ctx.locale} /></span>
                           <Badge variant={depenseVariant[dep.statut]}>{e.statutDepense[dep.statut]}</Badge>
                         </span>
                         <IconChevronEnd width={18} height={18} className="shrink-0 text-link" />
                       </Link>
                     </li>
                   ))}
-                </ul>
+                </LiveList>
               )}
             </section>
           ) : null}

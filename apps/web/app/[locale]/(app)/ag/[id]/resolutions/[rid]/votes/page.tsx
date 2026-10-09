@@ -14,6 +14,8 @@ import { Banner } from "../../../../../../../../components/ui/banner";
 import { EmptyState } from "../../../../../../../../components/ui/empty-state";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../../../../components/ui/table";
 import { Avatar } from "../../../../../../../../components/ui/avatar";
+import { Figure } from "../../../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../../../components/ui/live-list";
 
 /** E6 — détail nominatif (SYNDIC uniquement, étiqueté « audit »). */
 export default async function VotesNominatifsPage({
@@ -65,7 +67,7 @@ export default async function VotesNominatifsPage({
               <TH align="end">{a.tantiemes}</TH>
               <TH>{dict.documents.date}</TH>
             </THead>
-            <tbody>
+            <LiveList as="tbody">
               {votesRes.data.map((v) => {
                 const nom = membreParId.get(v.utilisateurId);
                 return (
@@ -87,7 +89,7 @@ export default async function VotesNominatifsPage({
                     </Badge>
                   </TD>
                   <TD align="end" className="tnum text-body">
-                    {formatEntier(v.tantiemesRepresentes)}
+                    <Figure value={formatEntier(v.tantiemesRepresentes)} />
                   </TD>
                   <TD className="text-[13px] text-soft">
                     {formatDateHeure(v.horodatage, ctx.locale)}
@@ -95,7 +97,7 @@ export default async function VotesNominatifsPage({
                 </TR>
                 );
               })}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

@@ -110,9 +110,10 @@ class _RoundAction extends StatelessWidget {
           button: true,
           label: label,
           excludeSemantics: true,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
+          child: SuTap(
             onTap: onTap,
+            ink: false,
+            scale: 1,
             child: Column(
               children: [
                 SuPressable(
@@ -181,7 +182,7 @@ class _DashSyndic extends ConsumerWidget {
     final aValider = (reservations.valueOrNull ?? const <Reservation>[]).where((r) => r.statut == 'EN_ATTENTE').toList();
     final litigesOuverts = (litiges.valueOrNull ?? const <Litige>[]).where((x) => x.statut == 'OUVERT').toList();
 
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: refresh,
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
         key: key,
@@ -225,7 +226,7 @@ class _DashSyndic extends ConsumerWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(d.enums.escalade[n.niveau] ?? n.niveau, style: t.labelSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w700)),
-                          MoneyText(formatMAD(versChaine(n.montant), l), style: t.bodySmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w600)),
+                          AnimatedAmount(versChaine(n.montant), style: t.bodySmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w600), textDirection: TextDirection.ltr, maxLines: null, upIsGood: false),
                         ],
                       ),
                     ),
@@ -240,6 +241,7 @@ class _DashSyndic extends ConsumerWidget {
             CardList([
               for (final a in s.appels.take(5))
                 ListRow(
+                  key: ValueKey(a.id),
                   leading: const IconCircle(Icons.request_quote_rounded, tone: Tone.sand),
                   title: formatPeriode(a.periode, l),
                   subtitle: '${d.enums.typeAppel[a.type] ?? a.type} · ${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)}',
@@ -261,20 +263,20 @@ class _DashSyndic extends ConsumerWidget {
           if (ouverts.isEmpty)
             _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded)
           else
-            CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
+            CardList([for (final i in ouverts.take(5)) IncidentRow(i, key: ValueKey(i.id))]),
           SectionHeader(d.dash.prochaineAg),
           _AgCard(ag: prochaine.firstOrNull, creer: lectureSeule ? null : () => context.push('/ag/nouvelle')),
           SectionHeader(lectureSeule ? d.dash.litigesOuverts : d.dash.reservationsAValider, actionLabel: d.common.seeAll, onAction: () => context.push(lectureSeule ? '/litiges' : '/reservations')),
           if (lectureSeule)
             litigesOuverts.isEmpty
                 ? _EmptyLine(d.litiges.aucun, icon: Icons.gavel_rounded)
-                : CardList([for (final x in litigesOuverts.take(4)) ListRow(leading: const IconCircle(Icons.gavel_rounded, tone: Tone.lilac), title: x.type, subtitle: d.enums.escaladeLitige['${x.escaladeNiveau}'], onTap: () => context.push('/litiges'))])
+                : CardList([for (final x in litigesOuverts.take(4)) ListRow(key: ValueKey(x.id), leading: const IconCircle(Icons.gavel_rounded, tone: Tone.lilac), title: x.type, subtitle: d.enums.escaladeLitige['${x.escaladeNiveau}'], onTap: () => context.push('/litiges'))])
           else
             aValider.isEmpty
                 ? _EmptyLine(d.espaces.aucuneReservation, icon: Icons.event_available_rounded)
                 : CardList([
                     for (final r in aValider.take(4))
-                      ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.tosca), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true), onTap: () => context.push('/reservations')),
+                      ListRow(key: ValueKey(r.id), leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.tosca), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true), onTap: () => context.push('/reservations')),
                   ]),
           DocumentsCard(documents: documents.valueOrNull ?? const []),
         ],
@@ -300,7 +302,7 @@ class _AgCard extends StatelessWidget {
             const IconCircle(Icons.how_to_vote_rounded, tone: Tone.lilac),
             const SizedBox(width: 12),
             Expanded(child: Text(d.dash.aucuneAg, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
-            if (creer != null) TextButton(onPressed: creer, child: Text(d.dash.creerAg)),
+            if (creer != null) SuButton(variant: SuButtonVariant.ghost, onPressed: creer, label: d.dash.creerAg),
           ],
         ),
       );
@@ -395,7 +397,7 @@ class _DashResident extends ConsumerWidget {
     final voitTransparence = buildNav(ctx, d).expand((s) => s.items).any((i) => i.path == '/rapports/transparence');
     final afficheTransparence = voitTransparence && prochaine.isEmpty && (locataire || (ags?.hasValue ?? false));
 
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: refresh,
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
         key: key,
@@ -441,6 +443,7 @@ class _DashResident extends ConsumerWidget {
             CardList([
               for (final v in visitesEnAttente)
                 ListRow(
+                  key: ValueKey(v.id),
                   leading: const IconCircle(Icons.meeting_room_rounded, tone: Tone.warn),
                   title: fill(d.visites.demandeAcces, {'nom': v.visiteurNom, 'lot': lotsAffiches.where((x) => x.id == v.lotId).firstOrNull?.numero ?? '—'}),
                   subtitle: formatHeure(v.horodatage, l),
@@ -465,13 +468,13 @@ class _DashResident extends ConsumerWidget {
               ),
             ),
           SectionHeader(d.dash.mesIncidents, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
-          mesIncidents.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in mesIncidents.take(5)) IncidentRow(i)]),
+          mesIncidents.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in mesIncidents.take(5)) IncidentRow(i, key: ValueKey(i.id))]),
           SectionHeader(d.dash.mesReservations, actionLabel: d.common.seeAll, onAction: () => context.push('/reservations')),
           mesResas.isEmpty
               ? _EmptyLine(d.espaces.aucuneReservation, icon: Icons.event_available_rounded)
               : CardList([
                   for (final r in mesResas)
-                    ListRow(leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
+                    ListRow(key: ValueKey(r.id), leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
                 ]),
           if (pvDispo) ...[
             SectionHeader(d.dash.pvDisponibles),
@@ -483,6 +486,7 @@ class _DashResident extends ConsumerWidget {
               : CardList([
                   for (final n in notifs.valueOrNull!.take(4))
                     ListRow(
+                      key: ValueKey(n.id),
                       leading: IconCircle(Icons.notifications_rounded, tone: n.lu ? Tone.neutral : Tone.sand),
                       title: n.titre ?? n.templateCode,
                       subtitle: formatDateHeure(n.horodatageEnvoi, l),
@@ -575,7 +579,7 @@ class _DashGardien extends ConsumerWidget {
     final enAttente = all.where((v) => v.statut == 'EN_ATTENTE').toList();
     final ouverts = (incidents.valueOrNull ?? const <Incident>[]).where((i) => i.ouvert).toList();
 
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async {
         ref.invalidate(visitesProvider);
         ref.invalidate(incidentsProvider);
@@ -646,9 +650,9 @@ class _DashGardien extends ConsumerWidget {
           if (visites.hasError) ErrorState(error: visites.error!, onRetry: () => ref.invalidate(visitesProvider)),
           enAttente.isEmpty
               ? _EmptyLine(d.visites.aucuneVisite, icon: Icons.meeting_room_rounded)
-              : CardList([for (final v in enAttente.take(6)) ListRow(leading: Avatar(v.visiteurNom, size: 48), title: v.visiteurNom, subtitle: formatHeure(v.horodatage, l), trailing: StatusBadge(d.enums.statutVisite['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true))]),
+              : CardList([for (final v in enAttente.take(6)) ListRow(key: ValueKey(v.id), leading: Avatar(v.visiteurNom, size: 48), title: v.visiteurNom, subtitle: formatHeure(v.horodatage, l), trailing: StatusBadge(d.enums.statutVisite['EN_ATTENTE']!, variant: BadgeVariant.warn, pulse: true))]),
           SectionHeader(d.dash.incidentsOuverts, actionLabel: d.common.seeAll, onAction: () => context.push('/incidents')),
-          ouverts.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in ouverts.take(5)) IncidentRow(i)]),
+          ouverts.isEmpty ? _EmptyLine(d.incidents.aucunIncident, icon: Icons.build_rounded) : CardList([for (final i in ouverts.take(5)) IncidentRow(i, key: ValueKey(i.id))]),
         ],
       )),
     );
@@ -667,7 +671,7 @@ class _DashPrestataire extends ConsumerWidget {
     final incidents = ref.watch(incidentsProvider);
     final tickets = incidents.valueOrNull ?? const <Incident>[];
     final ouverts = tickets.where((i) => i.ouvert).toList();
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(incidentsProvider),
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
         key: key,
@@ -679,7 +683,7 @@ class _DashPrestataire extends ConsumerWidget {
             StatTile(icon: Icons.build_rounded, label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand),
           ]),
           SectionHeader(d.dash.mesTickets),
-          AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) => list.isEmpty ? EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: 'empty-incidents') : CardList([for (final i in list) IncidentRow(i)])),
+          AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) => list.isEmpty ? EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: 'empty-incidents') : CardList([for (final i in list) IncidentRow(i, key: ValueKey(i.id))])),
           const SizedBox(height: 16),
           SuBanner(tone: BannerTone.info, body: md.cloisonnement),
         ],

@@ -28,7 +28,6 @@ class DocumentsScreen extends ConsumerStatefulWidget {
 }
 
 class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
-  static final _pill = OutlineInputBorder(borderRadius: BorderRadius.circular(SuRadius.pill), borderSide: BorderSide.none);
   String _filtre = '';
   final _search = TextEditingController();
 
@@ -46,19 +45,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       children: [
         PhotoBanner('cour', title: ctx.copropriete?.nom),
         // Recherche Wise : pill greige pleine, loupe encre, sans liseré.
-        TextField(
-          controller: _search,
-          onChanged: (v) => setState(() => _filtre = v.toLowerCase()),
-          decoration: InputDecoration(
-            hintText: d.common.search,
-            prefixIcon: const Icon(Icons.search_rounded, color: SuColors.ink),
-            filled: true,
-            fillColor: SuColors.tile,
-            border: _pill,
-            enabledBorder: _pill,
-            focusedBorder: _pill.copyWith(borderSide: const BorderSide(color: SuColors.ink, width: 2)),
-          ),
-        ),
+        SuSearchField(hint: d.common.search, controller: _search, pill: true, onChanged: (v) => setState(() => _filtre = v.toLowerCase())),
         const SizedBox(height: 16),
         AsyncView(docs, onRetry: () => ref.invalidate(documentsProvider), data: (list) {
           final types = list.map((x) => x.type).toSet().toList()..sort();
@@ -75,7 +62,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
                 Wrap(spacing: 6, children: [for (final ty in types) StatusBadge(libelleTypeDocument(context, ty), variant: BadgeVariant.outline, small: true)]),
                 const SizedBox(height: 12),
               ],
-              CardList([for (final doc in visible) DocumentRow(doc, canDelete: ctx.isGestion)]),
+              CardList([for (final doc in visible) DocumentRow(doc, key: ValueKey(doc.id), canDelete: ctx.isGestion)]),
               const SizedBox(height: 16),
               Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 const Padding(padding: EdgeInsetsDirectional.only(top: 1, end: 6), child: Icon(Icons.lock_rounded, size: 14, color: SuColors.faint)),
@@ -109,8 +96,9 @@ class DocumentRow extends ConsumerWidget {
       title: doc.nom,
       subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
       trailing: canDelete
-          ? IconButton(
-              icon: const Icon(Icons.delete_outline_rounded, color: SuColors.faint),
+          ? SuIconButton(
+              icon: Icons.delete_outline_rounded,
+              color: SuColors.faint,
               onPressed: () async {
                 final ok = await confirmDialog(context, title: d.gestion.supprimer, body: d.gestion.documentSupprimerAide, danger: true, irreversible: true);
                 if (!ok) return;
@@ -142,7 +130,7 @@ class DocumentsCard extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(d.documents.titre, actionLabel: d.common.seeAll, onAction: () => context.push('/documents')),
-        CardList([for (final doc in documents.take(3)) DocumentRow(doc)]),
+        CardList([for (final doc in documents.take(3)) DocumentRow(doc, key: ValueKey(doc.id))]),
       ],
     );
   }
@@ -217,7 +205,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        OutlinedButton.icon(onPressed: _pick, icon: const Icon(Icons.attach_file_rounded), label: Text(_file?.name ?? d.documents.fichier)),
+        SuButton(label: _file?.name ?? d.documents.fichier, icon: Icons.attach_file_rounded, variant: SuButtonVariant.secondary, onPressed: _pick),
         Padding(padding: const EdgeInsets.only(top: 6), child: Text(d.documents.fichierAide, style: Theme.of(context).textTheme.bodySmall)),
         const SizedBox(height: 14),
         SuField(label: d.documents.nom, controller: _nom, error: fieldError(_fail, 'nom')),
@@ -228,7 +216,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.documents.televerser, loading: _loading, onPressed: _file == null ? null : _submit),
+        SubmitButton(label: d.documents.televerser, loading: _loading, onPressed: _file == null ? null : _submit, fail: _fail),
       ],
     );
   }

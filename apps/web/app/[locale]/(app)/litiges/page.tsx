@@ -15,6 +15,7 @@ import { CAlert, CScale, CShield, IconCircle } from "../../../../components/ui/c
 import { litigeVariant } from "../../../../lib/status";
 import { IconCheck } from "../../../../components/ui/icons";
 import { CloturerLitigeModal, DeclarerLitigeModal, EscaladerModal } from "./litige-actions";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({
   params,
@@ -99,9 +100,9 @@ export default async function LitigesPage({
           action={peutDeclarer ? <DeclarerLitigeModal dict={dict} locale={ctx.locale} /> : undefined}
         />
       ) : (
-        <div className="space-y-4">
+        <LiveList as="div" className="space-y-4">
           {litiges.map((l) => (
-            <Card key={l.id}>
+            <div key={l.id}><Card>
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="flex min-w-0 flex-1 items-start gap-3.5">
                   <span className="hidden sm:block">
@@ -151,9 +152,9 @@ export default async function LitigesPage({
 
               {/* Stepper des 3 niveaux d'escalade */}
               <StepperEscalade dict={dict} niveau={l.escaladeNiveau} />
-            </Card>
+            </Card></div>
           ))}
-        </div>
+        </LiveList>
       )}
     </div>
   );

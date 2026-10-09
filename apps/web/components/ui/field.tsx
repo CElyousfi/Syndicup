@@ -60,11 +60,7 @@ export function Field({
         {!required && optionalLabel ? (
           <span className="font-normal text-faint">({optionalLabel})</span>
         ) : null}
-        {valid ? (
-          <svg aria-hidden viewBox="0 0 18 18" className="su-tick ms-auto size-4 self-center">
-            <path d="M4.2 9.4 7.6 12.6 13.8 5.8" fill="none" stroke="var(--color-ok)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        ) : null}
+        {valid ? <span aria-hidden className="su-tick ms-auto size-4 self-center" /> : null}
       </label>
       {children}
       {error ? (
@@ -78,5 +74,5 @@ export function Field({
   );
 }
 
-/** Interrupteur, case à cocher, groupe radio : composants client vivants (toggle.tsx). */
-export { Switch, Checkbox, RadioGroup } from "./toggle";
+/* Interrupteur, case à cocher, groupe radio : composants client vivants dans toggle.tsx
+   (importés directement, pour que les pages publiques qui n'en ont pas besoin ne les chargent pas). */

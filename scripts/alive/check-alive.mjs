@@ -51,7 +51,7 @@ const ELEMENTS = {
       alive: [/\bAnimatedAmount\(/, /\bAnimatedNumber\(/, /\bAnimatedDigits\(/, /\bStatTile\(/, /\bKeyValueRow\.amount\(/, /\bMoneyText\(/],
       raw: [
         // Montant affiché tel quel (hors phrase interpolée '${formatMAD(...)}').
-        { re: /(?<!\$\{\s*)\bformatM(AD|ontant)\(/, fix: "AnimatedAmount / KeyValueRow.amount / StatTile(value:)", skip: /(value|hint):\s*formatM|\$\{\s*formatM/ },
+        { re: /(?<!\$\{\s*)\bformatM(AD|ontant)\(/, fix: "AnimatedAmount / KeyValueRow.amount / StatTile(value:)", skip: /(value|hint):[^,]*formatM|\$\{\s*formatM|\bfill\([^)]*formatM|\bAnimatedDigits\(/ },
       ],
     },
     {
@@ -117,7 +117,7 @@ const ELEMENTS = {
       key: "button",
       label: "Boutons d'envoi",
       alive: [/<SubmitButton\b/],
-      raw: [{ re: /type="submit"(?![^>]*su-btn)/, fix: "SubmitButton", skip: /<(Button|SubmitButton|IconButton)\b/ }],
+      raw: [{ re: /type="submit"(?![^>]*su-btn)/, fix: "SubmitButton", skip: /<(Button|SubmitButton|IconButton|Pressable)\b/ }],
     },
     {
       key: "number",

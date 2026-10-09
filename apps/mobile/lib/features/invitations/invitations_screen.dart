@@ -16,7 +16,6 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
-import '../../core/theme/motion.dart';
 
 /// J4 — invitations (syndic) : créer (rôle, lot, canal) → code 8 caractères + QR à transmettre.
 class InvitationsScreen extends ConsumerStatefulWidget {
@@ -56,6 +55,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
           return CardList([
             for (final i in sorted)
               ListRow(
+                key: ValueKey(i.id),
                 leading: IconCircle(Icons.vpn_key_rounded, tone: i.statut == 'EN_ATTENTE' ? Tone.action : Tone.neutral),
                 title: '${d.roles[i.roleCible] ?? i.roleCible}${i.lotId != null ? ' · ${lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull ?? ''}' : ''}',
                 subtitle: '${i.code} · ${d.enums.canal[i.canal] ?? i.canal} · ${d.invitations.expiration} ${formatDateCourte(i.expireLe, l)}${i.ouverteLe != null ? ' · ${d.invitations.ouverte}' : ''}',
@@ -74,12 +74,8 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
 
   Future<void> _detail(BuildContext context, Invitation i) async {
     final d = context.dict;
-    await showModalBottomSheet<void>(
-      useRootNavigator: true,
-      context: context,
-      sheetAnimationStyle: SuMotion.sheet,
-      isScrollControlled: true,
-      useSafeArea: true,
+    await showSuSheet<void>(
+      context,
       builder: (sheet) => SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
         child: Column(
@@ -90,7 +86,8 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
             CodeCard(invitation: i),
             const SizedBox(height: 16),
             if (i.statut == 'EXPIREE' || i.statut == 'EN_ATTENTE')
-              OutlinedButton.icon(
+              SuButton(
+                variant: SuButtonVariant.secondary,
                 onPressed: () async {
                   final r = await ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j)));
                   if (!sheet.mounted) return;
@@ -100,12 +97,13 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
                     showToast(context, d.invitations.regeneree);
                   }
                 },
-                icon: const Icon(Icons.refresh_rounded),
-                label: Text(d.invitations.regenerer),
+                icon: Icons.refresh_rounded,
+                label: d.invitations.regenerer,
               ),
             if (i.statut == 'EN_ATTENTE') const SizedBox(height: 8),
             if (i.statut == 'EN_ATTENTE')
-              TextButton(
+              SuButton(
+                variant: SuButtonVariant.ghost,
                 onPressed: () async {
                   final ok = await confirmDialog(sheet, title: d.gestion.invitationAnnuler, body: d.gestion.invitationAnnulerAide, danger: true);
                   if (!ok) return;
@@ -118,7 +116,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: SuColors.danger),
-                child: Text(d.gestion.invitationAnnuler),
+                label: d.gestion.invitationAnnuler,
               ),
           ],
         ),
@@ -155,12 +153,12 @@ class CodeCard extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(child: OutlinedButton.icon(onPressed: () {
+              Expanded(child: SuButton(variant: SuButtonVariant.secondary, onPressed: () {
                 Clipboard.setData(ClipboardData(text: invitation.code));
                 showToast(context, md.copied);
-              }, icon: const Icon(Icons.copy_rounded, size: 18), label: Text(d.common.copy))),
+              }, icon: Icons.copy_rounded, label: d.common.copy)),
               const SizedBox(width: 8),
-              Expanded(child: FilledButton.icon(onPressed: () => Share.share('${d.invitations.transmettre} : ${invitation.code}\n$lien'), icon: const Icon(Icons.share_rounded, size: 18), label: Text(d.common.share))),
+              Expanded(child: SuButton(onPressed: () => Share.share('${d.invitations.transmettre} : ${invitation.code}\n$lien'), icon: Icons.share_rounded, label: d.common.share)),
             ],
           ),
         ],
@@ -198,7 +196,7 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
           const SizedBox(height: 14),
           CodeCard(invitation: c),
           const SizedBox(height: 16),
-          FilledButton(onPressed: () => Navigator.pop(context), child: Text(d.common.close)),
+          SuButton(onPressed: () => Navigator.pop(context), label: d.common.close),
         ],
       );
     }
@@ -218,6 +216,7 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
         SubmitButton(
           label: d.common.create,
           loading: _loading,
+          fail: _fail,
           onPressed: (!_sansLot.contains(_role) && _lot == null)
               ? null
               : () async {

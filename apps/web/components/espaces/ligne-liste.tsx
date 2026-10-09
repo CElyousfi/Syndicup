@@ -2,15 +2,21 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { IconCircle, type IconTone } from "../ui/color-icons";
 import { IconChevronEnd } from "../ui/icons";
+import { LiveList } from "../ui/live-list";
 
 /**
  * Liste « transactions » Wise — à plat sur la toile (ou dans une tuile) : pastille ronde, titre
  * gras, sous-titre gris, statut à l'extrémité, chevron vert si la ligne mène quelque part.
  * Le lien du titre couvre toute la ligne (lien étiré) ; les actions restent cliquables au-dessus.
+ * Vivante : une ligne arrivée à l'actualisation se déplie, une ligne retirée se replie (LiveList) —
+ * les enfants doivent être clés et transmettre `data-live` jusqu'au <li> (voir `LigneLive`).
  */
 export function Lignes({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <ul className={`stagger-grid -mx-3 space-y-0.5 ${className}`}>{children}</ul>;
+  return <LiveList as="ul" className={`stagger-grid -mx-3 space-y-0.5 ${className}`}>{children}</LiveList>;
 }
+
+/** Attributs posés par LiveList sur l'élément de ligne (entrée / sortie animée). */
+export type LigneLive = { "data-live"?: string; "aria-hidden"?: boolean };
 
 export function Ligne({
   icon,
@@ -21,7 +27,8 @@ export function Ligne({
   extra,
   end,
   actions,
-}: {
+  ...live
+}: LigneLive & {
   icon: ReactNode;
   tone?: IconTone;
   title: ReactNode;
@@ -35,7 +42,7 @@ export function Ligne({
   actions?: ReactNode;
 }) {
   return (
-    <li className="relative flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+    <li {...live} className="relative flex flex-wrap items-center gap-x-4 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
       <IconCircle tone={tone} size={46}>
         {icon}
       </IconCircle>

@@ -60,6 +60,7 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
           <Field label={j.appel} htmlFor="appel_de_fonds_lot_id" required>
             <Select id="appel_de_fonds_lot_id" name="appel_de_fonds_lot_id" defaultValue="SOLDE">
               <option value="SOLDE">{j.surSolde}</option>
+              {/* alive:allow <option> natif : texte seul, aucun élément React possible */}
               {lignesDuLot.map((l) => <option key={l.id} value={l.id}>{formatPeriode(l.periode, locale)} · {j.restant} {formatMAD(l.restant, locale)}</option>)}
             </Select>
           </Field>

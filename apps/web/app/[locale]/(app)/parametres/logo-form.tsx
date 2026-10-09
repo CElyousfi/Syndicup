@@ -7,6 +7,7 @@ import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { IconCircle, CBuilding } from "../../../../components/ui/color-icons";
 import { retirerLogo, televerserLogo } from "./actions";
+import { FadeImg } from "../../../../components/ui/motion/fade-img";
 
 /**
  * Logo de la résidence — aperçu immédiat de l'image choisie, envoi en un geste, retrait
@@ -24,7 +25,7 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
     <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
       <div className="flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[22px] bg-surface">
         {src ? (
-          <img src={src} alt="" className="size-24 object-cover" />
+          <FadeImg src={src} alt="" className="size-24 object-cover" />
         ) : (
           <IconCircle tone="sage" size={56}>
             <CBuilding width={28} height={28} />
@@ -40,8 +41,7 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
           <div className="flex flex-wrap items-center gap-2">
             <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[14px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
-              <input
-                type="file"
+              <input type="file"
                 name="fichier"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 className="sr-only"

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge } from "../../../../components/ui/badge";
+import { Button } from "../../../../components/ui/button";
+import { LiveList } from "../../../../components/ui/live-list";
 import { CBell, IconCircle } from "../../../../components/ui/color-icons";
 import { IconCheck, IconChevronEnd } from "../../../../components/ui/icons";
 import { marquerLueEnFond } from "../../../../lib/notifications-link";
@@ -46,7 +48,7 @@ export function NotificationsList({
   // Liste Wise à plat sur la toile : pastille cloche, titre gras (non lue), date grise,
   // action et chevron vert à l'extrémité — aucune boîte autour.
   return (
-    <ul className="-mx-3 space-y-1">
+    <LiveList as="ul" className="-mx-3 space-y-1">
       {items.map((n) => (
         <li key={n.id}>
           <div
@@ -90,18 +92,20 @@ export function NotificationsList({
             </div>
             <div className="flex shrink-0 items-center gap-1 self-center">
               {!n.lu ? (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={(e) => {
                     e.stopPropagation();
                     marquer(n.id);
                   }}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-btn px-3 text-[13px] font-semibold text-link transition-colors hover:bg-action-tint"
+                  className="px-3 text-link hover:bg-action-tint"
                 >
                   <IconCheck width={15} height={15} />
                   <span className="hidden sm:inline">{marquerLuLabel}</span>
                   <span className="sr-only sm:hidden">{marquerLuLabel}</span>
-                </button>
+                </Button>
               ) : null}
               <IconChevronEnd
                 width={18}
@@ -112,6 +116,6 @@ export function NotificationsList({
           </div>
         </li>
       ))}
-    </ul>
+    </LiveList>
   );
 }

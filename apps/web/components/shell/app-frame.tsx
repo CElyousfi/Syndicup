@@ -16,6 +16,7 @@ import { useLive } from "./live";
 import { seDeconnecter } from "../../lib/actions/session-actions";
 import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
 import { armSounds, useSensations } from "../../lib/feel";
+import { useBadgePop } from "./badge-pop";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
   IconBell,
@@ -142,6 +143,7 @@ export function AppFrame({
   // préchargés au premier geste.
   const sensations = useSensations();
   useEffect(() => armSounds(), []);
+  useBadgePop();
   const logoSrc = coproId && coproLogo ? `/api/copro-logo?id=${coproId}&v=${encodeURIComponent(coproLogo)}` : null;
 
   // Fermer le menu mobile à chaque navigation.

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { AppelDeFonds, Lot } from "../../../../../../lib/api/types";
-import { formatDate, formatMAD, formatPeriode } from "../../../../../../lib/format";
+import { formatDate, formatPeriode } from "../../../../../../lib/format";
 import { ratio, sommeCentimes, versChaine, versCentimes } from "../../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { Badge } from "../../../../../../components/ui/badge";
@@ -13,6 +13,8 @@ import { CCoins, IconCircle } from "../../../../../../components/ui/color-icons"
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../../components/ui/table";
 import { appelVariant, escaladeVariant, ligneAppelVariant } from "../../../../../../lib/status";
 import { PaiementModal } from "../../../../../../components/finances/paiement-modal";
+import { Amount } from "../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../components/ui/live-list";
 
 export default async function AppelDetailPage({
   params,
@@ -73,7 +75,7 @@ export default async function AppelDetailPage({
             <div className="min-w-0">
               <p className="text-sm font-medium text-soft">{f.montantTotal}</p>
               <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[44px]">
-                {formatMAD(appel.montantTotal, ctx.locale)}
+                <Amount value={appel.montantTotal} locale={ctx.locale} />
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2">
                 <Badge variant={appelVariant[appel.statut]}>{dict.enums.statutAppel[appel.statut]}</Badge>
@@ -87,12 +89,12 @@ export default async function AppelDetailPage({
             </div>
             <div className="flex items-baseline justify-between gap-4 py-3">
               <dt className="text-soft">{f.paye}</dt>
-              <dd className="tnum font-semibold text-ok">{formatMAD(versChaine(paye), ctx.locale)}</dd>
+              <dd className="tnum font-semibold text-ok"><Amount value={versChaine(paye)} locale={ctx.locale} /></dd>
             </div>
             <div className="flex items-baseline justify-between gap-4 py-3">
               <dt className="text-soft">{f.restant}</dt>
               <dd className={`tnum font-semibold ${du - paye > 0n ? "text-danger" : "text-ink"}`}>
-                {formatMAD(versChaine(du - paye), ctx.locale)}
+                <Amount value={versChaine(du - paye)} locale={ctx.locale} upIsGood={false} />
               </dd>
             </div>
           </dl>
@@ -118,7 +120,7 @@ export default async function AppelDetailPage({
             <TH>{dict.lots.statut}</TH>
             <TH />
           </THead>
-          <tbody>
+          <LiveList as="tbody">
             {lignes.map((l) => {
               const lot = lotParId.get(l.lotId);
               const restant = versCentimes(l.montantDu) - versCentimes(l.montantPaye);
@@ -139,13 +141,13 @@ export default async function AppelDetailPage({
                     )}
                   </TD>
                   <TD align="end" className="tnum text-body">
-                    {formatMAD(l.montantDu, ctx.locale)}
+                    <Amount value={l.montantDu} locale={ctx.locale} />
                   </TD>
                   <TD align="end" className="tnum text-body">
-                    {formatMAD(l.montantPaye, ctx.locale)}
+                    <Amount value={l.montantPaye} locale={ctx.locale} />
                   </TD>
                   <TD align="end" className="tnum font-medium text-ink">
-                    {formatMAD(versChaine(restant), ctx.locale)}
+                    <Amount value={versChaine(restant)} locale={ctx.locale} upIsGood={false} />
                   </TD>
                   <TD>
                     <span className="inline-flex items-center gap-1.5">
@@ -168,7 +170,7 @@ export default async function AppelDetailPage({
                 </TR>
               );
             })}
-          </tbody>
+          </LiveList>
         </Table>
       </TableCard>
     </div>

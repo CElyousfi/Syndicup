@@ -2,7 +2,8 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import type React from "react";
-import { Modal, IrreversibleNotice } from "./modal";
+import { Modal } from "./modal";
+import { IrreversibleNotice } from "./irreversible-notice";
 import { Banner } from "./banner";
 import { Button } from "./button";
 import { FormAlert, SubmitButton } from "./form";

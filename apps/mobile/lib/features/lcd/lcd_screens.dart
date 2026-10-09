@@ -129,7 +129,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           child: SuBanner(
             tone: BannerTone.info,
             body: ctx.isSyndic ? d.lcd.regimeNonDefiniSyndic : d.lcd.regimeNonDefiniCorps,
-            action: ctx.isSyndic ? TextButton(onPressed: () => context.push('/location-courte-duree/reglement'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36)), child: Text(d.lcd.configurerReglement)) : null,
+            action: ctx.isSyndic ? SuButton(label: d.lcd.configurerReglement, variant: SuButtonVariant.ghost, onPressed: () => context.push('/location-courte-duree/reglement'), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36))) : null,
           ),
         );
       }
@@ -152,11 +152,9 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
             if (peutConfirmer && !enFile.contains(s.id))
               Padding(
                 padding: const EdgeInsets.only(bottom: 14),
-                child: SuPressable(
-                  child: action == 'arrivee'
-                      ? FilledButton.icon(onPressed: () => confirmerSejour(context, ref, s, action), icon: const Icon(Icons.login_rounded, size: 20), label: Text(d.lcd.confirmerArrivee))
-                      : OutlinedButton.icon(onPressed: () => confirmerSejour(context, ref, s, action), icon: const Icon(Icons.logout_rounded, size: 20), label: Text(d.lcd.confirmerDepart)),
-                ),
+                child: action == 'arrivee'
+                    ? SuButton(label: d.lcd.confirmerArrivee, icon: Icons.login_rounded, onPressed: () => confirmerSejour(context, ref, s, action))
+                    : SuButton(label: d.lcd.confirmerDepart, icon: Icons.logout_rounded, variant: SuButtonVariant.secondary, onPressed: () => confirmerSejour(context, ref, s, action)),
               ),
           ],
         );
@@ -182,17 +180,17 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           else ...[
             if (dj.arrivees.isNotEmpty) ...[
               groupe('${d.lcd.arrivees} · ${dj.arrivees.length}'),
-              CardList([for (final s in dj.arrivees) sejourTerrain(s, 'arrivee')]),
+              CardList([for (final s in dj.arrivees) KeyedSubtree(key: ValueKey(s.id), child: sejourTerrain(s, 'arrivee'))]),
               const SizedBox(height: 12),
             ],
             if (dj.departs.isNotEmpty) ...[
               groupe('${d.lcd.departs} · ${dj.departs.length}'),
-              CardList([for (final s in dj.departs) sejourTerrain(s, 'depart')]),
+              CardList([for (final s in dj.departs) KeyedSubtree(key: ValueKey(s.id), child: sejourTerrain(s, 'depart'))]),
               const SizedBox(height: 12),
             ],
             if (dj.enCours.where((s) => !dj.departs.any((x) => x.id == s.id)).isNotEmpty) ...[
               groupe('${d.lcd.enCours} · ${dj.enCours.length}'),
-              CardList([for (final s in dj.enCours.where((s) => !dj.departs.any((x) => x.id == s.id))) SejourRow(s, enAttente: enFile.contains(s.id))]),
+              CardList([for (final s in dj.enCours.where((s) => !dj.departs.any((x) => x.id == s.id))) SejourRow(s, key: ValueKey(s.id), enAttente: enFile.contains(s.id))]),
             ],
           ],
         ],
@@ -231,7 +229,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
               final c = ordre.indexOf(a.statut).compareTo(ordre.indexOf(b.statut));
               return c != 0 ? c : b.creeLe.compareTo(a.creeLe);
             });
-          return CardList([for (final x in sorted.take(50)) declarationRow(x)]);
+          return CardList([for (final x in sorted.take(50)) KeyedSubtree(key: ValueKey(x.id), child: declarationRow(x))]);
         }),
         tableauDuJour(),
       ] else if (ctx.isGardien) ...[
@@ -240,7 +238,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           final aujourdhui = jourIso(DateTime.now());
           final aVenir = list.where((s) => s.statut == 'PREVU' && s.jourArrivee.compareTo(aujourdhui) > 0).toList()..sort((a, b) => a.jourArrivee.compareTo(b.jourArrivee));
           if (aVenir.isEmpty) return const SizedBox.shrink();
-          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [SectionHeader(d.lcd.aVenir), CardList([for (final s in aVenir.take(20)) SejourRow(s)])]);
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [SectionHeader(d.lcd.aVenir), CardList([for (final s in aVenir.take(20)) SejourRow(s, key: ValueKey(s.id))])]);
         }),
       ] else ...[
         // Propriétaire / gestionnaire : mes déclarations, mes séjours.
@@ -261,7 +259,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CardList([for (final x in sorted) declarationRow(x)]),
+              CardList([for (final x in sorted) KeyedSubtree(key: ValueKey(x.id), child: declarationRow(x))]),
               if (sorted.any((x) => x.statut == 'EN_ATTENTE')) Padding(padding: const EdgeInsets.only(top: 10), child: SuBanner(tone: BannerTone.info, body: d.lcd.declareeEnAttente)),
             ],
           );
@@ -274,11 +272,11 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (actifs.isNotEmpty) CardList([for (final s in actifs) SejourRow(s)]),
+              if (actifs.isNotEmpty) CardList([for (final s in actifs) SejourRow(s, key: ValueKey(s.id))]),
               if (passes.isNotEmpty) ...[
                 const SizedBox(height: 14),
                 groupe(d.lcd.historique),
-                CardList([for (final s in passes.take(20)) SejourRow(s)]),
+                CardList([for (final s in passes.take(20)) SejourRow(s, key: ValueKey(s.id))]),
               ],
             ],
           );
@@ -291,10 +289,8 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     return Scaffold(
       appBar: ShellHeader(title: titre),
       floatingActionButton: fab,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: refresh,
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 112), physics: const AlwaysScrollableScrollPhysics(), children: contenu),
       ),
     );
@@ -381,6 +377,7 @@ class _DeclarationFormState extends ConsumerState<_DeclarationForm> {
                       });
                   }
                 },
+          fail: _fail,
         ),
       ],
     );
@@ -465,7 +462,7 @@ class _LcdReglementScreenState extends ConsumerState<LcdReglementScreen> {
           const SizedBox(height: 28),
           FormError(_fail),
           if (_fail != null) const SizedBox(height: 12),
-          SubmitButton(label: d.common.save, loading: _loading, onPressed: _submit),
+          SubmitButton(label: d.common.save, loading: _loading, onPressed: _submit, fail: _fail),
         ],
       ],
     );
@@ -626,7 +623,7 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
               if (peutGerer && x.ouverte) ...[
                 const SizedBox(height: 10),
                 // Destructif : contour rouge (confirmation « danger » + irréversible à l'appui).
-                OutlinedButton.icon(onPressed: _loading || sejourActif ? null : () => _cloturer(x), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: BorderSide(color: sejourActif ? SuColors.hairlineStrong : SuColors.danger, width: 1.2)), icon: const Icon(Icons.lock_outline_rounded, size: 20), label: Text(d.lcd.cloturer)),
+                SuButton(label: d.lcd.cloturer, icon: Icons.lock_outline_rounded, variant: SuButtonVariant.secondary, onPressed: _loading || sejourActif ? null : () => _cloturer(x), style: OutlinedButton.styleFrom(foregroundColor: SuColors.danger, side: BorderSide(color: sejourActif ? SuColors.hairlineStrong : SuColors.danger, width: 1.2))),
                 if (sejourActif) Padding(padding: const EdgeInsets.only(top: 8), child: Text(d.lcd.cloturerAide, style: t.bodySmall)),
               ],
               if (ctx.isGestion || ctx.isProprietaire) ...[
@@ -634,7 +631,7 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
                 Center(child: LinkButton(md.lcdVoirLot, onTap: () => context.push('/lots/${x.lotId}'))),
               ],
               SectionHeader(d.lcd.sejours, actionLabel: x.statut == 'VALIDEE' && ctx.declareSejoursLcd ? d.lcd.declarerSejour : null, onAction: () => context.push('/location-courte-duree/sejours/nouveau?lot=${x.lotId}')),
-              sejours.isEmpty ? Text(d.lcd.aucunSejour, style: t.bodyMedium?.copyWith(color: SuColors.soft)) : CardList([for (final s in sejours.take(30)) SejourRow(s)]),
+              sejours.isEmpty ? Text(d.lcd.aucunSejour, style: t.bodyMedium?.copyWith(color: SuColors.soft)) : CardList([for (final s in sejours.take(30)) SejourRow(s, key: ValueKey(s.id))]),
             ],
           );
         }),
@@ -704,6 +701,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
                       });
                   }
                 },
+          fail: _fail,
         ),
       ],
     );
@@ -758,21 +756,22 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
           Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: SuButton(
+                  label: d.common.copy,
+                  icon: Icons.copy_rounded,
+                  variant: SuButtonVariant.secondary,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: inv.code));
                     showToast(context, md.copied);
                   },
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: Text(d.common.copy),
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(child: FilledButton.icon(onPressed: () => Share.share('${d.invitations.transmettre} : ${inv.code}\n$lien'), icon: const Icon(Icons.share_rounded, size: 18), label: Text(d.common.share))),
+              Expanded(child: SuButton(label: d.common.share, icon: Icons.share_rounded, onPressed: () => Share.share('${d.invitations.transmettre} : ${inv.code}\n$lien'))),
             ],
           ),
           const SizedBox(height: 10),
-          TextButton(onPressed: () => Navigator.pop(context), child: Text(d.common.close)),
+          SuButton(label: d.common.close, variant: SuButtonVariant.ghost, onPressed: () => Navigator.pop(context)),
         ],
       );
     }
@@ -835,6 +834,7 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
                       });
                   }
                 },
+          fail: _fail,
         ),
       ],
     );
@@ -898,6 +898,7 @@ class _ContactsFormState extends ConsumerState<_ContactsForm> {
                 });
             }
           },
+          fail: _fail,
         ),
       ],
     );
@@ -944,7 +945,7 @@ class LcdLotSection extends ConsumerWidget {
           Padding(padding: const EdgeInsets.only(top: 18, bottom: 2), child: Text(d.lcd.derniersSejours, style: t.bodyMedium?.copyWith(color: SuColors.soft, fontWeight: FontWeight.w600))),
           CardList([
             for (final s in synth.derniersSejours.take(3))
-              ListRow(leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
+              ListRow(key: ValueKey(s.id), leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
           ]),
         ],
       ],

@@ -1,14 +1,17 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
-import { Field, Input, Select, Textarea, Checkbox, Switch } from "../../../../components/ui/field";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
+import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
+import { Checkbox, Switch } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Banner } from "../../../../components/ui/banner";
 import { IconCircle } from "../../../../components/ui/color-icons";
 import { ProgressBar } from "../../../../components/ui/progress";
+import { Figure } from "../../../../components/ui/amount";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { celebrate } from "../../../../lib/success";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
@@ -109,9 +112,9 @@ export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Lo
             <p className="text-sm text-body">{c.publierCorps}</p>
             <div className="flex flex-wrap gap-2">
               {(["maintenant", "programmer"] as const).map((m) => (
-                <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)} className={`inline-flex h-9 items-center rounded-full border px-4 text-[14px] font-semibold transition-colors ${mode === m ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-hover"}`}>
+                <Button key={m} type="button" size="sm" variant={mode === m ? "primary" : "ghost"} aria-pressed={mode === m} onClick={() => setMode(m)} className={`border text-[14px] transition-colors ${mode === m ? "border-cta" : "border-hairline-strong bg-surface"}`}>
                   {m === "maintenant" ? c.publierMaintenant : c.programmer}
-                </button>
+                </Button>
               ))}
             </div>
             {mode === "programmer" ? <Field label={c.dateProgrammee} htmlFor="publie_le" required error={fieldError(state, "publie_le")}><Input id="publie_le" name="publie_le" type="datetime-local" required dir="ltr" defaultValue={localInput(annonce.publieLe) || localInput(new Date(Date.now() + 3600_000).toISOString())} className="tnum text-start" /></Field> : null}
@@ -272,6 +275,7 @@ export function RepondreForm({ dict, locale, sondage }: { dict: Dict; locale: Lo
       <div className="space-y-2">
         {sondage.options.map((o) => (
           <label key={o.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-full bg-surface px-5 py-3 text-[15px] transition-colors hover:bg-lime-hover/40 has-[:checked]:bg-cta">
+            {/* alive:allow option de sondage en pastille : type checkbox/radio dynamique + required, que Checkbox/RadioGroup n'exposent pas */}
             <input type={sondage.choixMultiple ? "checkbox" : "radio"} name="choix" value={o.id} required={!sondage.choixMultiple} className="size-5 shrink-0 accent-brand" />
             <span className="font-semibold text-ink">{o.libelle}</span>
           </label>
@@ -293,9 +297,9 @@ export function ResultatsSondage({ dict, sondage }: { dict: Dict; sondage: Sonda
       <div className="space-y-3">
         {r.options.map((o) => (
           <div key={o.id}>
-            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[14px]"><span className="font-semibold text-ink">{o.libelle}{sondage.maReponse?.includes(o.id) ? <span className="ms-2 text-[13px] text-link">✓</span> : null}</span><span className="tnum shrink-0 font-semibold text-ink">{o.pourcentage} % <span className="font-normal text-soft">· {o.nb}</span></span></div>
+            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-[14px]"><span className="font-semibold text-ink">{o.libelle}{sondage.maReponse?.includes(o.id) ? <span className="ms-2 text-[13px] text-link">✓</span> : null}</span><span className="tnum shrink-0 font-semibold text-ink"><Figure value={`${o.pourcentage} %`} /> <span className="font-normal text-soft">· <Figure value={String(o.nb)} /></span></span></div>
             <ProgressBar ratio={o.pourcentage / 100} tone="action" />
-            {r.ponderation_tantiemes ? <div className="mt-1"><ProgressBar ratio={o.pourcentage_tantiemes / 100} tone="ink" /><p className="mt-1 text-[12px] text-soft">{c.parTantiemes} · <span className="tnum">{o.pourcentage_tantiemes} %</span></p></div> : null}
+            {r.ponderation_tantiemes ? <div className="mt-1"><ProgressBar ratio={o.pourcentage_tantiemes / 100} tone="ink" /><p className="mt-1 text-[12px] text-soft">{c.parTantiemes} · <Figure value={`${o.pourcentage_tantiemes} %`} /></p></div> : null}
           </div>
         ))}
       </div>

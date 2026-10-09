@@ -41,6 +41,7 @@ import { urgenceVariant } from "../../../../lib/status";
 import { chargerOnboarding } from "../import/onboarding-card";
 import { IconCalendar, IconScale, IconVote, IconWrench } from "../../../../components/ui/icons";
 import { AgPoster, ChecklistTile, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
+import { Amount } from "../../../../components/ui/amount";
 
 export async function DashboardSyndic({
   ctx,
@@ -272,19 +273,19 @@ export async function DashboardSyndic({
             {parNiveau.length === 0 ? (
               <Donut
                 size={168}
-                centerLabel={formatMAD(versChaine(impaye), locale)}
+                centerLabel={<Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />}
                 centerSub={dict.dash.impayes}
                 items={[
                   {
                     label: dict.finances.tauxPaiement,
                     value: Number(paye),
-                    display: formatMAD(versChaine(paye), locale),
+                    display: <Amount value={versChaine(paye)} locale={locale} />,
                     color: "var(--color-sage)",
                   },
                   {
                     label: dict.dash.impayes,
                     value: Number(impaye),
-                    display: formatMAD(versChaine(impaye), locale),
+                    display: <Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />,
                     color: "var(--color-danger)",
                   },
                 ]}
@@ -292,12 +293,12 @@ export async function DashboardSyndic({
             ) : (
               <Donut
                 size={168}
-                centerLabel={formatMAD(versChaine(impaye), locale)}
+                centerLabel={<Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />}
                 centerSub={dict.dash.impayes}
                 items={parNiveau.map((n) => ({
                   label: dict.enums.escalade[n.niveau],
                   value: Number(n.montant),
-                  display: formatMAD(versChaine(n.montant), locale),
+                  display: <Amount value={versChaine(n.montant)} locale={locale} upIsGood={false} />,
                 }))}
               />
             )}
@@ -421,8 +422,8 @@ export async function DashboardSyndic({
                     trailing={
                       <div className="w-32 sm:w-60">
                         <p className="tnum truncate text-[14px] font-bold text-ink">
-                          {formatMAD(versChaine(t.paye), locale)}
-                          <span className="hidden font-normal text-soft sm:inline"> / {formatMAD(a.montantTotal, locale)}</span>
+                          <Amount value={versChaine(t.paye)} locale={locale} />
+                          <span className="hidden font-normal text-soft sm:inline"> / <Amount value={a.montantTotal} locale={locale} /></span>
                         </p>
                         <MiniJauge ratio={t.ratio} />
                       </div>

@@ -35,6 +35,7 @@ class LitigesScreen extends ConsumerWidget {
             children: [
               for (int i = 0; i < sorted.length; i++)
                 SuEnter(
+                  key: ValueKey(sorted[i].id),
                   index: i,
                   child: Builder(builder: (context) {
                     final x = sorted[i];
@@ -222,6 +223,7 @@ class _LitigeFormState extends ConsumerState<_LitigeForm> {
         SubmitButton(
           label: d.litiges.declarer,
           loading: _loading,
+          fail: _fail,
           onPressed: () async {
             setState(() {
               _loading = true;

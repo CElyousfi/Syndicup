@@ -5,14 +5,17 @@ export function Card({
   className = "",
   padded = true,
   id,
+  "data-live": live,
 }: {
   children: ReactNode;
   className?: string;
   padded?: boolean;
   id?: string;
+  /** Posé par <LiveList> : la carte entre / sort en direct. */
+  "data-live"?: string;
 }) {
   return (
-    <div id={id} className={`card ${padded ? "p-6" : ""} ${className}`}>
+    <div id={id} data-live={live} className={`card ${padded ? "p-6" : ""} ${className}`}>
       {children}
     </div>
   );

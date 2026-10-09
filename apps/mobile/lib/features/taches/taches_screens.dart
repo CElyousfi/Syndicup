@@ -49,16 +49,16 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
         ref.invalidate(tachesProvider);
       },
       children: [
-        if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: TextButton(onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), child: Text(d.common.retry)))),
+        if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), label: d.common.retry))),
         if (!gardien) ...[
           FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? v }, onChanged: (v) => setState(() => _filtre = v)),
           const SizedBox(height: 16),
         ],
-        AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
+        SuFadeSwitch(value: _filtre, child: AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
           final visibles = gardien && _filtre == 'OUVERTES' ? rows.where((x) => x.ouverte).toList() : rows;
           if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search');
-          return CardList([for (final x in visibles) TacheRow(x, file: file)]);
-        }),
+          return CardList([for (final x in visibles) TacheRow(x, key: ValueKey(x.id), file: file)]);
+        })),
       ],
     );
   }
@@ -204,7 +204,11 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   SectionHeader(t.checklist, subtitle: fill(t.checklistProgres, {'n': '$nbFaits', 'total': '$nbEtapes'})),
                   SuCard(padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 4), child: Column(children: [
                     for (final it in x.checklist!)
-                      CheckboxListTile(value: it.fait, onChanged: x.peutMettreAJour && x.ouverte ? (v) => _cocher(x, it, v ?? false) : null, title: Text(it.libelle, style: it.fait ? tt.bodyLarge?.copyWith(decoration: TextDecoration.lineThrough, color: SuColors.soft) : tt.bodyLarge?.copyWith(color: SuColors.ink)), controlAffinity: ListTileControlAffinity.leading, contentPadding: const EdgeInsets.symmetric(horizontal: 10), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))),
+                      Padding(
+                        key: ValueKey(it.id),
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: SuCheckbox(value: it.fait, onChanged: x.peutMettreAJour && x.ouverte ? (v) => _cocher(x, it, v) : null, label: it.libelle, labelStyle: it.fait ? tt.bodyLarge?.copyWith(decoration: TextDecoration.lineThrough, color: SuColors.soft) : tt.bodyLarge?.copyWith(color: SuColors.ink)),
+                      ),
                   ])),
                 ],
                 if (lien != null) ...[
@@ -321,8 +325,8 @@ class _StatutSheetState extends State<_StatutSheet> {
       const SizedBox(height: 8),
       Row(children: [
         Expanded(child: Text(_piece?.nom ?? t.photo, style: Theme.of(context).textTheme.bodyMedium, overflow: TextOverflow.ellipsis)),
-        TextButton.icon(onPressed: () async { final p = await choisirPiece(context); if (p != null) setState(() => _piece = p); }, icon: const Icon(Icons.add_a_photo_outlined, size: 18), label: Text(d.common.add)),
-        if (_piece != null) IconButton(onPressed: () => setState(() => _piece = null), icon: const Icon(Icons.close_rounded, size: 18)),
+        SuButton(variant: SuButtonVariant.ghost, onPressed: () async { final p = await choisirPiece(context); if (p != null) setState(() => _piece = p); }, icon: Icons.add_a_photo_outlined, label: d.common.add),
+        if (_piece != null) SuIconButton(onPressed: () => setState(() => _piece = null), icon: Icons.close_rounded, iconSize: 18),
       ]),
       if (widget.tache.recurrenceFrequence != null && _statut == 'TERMINEE') Padding(padding: const EdgeInsets.only(top: 4), child: Text(t.recurrenceAide, style: Theme.of(context).textTheme.bodySmall)),
       const SizedBox(height: 12),
@@ -352,7 +356,8 @@ class ExecutionResolutionLigne extends ConsumerWidget {
         Text(t.execution, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.soft)),
         if (ex.taches.isEmpty) Text(t.aucuneTacheExecution, style: Theme.of(context).textTheme.bodySmall),
         for (final tk in ex.taches)
-          InkWell(
+          SuTap(
+            key: ValueKey('${tk['tache_id']}'),
             onTap: ctx.isGestion || ctx.isConseil ? () => context.push('/taches/${tk['tache_id']}') : null,
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 4),

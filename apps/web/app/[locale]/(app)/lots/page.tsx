@@ -28,6 +28,8 @@ import {
 import { lotVariant } from "../../../../lib/status";
 import { IconPlus, IconSearch } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
+import { Amount } from "../../../../components/ui/amount";
+import { LiveList } from "../../../../components/ui/live-list";
 
 /** Glyphe couleur par famille de lot — habitat vs bâtiment/annexe. */
 const LOTS_HABITAT = ["APPARTEMENT", "VILLA", "LOGE_GARDIEN"];
@@ -204,7 +206,7 @@ export default async function LotsPage({
                 <TH>{dict.lots.statut}</TH>
                 {voitSolde ? <TH align="end">{dict.lots.solde}</TH> : null}
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {lots.map((l) => {
                   const proprios = (l.proprietaires ?? []).filter((x) => !x.dateFin);
                   const noms = proprios
@@ -266,7 +268,7 @@ export default async function LotsPage({
                             <Badge variant="ok">{dict.enums.statutLigne.PAYE}</Badge>
                           ) : (
                             <span className="tnum font-bold text-danger">
-                              {formatMAD(versChaine(solde), ctx.locale)}
+                              <Amount value={versChaine(solde)} locale={ctx.locale} upIsGood={false} />
                             </span>
                           )}
                         </TD>
@@ -274,7 +276,7 @@ export default async function LotsPage({
                     </TR>
                   );
                 })}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
           {res.ok ? (

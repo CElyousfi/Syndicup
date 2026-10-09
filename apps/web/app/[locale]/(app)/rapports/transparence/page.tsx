@@ -21,6 +21,8 @@ import { CAlert, CChart, CFile, CMoneyBag, CWallet, IconCircle } from "../../../
 import { DocumentViewerButton, FileViewerButton } from "../../../../../components/documents/document-viewer";
 import { ExerciceLinks } from "../onglets";
 import { CategorieIcone } from "../categorie-icone";
+import { Amount, Figure } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 /** Teintes de la barre empilée sur la salle verte : lime d'abord (logo), puis accents clairs. */
 const TEINTES_AFFICHE = ["var(--color-lime)", "var(--color-sage)", "var(--color-tosca-mid)", "var(--color-sand-mid)", "var(--color-lilac-mid)", "var(--color-surface)"];
@@ -60,9 +62,9 @@ export default async function TransparencePage({ params, searchParams }: { param
                 <path d="M10 104 60 64l50 40V88L60 48 10 88z" fill="currentColor" />
               </svg>
               <p className="relative text-[15px] font-semibold text-white">{r.depenses} · <span className="tnum">{exercice}</span></p>
-              <p className="tnum relative mt-2 text-[40px] font-bold leading-none tracking-[-0.02em] text-lime sm:text-[56px]">{mad(dpc.total)}</p>
+              <p className="tnum relative mt-2 text-[40px] font-bold leading-none tracking-[-0.02em] text-lime sm:text-[56px]"><Amount value={dpc.total} locale={ctx.locale} /></p>
               {bvr.budget && bvr.totaux.montant_prevu ? (
-                <p className="relative mt-3 text-[14px] text-white/75">{r.prevu} <span className="tnum font-semibold text-white">{mad(bvr.totaux.montant_prevu)}</span>{bvr.totaux.pourcentage_realise ? <> · {r.realise} <span className="tnum font-semibold text-white">{bvr.totaux.pourcentage_realise} %</span></> : null}</p>
+                <p className="relative mt-3 text-[14px] text-white/75">{r.prevu} <span className="tnum font-semibold text-white"><Amount value={bvr.totaux.montant_prevu} locale={ctx.locale} /></span>{bvr.totaux.pourcentage_realise ? <> · {r.realise} <span className="tnum font-semibold text-white"><Figure value={`${bvr.totaux.pourcentage_realise} %`} /></span></> : null}</p>
               ) : null}
               <div className="relative mt-7">
                 <p className="mb-2.5 text-[13px] font-semibold text-white/70">{r.parCategorie}</p>
@@ -76,7 +78,7 @@ export default async function TransparencePage({ params, searchParams }: { param
                         <span className="mt-1 size-3 shrink-0 rounded-full" style={{ background: c.couleur }} aria-hidden />
                         <div className="min-w-0">
                           <p className="truncate text-[13px] text-white/75">{dict.enumsDepenses.categorieDepense[c.categorie]}</p>
-                          <p className="mt-0.5 flex items-baseline gap-2"><span className="tnum text-[17px] font-bold text-white">{mad(c.montant)}</span><span className="tnum rounded-full bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white">{Math.round(c.ratio * 100)}%</span></p>
+                          <p className="mt-0.5 flex items-baseline gap-2"><span className="tnum text-[17px] font-bold text-white"><Amount value={c.montant} locale={ctx.locale} /></span><span className="tnum rounded-full bg-white/15 px-1.5 py-0.5 text-[11px] font-bold text-white"><Figure value={`${Math.round(c.ratio * 100)}%`} /></span></p>
                         </div>
                       </li>
                     ))}
@@ -105,7 +107,7 @@ export default async function TransparencePage({ params, searchParams }: { param
                         <li key={po.poste_id} className="py-3.5">
                           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                             <span className="min-w-0 text-[14px] font-semibold text-ink">{po.libelle}<span className="ms-2 text-[12px] font-normal text-soft">{dict.enumsDepenses.categorieDepense[po.categorie]}</span></span>
-                            <span className="tnum text-[13px] text-soft"><b className="font-bold text-ink">{mad(po.realise)}</b> / {mad(po.montant_prevu)}</span>
+                            <span className="tnum text-[13px] text-soft"><b className="font-bold text-ink"><Amount value={po.realise} locale={ctx.locale} /></b> / <Amount value={po.montant_prevu} locale={ctx.locale} /></span>
                           </div>
                           <ProgressBar ratio={Math.min(1, ratio)} tone={po.depassement ? "danger" : ratio > 0.85 ? "warn" : "action"} className="mt-2" />
                         </li>
@@ -117,7 +119,7 @@ export default async function TransparencePage({ params, searchParams }: { param
               <Card className="lg:self-start">
                 <SectionHeader title={r.rapportsSoumis} subtitle={r.rapportsSoumisAide} />
                 {t.rapports_gestion.length === 0 ? <p className="mt-4 rounded-[16px] bg-surface px-4 py-3.5 text-[14px] text-soft">{r.aucunRapportSoumis}</p> : (
-                  <ul className="mt-4 space-y-2">
+                  <LiveList as="ul" className="mt-4 space-y-2">
                     {t.rapports_gestion.map((rg) => (
                       <li key={rg.document_id} className="flex items-center gap-3 rounded-[16px] bg-surface p-3">
                         <IconCircle tone="sage" size={42}><CFile /></IconCircle>
@@ -125,7 +127,7 @@ export default async function TransparencePage({ params, searchParams }: { param
                         <DocumentViewerButton documentId={rg.document_id} nom={rg.nom} labels={viewer} />
                       </li>
                     ))}
-                  </ul>
+                  </LiveList>
                 )}
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                   <Link href={p("/documents")} className="link text-[14px]">{dict.nav.documents}</Link>
@@ -137,7 +139,7 @@ export default async function TransparencePage({ params, searchParams }: { param
             <section className="mt-10">
               <SectionHeader title={r.depenses} subtitle={t.factures_visibles ? r.facturesVisibles : undefined} className="mb-3" />
               {t.depenses.length === 0 ? <EmptyState title={r.aucuneDepense} illustration="empty-appels" /> : (
-                <ul className="-mx-2 sm:-mx-3">
+                <LiveList as="ul" className="-mx-2 sm:-mx-3">
                   {t.depenses.map((d) => (
                     <li key={d.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[18px] px-2 py-3 transition-colors hover:bg-wash sm:flex-nowrap sm:px-3">
                       <CategorieIcone categorie={d.categorie} />
@@ -145,13 +147,13 @@ export default async function TransparencePage({ params, searchParams }: { param
                         <p className="text-[15px] font-bold leading-snug text-ink">{d.libelle}</p>
                         <p className="mt-0.5 text-[13px] text-soft">{dict.enumsDepenses.categorieDepense[d.categorie]}{d.source === "FONDS_RESERVE" ? ` · ${r.reserve}` : ""}{d.prestataire ? ` · ${d.prestataire}` : ""} · <span className="tnum">{formatDate(d.date, ctx.locale)}</span></p>
                       </div>
-                      <span className="tnum ms-auto shrink-0 text-[15px] font-bold text-ink">{mad(d.montant_ttc)}</span>
+                      <span className="tnum ms-auto shrink-0 text-[15px] font-bold text-ink"><Amount value={d.montant_ttc} locale={ctx.locale} /></span>
                       {t.factures_visibles && (d.factures ?? []).length > 0 ? (
                         <div className="flex w-full flex-wrap justify-end gap-1.5 sm:w-auto">{d.factures!.map((f) => <FileViewerButton key={f.id} src={f.url} nom={f.numero ?? d.libelle} labels={viewer} label={f.numero ?? r.voirFacture} />)}</div>
                       ) : null}
                     </li>
                   ))}
-                </ul>
+                </LiveList>
               )}
             </section>
           </>

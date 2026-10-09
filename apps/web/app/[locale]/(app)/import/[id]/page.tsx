@@ -15,6 +15,7 @@ import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/u
 import { CFile, CAlert, CShield } from "../../../../../components/ui/color-icons";
 import { importVariant } from "../../../../../lib/status";
 import { EtapesImport, ExecutionPanel, InvitationsMasseModal, MappingForm } from "../import-client";
+import { Figure } from "../../../../../components/ui/amount";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -85,11 +86,11 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
             <Card>
               <SectionHeader title={t.resultat} />
               <dl className="mt-4 grid grid-cols-2 gap-2.5">
-                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.crees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.crees}</dd></div>
-                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.misAJour}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.mis_a_jour}</dd></div>
-                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.ignorees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.ignorees}</dd></div>
-                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.dejaAppliquees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum">{j.resultat.deja_appliquees ?? 0}</dd></div>
-                <div className="col-span-2 rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.erreurs}</dt><dd className={`mt-1 text-[22px] font-bold leading-none tnum ${j.resultat.erreurs.length ? "text-danger" : "text-ink"}`}>{j.resultat.erreurs.length}</dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.crees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum"><Figure value={String(j.resultat.crees)} /></dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.misAJour}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum"><Figure value={String(j.resultat.mis_a_jour)} /></dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.ignorees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum"><Figure value={String(j.resultat.ignorees)} /></dd></div>
+                <div className="rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.dejaAppliquees}</dt><dd className="mt-1 text-[22px] font-bold leading-none text-ink tnum"><Figure value={String(j.resultat.deja_appliquees ?? 0)} /></dd></div>
+                <div className="col-span-2 rounded-2xl bg-surface p-3.5"><dt className="text-[12px] font-medium text-soft">{t.erreurs}</dt><dd className={`mt-1 text-[22px] font-bold leading-none tnum ${j.resultat.erreurs.length ? "text-danger" : "text-ink"}`}><Figure value={String(j.resultat.erreurs.length)} /></dd></div>
               </dl>
               {j.resultat.erreurs.length ? <ul className="mt-3 max-h-64 space-y-1 overflow-auto text-[12.5px] text-body">{j.resultat.erreurs.slice(0, 50).map((e) => <li key={e.n}><span className="font-mono text-faint">#{e.n}</span> {e.message}</li>)}</ul> : null}
               {j.resultat.echec ? <p className="mt-2 text-[12.5px] text-danger">{j.resultat.echec}</p> : null}

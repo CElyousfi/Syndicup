@@ -169,6 +169,65 @@ class _SuFieldState extends State<SuField> {
   }
 }
 
+/// Champ de recherche sans libellé (listes filtrables) : loupe, bouton d'effacement qui éclot
+/// dès qu'il y a du texte, anneau de focus animé du thème ; `pill` = variante greige pleine.
+class SuSearchField extends StatefulWidget {
+  const SuSearchField({super.key, required this.hint, required this.onChanged, this.controller, this.pill = false});
+  final String hint;
+  final ValueChanged<String> onChanged;
+  final TextEditingController? controller;
+  final bool pill;
+  @override
+  State<SuSearchField> createState() => _SuSearchFieldState();
+}
+
+class _SuSearchFieldState extends State<SuSearchField> {
+  late final TextEditingController _c = widget.controller ?? TextEditingController();
+
+  @override
+  void dispose() {
+    if (widget.controller == null) _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final pill = OutlineInputBorder(borderRadius: BorderRadius.circular(999), borderSide: BorderSide.none);
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _c,
+      builder: (context, v, _) => TextField(
+        controller: _c,
+        onChanged: widget.onChanged,
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: widget.hint,
+          prefixIcon: Icon(Icons.search_rounded, color: widget.pill ? SuColors.ink : null),
+          suffixIcon: AnimatedScale(
+            scale: v.text.isEmpty ? 0 : 1,
+            duration: SuMotion.of(context, SuTokens.base),
+            curve: SuMotion.spring,
+            child: SuIconButton(
+              icon: Icons.close_rounded,
+              tooltip: MaterialLocalizations.of(context).deleteButtonTooltip,
+              onPressed: v.text.isEmpty
+                  ? null
+                  : () {
+                      _c.clear();
+                      widget.onChanged('');
+                    },
+            ),
+          ),
+          filled: widget.pill ? true : null,
+          fillColor: widget.pill ? SuColors.tile : null,
+          border: widget.pill ? pill : null,
+          enabledBorder: widget.pill ? pill : null,
+          focusedBorder: widget.pill ? pill.copyWith(borderSide: const BorderSide(color: SuColors.ink, width: 2)) : null,
+        ),
+      ),
+    );
+  }
+}
+
 /// Sélecteur en feuille du bas (remplace `<select>`).
 class SuSelect<T> extends StatelessWidget {
   const SuSelect({super.key, required this.label, required this.value, required this.options, required this.labelOf, required this.onChanged, this.help, this.error, this.required = false, this.placeholder, this.enabled = true});
@@ -309,8 +368,11 @@ class Segmented<T> extends StatelessWidget {
 
 /// Case à cocher avec aide — la case se remplit en ressort et la coche SE TRACE ; `select()`.
 class SuCheckbox extends StatelessWidget {
-  const SuCheckbox({super.key, required this.value, required this.onChanged, required this.label, this.help, this.enabled = true});
+  const SuCheckbox({super.key, required this.value, required this.onChanged, required this.label, this.help, this.enabled = true, this.labelStyle});
   final bool value;
+
+  /// Style du libellé (ex. barré pour une étape faite) — fondu animé entre deux styles.
+  final TextStyle? labelStyle;
   final ValueChanged<bool>? onChanged;
   final String label;
   final String? help;
@@ -369,7 +431,11 @@ class SuCheckbox extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(label, style: t.bodyMedium?.copyWith(color: can ? SuColors.ink : SuColors.soft, fontWeight: FontWeight.w500)),
+                      AnimatedDefaultTextStyle(
+                        duration: SuMotion.of(context, SuTokens.base),
+                        style: labelStyle ?? t.bodyMedium!.copyWith(color: can ? SuColors.ink : SuColors.soft, fontWeight: FontWeight.w500),
+                        child: Text(label),
+                      ),
                       if (help != null) Text(help!, style: t.bodySmall),
                     ],
                   ),

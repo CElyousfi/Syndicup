@@ -16,6 +16,7 @@ import { Table, TD, TH, THead, TR } from "../../../../../../components/ui/table"
 import { CAlert, CChart, CMoneyBag, CWallet } from "../../../../../../components/ui/color-icons";
 import { rapportVariant, resolutionVariant, trancheVariant } from "../../../../../../lib/status";
 import { PdfRapportButtons, SoumettreModal } from "../../rapport-modals";
+import { Amount } from "../../../../../../components/ui/amount";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -66,7 +67,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
                   <THead><TH>{dict.depenses.poste}</TH><TH align="end">{r.prevu}</TH><TH align="end">{r.realise}</TH><TH align="end">{r.ecart}</TH></THead>
                   <tbody>
                     {d.budget_vs_realise.postes.map((po) => (
-                      <TR key={po.poste_id}><TD className="font-medium text-ink">{po.libelle}</TD><TD align="end" className="tnum text-body">{mad(po.montant_prevu)}</TD><TD align="end" className="tnum text-ink">{mad(po.realise)}</TD><TD align="end" className={`tnum ${po.depassement ? "text-danger" : "text-ok"}`}>{mad(po.ecart)}</TD></TR>
+                      <TR key={po.poste_id}><TD className="font-medium text-ink">{po.libelle}</TD><TD align="end" className="tnum text-body"><Amount value={po.montant_prevu} locale={ctx.locale} /></TD><TD align="end" className="tnum text-ink"><Amount value={po.realise} locale={ctx.locale} /></TD><TD align="end" className={`tnum ${po.depassement ? "text-danger" : "text-ok"}`}><Amount value={po.ecart} locale={ctx.locale} /></TD></TR>
                     ))}
                   </tbody>
                 </Table>
@@ -80,7 +81,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
                 <THead><TH>{r.date}</TH><TH>{r.libelle}</TH><TH>{r.prestataire}</TH><TH align="end">{r.montant}</TH></THead>
                 <tbody>
                   {d.depenses.map((dep) => (
-                    <TR key={dep.id}><TD className="tnum text-soft">{formatDate(dep.date, ctx.locale)}</TD><TD className="font-medium text-ink"><Link href={p(`/finances/depenses/${dep.id}`)} className="hover:text-link">{dep.libelle}</Link><span className="block text-[12px] text-faint">{dict.enumsDepenses.categorieDepense[dep.categorie]}</span></TD><TD className="text-body">{dep.prestataire ?? "—"}</TD><TD align="end" className="tnum text-ink">{mad(dep.montant_ttc)}</TD></TR>
+                    <TR key={dep.id}><TD className="tnum text-soft">{formatDate(dep.date, ctx.locale)}</TD><TD className="font-medium text-ink"><Link href={p(`/finances/depenses/${dep.id}`)} className="hover:text-link">{dep.libelle}</Link><span className="block text-[12px] text-faint">{dict.enumsDepenses.categorieDepense[dep.categorie]}</span></TD><TD className="text-body">{dep.prestataire ?? "—"}</TD><TD align="end" className="tnum text-ink"><Amount value={dep.montant_ttc} locale={ctx.locale} /></TD></TR>
                   ))}
                 </tbody>
               </Table>
@@ -94,13 +95,13 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
                   <THead><TH>{r.lot}</TH><TH align="center">{r.lignes}</TH><TH align="center">{r.retardMax}</TH><TH align="end">{r.resteDu}</TH></THead>
                   <tbody>
                     {d.impayes.par_lot.map((l) => (
-                      <TR key={l.lot_id}><TD className="font-medium text-ink"><Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="hover:text-link">{l.lot_numero}</Link>{l.conteste ? <Badge variant="warn" className="ms-2">{r.conteste}</Badge> : null}</TD><TD align="center" className="tnum text-body">{l.nb_lignes}</TD><TD align="center" className="tnum text-body">{l.retard_max_jours} j</TD><TD align="end" className="tnum text-danger">{mad(l.reste_du)}</TD></TR>
+                      <TR key={l.lot_id}><TD className="font-medium text-ink"><Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="hover:text-link">{l.lot_numero}</Link>{l.conteste ? <Badge variant="warn" className="ms-2">{r.conteste}</Badge> : null}</TD><TD align="center" className="tnum text-body">{l.nb_lignes}</TD><TD align="center" className="tnum text-body">{l.retard_max_jours} j</TD><TD align="end" className="tnum text-danger"><Amount value={l.reste_du} locale={ctx.locale} upIsGood={false} /></TD></TR>
                     ))}
                   </tbody>
                 </Table>
               </div>
             )}
-            <div className="mt-3 flex flex-wrap gap-2">{d.impayes.tranches.map((tr) => <Badge key={tr.tranche} variant={trancheVariant[tr.tranche]}>{dict.enumsRapports.tranche[tr.tranche]} · {mad(tr.montant)}</Badge>)}</div>
+            <div className="mt-3 flex flex-wrap gap-2">{d.impayes.tranches.map((tr) => <Badge key={tr.tranche} variant={trancheVariant[tr.tranche]}>{dict.enumsRapports.tranche[tr.tranche]} · <Amount value={tr.montant} locale={ctx.locale} upIsGood={false} /></Badge>)}</div>
           </Card>
         </div>
         <div className="min-w-0 space-y-4">
@@ -119,7 +120,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
             <SectionHeader title={r.reserveMouvements} />
             {d.reserve.mouvements.length === 0 ? <p className="mt-3 text-sm text-soft">{r.aucun}</p> : (
               <ul className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
-                {d.reserve.mouvements.map((m) => <li key={m.id} className="flex items-center justify-between gap-3 py-3"><span className="text-body">{formatDate(m.date, ctx.locale)} · {m.description ?? m.type}</span><span className={`tnum whitespace-nowrap font-bold ${m.montant.startsWith("-") ? "text-danger" : "text-ok"}`}>{mad(m.montant)}</span></li>)}
+                {d.reserve.mouvements.map((m) => <li key={m.id} className="flex items-center justify-between gap-3 py-3"><span className="text-body">{formatDate(m.date, ctx.locale)} · {m.description ?? m.type}</span><span className={`tnum whitespace-nowrap font-bold ${m.montant.startsWith("-") ? "text-danger" : "text-ok"}`}><Amount value={m.montant} locale={ctx.locale} /></span></li>)}
               </ul>
             )}
           </Card>
@@ -137,7 +138,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
             <dl className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
               <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.syndic}</dt><dd className="text-end font-semibold text-ink">{d.syndic.nom ?? r.nonRenseigne}</dd></div>
               <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.presidentConseil}</dt><dd className="text-end font-semibold text-ink">{d.president_conseil.nom ?? r.nonRenseigne}</dd></div>
-              <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.justificatifsAttente}</dt><dd className="text-end font-semibold tnum text-ink">{d.justificatifs_en_attente.nb} · {mad(d.justificatifs_en_attente.montant)}</dd></div>
+              <div className="flex justify-between gap-3 py-3"><dt className="text-soft">{r.justificatifsAttente}</dt><dd className="text-end font-semibold tnum text-ink">{d.justificatifs_en_attente.nb} · <Amount value={d.justificatifs_en_attente.montant} locale={ctx.locale} /></dd></div>
             </dl>
           </Card>
         </div>

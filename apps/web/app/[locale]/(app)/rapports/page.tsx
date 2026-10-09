@@ -23,6 +23,8 @@ import { CAlert, CChart, CMoneyBag, CWallet } from "../../../../components/ui/co
 import { IconChevronEnd } from "../../../../components/ui/icons";
 import { trancheVariant, urgenceVariant } from "../../../../lib/status";
 import { RapportsTabs, ExerciceLinks } from "./onglets";
+import { Amount, Figure } from "../../../../components/ui/amount";
+import { LiveList } from "../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -71,22 +73,22 @@ export default async function RapportsPage({ params, searchParams }: { params: P
               <Card>
                 <SectionHeader title={r.impayes} subtitle={r.impayesAide} action={<Link href={p(`/rapports/impayes?exercice=${exercice}`)} className="link text-[14px]">{r.voirTout}</Link>} />
                 <div className="mt-5">
-                  <AgeingBars items={t.impayes.tranches.map((tr) => ({ label: dict.enumsRapports.tranche[tr.tranche], value: num(tr.montant), display: mad(tr.montant), hint: `${tr.nb_lots} ${r.lots.toLowerCase()}`, tone: tr.tranche === "0_30" ? "info" : tr.tranche === "31_90" ? "warn" : "danger" }))} />
+                  <AgeingBars items={t.impayes.tranches.map((tr) => ({ label: dict.enumsRapports.tranche[tr.tranche], value: num(tr.montant), display: <Amount value={tr.montant} locale={ctx.locale} upIsGood={false} />, hint: `${tr.nb_lots} ${r.lots.toLowerCase()}`, tone: tr.tranche === "0_30" ? "info" : tr.tranche === "31_90" ? "warn" : "danger" }))} />
                 </div>
                 <h3 className="mt-7 text-[15px] font-bold text-ink">{r.topLots}</h3>
                 {t.impayes.top_lots.length === 0 ? <p className="mt-2 text-sm text-soft">{r.aucunImpaye}</p> : (
-                  <ul className="-mx-2 mt-2 space-y-0.5">
+                  <LiveList as="ul" className="-mx-2 mt-2 space-y-0.5">
                     {t.impayes.top_lots.map((l) => (
                       <li key={l.lot_id}>
                         <Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="group flex items-center gap-3 rounded-[14px] px-2 py-2 transition-colors hover:bg-wash">
                           <span className="tnum flex size-10 shrink-0 items-center justify-center rounded-full bg-surface text-[12px] font-bold text-ink" dir="ltr">{l.lot_numero}</span>
                           <span className="min-w-0 flex-1 text-[12.5px] text-soft">{l.retard_max_jours} j{l.conteste ? ` · ${r.conteste}` : ""}</span>
-                          <span className="tnum text-[14px] font-bold text-danger">{mad(l.reste_du)}</span>
+                          <span className="tnum text-[14px] font-bold text-danger"><Amount value={l.reste_du} locale={ctx.locale} upIsGood={false} /></span>
                           <IconChevronEnd width={16} height={16} className="shrink-0 text-link" />
                         </Link>
                       </li>
                     ))}
-                  </ul>
+                  </LiveList>
                 )}
               </Card>
             </div>
@@ -101,20 +103,20 @@ export default async function RapportsPage({ params, searchParams }: { params: P
                   <div className="mt-6 overflow-x-auto scroll-thin">
                     <Table>
                       <THead><TH>{dict.depenses.poste}</TH><TH align="end">{r.prevu}</TH><TH align="end">{r.realise}</TH><TH align="end">{r.ecart}</TH><TH align="end">%</TH></THead>
-                      <tbody>
+                      <LiveList as="tbody">
                         {bvr.postes.map((x) => (
                           <TR key={x.poste_id}>
                             <TD className="font-medium text-ink">{x.libelle}<span className="block text-[12px] text-faint">{dict.enumsDepenses.categorieDepense[x.categorie]}</span></TD>
-                            <TD align="end" className="tnum whitespace-nowrap text-body">{mad(x.montant_prevu)}</TD>
-                            <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(x.realise)}</TD>
-                            <TD align="end" className={`tnum whitespace-nowrap ${x.depassement ? "text-danger" : "text-ok"}`}>{mad(x.ecart)}</TD>
-                            <TD align="end" className="tnum whitespace-nowrap text-body">{x.pourcentage_realise ? `${x.pourcentage_realise} %` : "—"}</TD>
+                            <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={x.montant_prevu} locale={ctx.locale} /></TD>
+                            <TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={x.realise} locale={ctx.locale} /></TD>
+                            <TD align="end" className={`tnum whitespace-nowrap ${x.depassement ? "text-danger" : "text-ok"}`}><Amount value={x.ecart} locale={ctx.locale} /></TD>
+                            <TD align="end" className="tnum whitespace-nowrap text-body"><Figure value={x.pourcentage_realise ? `${x.pourcentage_realise} %` : "—"} /></TD>
                           </TR>
                         ))}
                         {bvr.hors_poste.map((h) => (
-                          <TR key={h.categorie}><TD className="text-body">{dict.depenses.horsPoste} — {dict.enumsDepenses.categorieDepense[h.categorie]}</TD><TD align="end">—</TD><TD align="end" className="tnum whitespace-nowrap text-ink">{mad(h.realise)}</TD><TD align="end">—</TD><TD align="end">—</TD></TR>
+                          <TR key={h.categorie}><TD className="text-body">{dict.depenses.horsPoste} — {dict.enumsDepenses.categorieDepense[h.categorie]}</TD><TD align="end">—</TD><TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={h.realise} locale={ctx.locale} /></TD><TD align="end">—</TD><TD align="end">—</TD></TR>
                         ))}
-                      </tbody>
+                      </LiveList>
                     </Table>
                   </div>
                 ) : null}
@@ -123,11 +125,11 @@ export default async function RapportsPage({ params, searchParams }: { params: P
                 <Card>
                   <SectionHeader title={r.depenses} subtitle={`${r.parCategorie} · ${r.exercice} ${exercice}`} />
                   <div className="mt-5">
-                    <Donut size={150} centerLabel={mad(t.depenses.exercice.total)} centerSub={`${t.depenses.exercice.nb}`} items={t.depenses.exercice.categories.map((c) => ({ label: dict.enumsDepenses.categorieDepense[c.categorie], value: num(c.montant), display: mad(c.montant) }))} />
+                    <Donut size={150} centerLabel={<Amount value={t.depenses.exercice.total} locale={ctx.locale} />} centerSub={`${t.depenses.exercice.nb}`} items={t.depenses.exercice.categories.map((c) => ({ label: dict.enumsDepenses.categorieDepense[c.categorie], value: num(c.montant), display: <Amount value={c.montant} locale={ctx.locale} /> }))} />
                   </div>
                   <div className="mt-5 flex items-center justify-between gap-3 rounded-[16px] bg-surface px-4 py-3 text-[13px]">
                     <span className="text-soft">{r.depensesMois}</span>
-                    <b className="tnum text-[15px] text-ink">{mad(t.depenses.mois.total)}</b>
+                    <b className="tnum text-[15px] text-ink"><Amount value={t.depenses.mois.total} locale={ctx.locale} /></b>
                   </div>
                 </Card>
                 <Card>
@@ -138,10 +140,10 @@ export default async function RapportsPage({ params, searchParams }: { params: P
                     ))}
                   </div>
                   <div className="mt-5 divide-y divide-wash-strong rounded-[16px] bg-surface px-4 text-sm">
-                    <Kv label={r.justificatifsAttente}><Link href={p("/finances/justificatifs")} className="tnum font-semibold text-ink hover:text-link">{t.justificatifs_en_attente.nb} · {mad(t.justificatifs_en_attente.montant)}</Link></Kv>
+                    <Kv label={r.justificatifsAttente}><Link href={p("/finances/justificatifs")} className="tnum font-semibold text-ink hover:text-link">{t.justificatifs_en_attente.nb} · <Amount value={t.justificatifs_en_attente.montant} locale={ctx.locale} /></Link></Kv>
                     <Kv label={dict.contrats.actifs}><Link href={p("/contrats")} className="tnum font-semibold text-ink hover:text-link">{t.contrats.actifs}</Link></Kv>
                     <Kv label={dict.contrats.aRenouveler}><Link href={p("/contrats?statut=A_RENOUVELER")} className={`tnum font-semibold ${t.contrats.a_echoir_30j + t.contrats.echus_90j > 0 ? "text-warn" : "text-ink"} hover:text-link`}>{t.contrats.a_echoir_30j + t.contrats.echus_90j}</Link></Kv>
-                    <Kv label={dict.contrats.echeances30}><Link href={p("/contrats/calendrier")} className="tnum font-semibold text-ink hover:text-link">{t.contrats.echeances_30j.nb} · {mad(t.contrats.echeances_30j.montant)}</Link></Kv>
+                    <Kv label={dict.contrats.echeances30}><Link href={p("/contrats/calendrier")} className="tnum font-semibold text-ink hover:text-link">{t.contrats.echeances_30j.nb} · <Amount value={t.contrats.echeances_30j.montant} locale={ctx.locale} /></Link></Kv>
                     <Kv label={dict.contrats.assurance}><Badge variant={t.contrats.assurance_immeuble_active ? "ok" : "danger"}>{t.contrats.assurance_immeuble_active ? dict.contrats.assuranceOk : dict.contrats.assuranceAbsente}</Badge></Kv>
                   </div>
                 </Card>

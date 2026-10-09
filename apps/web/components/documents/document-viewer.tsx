@@ -12,7 +12,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
-import { Spinner } from "../ui/form";
+import { FadeImg } from "../ui/motion/fade-img";
 import { IconDownload, IconEye } from "../ui/icons";
 
 export interface ViewerLabels {
@@ -180,8 +180,8 @@ function DocumentPreview({
 
   if (apercu.etat === "chargement") {
     return (
-      <div className="flex h-[50vh] items-center justify-center rounded-2xl bg-tile">
-        <Spinner className="size-6 text-soft" />
+      <div className="max-h-[68vh] overflow-hidden rounded-2xl bg-tile p-3" aria-busy="true">
+        <div className="skeleton mx-auto aspect-[1/1.414] w-full max-w-xl rounded-[18px]" />
       </div>
     );
   }
@@ -190,7 +190,7 @@ function DocumentPreview({
     return (
       <div className="max-h-[68vh] overflow-y-auto rounded-2xl bg-tile p-3 scroll-thin">
         {/* Aperçu d'un fichier utilisateur via URL d'objet locale — next/image inapplicable. */}
-        <img src={apercu.url} alt={nom} className="mx-auto h-auto max-w-full rounded-[10px]" />
+        <FadeImg src={apercu.url} alt={nom} className="mx-auto h-auto max-w-full rounded-[10px]" />
       </div>
     );
   }

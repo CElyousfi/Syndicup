@@ -35,11 +35,11 @@ class _MembresScreenState extends ConsumerState<MembresScreen> {
       onRefresh: () async => ref.invalidate(membresProvider),
       actions: [CircleIconButton(onTap: () => context.push('/invitations?nouvelle=1'), icon: Icons.person_add_alt_1_rounded, tooltip: d.membres.inviter)],
       children: [
-        TextField(onChanged: (v) => setState(() => _q = v.toLowerCase()), decoration: InputDecoration(hintText: d.membres.rechercher, prefixIcon: const Icon(Icons.search_rounded))),
+        SuSearchField(hint: d.membres.rechercher, onChanged: (v) => setState(() => _q = v.toLowerCase())),
         const SizedBox(height: 10),
         FilterChips<String>(value: _role, options: ['TOUS', ...d.roles.keys.where((r) => r != 'SUPER_ADMIN')], labelOf: (v) => v == 'TOUS' ? d.membres.tousRoles : d.roles[v]!, onChanged: (v) => setState(() => _role = v)),
         const SizedBox(height: 12),
-        AsyncView(membres, onRetry: () => ref.invalidate(membresProvider), data: (list) {
+        SuFadeSwitch(value: _role, child: AsyncView(membres, onRetry: () => ref.invalidate(membresProvider), data: (list) {
           final visible = list.where((m) {
             final nom = '${m.prenom ?? ''} ${m.nom ?? ''} ${m.email ?? ''} ${m.telephone ?? ''}'.toLowerCase();
             return (_q.isEmpty || nom.contains(_q)) && (_role == 'TOUS' || m.roles.any((r) => r.role == _role && r.actif));
@@ -49,11 +49,12 @@ class _MembresScreenState extends ConsumerState<MembresScreen> {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(fill(d.membres.total, {'n': visible.length, 'count': visible.length}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+              AnimatedFigureText(fill(d.membres.total, {'n': visible.length, 'count': visible.length}), tint: false, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
               const SizedBox(height: 4),
               CardList([
                 for (final m in visible)
                   ListRow(
+                    key: ValueKey(m.id),
                     leading: Avatar(nomComplet(m.prenom, m.nom) ?? m.email ?? '?', size: 48),
                     title: nomComplet(m.prenom, m.nom) ?? m.email ?? m.id.substring(0, 8),
                     subtitle: [
@@ -66,7 +67,7 @@ class _MembresScreenState extends ConsumerState<MembresScreen> {
               ]),
             ],
           );
-        }),
+        })),
       ],
     );
   }
@@ -106,7 +107,7 @@ class MembreDetailScreen extends ConsumerWidget {
               ),
               SectionHeader(d.membres.colContact),
               SuCard(child: Column(children: [
-                KeyValueRow(d.auth.phoneLabel, formatTelephone(p.telephone), valueWidget: p.telephone == null ? null : Align(alignment: AlignmentDirectional.centerEnd, child: TextButton(onPressed: () => launchUrl(Uri.parse('tel:${p.telephone}')), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)), child: Text(formatTelephone(p.telephone))))),
+                KeyValueRow(d.auth.phoneLabel, formatTelephone(p.telephone), valueWidget: p.telephone == null ? null : Align(alignment: AlignmentDirectional.centerEnd, child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => launchUrl(Uri.parse('tel:${p.telephone}')), style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 32)), label: formatTelephone(p.telephone)))),
                 KeyValueRow(d.auth.emailLabel, p.email ?? '—'),
                 KeyValueRow(d.profil.langue, p.languePreferee == 'AR' ? d.common.arabic : d.common.french),
                 if (annuaire != null) KeyValueRow(d.membres.colDepuis, formatDateCourte(annuaire.membreDepuis, l)),
@@ -115,7 +116,7 @@ class MembreDetailScreen extends ConsumerWidget {
               CardList([for (final r in p.roles) ListRow(leading: IconCircle(Icons.badge_rounded, tone: r.actif ? Tone.lilac : Tone.neutral), title: d.roles[r.role] ?? r.role, trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true))]),
               if (annuaire != null && annuaire.lots.isNotEmpty) ...[
                 SectionHeader(d.membres.colLots),
-                CardList([for (final x in annuaire.lots) ListRow(leading: const IconCircle(Icons.home_rounded, tone: Tone.sand), title: x.numero, subtitle: x.lien == 'PROPRIETAIRE' ? d.membres.proprietaireDe : d.membres.occupantDe, onTap: () => context.push('/lots/${x.id}'))]),
+                CardList([for (final x in annuaire.lots) ListRow(key: ValueKey(x.id), leading: const IconCircle(Icons.home_rounded, tone: Tone.sand), title: x.numero, subtitle: x.lien == 'PROPRIETAIRE' ? d.membres.proprietaireDe : d.membres.occupantDe, onTap: () => context.push('/lots/${x.id}'))]),
               ],
               if (ctx.isGestion) ...[
                 SectionHeader(d.membres.zoneDanger),

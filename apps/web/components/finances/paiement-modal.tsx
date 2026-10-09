@@ -3,7 +3,8 @@
 import { useActionState, useEffect, useState } from "react";
 import { Modal } from "../ui/modal";
 import { Segmented } from "../ui/tabs";
-import { Field, Input, Select, Checkbox } from "../ui/field";
+import { Field, Input, Select } from "../ui/field";
+import { Checkbox } from "../ui/toggle";
 import { FormAlert, SubmitButton } from "../ui/form";
 import { Button, ButtonLink } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -16,6 +17,7 @@ import { formatMAD } from "../../lib/format";
 import { ligneAppelVariant } from "../../lib/status";
 import { enregistrerPaiement } from "../../app/[locale]/(app)/finances/actions";
 import { IconCoins } from "../ui/icons";
+import { Amount } from "../ui/amount";
 
 interface LigneOption {
   id: string;
@@ -119,7 +121,7 @@ export function PaiementModal({
                   {resultat.affectations.map((a, i) => (
                     <li key={i} className="flex items-center justify-between gap-3 py-2.5">
                       <span className="tnum text-[15px] font-semibold text-ink">
-                        {formatMAD(a.montant, locale)}
+                        <Amount value={a.montant} locale={locale} />
                       </span>
                       <Badge variant={ligneAppelVariant[a.statut]}>
                         {a.statut === "PAYE" ? f.fifoLigneSoldee : f.fifoLignePartielle}
@@ -164,6 +166,7 @@ export function PaiementModal({
                 >
                   {lignes.map((l) => (
                     <option key={l.id} value={l.id}>
+                      {/* alive:allow <option> natif : texte seul, aucun élément React possible */}
                       {l.libelle} — {formatMAD(l.restant, locale)}
                     </option>
                   ))}

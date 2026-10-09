@@ -5,7 +5,7 @@ import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { Conge, EvaluationPersonnel, FichePaie, Lot, PersonnelDetail, PresencePersonnel, StatutPresence } from "../../../../../lib/api/types";
 import { getDict, isLocale, fill } from "../../../../../lib/i18n";
-import { formatDate, formatDateHeure, formatMAD, nomComplet } from "../../../../../lib/format";
+import { formatDate, formatDateHeure, nomComplet } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
@@ -18,6 +18,9 @@ import { Avatar } from "../../../../../components/ui/avatar";
 import { DocumentViewerButton, FileViewerButton } from "../../../../../components/documents/document-viewer";
 import { congeVariant, depenseVariant, fichePaieVariant, personnelVariant, presenceVariant } from "../../../../../lib/status";
 import { DossierModal, CnssButton, PreparerFicheModal, ValiderFicheModal, PayerFicheModal, DemanderCongeModal, DeciderCongeButtons, AnnulerCongeBouton, PresencesForm, PointerBouton, EvaluerModal } from "../rh-modals";
+import type { ReactNode } from "react";
+import { Amount, Figure } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -105,7 +108,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
                 <Kv k={pe.typeContrat} v={x.typeContrat ? en.typeContratTravail[x.typeContrat] : "—"} />
                 <Kv k={pe.dateEmbauche} v={x.dateEmbauche ? formatDate(x.dateEmbauche, ctx.locale) : "—"} />
                 <Kv k={pe.dateFinContrat} v={x.dateFinContrat ? formatDate(x.dateFinContrat, ctx.locale) : "—"} />
-                <Kv k={pe.salaireBrut} v={x.salaireBrutMensuel ? formatMAD(x.salaireBrutMensuel, ctx.locale) : "—"} />
+                <Kv k={pe.salaireBrut} v={x.salaireBrutMensuel ? <Amount value={x.salaireBrutMensuel} locale={ctx.locale} /> : "—"} />
                 <div className="rounded-[16px] bg-surface px-4 py-3 sm:col-span-2"><dt className="text-soft">{pe.cnss}</dt><dd className="mt-0.5 flex flex-wrap items-center gap-2 font-semibold text-ink"><span className="tnum" dir="ltr">{x.numeroCnssMasque ?? pe.cnssNonRenseigne}</span>{x.cnssRenseigne ? <CnssButton dict={dict} personnelId={x.id} /> : null}</dd><dd className="text-[12px] text-faint">{pe.cnssAide}</dd></div>
                 <Kv k={pe.contactUrgence} v={x.contactUrgence ?? "—"} />
               </> : null}
@@ -147,14 +150,14 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
           {fichesRes.data.length === 0 ? <EmptyState title={pe.aucuneFichePaie} illustration="empty-personnel" /> : (
             <div className="mt-4"><Table>
               <THead><TH>{pe.periode}</TH><TH align="end">{pe.brut}</TH><TH align="end">{pe.cotisationsSalariales}</TH><TH align="end">{pe.net}</TH>{gestion ? <TH align="end">{pe.coutEmployeur}</TH> : null}<TH>{dict.incidents.statut}</TH><TH></TH></THead>
-              <tbody>
+              <LiveList as="tbody">
                 {fichesRes.data.map((f) => (
                   <TR key={f.id}>
                     <TD className="tnum font-medium text-ink-strong"><span dir="ltr">{f.periode}</span></TD>
-                    <TD className="text-end tnum">{formatMAD(f.brut, ctx.locale)}</TD>
-                    <TD className="text-end tnum">{formatMAD(f.cotisationsSalarialesJson.total ?? "0", ctx.locale)}</TD>
-                    <TD className="text-end tnum whitespace-nowrap font-bold text-ink">{formatMAD(f.net, ctx.locale)}</TD>
-                    {gestion ? <TD className="text-end tnum">{formatMAD(f.coutTotalEmployeur, ctx.locale)}</TD> : null}
+                    <TD className="text-end tnum"><Amount value={f.brut} locale={ctx.locale} /></TD>
+                    <TD className="text-end tnum"><Amount value={f.cotisationsSalarialesJson.total ?? "0"} locale={ctx.locale} /></TD>
+                    <TD className="text-end tnum whitespace-nowrap font-bold text-ink"><Amount value={f.net} locale={ctx.locale} /></TD>
+                    {gestion ? <TD className="text-end tnum"><Amount value={f.coutTotalEmployeur} locale={ctx.locale} /></TD> : null}
                     <TD><div className="flex flex-wrap items-center gap-1"><Badge variant={fichePaieVariant[f.statut]}>{en.statutFichePaie[f.statut]}</Badge>{f.depense ? <a href={p(`/finances/depenses/${f.depense.id}`)}><Badge variant={depenseVariant[f.depense.statut]}>{dict.enumsDepenses.statutDepense[f.depense.statut]}</Badge></a> : null}</div></TD>
                     <TD className="text-end"><div className="flex flex-wrap justify-end gap-1.5">
                       {f.statut !== "BROUILLON" || gestion ? <FileViewerButton src={p(`/api/fiche-paie-pdf?personnel=${x.id}&fiche=${f.id}&langue=${ctx.locale}`)} nom={`fiche-paie-${f.periode}.pdf`} labels={viewer} label={pe.pdfFiche} /> : null}
@@ -163,7 +166,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
                     </div></TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table></div>
           )}
           <p className="mt-4 text-[12px] text-soft">{pe.mentionPaie}</p>
@@ -177,7 +180,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
           {congesRes.data.length === 0 ? <EmptyState title={pe.aucunConge} illustration="empty-reservations" /> : (
             <div className="mt-4"><Table>
               <THead><TH>{pe.typeConge}</TH><TH>{pe.dateDebut}</TH><TH>{pe.dateFin}</TH><TH align="end">{pe.nbJours}</TH><TH>{pe.remplacant}</TH><TH>{dict.incidents.statut}</TH><TH></TH></THead>
-              <tbody>
+              <LiveList as="tbody">
                 {congesRes.data.map((c) => (
                   <TR key={c.id}>
                     <TD className="font-medium text-ink-strong">{en.typeConge[c.type]}{c.motif ? <span className="block text-[12px] font-normal text-soft">{c.motif}</span> : null}{c.motifRefus ? <span className="block text-[12px] font-normal text-danger">{pe.motifRefus} : {c.motifRefus}</span> : null}</TD>
@@ -189,7 +192,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
                     <TD className="text-end">{c.statut === "DEMANDE" ? (gestion ? <DeciderCongeButtons dict={dict} locale={ctx.locale} conge={c} remplacants={remplacants} /> : soi ? <AnnulerCongeBouton dict={dict} locale={ctx.locale} congeId={c.id} /> : null) : null}</TD>
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table></div>
           )}
         </Card>
@@ -222,14 +225,14 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
           <SectionHeader title={pe.evaluations} action={(gestion || conseil) && x.statut !== "PARTI" ? <EvaluerModal dict={dict} locale={ctx.locale} personnelId={x.id} periodeDefaut={mois} /> : undefined} />
           <p className="mt-2 mb-2 text-[13px] text-soft">{pe.moyenne} : <b className="tnum text-ink-strong">{evalsRes.data.moyenne ?? "—"}</b> / 5 · {evalsRes.data.evaluations.length}</p>
           {evalsRes.data.evaluations.length === 0 ? <EmptyState title={pe.aucuneEvaluation} illustration="empty-taches" /> : (
-            <ul className="mt-3 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
+            <LiveList as="ul" className="mt-3 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
               {evalsRes.data.evaluations.map((ev) => (
                 <li key={ev.id} className="flex flex-wrap items-start justify-between gap-2 py-3.5 text-[13.5px]">
                   <div><p className="font-bold text-ink" dir="ltr">{ev.periode} <span className="text-warn">{"★".repeat(ev.note)}</span><span className="text-faint">{"★".repeat(5 - ev.note)}</span></p>{ev.commentaire ? <p className="text-body">{ev.commentaire}</p> : null}</div>
                   <p className="text-[12px] text-soft">{nomComplet(ev.evaluateur) ?? "—"} · {formatDateHeure(ev.creeLe, ctx.locale)}</p>
                 </li>
               ))}
-            </ul>
+            </LiveList>
           )}
         </Card>
       ) : null}
@@ -238,5 +241,5 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
 }
 
 /** Clé / valeur en sous-bloc blanc (dans la tuile greige). */
-function Kv({ k, v }: { k: string; v: string }) { return <div className="rounded-[16px] bg-surface px-4 py-3"><dt className="text-soft">{k}</dt><dd className="mt-0.5 font-semibold text-ink">{v}</dd></div>; }
-function Stat({ k, v }: { k: string; v: string }) { return <div className="rounded-[16px] bg-surface px-2 py-3"><p className="text-[12px] font-medium text-soft">{k}</p><p className="tnum mt-0.5 text-[22px] font-bold text-ink">{v}</p></div>; }
+function Kv({ k, v }: { k: string; v: ReactNode }) { return <div className="rounded-[16px] bg-surface px-4 py-3"><dt className="text-soft">{k}</dt><dd className="mt-0.5 font-semibold text-ink">{v}</dd></div>; }
+function Stat({ k, v }: { k: string; v: string }) { return <div className="rounded-[16px] bg-surface px-2 py-3"><p className="text-[12px] font-medium text-soft">{k}</p><p className="tnum mt-0.5 text-[22px] font-bold text-ink"><Figure value={v} /></p></div>; }

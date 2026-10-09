@@ -53,7 +53,7 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
       if (a != null && a.statut == 'CLOTUREE' && !ctx.isGestion) context.pushReplacement('/ag/${widget.id}/pv');
     });
     return ag.when(
-      loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, body: const Center(child: LoadingOrb())),
+      loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: const [LoadingList(count: 3, height: 150)]),
       error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
       data: (a) => ctx.isGestion ? _Pupitre(ag: a) : _VueVotant(ag: a),
     );
@@ -94,7 +94,7 @@ class _Salle extends StatelessWidget {
             children: [
               StatusBadge(d.enums.statutAg['EN_COURS'] ?? 'EN_COURS', variant: BadgeVariant.warn, pulse: true, small: true),
               const SizedBox(width: 10),
-              if (quorum != null) Expanded(child: Text(quorum!, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelMedium?.copyWith(color: Colors.white70))) else const Spacer(),
+              if (quorum != null) Expanded(child: AnimatedFigureText(quorum!, textAlign: TextAlign.end, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.labelMedium?.copyWith(color: Colors.white70))) else const Spacer(),
             ],
           ),
           const SizedBox(height: 22),
@@ -149,40 +149,35 @@ class _VoteChoice extends StatelessWidget {
       enabled: onTap != null,
       child: Opacity(
         opacity: onTap == null ? 0.5 : 1,
-        child: SuPressable(
-          enabled: onTap != null,
+        child: SuTap(
+          ink: false,
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
           child: AnimatedContainer(
             duration: SuMotion.of(context, SuMotion.base),
             curve: SuMotion.easeOut,
             height: 68,
             decoration: ShapeDecoration(color: selected ? color : SuColors.surface, shape: const StadiumBorder()),
-            child: Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                customBorder: const StadiumBorder(),
-                onTap: onTap,
-                child: Padding(
-                  padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 18, 0),
-                  child: Row(
-                    children: [
-                      AnimatedContainer(
-                        duration: SuMotion.of(context, SuMotion.base),
-                        width: 48,
-                        height: 48,
-                        decoration: BoxDecoration(color: selected ? Colors.white.withValues(alpha: 0.18) : tint, shape: BoxShape.circle),
-                        child: Icon(icon, size: 24, color: selected ? Colors.white : color),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(child: Text(label, style: t.titleLarge?.copyWith(color: fg), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                      AnimatedScale(
-                        scale: selected ? 1 : 0,
-                        duration: SuMotion.of(context, SuMotion.base),
-                        curve: SuMotion.easeOut,
-                        child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 26),
-                      ),
-                    ],
+            child: Padding(
+              padding: const EdgeInsetsDirectional.fromSTEB(10, 0, 18, 0),
+              child: Row(
+                children: [
+                  AnimatedContainer(
+                    duration: SuMotion.of(context, SuMotion.base),
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(color: selected ? Colors.white.withValues(alpha: 0.18) : tint, shape: BoxShape.circle),
+                    child: Icon(icon, size: 24, color: selected ? Colors.white : color),
                   ),
-                ),
+                  const SizedBox(width: 14),
+                  Expanded(child: Text(label, style: t.titleLarge?.copyWith(color: fg), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                  AnimatedScale(
+                    scale: selected ? 1 : 0,
+                    duration: SuMotion.of(context, SuMotion.base),
+                    curve: SuMotion.easeOut,
+                    child: const Icon(Icons.check_circle_rounded, color: Colors.white, size: 26),
+                  ),
+                ],
               ),
             ),
           ),
@@ -312,7 +307,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
             _fail!.error.code == 'CONFLICT' ? SuBanner(tone: BannerTone.warn, body: d.ag.dejaVote) : FormError(_fail),
             const SizedBox(height: 12),
           ],
-          SubmitButton(label: md.registerVote, loading: _loading, onPressed: _choix == null ? null : () => _confirmer(r)),
+          SubmitButton(label: md.registerVote, loading: _loading, fail: _fail, onPressed: _choix == null ? null : () => _confirmer(r)),
           const SizedBox(height: 10),
           Text(d.ag.voteImmuable, style: t.bodySmall, textAlign: TextAlign.center),
         ],
@@ -411,7 +406,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
         if (ag.statut == 'CLOTUREE') ...[
           SuBanner(tone: BannerTone.ok, title: d.ag.cloturee, body: d.ag.toutesFinalisees),
           const SizedBox(height: 12),
-          FilledButton.icon(onPressed: () => context.pushReplacement('/ag/${ag.id}/pv'), icon: const Icon(Icons.gavel_rounded), label: Text(d.ag.pv)),
+          SuButton(onPressed: () => context.pushReplacement('/ag/${ag.id}/pv'), icon: Icons.gavel_rounded, label: d.ag.pv),
         ] else if (r == null) ...[
           EmptyState(title: d.ag.aucuneResolution, icon: Icons.list_alt_rounded, illustration: 'empty-ag'),
         ] else ...[
@@ -450,6 +445,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
             SubmitButton(
               label: '${d.ag.finaliser} · ${d.ag.resolution} ${r.ordre}',
               loading: _loading,
+              fail: _fail,
               icon: Icons.check_rounded,
               onPressed: () async {
                 final ok = await confirmDialog(context, title: d.ag.finaliser, body: d.ag.finaliserCorps, irreversible: true);

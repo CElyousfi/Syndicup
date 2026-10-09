@@ -9,6 +9,9 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { IconCamera, IconImage, IconX } from "../ui/icons";
+import { Button } from "../ui/button";
+import { IconButton } from "../ui/pressable";
+import { FadeImg } from "../ui/motion/fade-img";
 
 const MAX_PHOTOS = 5;
 const MAX_COTE = 1600;
@@ -72,8 +75,7 @@ export function PhotoPicker({
   };
 
   // Déclencheurs : pills blanches sur la tuile pointillée (greige).
-  const boutonCls =
-    "inline-flex h-11 flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-btn bg-surface px-4 text-[14px] font-semibold text-ink-strong transition-colors hover:bg-hover sm:flex-none";
+  const boutonCls = "flex-1 bg-surface px-4 text-[14px] hover:bg-hover sm:flex-none";
 
   return (
     <div>
@@ -81,9 +83,8 @@ export function PhotoPicker({
 
       {/* Champ réel (multipart) + déclencheurs cachés caméra / galerie */}
       <input ref={champRef} type="file" name={name} multiple hidden tabIndex={-1} aria-hidden />
-      <input
+      <input type="file"
         ref={cameraRef}
-        type="file"
         accept="image/*"
         capture="environment"
         hidden
@@ -92,9 +93,8 @@ export function PhotoPicker({
           e.target.value = "";
         }}
       />
-      <input
+      <input type="file"
         ref={galerieRef}
-        type="file"
         accept="image/*"
         multiple
         hidden
@@ -118,15 +118,15 @@ export function PhotoPicker({
             {apercus.map((url, i) => (
               <li key={url} className="relative animate-in-up">
                 {/* Aperçu local (URL d'objet) — next/image inapplicable. */}
-                <img src={url} alt="" className="size-20 rounded-2xl object-cover" />
-                <button
-                  type="button"
+                <FadeImg src={url} alt="" className="size-20 rounded-2xl object-cover" />
+                <IconButton
+                  tone="none"
                   onClick={() => setFichiers((prev) => prev.filter((_, j) => j !== i))}
-                  aria-label={labels.retirer(i + 1)}
-                  className="absolute -end-1.5 -top-1.5 flex size-6 items-center justify-center rounded-full bg-ink text-white transition-transform hover:scale-110"
+                  label={labels.retirer(i + 1)}
+                  className="absolute -end-1.5 -top-1.5 h-6 w-6 bg-ink text-white transition-transform hover:scale-110"
                 >
                   <IconX width={12} height={12} />
-                </button>
+                </IconButton>
               </li>
             ))}
           </ul>
@@ -134,14 +134,14 @@ export function PhotoPicker({
 
         {fichiers.length < MAX_PHOTOS ? (
           <div className="mt-4 flex flex-wrap gap-2">
-            <button type="button" onClick={() => cameraRef.current?.click()} className={boutonCls}>
+            <Button type="button" variant="ghost" onClick={() => cameraRef.current?.click()} className={boutonCls}>
               <IconCamera width={17} height={17} className="text-link" />
               {labels.prendre}
-            </button>
-            <button type="button" onClick={() => galerieRef.current?.click()} className={boutonCls}>
+            </Button>
+            <Button type="button" variant="ghost" onClick={() => galerieRef.current?.click()} className={boutonCls}>
               <IconImage width={17} height={17} className="text-link" />
               {labels.galerie}
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

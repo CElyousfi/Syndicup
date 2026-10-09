@@ -107,12 +107,11 @@ class _PlanTab extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final plan = ref.watch(planEmplacementsProvider);
     final mes = resident ? ref.watch(attributionsProvider('')) : const AsyncValue<List<AttributionEmplacement>>.data([]);
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async {
         ref.invalidate(planEmplacementsProvider);
         ref.invalidate(attributionsProvider);
       },
-      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(resident ? t.subtitleResident : t.subtitle, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         if (resident) ...[
@@ -122,6 +121,7 @@ class _PlanTab extends ConsumerWidget {
               : CardList([
                   for (final a in rows)
                     ListRow(
+                      key: ValueKey(a.id),
                       leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral),
                       title: '${a.emplacementCode} · ${t.lot} ${a.lotNumero ?? '—'}',
                       subtitle: '${e.typeAttribution[a.type] ?? a.type} · ${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
@@ -235,7 +235,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
                   KeyValueRow(t.lotBeneficiaire, c.lotNumero ?? '—'),
                   KeyValueRow(t.type, e.typeAttribution[c.type] ?? c.type),
                   KeyValueRow(t.periode, '${formatJourAnnee(c.dateDebut, l)} → ${c.dateFin != null ? formatJourAnnee(c.dateFin, l) : t.sansFin}'),
-                  KeyValueRow(t.redevance, c.redevanceMensuelle != null ? formatMAD(c.redevanceMensuelle, l) : '—'),
+                  c.redevanceMensuelle != null ? KeyValueRow.amount(t.redevance, c.redevanceMensuelle) : KeyValueRow(t.redevance, '—'),
                   if (c.notes != null) KeyValueRow(t.notes, c.notes!),
                 ])),
           SectionHeader(t.historique),
@@ -244,6 +244,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
               : CardList([
                   for (final a in x.attributions)
                     ListRow(
+                      key: ValueKey(a.id),
                       leading: IconCircle(Icons.history_rounded, tone: a.active ? Tone.ok : Tone.neutral),
                       title: '${t.lot} ${a.lotNumero ?? '—'} · ${e.typeAttribution[a.type] ?? a.type}',
                       subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
@@ -344,6 +345,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
     final liste = ref.watch(vehiculesProvider(''));
     final peutDeclarer = ctx.isResident || ctx.isGestion;
     Widget ligne(Vehicule v, {bool actions = false}) => ListRow(
+          key: ValueKey(v.id),
           leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : v.type == 'UTILITAIRE' ? Icons.local_shipping_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral),
           title: v.immatriculation,
           subtitle: '${t.lot} ${v.lotNumero ?? '—'} · ${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}',
@@ -351,9 +353,8 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
               ? PopupMenuButton<String>(icon: const Icon(Icons.more_vert_rounded, color: SuColors.link), onSelected: (k) => k == 'edit' ? _declarer(v) : _retirer(v), itemBuilder: (_) => [PopupMenuItem(value: 'edit', child: Text(d.common.modify)), PopupMenuItem(value: 'del', child: Text(t.retirerVehicule))])
               : StatusBadge(v.actif ? t.actif : t.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
         );
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async { ref.invalidate(vehiculesProvider); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
-      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [
         if (ctx.isGardien || ctx.isGestion) ...[
           // Recherche de plaque : titre de section Wise + tuile greige (champ blanc, pill « Rechercher »).
@@ -363,7 +364,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
               Expanded(child: SuField(label: t.immatriculation, controller: _plaque, hint: '12345-A-6', keyboardType: TextInputType.visiblePassword)),
               const SizedBox(width: 8),
               // Le thème fixe minimumSize = Size.fromHeight(…) (largeur infinie) : borné explicitement dans une Row.
-              Padding(padding: const EdgeInsets.only(top: 22), child: FilledButton.icon(style: FilledButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 14)), onPressed: _recherche ? null : _chercher, icon: const Icon(Icons.search_rounded, size: 18), label: Text(t.rechercherAction))),
+              Padding(padding: const EdgeInsets.only(top: 22), child: SuButton(label: t.rechercherAction, icon: Icons.search_rounded, style: FilledButton.styleFrom(minimumSize: const Size(0, 48), padding: const EdgeInsets.symmetric(horizontal: 14)), onPressed: _recherche ? null : _chercher)),
             ]),
             if (!online) Padding(padding: const EdgeInsets.only(top: 8), child: StatusBadge(context.mdict.offlineCached, variant: BadgeVariant.warn, small: true)),
             if (_resultat != null) ...[
@@ -453,7 +454,7 @@ class _VehiculeFormState extends ConsumerState<VehiculeForm> {
       const SizedBox(height: 12),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
-      SubmitButton(label: widget.existant == null ? t.declarerVehicule : d.common.save, loading: _loading, onPressed: _immat.text.trim().length >= 2 || _loading ? _envoyer : null),
+      SubmitButton(label: widget.existant == null ? t.declarerVehicule : d.common.save, loading: _loading, onPressed: _immat.text.trim().length >= 2 || _loading ? _envoyer : null, fail: _fail),
     ]);
   }
 }
@@ -482,9 +483,8 @@ class _BadgesTab extends ConsumerWidget {
     final l = context.locale;
     final liste = ref.watch(badgesProvider(''));
     final peutSignaler = ctx.isResident || ctx.isGestion;
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(badgesProvider),
-      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
         SectionHeader(ctx.isResident ? t.mesBadges : t.badges),
         AsyncView(liste, onRetry: () => ref.invalidate(badgesProvider), data: (rows) => rows.isEmpty
@@ -492,6 +492,7 @@ class _BadgesTab extends ConsumerWidget {
             : CardList([
                 for (final b in rows)
                   ListRow(
+                    key: ValueKey(b.id),
                     leading: IconCircle(switch (b.type) { 'TELECOMMANDE_PARKING' => Icons.settings_remote_rounded, 'CLE_CAVE' => Icons.key_rounded, 'CARTE_ASCENSEUR' => Icons.elevator_rounded, _ => Icons.badge_rounded }, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral),
                     title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}',
                     subtitle: '${t.lot} ${b.lotNumero ?? '—'} · ${t.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${t.caution} ${formatMAD(b.cautionMontant, l)}' : ''}${b.restitueLe != null ? ' · ${t.restitueLe} ${formatJourAnnee(b.restitueLe, l)}' : ''}',
@@ -515,9 +516,8 @@ class _VisiteursTab extends ConsumerWidget {
     final l = context.locale;
     final tt = Theme.of(context).textTheme;
     final jour = ref.watch(visiteursAujourdhuiProvider);
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(visiteursAujourdhuiProvider),
-      color: SuColors.link,
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(t.visiteursJourAide, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         AsyncView(jour, onRetry: () => ref.invalidate(visiteursAujourdhuiProvider), data: (j) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -544,6 +544,7 @@ class _VisiteursTab extends ConsumerWidget {
             CardList([
               for (final v in j.visites)
                 ListRow(
+                  key: ValueKey('visite-${v['visite_id']}'),
                   leading: IconCircle(v['depassee'] == true ? Icons.timer_off_rounded : Icons.local_parking_rounded, tone: v['depassee'] == true ? Tone.danger : Tone.sand),
                   title: '${(v['emplacement'] as Map?)?['code'] ?? '—'} · ${v['visiteur_nom']}',
                   subtitle: '${t.lot} ${v['lot'] ?? '—'} · ${v['immatriculation'] ?? '—'} · ${formatHeure('${v['horodatage']}', l)}${v['heure_limite'] != null ? ' · ${t.heureLimite} ${formatHeure('${v['heure_limite']}', l)}' : ''}',
@@ -551,6 +552,7 @@ class _VisiteursTab extends ConsumerWidget {
                 ),
               for (final s in j.sejours)
                 ListRow(
+                  key: ValueKey('sejour-${s['sejour_id']}'),
                   leading: const IconCircle(Icons.luggage_rounded, tone: Tone.lilac),
                   title: '${(s['emplacement'] as Map?)?['code'] ?? '—'} · ${s['voyageur']}',
                   subtitle: '${t.lot} ${s['lot'] ?? '—'} · ${s['immatriculation'] ?? '—'} · ${t.depart} ${formatJourAnnee('${s['date_depart']}', l)}',
@@ -615,11 +617,11 @@ class _PlaceVisiteurSheetState extends ConsumerState<PlaceVisiteurSheet> {
       SuField(label: t.immatriculation, controller: _immat, hint: '12345-A-6', optionalLabel: d.common.optional, error: fieldError(_fail, 'immatriculation'), keyboardType: TextInputType.visiblePassword),
       const SizedBox(height: 12),
       if (_place != null)
-        OutlinedButton.icon(onPressed: _choisirHeure, icon: const Icon(Icons.schedule_rounded, size: 18), label: Text('${t.heureLimite} · ${_limite != null ? formatHeure(_limite!.toIso8601String(), l) : '—'}')),
+        SuButton(label: '${t.heureLimite} · ${_limite != null ? formatHeure(_limite!.toIso8601String(), l) : '—'}', icon: Icons.schedule_rounded, variant: SuButtonVariant.secondary, onPressed: _choisirHeure),
       const SizedBox(height: 12),
       FormError(_fail),
       if (_fail != null) const SizedBox(height: 12),
-      SubmitButton(label: t.attribuerPlace, loading: _loading, onPressed: _loading ? null : _envoyer),
+      SubmitButton(label: t.attribuerPlace, loading: _loading, onPressed: _loading ? null : _envoyer, fail: _fail),
     ]);
   }
 }

@@ -18,6 +18,8 @@ import { CBuilding, CDoor, CKey, CAlert } from "../../../../components/ui/color-
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { badgeAccesVariant, emplacementVariant } from "../../../../lib/status";
 import { BadgeDesactiverModal, BadgeModal, BadgePerduModal, BadgeRestituerModal, EmplacementModal, RechercheVehiculeForm, RetirerVehiculeModal, VehiculeModal, type LotOption } from "./parkings-client";
+import { LiveList } from "../../../../components/ui/live-list";
+import { Amount } from "../../../../components/ui/amount";
 
 type Onglet = "plan" | "emplacements" | "vehicules" | "badges" | "visiteurs";
 const PILL = "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[14px] font-semibold transition-colors";
@@ -153,7 +155,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
           {emplacements.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration={type || statut ? "empty-search" : "empty-parkings"} /> : (
             <TableCard><Table>
               <THead><TH>{t.code}</TH><TH>{t.type}</TH><TH>{t.niveau}</TH><TH>{t.statut}</TH><TH>{t.lotBeneficiaire}</TH><TH>{t.periode}</TH><TH align="end">{t.redevance}</TH></THead>
-              <tbody>{emplacements.map((x) => (
+              <LiveList as="tbody">{emplacements.map((x) => (
                 <TR key={x.id}>
                   <TD><Link href={p(`/parkings/${x.id}`)} className="link font-mono" dir="ltr">{x.code}</Link></TD>
                   <TD className="text-body">{e.typeEmplacement[x.type]}{!x.attribuable ? <span className="ms-1 text-[11px] text-faint">· {t.nonAttribuable}</span> : null}</TD>
@@ -161,9 +163,9 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                   <TD><Badge variant={emplacementVariant[x.statut]}>{e.statutEmplacement[x.statut]}</Badge></TD>
                   <TD className="text-body">{x.attributionCourante ? `${x.attributionCourante.lotNumero ?? "—"} · ${e.typeAttribution[x.attributionCourante.type]}` : "—"}</TD>
                   <TD className="text-body tnum">{x.attributionCourante ? `${formatDate(x.attributionCourante.dateDebut, ctx.locale)} → ${x.attributionCourante.dateFin ? formatDate(x.attributionCourante.dateFin, ctx.locale) : t.sansFin}` : "—"}</TD>
-                  <TD align="end" className="tnum">{x.attributionCourante?.redevanceMensuelle ? `${formatMontant(x.attributionCourante.redevanceMensuelle)} MAD` : "—"}</TD>
+                  <TD align="end" className="tnum">{x.attributionCourante?.redevanceMensuelle ? <><Amount value={x.attributionCourante.redevanceMensuelle} locale={ctx.locale} currency={false} /> MAD</> : "—"}</TD>
                 </TR>
-              ))}</tbody>
+              ))}</LiveList>
             </Table></TableCard>
           )}
         </div>
@@ -175,7 +177,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
           {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} illustration="empty-parkings" /> : (
             <TableCard><Table>
               <THead><TH>{t.immatriculation}</TH><TH>{t.lot}</TH><TH>{t.typeVehicule}</TH><TH>{t.marque}</TH><TH>{t.couleur}</TH><TH>{t.statut}</TH>{gestion || resident ? <TH align="end">{dict.common.actions}</TH> : null}</THead>
-              <tbody>{vehicules.map((v) => (
+              <LiveList as="tbody">{vehicules.map((v) => (
                 <TR key={v.id}>
                   <TD className="font-mono font-semibold text-ink-strong"><span dir="ltr">{v.immatriculation}</span></TD>
                   <TD className="text-body">{v.lotNumero ?? "—"}</TD>
@@ -185,7 +187,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                   <TD><Badge variant={v.actif ? "ok" : "neutral"}>{v.actif ? t.actif : t.inactif}</Badge>{v.utilisateurId ? <span className="ms-1.5 text-[11px] text-faint">{t.declarePar}</span> : null}</TD>
                   {gestion || resident ? <TD align="end"><span className="inline-flex gap-1"><VehiculeModal dict={dict} locale={ctx.locale} lots={mesLots} vehicule={v} />{v.actif ? <RetirerVehiculeModal dict={dict} locale={ctx.locale} vehicule={v} /> : null}</span></TD> : null}
                 </TR>
-              ))}</tbody>
+              ))}</LiveList>
             </Table></TableCard>
           )}
         </div>
@@ -195,14 +197,14 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} illustration="empty-parkings" /> : (
           <TableCard><Table>
             <THead><TH>{t.identifiant}</TH><TH>{t.type}</TH><TH>{t.lot}</TH><TH>{t.statut}</TH><TH>{t.remisLe}</TH><TH align="end">{t.caution}</TH><TH align="end">{dict.common.actions}</TH></THead>
-            <tbody>{badges.map((b) => (
+            <LiveList as="tbody">{badges.map((b) => (
               <TR key={b.id}>
                 <TD className="font-mono font-semibold text-ink-strong"><span dir="ltr">{b.identifiant}</span></TD>
                 <TD className="text-body">{e.typeBadge[b.type as TypeBadge]}</TD>
                 <TD className="text-body">{b.lotNumero ?? "—"}</TD>
                 <TD><Badge variant={badgeAccesVariant[b.statut as StatutBadge]}>{e.statutBadge[b.statut as StatutBadge]}</Badge>{b.restitueLe ? <span className="ms-1.5 text-[11px] text-faint tnum">{formatDate(b.restitueLe, ctx.locale)}</span> : null}</TD>
                 <TD className="text-body tnum">{formatDate(b.remisLe, ctx.locale)}</TD>
-                <TD align="end" className="tnum">{b.cautionMontant ? `${formatMontant(b.cautionMontant)} MAD` : "—"}</TD>
+                <TD align="end" className="tnum">{b.cautionMontant ? <><Amount value={b.cautionMontant} locale={ctx.locale} currency={false} /> MAD</> : "—"}</TD>
                 <TD align="end"><span className="inline-flex flex-wrap justify-end gap-1">
                   {gestion ? <BadgeModal dict={dict} locale={ctx.locale} lots={mesLots} badge={b} /> : null}
                   {b.statut === "ACTIF" && (gestion || resident) ? <BadgePerduModal dict={dict} locale={ctx.locale} badge={b} /> : null}
@@ -210,7 +212,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                   {gestion && (b.statut === "ACTIF" || b.statut === "PERDU") ? <BadgeDesactiverModal dict={dict} locale={ctx.locale} badge={b} /> : null}
                 </span></TD>
               </TR>
-            ))}</tbody>
+            ))}</LiveList>
           </Table></TableCard>
         )
       ) : null}

@@ -75,16 +75,16 @@ class _InvitationEntryScreenState extends ConsumerState<InvitationEntryScreen> {
               onSubmitted: (_) => _go(),
             ),
             const SizedBox(height: 20),
-            SuPressable(child: FilledButton(onPressed: _go, child: Text(d.common.next))),
+            SuButton(label: d.common.next, onPressed: _go),
           ],
         ),
         const SizedBox(height: 12),
-        OutlinedButton.icon(onPressed: () => context.push('/invitation/scan'), icon: const Icon(Icons.qr_code_scanner_rounded, size: 20), label: Text(d.auth.scanQr)),
+        SuButton(label: d.auth.scanQr, icon: Icons.qr_code_scanner_rounded, variant: SuButtonVariant.secondary, onPressed: () => context.push('/invitation/scan')),
         const SizedBox(height: 12),
         Center(
           child: session != null
-              ? TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))
-              : TextButton(onPressed: () => context.push('/connexion'), child: Text(d.auth.inviteDejaCompte)),
+              ? SuButton(label: d.common.logout, variant: SuButtonVariant.ghost, onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft))
+              : SuButton(label: d.auth.inviteDejaCompte, variant: SuButtonVariant.ghost, onPressed: () => context.push('/connexion')),
         ),
       ],
     );
@@ -324,7 +324,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
       showBack: true,
       children: [
         apercu.when(
-          loading: () => const Padding(padding: EdgeInsets.only(top: 48), child: Center(child: LoadingOrb())),
+          loading: () => const Padding(padding: EdgeInsets.only(top: 24), child: LoadingList(count: 3)),
           error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(_apercuProvider(widget.code))),
           data: (a) {
             if (a.statut != 'EN_ATTENTE') {
@@ -345,9 +345,9 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
                   const SizedBox(height: 20),
                   SuBanner(tone: a.statut == 'ACCEPTEE' ? BannerTone.info : BannerTone.warn, body: msg),
                   const SizedBox(height: 20),
-                  FilledButton(onPressed: () => context.go(session == null ? '/connexion' : '/'), child: Text(d.auth.signIn)),
+                  SuButton(label: d.auth.signIn, onPressed: () => context.go(session == null ? '/connexion' : '/')),
                   const SizedBox(height: 10),
-                  OutlinedButton(onPressed: () => context.go('/invitation'), child: Text(d.auth.inviteEnterCode)),
+                  SuButton(label: d.auth.inviteEnterCode, variant: SuButtonVariant.secondary, onPressed: () => context.go('/invitation')),
                 ],
               );
             }
@@ -392,10 +392,10 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
                     const SizedBox(height: 20),
                     FormError(_fail),
                     if (_fail != null) const SizedBox(height: 12),
-                    SubmitButton(label: session == null ? d.auth.inviteCreerCompte : d.auth.inviteAccept, loading: _loading, onPressed: session == null ? _inscrire : _accepter),
+                    SubmitButton(label: session == null ? d.auth.inviteCreerCompte : d.auth.inviteAccept, loading: _loading, onPressed: session == null ? _inscrire : _accepter, fail: _fail),
                     if (session == null) ...[
                       const SizedBox(height: 8),
-                      TextButton(onPressed: () => context.push('/connexion?next=${Uri.encodeComponent('/invitation/${widget.code}')}'), child: Text(d.auth.inviteDejaCompte)),
+                      SuButton(label: d.auth.inviteDejaCompte, variant: SuButtonVariant.ghost, onPressed: () => context.push('/connexion?next=${Uri.encodeComponent('/invitation/${widget.code}')}')),
                     ],
                   ],
                 ),
@@ -443,6 +443,7 @@ class ChooseCoproScreen extends ConsumerWidget {
         CardList([
           for (final c in copros)
             ListRow(
+              key: ValueKey(c.id),
               leading: Avatar(c.nom, size: 48),
               title: c.nom,
               subtitle: [c.ville, roleDans(c.id)].where((x) => x.isNotEmpty).join(' · '),
@@ -455,7 +456,7 @@ class ChooseCoproScreen extends ConsumerWidget {
             ),
         ]),
         const SizedBox(height: 16),
-        Center(child: TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))),
+        Center(child: SuButton(label: d.common.logout, variant: SuButtonVariant.ghost, onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft))),
       ],
     );
   }
@@ -483,10 +484,10 @@ class CompteEtatScreen extends ConsumerWidget {
         const SizedBox(height: 10),
         Text(body, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5), textAlign: TextAlign.center),
         const SizedBox(height: 32),
-        if (kind == 'sans-acces') ...[FilledButton(onPressed: () => context.go('/invitation'), child: Text(d.auth.inviteEnterCode)), const SizedBox(height: 10)],
-        OutlinedButton(onPressed: () => ref.read(appStateProvider.notifier).reload(), child: Text(d.common.retry)),
+        if (kind == 'sans-acces') ...[SuButton(label: d.auth.inviteEnterCode, onPressed: () => context.go('/invitation')), const SizedBox(height: 10)],
+        SuButton(label: d.common.retry, variant: SuButtonVariant.secondary, onPressed: () => ref.read(appStateProvider.notifier).reload()),
         const SizedBox(height: 8),
-        Center(child: TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(d.common.logout))),
+        Center(child: SuButton(label: d.common.logout, variant: SuButtonVariant.ghost, onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft))),
       ],
     );
   }
@@ -509,7 +510,7 @@ class SplashScreen extends ConsumerWidget {
                   children: [
                     ErrorState(error: st.error!, onRetry: () => ref.read(appStateProvider.notifier).reload()),
                     const SizedBox(height: 12),
-                    TextButton(onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft), child: Text(context.dict.common.logout)),
+                    SuButton(label: context.dict.common.logout, variant: SuButtonVariant.ghost, onPressed: () => ref.read(sessionProvider.notifier).signOut(), style: TextButton.styleFrom(foregroundColor: SuColors.soft)),
                   ],
                 ),
               )

@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import { Pressable } from "../../../../../components/ui/pressable";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
-import { Checkbox, Field, Input, Select } from "../../../../../components/ui/field";
+import { Field, Input, Select } from "../../../../../components/ui/field";
+import { Checkbox } from "../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
@@ -42,7 +44,7 @@ export function ReglementForm({
             const actif = regime === r;
             const danger = r === "INTERDITE";
             return (
-              <button
+              <Pressable
                 key={r}
                 type="button"
                 onClick={() => setRegime(r)}
@@ -71,7 +73,7 @@ export function ReglementForm({
                     {l.regimeDescriptions[r]}
                   </span>
                 </span>
-              </button>
+              </Pressable>
             );
           })}
         </div>

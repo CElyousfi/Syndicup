@@ -13,6 +13,8 @@ import { justificatifVariant } from "../../../../../lib/status";
 import { DeclarerForm } from "../justificatifs/declarer-form";
 import { AnnulerBouton } from "../justificatifs/justificatif-modals";
 import { comptesBancaires, justificatifs, lotsEtLignesOuvertes, soldesLots } from "../justificatifs/data";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -30,7 +32,8 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
   const soldes = await soldesLots(lots);
   const totalDu = [...soldes.values()].reduce((acc, s) => acc + BigInt(Math.round(Number(s.solde_du) * 100)), 0n);
   const enAttente = [...soldes.values()].reduce((acc, s) => acc + BigInt(Math.round(Number(s.justificatifs_en_attente ?? "0") * 100)), 0n);
-  const mad = (c: bigint) => formatMAD(`${c / 100n}.${String(c % 100n).padStart(2, "0")}`, ctx.locale);
+  const chaine = (c: bigint) => `${c / 100n}.${String(c % 100n).padStart(2, "0")}`;
+  const mad = (c: bigint) => formatMAD(chaine(c), ctx.locale);
 
   return (
     <div className="page-root">
@@ -44,7 +47,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
             </IconCircle>
             <div className="min-w-0">
               <p className="text-sm font-medium text-soft">{dict.finances.soldeDu}</p>
-              <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[44px]">{mad(totalDu)}</p>
+              <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[44px]"><Amount value={chaine(totalDu)} locale={ctx.locale} upIsGood={false} /></p>
               {totalDu <= 0n ? <p className="mt-3 text-sm text-soft">{dict.finances.soldeAJour}</p> : null}
             </div>
           </div>
@@ -53,7 +56,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
               <IconCircle tone="tosca" size={40}><CCoins width={20} height={20} /></IconCircle>
               <div className="min-w-0 flex-1">
                 <p className="text-[13px] text-soft">{e.statutJustificatif.EN_ATTENTE}</p>
-                <p className="tnum text-[17px] font-bold text-ink">{mad(enAttente)}</p>
+                <p className="tnum text-[17px] font-bold text-ink"><Amount value={chaine(enAttente)} locale={ctx.locale} /></p>
               </div>
             </div>
             <div className="flex items-center gap-3 rounded-[20px] bg-surface px-4 py-3.5">
@@ -95,7 +98,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
           <section>
             <SectionHeader title={j.mesDeclarations} className="mb-2" />
             {mes.rows.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucuneDeclaration}</p> : (
-              <ul className="-mx-2">
+              <LiveList as="ul" className="-mx-2">
                 {mes.rows.map((x) => (
                   <li key={x.id}>
                     <Link href={`/${locale}/finances/justificatifs/${x.id}`} className="group flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-wash">
@@ -106,7 +109,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
                         {x.statut === "REJETE" && x.motifRejet ? <p className="mt-0.5 line-clamp-2 text-[13px] text-danger">{x.motifRejet}</p> : null}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
-                        <span className="tnum text-[15px] font-bold text-ink">{formatMAD(x.montant, ctx.locale)}</span>
+                        <span className="tnum text-[15px] font-bold text-ink"><Amount value={x.montant} locale={ctx.locale} /></span>
                         <Badge variant={justificatifVariant[x.statut]}>{e.statutJustificatif[x.statut]}</Badge>
                       </div>
                       <IconChevronEnd width={18} height={18} className="shrink-0 text-link" />
@@ -114,7 +117,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
                     {x.statut === "EN_ATTENTE" && x.declareParId === ctx.profil.id ? <div className="-mt-1 mb-1 pe-2 text-end"><AnnulerBouton dict={dict} locale={ctx.locale} justificatif={x} /></div> : null}
                   </li>
                 ))}
-              </ul>
+              </LiveList>
             )}
           </section>
         </div>

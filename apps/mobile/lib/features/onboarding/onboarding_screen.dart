@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/feel/feel.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/motion.dart';
@@ -44,7 +44,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   void _next() {
-    HapticFeedback.selectionClick();
+    Haptics.select();
     if (_index == _count - 1) {
       _finish('/');
       return;
@@ -109,14 +109,16 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  SuPressable(
-                    child: FilledButton(
-                      onPressed: _next,
-                      style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)),
-                      child: AnimatedSwitcher(
-                        duration: SuMotion.of(context, SuMotion.base),
-                        child: Text(last ? md.obStart : md.obNext, key: ValueKey(last)),
-                      ),
+                  SuButton(
+                    onPressed: _next,
+                    size: SuButtonSize.lg,
+                    expand: true,
+                    haptic: false,
+                    child: SuFadeSwitch(
+                      value: last,
+                      slide: false,
+                      alignment: AlignmentDirectional.center,
+                      child: Text(last ? md.obStart : md.obNext),
                     ),
                   ),
                   SizedBox(

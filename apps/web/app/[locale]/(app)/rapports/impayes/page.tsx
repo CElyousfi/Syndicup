@@ -5,7 +5,7 @@ import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { LigneImpayee, SyntheseImpayes } from "../../../../../lib/api/types";
 import { getDict, isLocale, fill } from "../../../../../lib/i18n";
-import { formatDate, formatMAD, formatPeriode } from "../../../../../lib/format";
+import { formatDate, formatPeriode } from "../../../../../lib/format";
 import { PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
@@ -15,6 +15,8 @@ import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { escaladeVariant, ligneAppelVariant, trancheVariant } from "../../../../../lib/status";
 import { RapportsTabs } from "../onglets";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 const TRANCHES = ["TOUTES", "0_30", "31_90", "91_180", "PLUS_180"] as const;
 
@@ -34,7 +36,6 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
   const res = await apiFetch<LigneImpayee[]>("/rapports/impayes", { searchParams: { tranche, limit: 100, sort: sp.sort } });
   const synthese = res.ok ? ((res.meta as { synthese?: SyntheseImpayes }).synthese ?? null) : null;
   const p = (path: string) => `/${locale}${path}`;
-  const mad = (v: string | null | undefined) => formatMAD(v, ctx.locale);
   return (
     <div className="page-root">
       <PageHeader title={r.impayesTitre} subtitle={r.impayesSubtitle} actions={<ExportButtons ressource="impayes" filtres={{ tranche }} labels={{ csv: r.exporterCsv, xlsx: r.exporterXlsx, title: r.exportImpayesAide }} />} />
@@ -43,7 +44,7 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
         <div className="card mb-5 flex flex-wrap items-center gap-x-5 gap-y-3 p-5 sm:p-6">
           <IconCircle tone="danger" size={48}><CAlert /></IconCircle>
           <div className="min-w-0 flex-1">
-            <p className="tnum text-[30px] font-bold leading-none tracking-[-0.02em] text-ink">{mad(synthese.total)}</p>
+            <p className="tnum text-[30px] font-bold leading-none tracking-[-0.02em] text-ink"><Amount value={synthese.total} locale={ctx.locale} upIsGood={false} /></p>
             <p className="mt-1.5 text-[14px] text-soft">{fill(r.lotsEnRetard, { n: synthese.nb_lots_en_retard })} · {fill(r.nbLignes, { n: synthese.nb_lignes })}</p>
           </div>
         </div>
@@ -65,7 +66,7 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
         <TableCard>
           <Table>
             <THead><TH>{r.lot}</TH><TH>{r.periode}</TH><TH>{r.echeance}</TH><TH align="center">{r.retardJours}</TH><TH>{r.tranche}</TH><TH align="end">{r.du}</TH><TH align="end">{r.paye}</TH><TH align="end">{r.resteDu}</TH><TH>{r.escalade}</TH></THead>
-            <tbody>
+            <LiveList as="tbody">
               {res.data.map((l) => (
                 <TR key={l.appel_de_fonds_lot_id}>
                   <TD className="font-bold text-ink"><Link href={p(`/lots/${l.lot_id}?onglet=finances`)} className="hover:text-link">{l.lot_numero}</Link>{l.conteste ? <Badge variant="warn" className="ms-2">{r.conteste}</Badge> : null}</TD>
@@ -73,13 +74,13 @@ export default async function ImpayesPage({ params, searchParams }: { params: Pr
                   <TD className="tnum text-soft">{formatDate(l.date_echeance, ctx.locale)}</TD>
                   <TD align="center" className="tnum text-body">{l.retard_jours}</TD>
                   <TD><Badge variant={trancheVariant[l.tranche]}>{dict.enumsRapports.tranche[l.tranche]}</Badge></TD>
-                  <TD align="end" className="tnum whitespace-nowrap text-body">{mad(l.montant_du)}</TD>
-                  <TD align="end" className="tnum whitespace-nowrap text-body">{mad(l.montant_paye)}</TD>
-                  <TD align="end" className="tnum whitespace-nowrap font-bold text-danger">{mad(l.reste_du)}</TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={l.montant_du} locale={ctx.locale} /></TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={l.montant_paye} locale={ctx.locale} /></TD>
+                  <TD align="end" className="tnum whitespace-nowrap font-bold text-danger"><Amount value={l.reste_du} locale={ctx.locale} upIsGood={false} /></TD>
                   <TD><div className="flex flex-wrap gap-1"><Badge variant={ligneAppelVariant[l.statut]}>{dict.enums.statutLigne[l.statut]}</Badge><Badge variant={escaladeVariant(l.niveau_escalade)}>{l.niveau_escalade}</Badge></div></TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table>
         </TableCard>
       )}

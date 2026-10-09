@@ -2,7 +2,8 @@
 
 /** Cabinet (M25) — modales : membre, mandat (proposer / modifier / terminer), prestataire modèle + copie, paramètres, confirmation de passation. */
 import { useActionState, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../components/ui/modal";
+import { Modal } from "../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";

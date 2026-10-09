@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import { Modal, IrreversibleNotice } from "../../../../../components/ui/modal";
-import { Field, Input, Select, Textarea, Checkbox } from "../../../../../components/ui/field";
+import { Modal } from "../../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../../components/ui/irreversible-notice";
+import { Field, Input, Select, Textarea } from "../../../../../components/ui/field";
+import { Checkbox } from "../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { IDLE } from "../../../../../lib/forms";

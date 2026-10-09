@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { IrreversibleNotice, Modal } from "../../../../../../components/ui/modal";
+import { Modal } from "../../../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../../../components/ui/irreversible-notice";
 import { Field, Textarea } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Button } from "../../../../../../components/ui/button";
@@ -12,6 +13,7 @@ import { annulerSejour, ajouterPiecesJointes, retirerPieceJointe } from "../../a
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { IconCamera, IconFile } from "../../../../../../components/ui/icons";
+import { FadeImg } from "../../../../../../components/ui/motion/fade-img";
 
 /** Annulation d'un séjour PREVU — confirmation explicite, motif facultatif, gardien notifié. */
 export function AnnulerSejourModal({
@@ -103,7 +105,7 @@ export function PiecesJointesCard({
             <li key={pj.path} className="flex items-center gap-3 rounded-2xl bg-surface p-2.5">
               <div className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-wash">
                 {pj.type === "IMAGE" ? (
-                  <img src={pj.src} alt="" className="size-16 object-cover" />
+                  <FadeImg src={pj.src} alt="" className="size-16 object-cover" />
                 ) : (
                   <IconFile width={22} height={22} className="text-soft" />
                 )}

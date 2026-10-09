@@ -157,7 +157,7 @@ class _FicheTab extends ConsumerWidget {
           if (complet) ...[
             KeyValueRow(d.personnel.dateEmbauche, p.dateEmbauche == null ? '—' : formatJourAnnee(p.dateEmbauche, l)),
             KeyValueRow(d.personnel.dateFinContrat, p.dateFinContrat == null ? '—' : formatJourAnnee(p.dateFinContrat, l)),
-            KeyValueRow(d.personnel.salaireBrut, p.salaireBrutMensuel == null ? '—' : formatMAD(p.salaireBrutMensuel, l)),
+            KeyValueRow.amount(d.personnel.salaireBrut, p.salaireBrutMensuel),
             KeyValueRow(d.personnel.cnss, p.numeroCnssMasque ?? d.personnel.cnssNonRenseigne, mono: true),
             KeyValueRow(d.personnel.contactUrgence, p.contactUrgence ?? '—'),
           ],
@@ -224,10 +224,8 @@ class _PaieTab extends ConsumerWidget {
     final fiches = ref.watch(fichesPaieProvider(detail.fiche.id));
     final nonConfigure = gestion && detail.paie != null && detail.paie!['parametres_configures'] == false;
     final t = Theme.of(context).textTheme;
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(fichesPaieProvider(detail.fiche.id)),
-      color: SuColors.link,
-      backgroundColor: SuColors.surface,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -245,15 +243,16 @@ class _PaieTab extends ConsumerWidget {
                     StatusBadge(d.enumsPersonnelRh.statutFichePaie[derniere.statut] ?? derniere.statut, variant: fichePaieVariant[derniere.statut] ?? BadgeVariant.neutral, small: true),
                   ]),
                   const SizedBox(height: 10),
-                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: MoneyText(formatMAD(derniere.net, l), style: t.displayMedium)),
+                  FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: AnimatedAmount(derniere.net, style: t.displayMedium, textDirection: TextDirection.ltr, maxLines: null)),
                   const SizedBox(height: 4),
-                  Text('${d.personnel.brut} ${formatMAD(derniere.brut, l)}', style: t.bodySmall),
+                  AnimatedAmount(derniere.brut, prefix: '${d.personnel.brut} ', maxLines: null, style: t.bodySmall),
                 ]),
               ),
               SectionHeader(d.personnel.fichesPaie),
               CardList([
                 for (final f in fs)
                   ListRow(
+                    key: ValueKey(f.id),
                     leading: IconCircle(Icons.receipt_long_rounded, tone: f.statut == 'PAYEE' ? Tone.ok : (f.statut == 'VALIDEE' ? Tone.action : Tone.neutral)),
                     title: formatPeriode(f.periode, l),
                     subtitle: '${d.personnel.net} ${formatMAD(f.net, l)} · ${d.personnel.brut} ${formatMAD(f.brut, l)}',
@@ -298,10 +297,8 @@ class _CongesTab extends ConsumerWidget {
               label: Text(d.personnel.demanderConge),
             )
           : null,
-      body: RefreshIndicator(
+      body: SuRefresh(
         onRefresh: () async => rafraichir(),
-        color: SuColors.link,
-        backgroundColor: SuColors.surface,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
@@ -318,14 +315,14 @@ class _CongesTab extends ConsumerWidget {
                   const SizedBox(height: 6),
                   AnimatedDigits('${solde['solde'] ?? '—'}', style: t.displayMedium),
                   const SizedBox(height: 4),
-                  Text('${d.personnel.acquis} ${solde['acquis'] ?? '—'} · ${d.personnel.pris} ${solde['pris'] ?? '0'}', style: t.bodySmall),
+                  AnimatedFigureText('${d.personnel.acquis} ${solde['acquis'] ?? '—'} · ${d.personnel.pris} ${solde['pris'] ?? '0'}', tint: false, maxLines: null, style: t.bodySmall),
                 ]),
               ),
             AsyncView(conges, onRetry: rafraichir, data: (cs) {
               if (cs.isEmpty) return EmptyState(title: d.personnel.aucunConge, icon: Icons.beach_access_outlined, illustration: 'empty-personnel');
               return CardList([
                 for (final c in cs)
-                  _CongeRow(conge: c, gestion: gestion, soi: soi, onDone: rafraichir, sousTitre: '${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)} · ${c.nbJours} ${d.personnel.nbJours.toLowerCase()}${c.remplacantNom != null ? ' · ${d.personnel.remplacant} ${c.remplacantNom}' : ''}${c.motifRefus != null ? '\n${d.personnel.motifRefus} : ${c.motifRefus}' : ''}', titre: '${e.typeConge[c.type] ?? c.type}${c.motif != null ? ' · ${c.motif}' : ''}'),
+                  _CongeRow(key: ValueKey(c.id), conge: c, gestion: gestion, soi: soi, onDone: rafraichir, sousTitre: '${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)} · ${c.nbJours} ${d.personnel.nbJours.toLowerCase()}${c.remplacantNom != null ? ' · ${d.personnel.remplacant} ${c.remplacantNom}' : ''}${c.motifRefus != null ? '\n${d.personnel.motifRefus} : ${c.motifRefus}' : ''}', titre: '${e.typeConge[c.type] ?? c.type}${c.motif != null ? ' · ${c.motif}' : ''}'),
               ]);
             }),
           ],
@@ -336,7 +333,7 @@ class _CongesTab extends ConsumerWidget {
 }
 
 class _CongeRow extends ConsumerStatefulWidget {
-  const _CongeRow({required this.conge, required this.gestion, required this.soi, required this.onDone, required this.titre, required this.sousTitre});
+  const _CongeRow({super.key, required this.conge, required this.gestion, required this.soi, required this.onDone, required this.titre, required this.sousTitre});
   final Conge conge;
   final bool gestion, soi;
   final VoidCallback onDone;
@@ -384,18 +381,18 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
     final enAttente = c.statut == 'DEMANDE';
     Widget? trailing;
     if (_busy) {
-      trailing = const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2));
+      trailing = const SizedBox(width: 20, height: 20, child: Center(child: LoadingOrb(size: 8)));
     } else if (enAttente && widget.gestion) {
       trailing = Row(mainAxisSize: MainAxisSize.min, children: [
-        IconButton(tooltip: d.personnel.approuverConge, icon: const Icon(Icons.check_circle_rounded, color: SuColors.ok), onPressed: () async {
+        SuIconButton(tooltip: d.personnel.approuverConge, icon: Icons.check_circle_rounded, color: SuColors.ok, onPressed: () async {
           if (await confirmDialog(context, title: d.personnel.approuverConge, body: widget.sousTitre, confirmLabel: d.personnel.approuverConge)) await _decider('approuver');
         }),
-        IconButton(tooltip: d.personnel.refuserConge, icon: const Icon(Icons.cancel_rounded, color: SuColors.danger), onPressed: _refuser),
+        SuIconButton(tooltip: d.personnel.refuserConge, icon: Icons.cancel_rounded, color: SuColors.danger, onPressed: _refuser),
       ]);
     } else if (enAttente && widget.soi) {
-      trailing = TextButton(onPressed: () async {
+      trailing = SuButton(variant: SuButtonVariant.ghost, onPressed: () async {
         if (await confirmDialog(context, title: d.personnel.annulerConge, body: widget.sousTitre, danger: true)) await _decider('annuler');
-      }, child: Text(d.personnel.annulerConge));
+      }, label: d.personnel.annulerConge);
     } else {
       trailing = StatusBadge(d.enumsPersonnelRh.statutConge[c.statut] ?? c.statut, variant: congeVariant[c.statut] ?? BadgeVariant.neutral, small: true);
     }
@@ -461,6 +458,7 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
         SubmitButton(
           label: d.personnel.demanderConge,
           loading: _loading,
+          fail: _fail,
           onPressed: _debut == null || _fin == null
               ? null
               : () async {
@@ -503,12 +501,13 @@ class _DateField extends StatelessWidget {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Text(label, style: t.labelMedium?.copyWith(color: SuColors.ink)),
       const SizedBox(height: 8),
-      Material(
-        color: SuColors.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(SuRadius.field),
+      SuTap(
+        onTap: onTap,
+        ink: false,
+        borderRadius: BorderRadius.circular(SuRadius.field),
+        child: Material(
+          color: SuColors.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(SuRadius.field), side: BorderSide(color: error != null ? SuColors.danger : SuColors.hairlineStrong)),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 17),
             child: Row(children: [
@@ -563,10 +562,8 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     final m = int.parse(_periode.substring(5, 7));
     final nbJours = DateTime(a, m + 1, 0).day;
     final t = Theme.of(context).textTheme;
-    return RefreshIndicator(
+    return SuRefresh(
       onRefresh: () async => ref.invalidate(presencesProvider(cle)),
-      color: SuColors.link,
-      backgroundColor: SuColors.surface,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -581,19 +578,19 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
           if (file.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: TextButton(onPressed: () => ref.read(presenceSyncProvider.notifier).flush(), child: Text(d.common.retry))),
+              child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ref.read(presenceSyncProvider.notifier).flush(), label: d.common.retry)),
             ),
           // Sélecteur de mois Wise : boutons ronds (miroir RTL), mois en grand au centre.
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
               CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
-              Expanded(child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: t.headlineSmall)),
+              Expanded(child: SuFadeSwitch(value: _periode, alignment: Alignment.center, child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: t.headlineSmall))),
               CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
             ]),
           ),
           const SizedBox(height: 12),
-          AsyncView(presences, onRetry: () => ref.invalidate(presencesProvider(cle)), data: (ps) {
+          SuFadeSwitch(value: _periode, child: AsyncView(presences, onRetry: () => ref.invalidate(presencesProvider(cle)), data: (ps) {
             final parDate = {for (final p in ps) p.date: p};
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(spacing: 6, runSpacing: 6, children: [
@@ -603,7 +600,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
               const SizedBox(height: 8),
               CardList([
                 for (var i = 1; i <= nbJours; i++)
-                  Builder(builder: (_) {
+                  Builder(key: ValueKey('$_periode-$i'), builder: (_) {
                     final iso = '$_periode-${i.toString().padLeft(2, '0')}';
                     final p = parDate[iso];
                     final enFile = file.any((q) => q.date == iso && !q.definitif);
@@ -628,7 +625,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
               ]),
               if (widget.gestion) Padding(padding: const EdgeInsets.only(top: 12), child: Text(d.personnel.saisirPresencesAide, style: t.bodySmall)),
             ]);
-          }),
+          })),
         ],
       ),
     );
@@ -668,7 +665,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
           CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
         ]),
         const SizedBox(height: 4),
-        AsyncView(planning, onRetry: () => ref.invalidate(planningProvider(_semaine)), data: (x) {
+        SuFadeSwitch(value: _semaine, child: AsyncView(planning, onRetry: () => ref.invalidate(planningProvider(_semaine)), data: (x) {
           if (x.personnels.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, icon: Icons.calendar_view_week_outlined, illustration: 'empty-personnel');
           return Column(children: [
             for (final pp in x.personnels) ...[
@@ -693,7 +690,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
               ])),
             ],
           ]);
-        }),
+        })),
       ],
     );
   }

@@ -157,7 +157,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
       body: SafeArea(
         top: false,
         child: switch (_etat) {
-          _Etat.chargement => const Center(child: LoadingOrb()),
+          _Etat.chargement => const _PageSkeleton(),
           _Etat.erreur => Center(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -182,7 +182,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                       const SizedBox(height: 8),
                       Text(md.viewerUnsupported, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
                       const SizedBox(height: 22),
-                      FilledButton.icon(onPressed: _partager, icon: const Icon(Icons.ios_share_rounded), label: Text(d.common.share)),
+                      SuButton(label: d.common.share, icon: Icons.ios_share_rounded, onPressed: _partager),
                     ],
                   ),
                 ),
@@ -194,7 +194,7 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
               child: Center(
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
-                  child: ClipRRect(borderRadius: BorderRadius.circular(16), child: Image.memory(_bytes!, fit: BoxFit.contain, gaplessPlayback: true)),
+                  child: ClipRRect(borderRadius: BorderRadius.circular(16), child: SuImage.memory(_bytes!, fit: BoxFit.contain)),
                 ),
               ),
             ),
@@ -209,8 +209,8 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
                     onPageChanged: (p) => setState(() => _page = p),
                     builders: PdfViewPinchBuilders<DefaultBuilderOptions>(
                       options: const DefaultBuilderOptions(),
-                      documentLoaderBuilder: (_) => const Center(child: LoadingOrb()),
-                      pageLoaderBuilder: (_) => const Center(child: LoadingOrb()),
+                      documentLoaderBuilder: (_) => const _PageSkeleton(),
+                      pageLoaderBuilder: (_) => const _PageSkeleton(),
                       errorBuilder: (_, __) => Center(child: Text(md.viewerError, style: t.bodySmall)),
                     ),
                   ),
@@ -233,5 +233,44 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
         },
       ),
     );
+  }
+}
+
+/// Squelette en forme de page (A4) : feuille blanche arrondie posée sur la toile, lignes de
+/// texte en reflet (même shimmer que LoadingList) — jamais d'indicateur plein écran.
+class _PageSkeleton extends StatelessWidget {
+  const _PageSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(builder: (context, c) {
+      final maxW = (c.maxWidth.isFinite ? c.maxWidth : 400.0) - 32;
+      final maxH = (c.maxHeight.isFinite ? c.maxHeight : maxW * 1.414 + 32) - 32;
+      var w = maxW;
+      var h = w * 1.414;
+      if (h > maxH) {
+        h = maxH;
+        w = h / 1.414;
+      }
+      if (w <= 0 || h <= 0) return const SizedBox.shrink();
+      // Lignes de 14 px + 10 px d'interligne, dans la marge intérieure de la page.
+      final lines = ((h - 48 - 34) / 24).floor().clamp(0, 40);
+      return Center(
+        child: Container(
+          width: w,
+          height: h,
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(color: SuColors.surface, borderRadius: BorderRadius.circular(16)),
+          clipBehavior: Clip.hardEdge,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              FractionallySizedBox(widthFactor: 0.6, child: LoadingList(count: 1, height: 24)),
+              if (lines > 0) LoadingList(count: lines, height: 14),
+            ],
+          ),
+        ),
+      );
+    });
   }
 }

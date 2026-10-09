@@ -392,7 +392,7 @@ int? compareFigures(String a, String b) {
   final x = parse(a);
   final y = parse(b);
   if (x == null || y == null) return null;
-  return x.$1.compareTo(y.$1);
+  return x.$1.compareTo(y.$1).sign;
 }
 
 /// Nombre formaté VIVANT : au premier affichage, texte simple (aucune animation dans une liste

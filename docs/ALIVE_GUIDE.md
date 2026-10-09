@@ -64,9 +64,10 @@ sens de lecture (`SuMotion.sign(context)` / `--dir`).
 | `Text(formatPourcent(r))`, compteurs formatés | `AnimatedFigureText(texte, style:)` | Idem, pour toute chaîne numérique formatée |
 | `MoneyText(texte)` | déjà vivant | — |
 | texte d'état qui change (filtre, libellé) | `SuFadeSwitch(value: clé, child: …)` | Fondu enchaîné, jamais de saut |
+| champ de recherche sans libellé | `SuSearchField(hint:, onChanged:, controller:, pill:)` | Loupe, bouton d'effacement qui éclot, anneau de focus animé |
 | `TextField`, `TextFormField` | `SuField(label:, controller:, error:, validator:, valid:, …)` | Erreur (serveur ou validateur) = secousse miroir + `warning()` ; `valid` = coche tracée ; anneau de focus animé |
 | `Switch`, `SwitchListTile` | `SuSwitchRow(label:, help:, value:, onChanged:)` | Curseur ressort + `select()` |
-| `Checkbox`, `CheckboxListTile` | `SuCheckbox(value:, onChanged:, label:, help:)` | Case en ressort, coche qui se trace, `select()` |
+| `Checkbox`, `CheckboxListTile` | `SuCheckbox(value:, onChanged:, label:, help:, labelStyle:)` | Case en ressort, coche qui se trace, `select()` |
 | `Radio` | `SuRadioGroup<T>(value:, options:, labelOf:, onChanged:)` | Pastille en ressort, `select()` |
 | `SegmentedButton` | `Segmented<T>` / `FilterChips<T>` | Pastille qui glisse, `select()` |
 | `Image.network/file/memory` | `SuImage.network(url, heroTag:)` / `.file` / `.memory` | Fondu + léger dézoom, jamais d'apparition brutale ; `heroTag` = ouverture en zoom |
@@ -84,24 +85,30 @@ sens de lecture (`SuMotion.sign(context)` / `--dir`).
 
 | Au lieu de… | Utiliser | Ce qui est vivant |
 |---|---|---|
-| `<button>` | `<Button variant size>` / `<IconButton label tone size>` / `<ButtonLink>` | Enfoncement ressort (100 ms), relâchement |
+| `<button>` | `<Button variant size>` / `<IconButton label tone size>` (`ui/pressable`) / `<ButtonLink>` · tuile ou ligne à mise en page libre : `<Pressable>` (`ui/pressable`) | Enfoncement ressort (100 ms), relâchement |
 | `type="submit"` brut | `<SubmitButton>` (+ `<FormAlert state>` dans le même `<form>`) | Spinner dans le bouton ; coche après succès, secousse après erreur (événement `su:form-result`) ; haptique (Android) |
 | `{formatMAD(v, locale)}` | `<Amount value={v} locale={locale} />` (`currency={false}`, `upIsGood={false}`, `prefix`) | Texte simple au 1er rendu ; à chaque changement (actualisation live 25 s, action) roulement des chiffres changés + teinte. Aucun float |
 | `{formatPourcent(r)}`, compteurs | `<Figure value={texte} />` | Idem |
 | grande valeur de tuile | `<StatCard value>` (odomètre) | Défile au montage et à chaque changement |
 | `<input>` / `<select>` / `<textarea>` | `<Input>`, `<Select>`, `<Textarea>` dans `<Field label error valid>` | Anneau de focus animé ; erreur = secousse (miroir RTL) + fondu ; `valid` = coche tracée |
-| `type="checkbox"` / `type="radio"` | `<Checkbox>`, `<Switch>`, `<RadioGroup>` | Ressort, coche tracée, `select()` haptique |
+| `type="checkbox"` / `type="radio"` | `<Checkbox>`, `<Switch>`, `<RadioGroup>` (import depuis `ui/toggle`) | Ressort, coche tracée, `select()` haptique |
 | `<img>` | `<FadeImg>` | Fondu + dézoom au chargement |
 | `<Spinner>` / `animate-spin` dans un écran | `loading.tsx` + `*Skeleton`, état du `SubmitButton` | Aucun spinner plein écran |
 | `<tbody>` / liste de lignes clées | `<LiveList as="tbody">{rows.map(r => <TR key={r.id}>)}</LiveList>` | Ligne arrivée en direct : dépli + surlignage lime ; ligne retirée : repli |
 | `alert()`, `confirm()`, `<dialog>` | `<Modal>`, `<ConfirmDelete>`, `toast()`, `celebrate()` | Ressort, fond flouté, feuille glissable sur mobile |
 | `navigator.vibrate` / `new Audio` | `haptic(intent)` / `playSound(name)` (`lib/feel`) | Sémantique, réglages, anti-rafale |
 | jauge | `<ProgressBar ratio>` / `<RingGauge>` | Remplissage par `transform`, glisse vers la nouvelle valeur |
-| badge | `<Badge variant pulse>` | Éclot au changement ; `pulse` = 2 pulsations puis immobile |
+| badge | `<Badge variant pulse>` (composant serveur, `data-badge`) | Éclot quand son texte ou sa variante change (observé par la coque connectée) ; `pulse` = 2 pulsations puis immobile |
 
 `motion` (bibliothèque JS) : autorisé dans `components/shell/**` et `components/ui/**` uniquement,
 jamais dans les pages publiques (`(public)`, `components/auth`) — ESLint le refuse (D5). Le poids JS
-des pages de connexion est mesuré à chaque phase et ne doit pas grossir.
+des pages de connexion est mesuré à chaque phase et ne doit pas grossir. Conséquences pratiques :
+- tout comportement déclenché APRÈS un geste (haptique, résultat de formulaire, glisser de feuille)
+  vit dans `lib/feel/lazy.ts`, chargé à la demande (un seul fragment différé) ;
+- une primitive importée par une page publique reste légère : pas de ré-export d'un module client
+  dont elle n'a pas besoin (`ui/toggle`, `ui/pressable`, `ui/irreversible-notice` sont séparés) ;
+- ce qui ne concerne que l'espace connecté (éclosion des badges, révélation au défilement) est
+  observé par la coque (`components/shell/*`), jamais porté par la primitive.
 
 ## 4. Carte haptique & sonore
 

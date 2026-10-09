@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useState } from "react";
-import { Field, Input, Checkbox } from "../../../../../../components/ui/field";
+import { Field, Input } from "../../../../../../components/ui/field";
+import { Checkbox } from "../../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../../components/ui/button";
 import { Banner } from "../../../../../../components/ui/banner";
-import { IrreversibleNotice } from "../../../../../../components/ui/modal";
+import { IrreversibleNotice } from "../../../../../../components/ui/irreversible-notice";
 import { CopyButton } from "../../../../../../components/ui/copy";
 import { IDLE } from "../../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";

@@ -22,6 +22,8 @@ import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { alerteVariant, mandatVariant } from "../../../../lib/status";
 import { CopierPrestataireModal, MandatModal, MembreModal, ParametresCabinetForm, PrestataireModeleModal, RetirerMembreModal, TerminerMandatModal } from "./cabinet-client";
 import { ouvrirCopropriete } from "./actions";
+import { Amount, Figure } from "../../../../components/ui/amount";
+import { LiveList } from "../../../../components/ui/live-list";
 
 type Onglet = "portefeuille" | "alertes" | "agenda" | "membres" | "prestataires" | "parametres";
 const ONGLETS: Onglet[] = ["portefeuille", "alertes", "agenda", "membres", "prestataires", "parametres"];
@@ -118,7 +120,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
                 <TH>{t.gestionnaire}</TH>
                 <TH align="end" />
               </THead>
-              <tbody>{lignes.map((l) => (
+              <LiveList as="tbody">{lignes.map((l) => (
                 <TR key={l.mandat_id}>
                   <TD>
                     <div className="flex items-center gap-3">
@@ -130,8 +132,8 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
                     </div>
                   </TD>
                   <TD align="end" className="tnum">{l.nb_lots}</TD>
-                  <TD><div className="flex items-center gap-2"><div className="w-16"><ProgressBar ratio={(l.taux_recouvrement ?? 0) / 100} tone={tauxTone(l.taux_recouvrement) === "ok" ? "ok" : tauxTone(l.taux_recouvrement) === "warn" ? "warn" : tauxTone(l.taux_recouvrement) === "danger" ? "danger" : "ink"} /></div><span className="tnum text-[13px]">{l.taux_recouvrement === null ? "—" : `${l.taux_recouvrement} %`}</span></div></TD>
-                  <TD align="end" className="tnum">{formatMontant(l.impayes_montant)}<span className="block text-[11px] text-faint">{fill(t.impayesLots, { n: l.impayes_nb_lots })}</span></TD>
+                  <TD><div className="flex items-center gap-2"><div className="w-16"><ProgressBar ratio={(l.taux_recouvrement ?? 0) / 100} tone={tauxTone(l.taux_recouvrement) === "ok" ? "ok" : tauxTone(l.taux_recouvrement) === "warn" ? "warn" : tauxTone(l.taux_recouvrement) === "danger" ? "danger" : "ink"} /></div><Figure value={l.taux_recouvrement === null ? "—" : `${l.taux_recouvrement} %`} className="text-[13px]" /></div></TD>
+                  <TD align="end" className="tnum"><Amount value={l.impayes_montant} locale={ctx.locale} currency={false} upIsGood={false} /><span className="block text-[11px] text-faint">{fill(t.impayesLots, { n: l.impayes_nb_lots })}</span></TD>
                   <TD align="end" className="tnum">{l.justificatifs_en_attente}</TD>
                   <TD align="end" className="tnum">{l.incidents_ouverts}{l.incidents_urgents ? <span className="block text-[11px] text-danger">{fill(t.incidentsUrgents, { n: l.incidents_urgents })}</span> : null}</TD>
                   <TD align="end" className={`tnum ${l.taches_retard ? "text-danger" : ""}`}>{l.taches_retard}</TD>
@@ -140,7 +142,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
                   <TD className="text-[12.5px] text-body">{nomMembre(l.gestionnaire_principal_id)}</TD>
                   <TD align="end"><Ouvrir coproId={l.copropriete_id} /></TD>
                 </TR>
-              ))}</tbody>
+              ))}</LiveList>
             </Table></TableCard>
           )}
         </div>
@@ -179,19 +181,19 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
         <div className="grid gap-8 lg:grid-cols-2">
           <section className="min-w-0">
             <SectionHeader title={t.membres} subtitle={t.ajouterMembreAide} />
-            <ul className="-mx-3 mt-3">{membres.map((m) => (
+            <LiveList as="ul" className="-mx-3 mt-3">{membres.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                 <Avatar nom={`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId} size={44} />
                 <div className="min-w-0 flex-1 basis-40"><p className="truncate text-[15px] font-bold text-ink">{`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId.slice(0, 8)}</p><p className="text-[13px] text-soft">{t.roles[m.role]}{m.nbCoproprietes ? ` · ${fill(t.nbCoproprietes, { n: m.nbCoproprietes })}` : ""}</p></div>
                 <Badge variant={m.actif ? "ok" : "neutral"}>{m.actif ? t.actif : t.inactif}</Badge>
                 {admin && m.actif ? <span className="inline-flex gap-1"><MembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /><RetirerMembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /></span> : null}
               </li>
-            ))}</ul>
+            ))}</LiveList>
           </section>
           <section className="min-w-0">
             <SectionHeader title={t.mandats} subtitle={t.proposerMandatAide} />
             {mandats.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunMandat}</p> : (
-              <ul className="-mx-3 mt-3">{mandats.map((m) => (
+              <LiveList as="ul" className="-mx-3 mt-3">{mandats.map((m) => (
                 <li key={m.id} className="flex items-start gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                   <IconCircle tone="sage" size={44}><CBuilding width={20} height={20} /></IconCircle>
                   <div className="min-w-0 flex-1">
@@ -202,7 +204,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
                   </div>
                   </div>
                 </li>
-              ))}</ul>
+              ))}</LiveList>
             )}
           </section>
         </div>
@@ -212,9 +214,9 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
         (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} /> : (
           <TableCard><Table>
             <THead><TH>{t.nom}</TH><TH>{t.specialite}</TH><TH>{t.telephone}</TH><TH>{t.email}</TH><TH align="end" /></THead>
-            <tbody>{(prestaRes?.ok ? prestaRes.data : []).map((x) => (
+            <LiveList as="tbody">{(prestaRes?.ok ? prestaRes.data : []).map((x) => (
               <TR key={x.id}><TD className="font-bold text-ink">{x.nom}</TD><TD className="text-body">{x.specialite}</TD><TD className="text-body"><span dir="ltr">{x.telephone ?? "—"}</span></TD><TD className="text-body"><span dir="ltr">{x.email ?? "—"}</span></TD><TD align="end">{gestion ? <CopierPrestataireModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} modele={x} coproprietes={lignes.map((l) => ({ id: l.copropriete_id, nom: l.nom }))} /> : null}</TD></TR>
-            ))}</tbody>
+            ))}</LiveList>
           </Table></TableCard>
         )
       ) : null}

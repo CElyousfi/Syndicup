@@ -13,6 +13,7 @@ import type { CanalInvitation, RoleType } from "../../../../lib/api/types";
 import { creerInvitation, regenererInvitation } from "./actions";
 import { IconPlus } from "../../../../components/ui/icons";
 import { celebrate } from "../../../../lib/success";
+import { FadeImg } from "../../../../components/ui/motion/fade-img";
 
 const ROLES_SANS_LOT: RoleType[] = ["SYNDIC", "GARDIEN", "PRESTATAIRE"];
 // SYNDIC volontairement absent : un syndic n'invite jamais un autre syndic — seul le super
@@ -57,7 +58,7 @@ export function CodeInvitation({
       {lien ? (
         <figure className="flex shrink-0 flex-col items-center gap-2">
           {qrLegende ? <figcaption className="max-w-[200px] text-center text-[12px] text-soft">{qrLegende}</figcaption> : null}
-          <img
+          <FadeImg
             src={`/api/qr?data=${encodeURIComponent(lien)}`}
             alt="QR"
             width={148}

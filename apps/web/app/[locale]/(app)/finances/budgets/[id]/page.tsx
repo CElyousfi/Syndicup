@@ -19,6 +19,8 @@ import { CCoins, CMoneyBag, CWallet } from "../../../../../../components/ui/colo
 import { budgetVariant } from "../../../../../../lib/status";
 import { ActiverBudgetModal } from "../budget-modals";
 import { AjouterPosteModal, ModifierPosteModal, SupprimerPosteBouton } from "./postes-modals";
+import { Amount } from "../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -113,7 +115,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
             {rapport ? <TH>{d.prevuVsRealise}</TH> : null}
             {gestion && budget.statut !== "REMPLACE" ? <TH align="end" /> : null}
           </THead>
-          <tbody>
+          <LiveList as="tbody">
             {postes.map((x) => {
               const l = ligneDe(x.id);
               const part = total > 0n ? Number(versCentimes(x.montantPrevu)) / Number(total) : 0;
@@ -125,8 +127,8 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
                     <span className="tnum block text-[12px] font-normal text-faint">{Math.round(part * 100)} %</span>
                   </TD>
                   <TD className="text-body">{e.categorieDepense[x.categorie]}</TD>
-                  <TD align="end" className="tnum font-medium text-ink">{formatMAD(x.montantPrevu, ctx.locale)}</TD>
-                  {rapport ? <TD align="end" className={`tnum ${l?.depassement ? "font-semibold text-danger" : "text-body"}`}>{l ? formatMAD(l.consomme, ctx.locale) : "—"}</TD> : null}
+                  <TD align="end" className="tnum font-medium text-ink"><Amount value={x.montantPrevu} locale={ctx.locale} /></TD>
+                  {rapport ? <TD align="end" className={`tnum ${l?.depassement ? "font-semibold text-danger" : "text-body"}`}>{l ? <Amount value={l.consomme} locale={ctx.locale} /> : "—"}</TD> : null}
                   {rapport ? (
                     <TD>
                       <div className="min-w-[120px]">
@@ -146,12 +148,12 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
                 </TR>
               );
             })}
-          </tbody>
+          </LiveList>
           <tfoot>
             <TR>
               <TD colSpan={2} className="text-[13px] text-soft">{f.montantVote}</TD>
-              <TD align="end" className="tnum font-semibold text-ink">{formatMAD(budget.montantTotal, ctx.locale)}</TD>
-              {rapport ? <TD align="end" className="tnum font-semibold text-ink">{formatMAD(rapport.totaux.consomme, ctx.locale)}</TD> : null}
+              <TD align="end" className="tnum font-semibold text-ink"><Amount value={budget.montantTotal} locale={ctx.locale} /></TD>
+              {rapport ? <TD align="end" className="tnum font-semibold text-ink"><Amount value={rapport.totaux.consomme} locale={ctx.locale} /></TD> : null}
               {rapport ? <TD /> : null}
               {gestion && budget.statut !== "REMPLACE" ? <TD /> : null}
             </TR>
@@ -162,14 +164,14 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
       {rapport && rapport.hors_poste.length > 0 ? (
         <Card className="mt-8">
           <SectionHeader title={d.horsPoste} subtitle={d.parCategorie} />
-          <ul className="mt-3 divide-y divide-wash-strong text-sm">
+          <LiveList as="ul" className="mt-3 divide-y divide-wash-strong text-sm">
             {rapport.hors_poste.map((h) => (
               <li key={h.categorie} className="flex items-center justify-between gap-3 py-3">
                 <span className="text-body">{e.categorieDepense[h.categorie]}</span>
-                <span className="tnum font-semibold text-ink">{formatMAD(h.consomme, ctx.locale)}</span>
+                <span className="tnum font-semibold text-ink"><Amount value={h.consomme} locale={ctx.locale} /></span>
               </li>
             ))}
-          </ul>
+          </LiveList>
         </Card>
       ) : null}
     </div>

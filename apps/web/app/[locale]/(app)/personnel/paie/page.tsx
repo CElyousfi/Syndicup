@@ -17,6 +17,8 @@ import { FileViewerButton } from "../../../../../components/documents/document-v
 import { IconCoins, IconUsers } from "../../../../../components/ui/icons";
 import { depenseVariant, fichePaieVariant } from "../../../../../lib/status";
 import { ValiderFicheModal, PayerFicheModal } from "../rh-modals";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -56,13 +58,13 @@ export default async function PaieMoisPage({ params, searchParams }: { params: P
         {x.fiches.length === 0 ? <EmptyState title={pe.aucuneFichePaie} illustration="empty-personnel" /> : (
           <div className="mt-4"><Table>
             <THead><TH>{pe.titre}</TH><TH align="end">{pe.brut}</TH><TH align="end">{pe.net}</TH><TH align="end">{pe.coutEmployeur}</TH><TH>{dict.incidents.statut}</TH><TH></TH></THead>
-            <tbody>
+            <LiveList as="tbody">
               {x.fiches.map((f) => (
                 <TR key={f.id}>
                   <TD><a href={p(`/personnel/${f.personnelId}?onglet=paie`)} className="font-bold text-ink hover:text-link">{f.personnel.nom ?? en.poste[f.personnel.poste]}</a><span className="block text-[12px] text-soft">{en.poste[f.personnel.poste]}</span></TD>
-                  <TD className="text-end tnum whitespace-nowrap">{formatMAD(f.brut, ctx.locale)}</TD>
-                  <TD className="text-end tnum whitespace-nowrap font-bold text-ink">{formatMAD(f.net, ctx.locale)}</TD>
-                  <TD className="text-end tnum whitespace-nowrap">{formatMAD(f.coutTotalEmployeur, ctx.locale)}</TD>
+                  <TD className="text-end tnum whitespace-nowrap"><Amount value={f.brut} locale={ctx.locale} /></TD>
+                  <TD className="text-end tnum whitespace-nowrap font-bold text-ink"><Amount value={f.net} locale={ctx.locale} /></TD>
+                  <TD className="text-end tnum whitespace-nowrap"><Amount value={f.coutTotalEmployeur} locale={ctx.locale} /></TD>
                   <TD><div className="flex flex-wrap items-center gap-1"><Badge variant={fichePaieVariant[f.statut]}>{en.statutFichePaie[f.statut]}</Badge>{f.depense ? <a href={p(`/finances/depenses/${f.depense.id}`)}><Badge variant={depenseVariant[f.depense.statut]}>{dict.enumsDepenses.statutDepense[f.depense.statut]}</Badge></a> : null}</div></TD>
                   <TD className="text-end"><div className="flex flex-wrap justify-end gap-1.5">
                     <FileViewerButton src={p(`/api/fiche-paie-pdf?personnel=${f.personnelId}&fiche=${f.id}&langue=${ctx.locale}`)} nom={`fiche-paie-${f.periode}.pdf`} labels={viewer} label={pe.pdfFiche} />
@@ -71,16 +73,16 @@ export default async function PaieMoisPage({ params, searchParams }: { params: P
                   </div></TD>
                 </TR>
               ))}
-            </tbody>
+            </LiveList>
           </Table></div>
         )}
       </Card>
       {x.sans_fiche.length ? (
         <Card>
           <SectionHeader title={pe.sansFiche} />
-          <ul className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
-            {x.sans_fiche.map((s) => <li key={s.id} className="flex items-center justify-between gap-2 py-3 text-[14px]"><span><a href={p(`/personnel/${s.id}?onglet=paie`)} className="font-semibold text-ink hover:text-link">{s.nom}</a> <span className="text-soft">· {en.poste[s.poste]}</span></span><span className="tnum text-soft">{s.salaire_brut_mensuel ? formatMAD(s.salaire_brut_mensuel, ctx.locale) : "—"}</span></li>)}
-          </ul>
+          <LiveList as="ul" className="mt-4 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
+            {x.sans_fiche.map((s) => <li key={s.id} className="flex items-center justify-between gap-2 py-3 text-[14px]"><span><a href={p(`/personnel/${s.id}?onglet=paie`)} className="font-semibold text-ink hover:text-link">{s.nom}</a> <span className="text-soft">· {en.poste[s.poste]}</span></span><span className="tnum text-soft">{s.salaire_brut_mensuel ? <Amount value={s.salaire_brut_mensuel} locale={ctx.locale} /> : "—"}</span></li>)}
+          </LiveList>
         </Card>
       ) : null}
       <p className="text-[12px] text-faint">{pe.mentionPaie}</p>

@@ -35,6 +35,8 @@ import { IconDownload } from "../../../../../components/ui/icons";
 import { ExportButtons } from "../../../../../components/ui/export-buttons";
 import { ParcoursCompta, AideReleveResident, type EtapeParcours } from "../../../../../components/finances/parcours-compta";
 import { escaladeVariant } from "../../../../../lib/status";
+import { Amount, Figure } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -194,26 +196,26 @@ export default async function ComptabilitePage({
                 <TH align="end">{lbl.restant}</TH>
                 <TH align="end">{lbl.taux}</TH>
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {mois.map((r) => (
                   <TR key={r.periode}>
                     <TD className="font-medium text-ink">{formatPeriode(r.periode, ctx.locale)}</TD>
                     <TD align="center" className="tnum text-body">{r.nbAppels}</TD>
-                    <TD align="end" className="tnum whitespace-nowrap text-body">{mad(r.du)}</TD>
-                    <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(r.paye)}</TD>
-                    <TD align="end" className={`tnum whitespace-nowrap ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
-                    <TD align="end" className="tnum whitespace-nowrap text-body">{Math.round(r.taux * 100)}%</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={versChaine(r.du)} locale={ctx.locale} /></TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={versChaine(r.paye)} locale={ctx.locale} /></TD>
+                    <TD align="end" className={`tnum whitespace-nowrap ${r.restant > 0n ? "text-danger" : "text-ok"}`}><Amount value={versChaine(r.restant)} locale={ctx.locale} upIsGood={false} /></TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body"><Figure value={`${Math.round(r.taux * 100)}%`} /></TD>
                   </TR>
                 ))}
                 <TR className="bg-wash font-semibold">
                   <TD className="text-ink">{c.total}</TD>
                   <TD align="center" className="tnum text-ink">{mois.reduce((n, r) => n + r.nbAppels, 0)}</TD>
-                  <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(t.du)}</TD>
-                  <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(t.paye)}</TD>
-                  <TD align="end" className={`tnum whitespace-nowrap ${t.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(t.restant)}</TD>
-                  <TD align="end" className="tnum whitespace-nowrap text-ink">{Math.round(t.taux * 100)}%</TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={versChaine(t.du)} locale={ctx.locale} /></TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={versChaine(t.paye)} locale={ctx.locale} /></TD>
+                  <TD align="end" className={`tnum whitespace-nowrap ${t.restant > 0n ? "text-danger" : "text-ok"}`}><Amount value={versChaine(t.restant)} locale={ctx.locale} upIsGood={false} /></TD>
+                  <TD align="end" className="tnum whitespace-nowrap text-ink"><Figure value={`${Math.round(t.taux * 100)}%`} /></TD>
                 </TR>
-              </tbody>
+              </LiveList>
             </Table>
           </div>
         </Card>
@@ -225,12 +227,12 @@ export default async function ComptabilitePage({
             <div className="mt-5">
               <Donut
                 size={150}
-                centerLabel={mad(t.du)}
+                centerLabel={<Amount value={versChaine(t.du)} locale={ctx.locale} />}
                 centerSub={lbl.appele}
                 items={types.map((r) => ({
                   label: dict.enums.typeAppel[r.type],
                   value: Number(r.du),
-                  display: mad(r.du),
+                  display: <Amount value={versChaine(r.du)} locale={ctx.locale} />,
                 }))}
               />
             </div>
@@ -244,25 +246,25 @@ export default async function ComptabilitePage({
                 <div className="mt-4 space-y-3 text-sm">
                   <div className="flex items-baseline justify-between gap-3">
                     <span className="text-soft">{c.budgetVote}</span>
-                    <span className="tnum font-semibold text-ink">{mad(bvr.vote)}</span>
+                    <span className="tnum font-semibold text-ink"><Amount value={versChaine(bvr.vote)} locale={ctx.locale} /></span>
                   </div>
                   <div>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-soft">{c.budgetAppele}</span>
-                      <span className="tnum font-medium text-ink">{mad(bvr.appele)} · {Math.round(bvr.tauxAppele * 100)}%</span>
+                      <span className="tnum font-medium text-ink"><Amount value={versChaine(bvr.appele)} locale={ctx.locale} /> · <Figure value={`${Math.round(bvr.tauxAppele * 100)}%`} /></span>
                     </div>
                     <ProgressBar ratio={bvr.tauxAppele} tone="ink" className="mt-1.5" />
                   </div>
                   <div>
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="text-soft">{c.budgetEncaisse}</span>
-                      <span className="tnum font-medium text-ink">{mad(bvr.encaisse)} · {Math.round(bvr.tauxEncaisse * 100)}%</span>
+                      <span className="tnum font-medium text-ink"><Amount value={versChaine(bvr.encaisse)} locale={ctx.locale} /> · <Figure value={`${Math.round(bvr.tauxEncaisse * 100)}%`} /></span>
                     </div>
                     <ProgressBar ratio={bvr.tauxEncaisse} tone="ok" className="mt-1.5" />
                   </div>
                   <div className="flex items-baseline justify-between gap-3 border-t border-hairline pt-3">
                     <span className="text-soft">{c.budgetEcart}</span>
-                    <span className={`tnum font-semibold ${bvr.ecart < 0n ? "text-danger" : "text-ink"}`}>{mad(bvr.ecart)}</span>
+                    <span className={`tnum font-semibold ${bvr.ecart < 0n ? "text-danger" : "text-ink"}`}><Amount value={versChaine(bvr.ecart)} locale={ctx.locale} /></span>
                   </div>
                 </div>
               ) : (
@@ -326,7 +328,7 @@ export default async function ComptabilitePage({
                 <TH>{c.colDernierPaiement}</TH>
                 {gestion ? <TH align="end">{dict.common.actions}</TH> : null}
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {releve.map((r) => (
                   <TR key={r.lotId}>
                     <TD>
@@ -334,9 +336,9 @@ export default async function ComptabilitePage({
                         {r.typeLot ? `${dict.enums.typeLot[r.typeLot]} ` : ""}{r.numero}
                       </Link>
                     </TD>
-                    <TD align="end" className="tnum whitespace-nowrap text-body">{mad(r.du)}</TD>
-                    <TD align="end" className="tnum whitespace-nowrap text-ink">{mad(r.paye)}</TD>
-                    <TD align="end" className={`tnum whitespace-nowrap font-medium ${r.restant > 0n ? "text-danger" : "text-ok"}`}>{mad(r.restant)}</TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-body"><Amount value={versChaine(r.du)} locale={ctx.locale} /></TD>
+                    <TD align="end" className="tnum whitespace-nowrap text-ink"><Amount value={versChaine(r.paye)} locale={ctx.locale} /></TD>
+                    <TD align="end" className={`tnum whitespace-nowrap font-medium ${r.restant > 0n ? "text-danger" : "text-ok"}`}><Amount value={versChaine(r.restant)} locale={ctx.locale} upIsGood={false} /></TD>
                     <TD>
                       {r.restant > 0n ? (
                         <Badge variant={escaladeVariant(r.escalade)}>{dict.enums.escalade[r.escalade]}</Badge>
@@ -359,7 +361,7 @@ export default async function ComptabilitePage({
                     ) : null}
                   </TR>
                 ))}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         </Card>
@@ -394,7 +396,7 @@ export default async function ComptabilitePage({
                   <TH>{c.colMethode}</TH>
                   <TH align="end">{c.colMontant}</TH>
                 </THead>
-                <tbody>
+                <LiveList as="tbody">
                   {journal.map((r) => (
                     <TR key={r.id}>
                       <TD className="text-[13px] text-body">{formatDateHeure(r.horodatage, ctx.locale)}</TD>
@@ -404,10 +406,10 @@ export default async function ComptabilitePage({
                         {r.typeAppel ? <span className="text-faint"> · {dict.enums.typeAppel[r.typeAppel]}</span> : null}
                       </TD>
                       <TD><Badge variant="outline">{dict.enums.methodePaiement[r.methode]}</Badge></TD>
-                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ink">{mad(r.montantC)}</TD>
+                      <TD align="end" className="tnum whitespace-nowrap font-semibold text-ink"><Amount value={versChaine(r.montantC)} locale={ctx.locale} /></TD>
                     </TR>
                   ))}
-                </tbody>
+                </LiveList>
               </Table>
             </TableCard>
           )}

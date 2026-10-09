@@ -16,6 +16,8 @@ import { agVariant } from "../../../../lib/status";
 import { IconChevronEnd, IconPlus } from "../../../../components/ui/icons";
 import { CCalendar, CVote, IconCircle } from "../../../../components/ui/color-icons";
 import { EcheanceRelative } from "../tableau-de-bord/syndic";
+import { LiveList } from "../../../../components/ui/live-list";
+import { Figure } from "../../../../components/ui/amount";
 
 export async function generateMetadata({
   params,
@@ -77,7 +79,7 @@ export default async function AgListPage({
       ) : (
         <>
           {/* Liste à plat sur la toile (Wise) : pastille, titre gras, date, statut, chevron. */}
-          <ul className="stagger-grid -mx-2 space-y-1 sm:-mx-3">
+          <LiveList as="ul" className="stagger-grid -mx-2 space-y-1 sm:-mx-3">
             {ags.map((ag) => {
               const aVenir = ["PLANIFIEE", "CONVOQUEE"].includes(ag.statut);
               return (
@@ -96,7 +98,7 @@ export default async function AgListPage({
                         {ag.quorumAtteint ? (
                           <span className="hidden sm:inline">
                             {` · ${dict.ag.quorum} `}
-                            <span className="tnum">{formatPourcent(ag.quorumAtteint)}</span>
+                            <Figure value={formatPourcent(ag.quorumAtteint)} />
                           </span>
                         ) : null}
                       </p>
@@ -116,7 +118,7 @@ export default async function AgListPage({
                 </li>
               );
             })}
-          </ul>
+          </LiveList>
           {agsRes.ok ? <Pagination meta={agsRes.meta} basePath={p("/ag")} dict={dict} /> : null}
         </>
       )}

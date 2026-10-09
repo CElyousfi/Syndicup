@@ -118,7 +118,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
               const SizedBox(height: 18),
               FormError(_fail),
               if (_fail != null) const SizedBox(height: 12),
-              SubmitButton(label: d.common.save, loading: _loading, onPressed: _save),
+              SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: _save),
             ],
           ),
         ),
@@ -131,7 +131,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
         SectionHeader(d.profil.mesRoles),
         CardList([
           for (final r in p.roles)
-            ListRow(leading: IconCircle(Icons.apartment_rounded, tone: r.actif ? Tone.lilac : Tone.neutral), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
+            ListRow(key: ValueKey('${r.coproprieteId}|${r.role}'), leading: IconCircle(Icons.apartment_rounded, tone: r.actif ? Tone.lilac : Tone.neutral), title: libelleRole(context, r.role), subtitle: ctx.coproprietes.where((c) => c.id == r.coproprieteId).map((c) => c.nom).firstOrNull ?? r.coproprieteId.substring(0, 8), trailing: r.actif ? null : StatusBadge(d.membres.roleInactif, variant: BadgeVariant.outline, small: true)),
         ]),
         // Réglages : lignes Wise à pastille et chevron.
         SectionHeader(d.communication.preferences),
@@ -222,18 +222,18 @@ class _DonneesScreenState extends ConsumerState<DonneesScreen> {
         SuBanner(tone: BannerTone.info, body: d.profil.donneesConservation),
         const SizedBox(height: 16),
         Text(d.profil.exportFormat, style: t.bodySmall),
-        if (_loading) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
+        if (_loading) const Padding(padding: EdgeInsets.only(top: 12), child: Center(child: LoadingOrb(size: 8))),
         const SizedBox(height: 12),
         FormError(_fail),
         const SizedBox(height: 8),
-        TextButton.icon(onPressed: () async {
+        SuButton(variant: SuButtonVariant.ghost, onPressed: () async {
           final r = await ref.read(apiClientProvider).get<Map<String, dynamic>>('/users/me/export', parse: asMap);
           if (!context.mounted) return;
           if (r is ApiOk<Map<String, dynamic>>) {
             await Clipboard.setData(ClipboardData(text: jsonEncode(r.data)));
             if (context.mounted) showToast(context, context.mdict.copied);
           }
-        }, icon: const Icon(Icons.copy_rounded, size: 18), label: Text(d.common.copy)),
+        }, icon: Icons.copy_rounded, label: d.common.copy),
       ],
     );
   }

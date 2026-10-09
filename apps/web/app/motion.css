@@ -535,16 +535,24 @@ dialog.su-modal[open][data-closing]::backdrop {
   45%, 60% { transform: translateX(calc(var(--dir) * -5px)); }
 }
 .su-field-error { animation: rise-sm var(--dur-base) var(--ease-out) both; }
-.su-tick path,
-.su-submit-done path { stroke-dasharray: 16; stroke-dashoffset: 16; animation: draw-check var(--dur-slow) var(--ease-out) forwards; }
-@keyframes draw-check { to { stroke-dashoffset: 0; } }
+/* Coche dessinée en CSS (masque SVG) : révélée de gauche à droite (miroir en arabe). */
+.su-tick,
+.su-submit-done {
+  display: inline-block;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.2 9.4 7.6 12.6 13.8 5.8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='M4.2 9.4 7.6 12.6 13.8 5.8' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.su-tick { color: var(--color-ok); animation: draw-check var(--dur-slow) var(--ease-out) both; }
+@keyframes draw-check { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+:root[dir="rtl"] .su-tick { animation-name: draw-check-rtl; }
+@keyframes draw-check-rtl { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
 
-/* ── Bouton d'envoi : coche après un succès confirmé (FormAlert → su:form-result) ── */
-.su-submit-stack > .su-submit-done { opacity: 0; transform: scale(0.5); }
-[data-done] > .su-submit-stack > .su-submit-done { opacity: 1; transform: none; }
+/* ── Bouton d'envoi : coche après un succès confirmé, secousse après un refus (form-result.ts) ── */
+.su-submit-stack > .su-submit-done { width: 18px; height: 18px; opacity: 0; transform: scale(0.5); }
+[data-done] > .su-submit-stack > .su-submit-done { opacity: 1; transform: none; animation: draw-check var(--dur-slow) var(--ease-out) both; }
 [data-done] > .su-submit-stack > .su-submit-label { opacity: 0; transform: scale(0.9); }
-.su-submit-stack > .su-submit-done path { animation: none; }
-[data-done] > .su-submit-stack > .su-submit-done path { animation: draw-check var(--dur-slow) var(--ease-out) forwards; }
+button[data-shake] { animation: shake 0.46s cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
 
 /* ── Cases, radios : remplissage en ressort, coche qui se trace ── */
 .su-check-mark path { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset var(--dur-base) var(--ease-out); }
@@ -588,7 +596,7 @@ dialog.su-modal[open][data-closing]::backdrop {
 dialog.su-modal[data-dragging] { transition: none; }
 
 /* ── Interrupteur général : alive_v1 coupé → aucune animation ajoutée par ce bloc ── */
-:root[data-alive="0"] :is(.amt-old, .amt-new, .amt-up, .amt-down, .su-field-invalid > *, .su-field-error, .badge-pop, [data-live]) {
+:root[data-alive="0"] :is(.amt-old, .amt-new, .amt-up, .amt-down, .su-field-invalid > *, .su-field-error, .badge-pop, [data-live], .su-tick) {
   animation: none !important;
 }
 :root[data-alive="0"] [data-live="out"] { display: none; }

@@ -7,7 +7,6 @@ import { contexteLignes, getSynthese } from "../../../../../lib/finances-data";
 import {
   formatDate,
   formatEntier,
-  formatMAD,
   formatPeriode,
   nomComplet,
 } from "../../../../../lib/format";
@@ -32,6 +31,8 @@ import { supprimerLot } from "../actions";
 import { ContesterModal } from "../../../../../components/finances/contester-modal";
 import { LotLcdCard } from "../../../../../components/lcd/lot-lcd-card";
 import { LotParkingsSection } from "./lot-parkings";
+import { Amount } from "../../../../../components/ui/amount";
+import { LiveList } from "../../../../../components/ui/live-list";
 
 type Onglet = "propriete" | "occupation" | "finances" | "historique" | "parkings";
 
@@ -46,7 +47,10 @@ function LignePersonne({
   fin,
   prefixe,
   extra,
+  "data-live": live,
 }: {
+  /** Posé par <LiveList> sur une ligne arrivée / retirée en direct. */
+  "data-live"?: string;
   nom: string | null;
   repli: string;
   sousTitre: ReactNode;
@@ -55,7 +59,7 @@ function LignePersonne({
   extra?: ReactNode;
 }) {
   return (
-    <li className="flex items-center gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
+    <li data-live={live} className="flex items-center gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
       <Avatar nom={nom ?? repli} size={44} />
       <div className="min-w-0 flex-1">
         <p className="flex min-w-0 items-center gap-1.5 text-[15px] font-semibold text-ink">
@@ -224,7 +228,7 @@ export default async function LotDetailPage({
                   </span>
                 ) : (
                   <span className="tnum block text-[18px] font-bold leading-tight tracking-[-0.02em] text-danger sm:text-[26px] sm:leading-none">
-                    {formatMAD(soldeDu, ctx.locale)}
+                    <Amount value={soldeDu} locale={ctx.locale} upIsGood={false} />
                   </span>
                 )}
               </dd>
@@ -262,7 +266,7 @@ export default async function LotDetailPage({
           {proprietairesActifs.length === 0 ? (
             <p className="py-4 text-sm text-soft">{dict.common.emptyDefault}</p>
           ) : (
-            <ul className="-mx-3">
+            <LiveList as="ul" className="-mx-3">
               {proprietairesActifs.map((pr) => (
                 <LignePersonne
                   key={pr.id}
@@ -279,7 +283,7 @@ export default async function LotDetailPage({
                   fin={<span className="tnum text-[16px] font-bold text-ink">{pr.quotePart} %</span>}
                 />
               ))}
-            </ul>
+            </LiveList>
           )}
           {/* M15 — location courte durée : rendu seulement si l'API autorise la lecture (200). */}
           <LotLcdCard lotId={id} dict={dict} locale={ctx.locale} />
@@ -307,7 +311,7 @@ export default async function LotDetailPage({
               className="py-10"
             />
           ) : (
-            <ul className="-mx-3">
+            <LiveList as="ul" className="-mx-3">
               {occupantsActifs.map((oc) => (
                 <LignePersonne
                   key={oc.id}
@@ -324,7 +328,7 @@ export default async function LotDetailPage({
                   }
                 />
               ))}
-            </ul>
+            </LiveList>
           )}
         </div>
       ) : null}
@@ -342,7 +346,7 @@ export default async function LotDetailPage({
                   <p className="mt-1 text-[17px] font-bold text-ok">{dict.finances.soldeAJour}</p>
                 ) : (
                   <p className="tnum mt-1 text-[30px] font-bold leading-none tracking-[-0.02em] text-danger">
-                    {formatMAD(soldeDu, ctx.locale)}
+                    <Amount value={soldeDu} locale={ctx.locale} upIsGood={false} />
                   </p>
                 )}
               </div>
@@ -394,7 +398,7 @@ export default async function LotDetailPage({
                 <TH>{dict.finances.reponseStatut}</TH>
                 <TH />
               </THead>
-              <tbody>
+              <LiveList as="tbody">
                 {soldeRes.data.lignes.map((l) => {
                   const cx = contextLignes.get(l.appel_de_fonds_lot_id);
                   return (
@@ -408,10 +412,10 @@ export default async function LotDetailPage({
                         ) : null}
                       </TD>
                       <TD align="end" className="tnum text-body">
-                        {formatMAD(l.montant_du, ctx.locale)}
+                        <Amount value={l.montant_du} locale={ctx.locale} />
                       </TD>
                       <TD align="end" className="tnum text-body">
-                        {formatMAD(l.montant_paye, ctx.locale)}
+                        <Amount value={l.montant_paye} locale={ctx.locale} />
                       </TD>
                       <TD>
                         <span className="inline-flex items-center gap-1.5">
@@ -438,7 +442,7 @@ export default async function LotDetailPage({
                     </TR>
                   );
                 })}
-              </tbody>
+              </LiveList>
             </Table>
           </TableCard>
         </div>
@@ -460,7 +464,7 @@ export default async function LotDetailPage({
         ) : (
           <div className="space-y-4">
             <SectionHeader title={dict.lots.proprietairesHistoriques} />
-            <ul className="-mx-3">
+            <LiveList as="ul" className="-mx-3">
               {anciens.map((pr) => (
                 <LignePersonne
                   key={pr.id}
@@ -474,7 +478,7 @@ export default async function LotDetailPage({
                   fin={<span className="tnum text-[15px] font-semibold text-soft">{pr.quotePart} %</span>}
                 />
               ))}
-            </ul>
+            </LiveList>
           </div>
         )
       ) : null}

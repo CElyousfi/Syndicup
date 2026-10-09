@@ -5,7 +5,7 @@ import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { DepenseDetail } from "../../../../../../lib/api/types";
 import { getDict, isLocale, fill } from "../../../../../../lib/i18n";
-import { formatDate, formatDateHeure, formatMAD, nomComplet } from "../../../../../../lib/format";
+import { formatDate, formatDateHeure, nomComplet } from "../../../../../../lib/format";
 import { actionsPossibles, joursAvant } from "../../../../../../lib/depenses";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { Badge } from "../../../../../../components/ui/badge";
@@ -16,6 +16,8 @@ import { CMoneyBag, IconCircle } from "../../../../../../components/ui/color-ico
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { depenseVariant, factureVariant } from "../../../../../../lib/status";
 import { SoumettreModal, DeciderModals, PayerModal, AnnulerModal, AjouterFactureModal, StatutFactureForm } from "./depense-actions";
+import { Amount } from "../../../../../../components/ui/amount";
+import { LiveList } from "../../../../../../components/ui/live-list";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -98,12 +100,12 @@ export default async function DepenseDetailPage({
               </IconCircle>
               <div className="min-w-0">
                 <p className="text-sm font-medium text-soft">{d.montantTtc}</p>
-                <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]">{formatMAD(x.montantTtc, ctx.locale)}</p>
+                <p className="tnum mt-1.5 text-[34px] font-bold leading-none tracking-[-0.02em] text-ink sm:text-[40px]"><Amount value={x.montantTtc} locale={ctx.locale} /></p>
               </div>
             </div>
             <dl className="mt-6 grid gap-2 sm:grid-cols-2">
-              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.montantHt}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.montantHt ? formatMAD(x.montantHt, ctx.locale) : "—"}</dd></div>
-              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.tva}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.tva ? formatMAD(x.tva, ctx.locale) : "—"}</dd></div>
+              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.montantHt}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.montantHt ? <Amount value={x.montantHt} locale={ctx.locale} /> : "—"}</dd></div>
+              <div className="flex items-baseline justify-between gap-3 rounded-[18px] bg-surface px-4 py-3"><dt className="text-sm text-soft">{d.tva}</dt><dd className="tnum text-[15px] font-semibold text-ink">{x.tva ? <Amount value={x.tva} locale={ctx.locale} /> : "—"}</dd></div>
             </dl>
             {x.description ? <p className="mt-5 whitespace-pre-wrap text-[15px] leading-relaxed text-body">{x.description}</p> : null}
           </Card>
@@ -113,7 +115,7 @@ export default async function DepenseDetailPage({
             {x.factures.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{d.aucuneFacture}</p>
             ) : (
-              <ul className="mt-4 divide-y divide-wash-strong">
+              <LiveList as="ul" className="mt-4 divide-y divide-wash-strong">
                 {x.factures.map((f, n) => {
                   const jours = joursAvant(f.dateEcheance);
                   return (
@@ -137,11 +139,11 @@ export default async function DepenseDetailPage({
                           {syndic ? <StatutFactureForm dict={dict} locale={ctx.locale} depenseId={id} factureId={f.id} statut={f.statut} /> : null}
                         </div>
                       </div>
-                      <span className="tnum shrink-0 text-[17px] font-bold text-ink">{formatMAD(f.montantTtc, ctx.locale)}</span>
+                      <span className="tnum shrink-0 text-[17px] font-bold text-ink"><Amount value={f.montantTtc} locale={ctx.locale} /></span>
                     </li>
                   );
                 })}
-              </ul>
+              </LiveList>
             )}
           </Card>
 
@@ -150,7 +152,7 @@ export default async function DepenseDetailPage({
             {x.logs.length === 0 ? (
               <p className="mt-3 text-sm text-soft">{d.journalVide}</p>
             ) : (
-              <ol className="mt-6 ms-2">
+              <LiveList as="ol" className="mt-6 ms-2">
                 {x.logs.map((log, idx) => {
                   const dernier = idx === x.logs.length - 1;
                   const ok = log.type === "PAYEE" || log.type === "APPROUVEE";
@@ -182,7 +184,7 @@ export default async function DepenseDetailPage({
                     </li>
                   );
                 })}
-              </ol>
+              </LiveList>
             )}
           </Card>
         </div>
@@ -197,7 +199,7 @@ export default async function DepenseDetailPage({
                 <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.reference}</dt><dd className="tnum font-semibold text-ink" dir="ltr">{x.referencePaiement ?? "—"}</dd></div>
                 <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.source}</dt><dd className="font-semibold text-ink">{e.sourceFinancement[x.source]}</dd></div>
                 {x.mouvementsFondsReserve.length > 0 ? (
-                  <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.mouvementReserve}</dt><dd className="tnum font-semibold text-danger">{formatMAD(x.mouvementsFondsReserve[0]!.montant, ctx.locale)}</dd></div>
+                  <div className="flex justify-between gap-3 py-2.5"><dt className="text-soft">{d.mouvementReserve}</dt><dd className="tnum font-semibold text-danger"><Amount value={x.mouvementsFondsReserve[0]!.montant} locale={ctx.locale} /></dd></div>
                 ) : null}
                 <div className="pt-3">
                   {x.justificatifPaiementDocument ? (
