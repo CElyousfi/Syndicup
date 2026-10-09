@@ -18,7 +18,7 @@ export function PhotoBanner({
 }) {
   return (
     <div className={`relative h-36 overflow-hidden rounded-card bg-tile sm:h-44 ${className}`}>
-      <FadeImg src={src} alt="" className="absolute inset-0 size-full object-cover" />
+      <FadeImg src={src} alt="" className="su-parallax absolute inset-0 size-full object-cover" />
       {title ? (
         <>
           <div className="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/15 to-transparent" />

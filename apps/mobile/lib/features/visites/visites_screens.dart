@@ -107,6 +107,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
     final contenu = <Widget>[
       // Réseau : état lisible d'un coup d'œil (le gardien travaille souvent sans réseau).
       if (gardien || gestion) ...[StatutReseauTile(online: online, syncing: sync.syncing, hint: md.worksOffline), const SizedBox(height: 12)],
+      SuQueueSyncFlash(pending: queue.length),
       if (queue.isNotEmpty) ...[
         SuCard(
           child: Column(
@@ -118,6 +119,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(fill(md.queueTitle, {'n': queue.length}), style: t.titleMedium), Text(md.queueLocal, style: t.labelSmall?.copyWith(color: SuColors.warn, fontFamily: 'GeistMono'))])),
               ]),
               const SizedBox(height: 12),
+              SuLiveColumn(highlight: false, children: [
               for (final q in queue)
                 Padding(
                   key: ValueKey(q.id),
@@ -131,6 +133,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
                     ],
                   ),
                 ),
+              ]),
               const SizedBox(height: 6),
               Text(md.queueHint, style: t.bodySmall),
               const SizedBox(height: 14),

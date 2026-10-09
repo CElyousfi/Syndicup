@@ -5,6 +5,7 @@ import { fill } from "../../../../lib/i18n";
 import { formatDateHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
+import { Greeting } from "../../../../components/ui/greeting";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { EmptyState } from "../../../../components/ui/empty-state";
@@ -24,7 +25,7 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
   return (
     <div className="page-root">
       <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6 shadow-none!" />
-      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={dict.dash.mesTickets} />
+      <PageHeader title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />} subtitle={dict.dash.mesTickets} />
 
       {tickets.length === 0 ? (
         <EmptyState

@@ -210,6 +210,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     final contenu = <Widget>[
       // Réseau : état lisible d'un coup d'œil pour qui confirme arrivées et départs.
       if (peutConfirmer) ...[StatutReseauTile(online: online, syncing: sync.syncing, hint: md.lcdOfflineConfirm), const SizedBox(height: 12)],
+      SuQueueSyncFlash(pending: queue.length),
       if (queue.isNotEmpty) ...[LcdQueueCard(queue: queue), const SizedBox(height: 12)],
       if (reglement.hasError && reg == null && !ctx.isGardien) ErrorState(error: reglement.error!, onRetry: () => ref.invalidate(lcdReglementProvider)),
       bannieres(),

@@ -60,6 +60,7 @@ export default async function AppLayout({
         quickTitle: dict.nav.quickTitle,
         done: dict.common.done,
       }}
+      alive={dict.alive}
       quick={buildQuickActions(nav, ctx.role, ctx.roles, dict, ctx.locale)}
       tour={dict.onboarding}
     >

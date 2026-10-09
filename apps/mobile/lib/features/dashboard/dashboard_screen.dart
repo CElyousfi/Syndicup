@@ -14,6 +14,7 @@ import '../../core/theme/tokens.dart';
 import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/util/status.dart';
+import '../../core/feel/feel.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../documents/documents_screen.dart';
@@ -64,7 +65,7 @@ class _Greeting extends StatelessWidget {
                 end: -16,
                 top: 0,
                 bottom: 0,
-                child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), child: CoproPhoto(photo)),
+                child: ClipRRect(borderRadius: const BorderRadius.vertical(top: Radius.circular(28)), child: SuHeroDrift(radius: 28, child: SuParallax(child: CoproPhoto(photo)))),
               ),
               const PositionedDirectional(
                 start: -16,
@@ -83,7 +84,8 @@ class _Greeting extends StatelessWidget {
             children: [
               // Salutation révélée mot par mot, prénom en gras (comme le tableau de bord web).
               Builder(builder: (context) {
-                final salut = fill(d.dash.greeting, {'prenom': ''}).trim();
+                // Vivant : salutation selon le moment de la journée (Bonjour / Bon après-midi / Bonsoir).
+                final salut = Feel.alive ? greetingFor(context, DateTime.now()) : fill(d.dash.greeting, {'prenom': ''}).trim();
                 final nom = '${ctx.profil.prenom ?? nomCompletProfil(ctx) ?? ''}!';
                 return SuRevealText('$salut $nom', style: t.displayLarge?.copyWith(fontWeight: FontWeight.w500), boldFrom: salut.split(RegExp(r'\s+')).where((w) => w.isNotEmpty).length);
               }),

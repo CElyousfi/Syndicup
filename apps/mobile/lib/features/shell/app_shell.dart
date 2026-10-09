@@ -37,10 +37,29 @@ class _AppShellState extends ConsumerState<AppShell> {
   /// Positions de défilement des écrans d'onglet (vit aussi longtemps que la session).
   final PageStorageBucket _tabScroll = PageStorageBucket();
 
+  /// Retour du réseau : « Connexion rétablie » quelques secondes, puis le bandeau se replie.
+  bool _justBack = false;
+  Timer? _backTimer;
+  DateTime? _pausedAt;
+  late final AppLifecycleListener _life = AppLifecycleListener(
+    onPause: () => _pausedAt = DateTime.now(),
+    onResume: () {
+      // Retour au premier plan après ≥ 30 s : les données se mettent à jour en douceur (contenu
+      // gardé à l'écran, montants qui roulent, lignes qui entrent) — jamais d'écran blanc.
+      final p = _pausedAt;
+      _pausedAt = null;
+      if (p != null && DateTime.now().difference(p) >= const Duration(seconds: 30)) _refreshVisible();
+    },
+  );
+
   @override
   void initState() {
     super.initState();
+    _life;
     SuPage.rootHeader = () => const ShellHeader();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) LaunchHandoff.play(context);
+    });
     // Flux temps réel : toast + invalidation ciblée des lectures concernées.
     _sub = ref.read(notificationsLiveProvider.notifier).events.listen(_onLive);
     // Push : jeton d'appareil enregistré côté API (no-op si Firebase absent du build).
@@ -73,6 +92,15 @@ class _AppShellState extends ConsumerState<AppShell> {
 
   /// Retour du réseau : les lectures tombées en erreur hors-ligne sont relancées.
   void _onReconnect() {
+    _refreshVisible();
+    setState(() => _justBack = true);
+    _backTimer?.cancel();
+    _backTimer = Timer(const Duration(milliseconds: 2600), () {
+      if (mounted) setState(() => _justBack = false);
+    });
+  }
+
+  void _refreshVisible() {
     for (final p in [visitesProvider, incidentsProvider, lotsProvider, syntheseProvider, notificationsProvider, agListProvider, reservationsProvider, documentsProvider]) {
       ref.invalidate(p);
     }
@@ -137,6 +165,8 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void dispose() {
     _sub?.cancel();
+    _backTimer?.cancel();
+    _life.dispose();
     super.dispose();
   }
 
@@ -157,8 +187,23 @@ class _AppShellState extends ConsumerState<AppShell> {
     final location = GoRouterState.of(context).uri.path;
     int current = tabs.indexWhere((t) => t.exact ? location == t.path : location == t.path || location.startsWith('${t.path}/'));
     final onPlus = location == '/plus';
+    // Bandeau de connexion calme : hors ligne → se déplie ; retour → « Connexion rétablie ».
+    final online = ref.watch(connectivityProvider).valueOrNull ?? true;
+    final a = dict.alive;
+    final banner = !Feel.alive
+        ? null
+        : !online
+            ? a.horsLigne
+            : _justBack
+                ? a.enLigne
+                : null;
     return Scaffold(
-      body: TabScrollMemory(bucket: _tabScroll, child: widget.child),
+      body: Column(
+        children: [
+          SuStatusBanner(message: banner, tone: online ? BannerTone.ok : BannerTone.warn, topInset: MediaQuery.paddingOf(context).top),
+          Expanded(child: MediaQuery.removePadding(context: context, removeTop: banner != null, child: TabScrollMemory(bucket: _tabScroll, child: widget.child))),
+        ],
+      ),
       bottomNavigationBar: _TabBar(
         tabs: tabs,
         current: onPlus ? tabs.length : current,

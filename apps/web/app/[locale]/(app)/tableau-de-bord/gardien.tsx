@@ -7,6 +7,7 @@ import { fill } from "../../../../lib/i18n";
 import { formatHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
+import { Greeting } from "../../../../components/ui/greeting";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { incidentVariant, visiteVariant } from "../../../../lib/status";
@@ -43,7 +44,7 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
   return (
     <div className="page-root">
       <PhotoBanner src={photoSrc(ctx.copropriete, "entree")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6 shadow-none!" />
-      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={ctx.copropriete?.nom ?? undefined} />
+      <PageHeader title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />} subtitle={ctx.copropriete?.nom ?? undefined} />
 
       {/* Deux gestes du quotidien, en très grand : tuile encre (geste principal) et tuile greige. */}
       <div className="grid gap-4 sm:grid-cols-2">

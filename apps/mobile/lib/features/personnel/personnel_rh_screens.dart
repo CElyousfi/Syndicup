@@ -575,6 +575,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
                 child: pointe ? SuBanner(tone: BannerTone.ok, body: d.personnel.pointe) : SubmitButton(label: d.personnel.pointer, icon: Icons.how_to_reg_rounded, loading: _pointage, onPressed: _pointer),
               );
             }),
+          SuQueueSyncFlash(pending: file.length),
           if (file.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: 12),

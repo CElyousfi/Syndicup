@@ -5,6 +5,7 @@ import '../api/providers.dart';
 import '../auth/app_state.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'ambient.dart';
 
 /// Photos de la résidence (M20) — emplacements personnalisables par le syndic, image du produit
 /// par défaut sinon. Mêmes clés que le web (`lib/photos.ts`) :
@@ -108,7 +109,7 @@ class PhotoBanner extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CoproPhoto(cle),
+              SuParallax(child: CoproPhoto(cle)),
               if (title != null) ...[
                 DecoratedBox(
                   decoration: BoxDecoration(

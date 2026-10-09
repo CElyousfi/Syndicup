@@ -499,6 +499,8 @@ class SplashScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final st = ref.watch(appStateProvider);
+    // Le logo du démarrage sera relayé vers l'en-tête de la coque (pas de coupure sèche).
+    LaunchHandoff.arm();
     return Scaffold(
       backgroundColor: SuColors.surface,
       body: Center(

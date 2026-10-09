@@ -36,11 +36,11 @@ export function PosterCard({
   const bg = tone === "ink" ? "bg-ink" : "bg-brand";
   const src = poster ? `/illustrations/${poster}.png` : null;
   const inner = (
-    <div className={`relative overflow-hidden rounded-[28px] ${bg} ${className}`}>
+    <div className={`alive-drift relative overflow-hidden rounded-[28px] ${bg} ${className}`}>
       {src ? (
         <>
           <img src={src} alt="" aria-hidden className="block h-40 w-full object-cover object-right rtl:-scale-x-100 sm:hidden" />
-          <img src={src} alt="" aria-hidden className="absolute inset-0 hidden size-full object-cover object-right rtl:-scale-x-100 sm:block" />
+          <img src={src} alt="" aria-hidden className="su-parallax absolute inset-0 hidden size-full object-cover object-right rtl:-scale-x-100 sm:block" />
         </>
       ) : null}
       <div className={`relative flex min-h-[200px] items-stretch gap-6 p-7 sm:p-9 ${src ? "sm:min-h-[260px]" : ""}`}>

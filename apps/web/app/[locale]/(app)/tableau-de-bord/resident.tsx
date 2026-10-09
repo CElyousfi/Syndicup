@@ -16,6 +16,7 @@ import { lienNotification } from "../../../../lib/notifications-link";
 import { formatDateHeure, formatMAD, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
+import { Greeting } from "../../../../components/ui/greeting";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
@@ -102,7 +103,7 @@ export async function DashboardResident({
     <div className="page-root">
       {/* Accueil Wise : la résidence en bandeau, puis le GRAND bonjour. */}
       <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6 shadow-none!" />
-      <PageHeader title={fill(dict.dash.greeting, { prenom })} reveal subtitle={ctx.copropriete?.nom ?? undefined} />
+      <PageHeader title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />} subtitle={ctx.copropriete?.nom ?? undefined} />
 
       {/* Soldes Wise : tuiles chiffres clés */}
       <div

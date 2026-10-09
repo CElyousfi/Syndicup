@@ -611,3 +611,79 @@ dialog.su-modal[data-dragging] { transition: none; }
 }
 @keyframes chart-draw { from { stroke-dashoffset: 1; } }
 .chart-dot { transition: top 0.7s var(--ease-out), width 0.2s, height 0.2s, background-color 0.2s; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Couche « Alive » — phase 3 : l'application respire (ambiance). Toute
+   l'ambiance disparaît en mode lite, en « animations réduites » et si
+   alive_v1 est coupé ; elle n'anime jamais hors écran.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Bandeau de connexion calme (components/shell/ambient.tsx) ── */
+.su-net {
+  position: fixed;
+  inset-inline: 0;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.su-net-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: var(--color-warn-tint, #fdf1dc);
+  color: var(--color-warn);
+  box-shadow: 0 8px 24px rgb(18 18 18 / 0.12);
+  transform: translateY(-140%);
+  opacity: 0;
+  transition: transform var(--dur-slow) var(--ease-spring), opacity var(--dur-base) var(--ease-out), background-color var(--dur-base), color var(--dur-base);
+}
+.su-net[data-state="off"] .su-net-inner,
+.su-net[data-state="back"] .su-net-inner { transform: none; opacity: 1; }
+.su-net[data-state="back"] .su-net-inner { background: var(--color-ok-tint, #e3f3e8); color: var(--color-ok); }
+.su-net-dot { width: 8px; height: 8px; border-radius: 999px; background: currentColor; }
+
+/* ── Révélation au défilement : première entrée à l'écran seulement ── */
+[data-reveal="wait"] { opacity: 0; translate: 0 16px; }
+[data-reveal="in"] { opacity: 1; translate: none; transition: opacity var(--dur-slow) var(--ease-out), translate var(--dur-slow) var(--ease-out); }
+
+/* ── Parallaxe légère des photos de héros (défilement natif, aucun JS) ── */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    :root:not([data-lite="1"]):not([data-motion="reduced"]):not([data-alive="0"]) .su-parallax {
+      scale: 1.08;
+      animation: su-parallax linear both;
+      animation-timeline: view();
+      animation-range: cover;
+    }
+  }
+}
+@keyframes su-parallax {
+  from { translate: 0 -12px; }
+  to { translate: 0 12px; }
+}
+
+/* ── Dérive très lente d'un halo lime sur les cartes-affiches (≈ 20 s, presque imperceptible).
+   Pseudo-élément surdimensionné déplacé par transform : composité, aucun repeint par image. ── */
+.alive-drift::after {
+  content: "";
+  position: absolute;
+  inset: -40% -60%;
+  pointer-events: none;
+  background: radial-gradient(28% 40% at 35% 40%, rgb(227 239 141 / 0.16), transparent 70%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-lite="1"]):not([data-motion="reduced"]):not([data-alive="0"]) .alive-drift::after {
+    animation: alive-drift 20s ease-in-out infinite alternate;
+  }
+}
+@keyframes alive-drift {
+  from { transform: translate(calc(var(--dir) * -12%), 0); }
+  to { transform: translate(calc(var(--dir) * 14%), 4%); }
+}
+:root:is([data-lite="1"], [data-motion="reduced"], [data-alive="0"]) .alive-drift::after { display: none; }

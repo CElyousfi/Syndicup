@@ -17,6 +17,8 @@ import { seDeconnecter } from "../../lib/actions/session-actions";
 import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
 import { armSounds, useSensations } from "../../lib/feel";
 import { useBadgePop } from "./badge-pop";
+import { ConnectivityBanner, useScrollReveal } from "./ambient";
+import type { Dict } from "../../lib/i18n";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
   IconBell,
@@ -112,6 +114,7 @@ export function AppFrame({
   userRole,
   unreadCount,
   labels,
+  alive,
   tour,
   quick = [],
   children,
@@ -131,6 +134,8 @@ export function AppFrame({
   userRole: string;
   unreadCount: number;
   labels: FrameLabels;
+  /** Textes de la couche Alive (bandeau de connexion, moments signature). */
+  alive: Dict["alive"];
   tour: TourLabels;
   quick?: QuickAction[];
   children: React.ReactNode;
@@ -144,6 +149,7 @@ export function AppFrame({
   const sensations = useSensations();
   useEffect(() => armSounds(), []);
   useBadgePop();
+  useScrollReveal();
   const logoSrc = coproId && coproLogo ? `/api/copro-logo?id=${coproId}&v=${encodeURIComponent(coproLogo)}` : null;
 
   // Fermer le menu mobile à chaque navigation.
@@ -420,6 +426,7 @@ export function AppFrame({
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
       <Toaster />
       <SuccessOverlay doneLabel={labels.done} />
+      <ConnectivityBanner offline={alive.horsLigne} online={alive.enLigne} />
     </div>
     </MotionConfig>
     </LazyMotion>

@@ -49,6 +49,7 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
         ref.invalidate(tachesProvider);
       },
       children: [
+        SuQueueSyncFlash(pending: file.length),
         if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), label: d.common.retry))),
         if (!gardien) ...[
           FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? v }, onChanged: (v) => setState(() => _filtre = v)),

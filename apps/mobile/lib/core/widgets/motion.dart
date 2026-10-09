@@ -3,7 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../feel/feel.dart';
 import '../theme/motion.dart';
+import 'ambient.dart';
 import '../theme/tokens.dart';
 
 /// Fenêtre d'entrée : les animations d'apparition (cascade, odomètre) ne jouent que pendant
@@ -26,6 +28,13 @@ class _EntranceWindow {
 /// Vrai pendant la fenêtre d'entrée de l'écran courant (cascade d'arrivée en cours).
 bool isEntranceWindowOpen(BuildContext context) => _EntranceWindow.open(context);
 
+/// Éléments déjà vus dans la cascade d'arrivée (ne seront pas « révélés » au défilement).
+class _ScrollSeen {
+  static void mark(BuildContext context, Key? k) {
+    if (k != null) markScrollSeen(context, k);
+  }
+}
+
 /// Apparition en cascade : fondu + léger soulèvement, décalé selon `index` (plafonné).
 class SuEnter extends StatelessWidget {
   const SuEnter({super.key, required this.child, this.index = 0, this.offset = 0.06, this.delay = Duration.zero});
@@ -36,7 +45,14 @@ class SuEnter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!_EntranceWindow.open(context)) return child;
+    if (!_EntranceWindow.open(context)) {
+      // Après la cascade d'arrivée : une ligne CLÉE qui entre à l'écran au défilement glisse et
+      // apparaît une seule fois (ambiance — jamais en mode lite ni en animations réduites).
+      final k = key ?? child.key;
+      if (k != null && Feel.ambient(context)) return SuScrollReveal(id: k, child: child);
+      return child;
+    }
+    _ScrollSeen.mark(context, key ?? child.key);
     final d = delay + SuMotion.stagger * math.min(index, SuMotion.maxStagger);
     return child
         .animate(delay: d)

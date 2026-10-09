@@ -28,6 +28,7 @@ import {
 import { versCentimes, versChaine } from "../../../../lib/centimes";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
+import { Greeting } from "../../../../components/ui/greeting";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { Badge } from "../../../../components/ui/badge";
@@ -126,8 +127,7 @@ export async function DashboardSyndic({
       {/* Accueil Wise : la résidence en bandeau, puis le GRAND bonjour. */}
       <PhotoBanner src={photoSrc(ctx.copropriete, "accueil")} title={ctx.copropriete?.nom} subtitle={ctx.copropriete?.adresse} className="mb-6 shadow-none!" />
       <PageHeader
-        title={fill(dict.dash.greeting, { prenom })}
-        reveal
+        title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />}
         subtitle={
           lectureSeule
             ? dict.dash.controleTitle
