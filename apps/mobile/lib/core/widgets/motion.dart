@@ -92,7 +92,7 @@ class _SuPressableState extends State<SuPressable> {
       onPointerCancel: (_) => _set(false),
       child: AnimatedScale(
         scale: _down ? widget.scale : 1,
-        duration: SuMotion.of(context, _down ? SuMotion.fast : const Duration(milliseconds: 380)),
+        duration: SuMotion.of(context, _down ? SuMotion.press : SuMotion.release),
         curve: _down ? SuMotion.easeOut : SuMotion.spring,
         child: widget.child,
       ),

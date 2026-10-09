@@ -107,6 +107,10 @@ services:
       # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
       - key: AG_RAPPEL_JOURS_AVANT
         value: "3"
+      # Couche « Alive » (GET /v1/config/client) : passer à "false" puis redémarrer coupe
+      # mouvement/haptique/sons chez tous les clients en ≤ 60 s (docs/ALIVE_GUIDE.md).
+      - key: ALIVE_V1
+        value: "true"
 
   - type: web
     name: syndicup-web-staging
@@ -228,6 +232,10 @@ services:
       # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
       - key: AG_RAPPEL_JOURS_AVANT
         value: "3"
+      # Couche « Alive » (GET /v1/config/client) : passer à "false" puis redémarrer coupe
+      # mouvement/haptique/sons chez tous les clients en ≤ 60 s (docs/ALIVE_GUIDE.md).
+      - key: ALIVE_V1
+        value: "true"
 
   - type: web
     name: syndicup-web

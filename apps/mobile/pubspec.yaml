@@ -37,6 +37,9 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   collection: ^1.19.0
   flutter_animate: ^4.5.2
+  audioplayers: ^6.6.0
+  battery_plus: ^7.1.2
+  device_info_plus: ^12.4.0
 
 dev_dependencies:
   flutter_test:
@@ -51,6 +54,7 @@ flutter:
   assets:
     - assets/images/
     - assets/illustrations/
+    - assets/sounds/
   fonts:
     # Langage « Wise » : Inter pour toute l'interface, Archivo semi-condensé Black pour les
     # titres-affiches (substitut libre de Wise Sans), Noto Kufi Arabic pour les affiches en arabe.

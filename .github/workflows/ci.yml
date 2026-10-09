@@ -60,6 +60,20 @@ jobs:
       - name: Tests
         run: npm run test
 
+  alive-layer:
+    # Couche Alive (docs/ALIVE_GUIDE.md) : jetons de mouvement synchronisés web + mobile, et aucun
+    # écran qui importe une primitive « morte » à la place de sa version vivante.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Jetons de mouvement à jour (tokens.json → CSS / TS / Dart)
+        run: node packages/config/motion/gen.mjs --check
+      - name: Écrans vivants (primitives brutes interdites)
+        run: node scripts/alive/check-alive.mjs --warn
+
   validate-openapi-contract:
     runs-on: ubuntu-latest
     steps:

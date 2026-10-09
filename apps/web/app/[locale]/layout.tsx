@@ -3,6 +3,8 @@ import { GeistMono } from "geist/font/mono";
 import localFont from "next/font/local";
 import { notFound } from "next/navigation";
 import { isLocale, dirFor } from "../../lib/i18n";
+import { getClientFlags } from "../../lib/feel/flags";
+import { feelBootScript } from "../../lib/feel/boot";
 import "../globals.css";
 
 // Inter (interface) + polices d'affiche — mêmes fichiers que l'app mobile (licences : fonts/LICENSES.md).
@@ -65,13 +67,22 @@ export default async function RootLayout({
 }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
+  // Couche Alive (D1) : drapeau serveur posé sur <html>, préférences de l'appareil appliquées
+  // par le script d'amorçage avant la première peinture.
+  const { flags, source } = await getClientFlags();
 
   return (
     <html
       lang={locale}
       dir={dirFor(locale)}
+      data-alive={flags.alive_v1 ? "1" : "0"}
+      data-alive-src={source}
+      suppressHydrationWarning
       className={`${inter.variable} ${suDisplay.variable} ${suDisplayAr.variable} ${suWordmark.variable} ${GeistMono.variable} ${notoArabic.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: feelBootScript() }} />
+      </head>
       <body>{children}</body>
     </html>
   );

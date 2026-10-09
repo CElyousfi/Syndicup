@@ -12,6 +12,7 @@ import { Avatar } from "../../../../components/ui/avatar";
 import { PosterCard } from "../../../../components/ui/poster-card";
 import { nomComplet } from "../../../../lib/format";
 import { ProfilForm } from "./profil-form";
+import { SensationsForm } from "./sensations-form";
 import { apiFetch } from "../../../../lib/api/client";
 import { PreferencesForm } from "../affichage/affichage-client";
 import { PREFERENCES_NOTIFICATION_DEFAUT, type PreferencesNotification } from "../../../../lib/api/types";
@@ -97,6 +98,10 @@ export default async function ProfilPage({
           <Card>
             <SectionHeader title={dict.communication.preferences} subtitle={dict.communication.preferencesAide} />
             <div className="mt-4"><PreferencesForm dict={dict} locale={ctx.locale} prefs={prefs} /></div>
+          </Card>
+          <Card>
+            <SectionHeader title={dict.alive.sensations} subtitle={dict.alive.sensationsAide} />
+            <SensationsForm dict={dict} />
           </Card>
           <Card>
             <SectionHeader title={pr.identifiants} subtitle={pr.identifiantsAide} />

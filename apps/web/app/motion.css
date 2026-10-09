@@ -5,16 +5,11 @@
    préférence « réduire les animations » pose chaque élément sur son état final.
    ══════════════════════════════════════════════════════════════════════════ */
 
+/* Durées, ressorts, distances : générés depuis packages/config/motion/tokens.json (source unique
+   web + mobile) — voir motion-tokens.css. Le retour tactile garde --dur-press (100 ms). */
+@import "./motion-tokens.css";
+
 :root {
-  --dur-fast: 120ms;
-  --dur-base: 220ms;
-  --dur-slow: 350ms;
-  --dur-page: 320ms;
-  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
-  /* Ressort léger (dépassement ~6 %) — relâchements, apparitions de pastilles. */
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --stagger: 45ms;
   --dir: 1;
 }
 :root[dir="rtl"] {
@@ -69,12 +64,12 @@
     border-color 0.18s var(--ease-out),
     box-shadow 0.22s var(--ease-out),
     filter 0.18s var(--ease-out),
-    transform 0.36s var(--ease-spring),
+    transform var(--dur-release) var(--ease-spring),
     rotate 0.4s var(--ease-spring);
 }
 .su-btn:active:not(:disabled) {
   transform: scale(0.965);
-  transition-duration: 0.18s, 0.18s, 0.18s, 0.22s, 0.18s, var(--dur-fast), 0.4s;
+  transition-duration: 0.18s, 0.18s, 0.18s, 0.22s, 0.18s, var(--dur-press), 0.4s;
   transition-timing-function: var(--ease-out);
 }
 
@@ -111,7 +106,7 @@
 }
 :is(.card-interactive, a.card):active {
   transform: translateY(0) scale(0.992);
-  transition-duration: var(--dur-fast);
+  transition-duration: var(--dur-press);
 }
 
 /* ── Squelettes : reflet qui balaie (sens de lecture respecté) ─────────────── */
@@ -378,6 +373,28 @@ dialog.su-modal[open]::backdrop {
   .pulse-halo::before {
     display: none;
   }
+}
+/* Même règle quand l'utilisateur choisit « Animations : Réduites » (Sensations, profil). */
+:root[data-motion="reduced"] *,
+:root[data-motion="reduced"] ::before,
+:root[data-motion="reduced"] ::after {
+  animation-duration: 0.001ms !important;
+  animation-delay: 0ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  transition-delay: 0ms !important;
+  scroll-behavior: auto !important;
+}
+:root[data-motion="reduced"] .animate-spin {
+  animation-duration: 1s !important;
+  animation-iteration-count: infinite !important;
+}
+:root[data-motion="reduced"] :is(.skeleton::after, .pulse-halo::before) {
+  display: none;
+}
+/* Mode lite (appareil modeste, économie de données) : aucune ambiance en boucle. */
+:root[data-lite="1"] :is(.motif-sun, .motif-win, .motif-tree, .hero-drift) {
+  animation: none;
 }
 
 /* ── Odomètre (components/ui/odometer.tsx) ───────────────────────────────── */

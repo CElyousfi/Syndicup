@@ -38,6 +38,8 @@ import '../../features/taches/taches_screens.dart';
 import '../../features/parkings/parkings_screens.dart';
 import '../../features/cabinet/cabinet_screens.dart';
 import '../../features/profil/profil_screens.dart';
+import '../../features/profil/sensations_section.dart';
+import '../../features/profil/sensations_test_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
 import '../auth/app_state.dart';
@@ -234,6 +236,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/litiges', builder: (_, __) => const LitigesScreen()),
           GoRoute(path: '/profil', builder: (_, __) => const ProfilScreen()),
           GoRoute(path: '/profil/donnees', builder: (_, __) => const DonneesScreen()),
+          if (sensationsTestEnabled) GoRoute(path: '/debug/sensations', builder: (_, __) => const SensationsTestScreen()),
           GoRoute(path: '/membres', builder: (_, __) => const MembresScreen()),
           GoRoute(path: '/membres/:id', builder: (_, s) => MembreDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/invitations', builder: (_, s) => InvitationsScreen(nouvelle: s.uri.queryParameters['nouvelle'] == '1')),

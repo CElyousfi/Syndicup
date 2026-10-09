@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/api_result.dart';
+import '../feel/haptics.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
@@ -252,6 +253,51 @@ class SuCheckbox extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Interrupteur avec libellé et aide (réglages) : ressort du curseur, `select()` haptique à
+/// chaque bascule ; toute la ligne est cliquable.
+class SuSwitchRow extends StatelessWidget {
+  const SuSwitchRow({super.key, required this.label, required this.value, required this.onChanged, this.help});
+  final String label;
+  final String? help;
+  final bool value;
+  final ValueChanged<bool>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    void toggle(bool v) {
+      Haptics.select();
+      onChanged?.call(v);
+    }
+
+    return MergeSemantics(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onChanged == null ? null : () => toggle(!value),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(label, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600)),
+                    if (help != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text(help!, style: t.bodySmall)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Switch.adaptive(value: value, onChanged: onChanged == null ? null : toggle, activeTrackColor: SuColors.brand),
+            ],
+          ),
         ),
       ),
     );

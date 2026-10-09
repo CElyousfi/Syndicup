@@ -105,6 +105,10 @@ export const envSchema = z.object({
 
   // ── Paramètres techniques ──
   AG_RAPPEL_JOURS_AVANT: optEntier(),
+
+  // ── Drapeaux clients (GET /v1/config/client — lib/config/client-flags.ts) ──
+  /** Couche « Alive » : true/false (absent → true). */
+  ALIVE_V1: z.preprocess(vide, z.enum(["true", "false", "1", "0", "on", "off"]).optional()),
 });
 
 export type Env = z.infer<typeof envSchema>;

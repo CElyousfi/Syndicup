@@ -21,6 +21,7 @@ import '../../core/widgets/widgets.dart';
 import '../../core/api/providers.dart';
 import '../communication/communication_screens.dart';
 import '../shell/app_shell.dart';
+import 'sensations_section.dart';
 
 /// J1 — profil : nom, prénom, langue (change le sens de lecture), identifiants, rôles.
 class ProfilScreen extends ConsumerStatefulWidget {
@@ -146,6 +147,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
             },
           ),
         ]),
+        // Sensations : animations, vibrations, sons (couche Alive, réglages locaux).
+        const SensationsSection(),
         SectionHeader(d.profil.donnees),
         CardList([
           ListRow(leading: const IconCircle(Icons.shield_rounded, tone: Tone.sage), title: d.profil.donneesTitre, subtitle: d.profil.donneesCorps, onTap: () => context.push('/profil/donnees')),

@@ -20,6 +20,7 @@ security:
 
 tags:
   - name: Auth
+  - name: Config
   - name: Copropriétés
   - name: Lots
   - name: Utilisateurs
@@ -2756,6 +2757,48 @@ components:
           schema: { $ref: "#/components/schemas/Error" }
 
 paths:
+  # ══════════════════════════════════════════════════════════════════════
+  # CONFIG CLIENT — drapeaux d'interface publics (docs/ALIVE_AUDIT.md, décision D1).
+  # ══════════════════════════════════════════════════════════════════════
+  /config/client:
+    get:
+      tags: [Config]
+      summary: Drapeaux d'interface des clients web et mobile (lecture seule, sans authentification).
+      description: |
+        Lus depuis l'environnement de l'API (ex. ALIVE_V1 sur Render) — aucune donnée de copropriété,
+        aucun secret. Réponse cachable 60 s (`Cache-Control: public, max-age=60`). Les clients gardent
+        la dernière valeur connue ; sans aucune valeur (première installation hors ligne), chaque
+        drapeau prend sa valeur par défaut (alive_v1 = true). Un drapeau inconnu d'un client est ignoré.
+      security: []
+      responses:
+        "200":
+          description: Drapeaux courants.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: "public, max-age=60" }
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: object
+                    required: [flags]
+                    properties:
+                      flags:
+                        type: object
+                        required: [alive_v1]
+                        additionalProperties: { type: boolean }
+                        properties:
+                          alive_v1:
+                            type: boolean
+                            description: Couche « Alive » (mouvement, haptique, sons). Défaut true.
+                  meta:
+                    type: object
+                    properties:
+                      request_id: { type: string, format: uuid }
+
   # ══════════════════════════════════════════════════════════════════════
   # AUTH — Master Spec Partie 4.3. Public / invité, pas de bearerAuth requis.
   # ══════════════════════════════════════════════════════════════════════

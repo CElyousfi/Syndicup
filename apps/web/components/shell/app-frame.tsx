@@ -15,6 +15,7 @@ import { SuccessOverlay } from "./success-overlay";
 import { useLive } from "./live";
 import { seDeconnecter } from "../../lib/actions/session-actions";
 import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
+import { armSounds, useSensations } from "../../lib/feel";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
   IconBell,
@@ -137,6 +138,10 @@ export function AppFrame({
   const [quickOpen, setQuickOpen] = useState(false);
   const pathname = usePathname();
   const unread = useLive(unreadCount, locale);
+  // Couche Alive : réglage « Animations réduites » (en plus de la préférence système) et sons
+  // préchargés au premier geste.
+  const sensations = useSensations();
+  useEffect(() => armSounds(), []);
   const logoSrc = coproId && coproLogo ? `/api/copro-logo?id=${coproId}&v=${encodeURIComponent(coproLogo)}` : null;
 
   // Fermer le menu mobile à chaque navigation.
@@ -279,7 +284,7 @@ export function AppFrame({
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={sensations.reducedMotion ? "always" : "user"}>
     <div className="min-h-screen bg-surface">
       {/* Barre latérale desktop — blanche, à plat (Wise) */}
       <aside className="fixed inset-y-0 start-0 z-30 hidden w-[272px] overflow-hidden bg-surface lg:block">

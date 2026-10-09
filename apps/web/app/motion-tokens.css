@@ -1,0 +1,29 @@
+/* GÉNÉRÉ par packages/config/motion/gen.mjs depuis tokens.json — ne pas modifier à la main. */
+:root {
+  --dur-press: 100ms;
+  --dur-toggle: 120ms;
+  --dur-release: 360ms;
+  --dur-fast: 180ms;
+  --dur-base: 260ms;
+  --dur-page: 320ms;
+  --dur-slow: 400ms;
+  --dur-sheet-in: 400ms;
+  --dur-sheet-out: 260ms;
+  --dur-number: 900ms;
+  --dur-highlight: 1200ms;
+  --dur-signature: 700ms;
+  --dur-signature-max: 1200ms;
+  --stagger: 35ms;
+  --max-stagger: 8;
+  --dist-xs: 8px;
+  --dist-sm: 16px;
+  --dist-md: 24px;
+  --press-button: 0.965;
+  --press-card: 0.98;
+  --press-row: 0.985;
+  --press-chip: 0.94;
+  --press-icon: 0.9;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}

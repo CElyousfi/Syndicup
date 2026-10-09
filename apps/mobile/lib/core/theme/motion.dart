@@ -1,31 +1,44 @@
 import 'package:flutter/material.dart';
 
-/// Jetons de mouvement — miroir de apps/web/app/motion.css. Seules transform / opacity
-/// s'animent ; tout décalage horizontal suit le sens de lecture ; « supprimer les
-/// animations » (accessibilité système) pose chaque élément sur son état final.
+import 'motion_tokens.g.dart';
+
+export 'motion_tokens.g.dart';
+
+/// Jetons de mouvement — générés depuis packages/config/motion/tokens.json (source unique web +
+/// mobile, voir `SuTokens`). Seules transform / opacity s'animent ; tout décalage horizontal suit
+/// le sens de lecture ; « animations réduites » (système ou réglage Sensations) pose chaque
+/// élément sur son état final.
 class SuMotion {
   SuMotion._();
 
-  static const Duration fast = Duration(milliseconds: 120);
-  static const Duration base = Duration(milliseconds: 220);
-  static const Duration slow = Duration(milliseconds: 350);
-  static const Duration page = Duration(milliseconds: 320);
-  static const Duration stagger = Duration(milliseconds: 45);
+  /// Retour tactile : enfoncement (vif) et relâchement (ressort).
+  static const Duration press = SuTokens.press;
+  static const Duration release = SuTokens.release;
+
+  /// Bascule (interrupteur, case, segment, puce de filtre).
+  static const Duration toggle = SuTokens.toggle;
+
+  static const Duration fast = SuTokens.fast;
+  static const Duration base = SuTokens.base;
+  static const Duration slow = SuTokens.slow;
+  static const Duration page = SuTokens.page;
+  static const Duration stagger = SuTokens.stagger;
+  static const Duration signature = SuTokens.signature;
 
   /// Sortie douce (cubic-bezier(.22,1,.36,1)).
-  static const Curve easeOut = Cubic(0.22, 1, 0.36, 1);
-  static const Curve easeIn = Cubic(0.4, 0, 1, 1);
+  static const Curve easeOut = SuTokens.easeOut;
+  static const Curve easeIn = SuTokens.easeIn;
 
   /// Ressort léger (dépassement ~6 %) — relâchements, pastilles qui apparaissent.
-  static const Curve spring = Cubic(0.34, 1.56, 0.64, 1);
+  static const Curve spring = SuTokens.spring;
 
   /// Nombre maximal d'éléments décalés dans une cascade (au-delà : même délai).
-  static const int maxStagger = 12;
+  static const int maxStagger = SuTokens.maxStagger;
 
   /// Feuilles du bas : montée douce, descente plus vive.
   static final AnimationStyle sheet = AnimationStyle(
-    duration: Duration(milliseconds: 420),
-    reverseDuration: Duration(milliseconds: 260),
+    duration: SuTokens.sheetIn,
+    reverseDuration: SuTokens.sheetOut,
     curve: easeOut,
     reverseCurve: easeIn,
   );

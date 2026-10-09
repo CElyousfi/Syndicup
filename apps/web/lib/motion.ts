@@ -1,25 +1,33 @@
 "use client";
 
 /**
- * Jetons de mouvement côté JS — miroir de app/motion.css. À n'utiliser que dans des
- * composants client (îlots) ; les composants serveur s'animent par classes CSS.
+ * Jetons de mouvement côté JS — générés depuis packages/config/motion/tokens.json (voir
+ * lib/motion-tokens.ts). À n'utiliser que dans des composants client (îlots) ; les composants
+ * serveur s'animent par classes CSS.
  */
 import { useEffect, useState } from "react";
+import { SPRING_SNAPPY, SPRING_SMOOTH } from "./motion-tokens";
 
 export { useReducedMotion } from "motion/react";
+export {
+  DUR,
+  DURATIONS_MS,
+  STAGGER,
+  MAX_STAGGER,
+  DISTANCES,
+  PRESS_SCALE,
+  EASE_OUT,
+  EASE_IN,
+  EASE_SPRING,
+  SPRING_SNAPPY,
+  SPRING_SMOOTH,
+  SPRING_GENTLE,
+} from "./motion-tokens";
 
-/** Durées en secondes (convention motion). */
-export const DUR = { fast: 0.12, base: 0.22, slow: 0.35, page: 0.32 } as const;
-
-export const EASE_OUT = [0.22, 1, 0.36, 1] as const;
-export const EASE_IN = [0.4, 0, 1, 1] as const;
-
-/** Pression / relâchement : vif, à peine élastique. */
-export const SPRING_PRESS = { type: "spring", stiffness: 520, damping: 34, mass: 0.7 } as const;
-/** Indicateurs qui glissent d'un élément à l'autre (onglets, menu, pastille). */
-export const SPRING_LAYOUT = { type: "spring", stiffness: 380, damping: 34, mass: 0.9 } as const;
-
-export const STAGGER = 0.045;
+/** Pression / relâchement : vif, à peine élastique (= SPRING_SNAPPY). */
+export const SPRING_PRESS = SPRING_SNAPPY;
+/** Indicateurs qui glissent d'un élément à l'autre (onglets, menu, pastille) (= SPRING_SMOOTH). */
+export const SPRING_LAYOUT = SPRING_SMOOTH;
 
 /** +1 en LTR, −1 en RTL — pour tout décalage horizontal piloté en JS. */
 export function useDirSign(): 1 | -1 {
