@@ -16,7 +16,7 @@
     "jsqr": "^1.4.0",
     "lottie-web": "^5.12.2",
     "motion": "^12.43.0",
-    "next": "^15.0.0",
+    "next": "^15.5.27",
     "pdfjs-dist": "^4.10.38",
     "qrcode": "^1.5.4",
     "react": "^19.0.0",
@@ -29,7 +29,7 @@
     "@types/node": "^20.0.0",
     "@types/qrcode": "^1.5.5",
     "@types/react": "19.2.18",
-    "@types/react-dom": "^19.0.0",
+    "@types/react-dom": "~19.2.5",
     "eslint": "^9.0.0",
     "tailwindcss": "^4.0.0",
     "typescript": "^5.6.0"
