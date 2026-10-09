@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'alive.dart';
 import 'illustration.dart';
 import 'motion.dart';
 
@@ -74,10 +75,14 @@ class LinkButton extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? color;
   @override
-  Widget build(BuildContext context) => TextButton(
-        onPressed: onTap,
-        style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(44, 44), foregroundColor: color),
-        child: Text(label),
+  Widget build(BuildContext context) => SuPressable(
+        enabled: onTap != null,
+        scale: SuTokens.pressChip,
+        child: TextButton(
+          onPressed: onTap,
+          style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 4), minimumSize: const Size(44, 44), foregroundColor: color),
+          child: Text(label),
+        ),
       );
 }
 
@@ -282,7 +287,7 @@ class PosterCard extends StatelessWidget {
                     if (ctaLabel != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 18),
-                        child: FilledButton(onPressed: onCta ?? onTap, style: FilledButton.styleFrom(minimumSize: const Size(0, 46)), child: Text(ctaLabel!)),
+                        child: SuButton(label: ctaLabel!, onPressed: onCta ?? onTap),
                       ),
                   ],
                 ),
@@ -324,8 +329,23 @@ class PosterArt extends StatelessWidget {
 }
 
 /// Ligne « clé : valeur » (frais Wise : libellé gras à gauche, montant à droite).
+/// [KeyValueRow.amount] : montant au format API, formaté MAD et VIVANT (roule quand il change).
 class KeyValueRow extends StatelessWidget {
   const KeyValueRow(this.label, this.value, {super.key, this.valueWidget, this.mono = false});
+
+  KeyValueRow.amount(this.label, String? amount, {super.key, bool currency = true, bool upIsGood = true, Color? color})
+      : value = '',
+        mono = false,
+        valueWidget = Builder(
+          builder: (context) => AnimatedAmount(
+            amount,
+            currency: currency,
+            upIsGood: upIsGood,
+            textAlign: TextAlign.end,
+            maxLines: 2,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: color ?? SuColors.ink, fontWeight: FontWeight.w600),
+          ),
+        );
   final String label;
   final String value;
   final Widget? valueWidget;
@@ -417,7 +437,7 @@ class Avatar extends StatelessWidget {
   }
 }
 
-/// Montant tabulaire (.tnum).
+/// Montant tabulaire (.tnum) déjà formaté — vivant (voir [AnimatedFigureText]).
 class MoneyText extends StatelessWidget {
   const MoneyText(this.text, {super.key, this.style, this.color});
   final String text;
@@ -426,7 +446,8 @@ class MoneyText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = style ?? Theme.of(context).textTheme.titleMedium;
-    return Text(text, style: base?.copyWith(color: color ?? base.color, fontFeatures: const [FontFeature.tabularFigures()]), textDirection: TextDirection.ltr);
+    // Vivant : roule et se teinte brièvement quand la valeur change (jamais au premier affichage).
+    return AnimatedFigureText(text, style: base?.copyWith(color: color ?? base.color), textDirection: TextDirection.ltr, maxLines: null, overflow: TextOverflow.visible);
   }
 }
 

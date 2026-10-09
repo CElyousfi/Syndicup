@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, m } from "motion/react";
 import { TOAST_EVENT, type ToastInput } from "../../lib/toast";
+import { haptic } from "../../lib/feel/haptics";
 import { marquerLueEnFond } from "../../lib/notifications-link";
 import { IconBell, IconCheck, IconAlert, IconX } from "../ui/icons";
 
@@ -41,6 +42,8 @@ export function Toaster() {
       const detail = (e as CustomEvent<ToastInput>).detail;
       const id = ++seq.current;
       const duree = detail.duree ?? 6500;
+      // Vivant : un toast d'échec se sent aussi (Android) ; les succès restent silencieux.
+      if (detail.tone === "danger") haptic("error");
       setItems((prev) => [...prev.slice(-2), { ...detail, id, duree }]);
       timers.current.push(setTimeout(() => setItems((prev) => prev.filter((t) => t.id !== id)), duree));
     };

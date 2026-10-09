@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../feel/feel.dart';
+import 'alive.dart';
 import 'cards.dart';
 import 'motion.dart';
 
@@ -78,7 +80,7 @@ class _SuPageState extends State<SuPage> {
             ...?widget.children,
           ],
         ));
-    if (widget.onRefresh != null) content = RefreshIndicator(onRefresh: widget.onRefresh!, color: SuColors.link, backgroundColor: SuColors.surface, child: content);
+    if (widget.onRefresh != null) content = SuRefresh(onRefresh: widget.onRefresh!, child: content);
     if (_big) content = NotificationListener<ScrollNotification>(onNotification: _onScroll, child: content);
 
     final canPop = context.canPop();
@@ -214,12 +216,14 @@ class CardList extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) {
+    // Lignes CLÉES (ValueKey de l'objet) : insertion / retrait animés quand la liste change
+    // (données live, actualisation) ; premier rendu en cascade.
     return _FlatListScope(
       child: Material(
         type: MaterialType.transparency,
-        child: Column(
+        child: SuLiveColumn(
           children: [
-            for (int i = 0; i < children.length; i++) SuEnter(index: i, offset: 0.12, child: children[i]),
+            for (int i = 0; i < children.length; i++) SuEnter(key: children[i].key is LocalKey ? children[i].key : null, index: i, offset: 0.12, child: children[i]),
           ],
         ),
       ),
@@ -258,7 +262,10 @@ class FilterChips<T> extends StatelessWidget {
                 type: MaterialType.transparency,
                 child: InkWell(
                   customBorder: const StadiumBorder(),
-                  onTap: () => onChanged(o),
+                  onTap: () {
+                    if (!sel) Haptics.select();
+                    onChanged(o);
+                  },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 18),
                     child: Center(

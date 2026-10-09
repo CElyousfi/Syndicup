@@ -15,12 +15,12 @@ class SuToaster {
 
   static final Expando<_ToastHostState> _hosts = Expando<_ToastHostState>();
 
-  static void show(BuildContext context, String message, {bool error = false, Duration duration = const Duration(milliseconds: 4200)}) {
+  static void show(BuildContext context, String message, {bool error = false, Duration duration = const Duration(milliseconds: 4200), String? actionLabel, VoidCallback? onAction}) {
     final overlay = Overlay.maybeOf(context, rootOverlay: true);
     if (overlay == null) return;
     final existing = _hosts[overlay];
     if (existing != null && existing.mounted) {
-      existing.add(message, error, duration);
+      existing.add(message, error, duration, actionLabel, onAction);
       return;
     }
     final key = GlobalKey<_ToastHostState>();
@@ -30,17 +30,19 @@ class SuToaster {
       final st = key.currentState;
       if (st == null) return;
       _hosts[overlay] = st;
-      st.add(message, error, duration);
+      st.add(message, error, duration, actionLabel, onAction);
     });
   }
 }
 
 class _ToastData {
-  _ToastData(this.id, this.message, this.error, this.duration);
+  _ToastData(this.id, this.message, this.error, this.duration, this.actionLabel, this.onAction);
   final int id;
   final String message;
   final bool error;
   final Duration duration;
+  final String? actionLabel;
+  final VoidCallback? onAction;
   bool leaving = false;
 }
 
@@ -55,8 +57,8 @@ class _ToastHostState extends State<_ToastHost> {
   final List<Timer> _timers = [];
   int _seq = 0;
 
-  void add(String message, bool error, Duration duration) {
-    final d = _ToastData(++_seq, message, error, duration);
+  void add(String message, bool error, Duration duration, [String? actionLabel, VoidCallback? onAction]) {
+    final d = _ToastData(++_seq, message, error, duration, actionLabel, onAction);
     setState(() {
       _items.add(d);
       while (_items.where((x) => !x.leaving).length > 3) {
@@ -161,6 +163,15 @@ class _ToastCard extends StatelessWidget {
                   ).animate().scaleXY(begin: reduced ? 1 : 0.4, end: 1, duration: 420.ms, delay: 80.ms, curve: SuMotion.spring),
                   const SizedBox(width: 12),
                   Expanded(child: Text(data.message, maxLines: 3, overflow: TextOverflow.ellipsis, style: t.bodyMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w600))),
+                  if (data.actionLabel != null)
+                    TextButton(
+                      onPressed: () {
+                        onTap();
+                        data.onAction?.call();
+                      },
+                      style: TextButton.styleFrom(foregroundColor: SuColors.cta, minimumSize: const Size(44, 40), padding: const EdgeInsets.symmetric(horizontal: 10)),
+                      child: Text(data.actionLabel!, style: const TextStyle(fontWeight: FontWeight.w700)),
+                    ),
                 ],
               ),
             ),

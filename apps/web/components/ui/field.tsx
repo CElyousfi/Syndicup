@@ -30,7 +30,9 @@ export function Textarea({ className = "", ...props }: ComponentProps<"textarea"
   return <textarea className={`${CONTROL} min-h-24 py-2.5 ${className}`} rows={4} suppressHydrationWarning {...props} />;
 }
 
-/** Champ complet : libellé, contrôle, aide, erreur serveur (VALIDATION_ERROR.fields). */
+/** Champ complet : libellé, contrôle, aide, erreur serveur (VALIDATION_ERROR.fields).
+ *  Vivant : une erreur qui apparaît secoue le champ (miroir RTL via --dir) et se pose en fondu ;
+ *  `valid` trace une petite coche à côté du libellé. */
 export function Field({
   label,
   htmlFor,
@@ -38,6 +40,7 @@ export function Field({
   error,
   required,
   optionalLabel,
+  valid,
   children,
 }: {
   label: ReactNode;
@@ -46,19 +49,28 @@ export function Field({
   error?: string | null;
   required?: boolean;
   optionalLabel?: string;
+  /** Saisie reconnue valide (code complet, référence reconnue…). */
+  valid?: boolean;
   children: ReactNode;
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className={`space-y-1.5 ${error ? "su-field-invalid" : ""}`}>
       <label htmlFor={htmlFor} className="flex items-baseline gap-2 text-[14px] font-semibold text-ink">
         {label}
         {!required && optionalLabel ? (
           <span className="font-normal text-faint">({optionalLabel})</span>
         ) : null}
+        {valid ? (
+          <svg aria-hidden viewBox="0 0 18 18" className="su-tick ms-auto size-4 self-center">
+            <path d="M4.2 9.4 7.6 12.6 13.8 5.8" fill="none" stroke="var(--color-ok)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        ) : null}
       </label>
       {children}
       {error ? (
-        <p className="text-[13px] text-danger">{error}</p>
+        <p key={error} className="su-field-error text-[13px] text-danger" role="alert">
+          {error}
+        </p>
       ) : hint ? (
         <p className="text-[13px] text-soft">{hint}</p>
       ) : null}
@@ -66,46 +78,5 @@ export function Field({
   );
 }
 
-/** Interrupteur (options booléennes) — input checkbox stylé, accessible. */
-export function Switch({
-  label,
-  hint,
-  className = "",
-  ...props
-}: ComponentProps<"input"> & { label: ReactNode; hint?: ReactNode }) {
-  return (
-    <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
-      <span className="relative mt-0.5 inline-flex shrink-0">
-        <input type="checkbox" className="peer sr-only" {...props} />
-        <span className="h-6 w-10 rounded-full bg-hairline-strong transition-colors duration-300 peer-checked:bg-action peer-focus-visible:ring-2 peer-focus-visible:ring-action/40" />
-        <span className="su-switch-thumb absolute top-0.5 start-0.5 size-5 rounded-full bg-white shadow-sm" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-ink-strong">{label}</span>
-        {hint ? <span className="block text-[13px] text-soft">{hint}</span> : null}
-      </span>
-    </label>
-  );
-}
-
-/** Case à cocher simple (attestations, confirmations explicites). */
-export function Checkbox({
-  label,
-  hint,
-  className = "",
-  ...props
-}: ComponentProps<"input"> & { label: ReactNode; hint?: ReactNode }) {
-  return (
-    <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
-      <input
-        type="checkbox"
-        className="su-check mt-0.5 size-[18px] shrink-0 rounded-[5px] border-hairline-strong text-action accent-[#1e7552] focus-visible:ring-2 focus-visible:ring-action/40"
-        {...props}
-      />
-      <span className="min-w-0">
-        <span className="block text-sm font-medium text-ink-strong">{label}</span>
-        {hint ? <span className="block text-[13px] text-soft">{hint}</span> : null}
-      </span>
-    </label>
-  );
-}
+/** Interrupteur, case à cocher, groupe radio : composants client vivants (toggle.tsx). */
+export { Switch, Checkbox, RadioGroup } from "./toggle";

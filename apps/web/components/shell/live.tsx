@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "../../lib/toast";
+import { playSound } from "../../lib/feel/sounds";
 import { NOTIF_LUE_EVENT, lienNotification } from "../../lib/notifications-link";
 
 const REFRESH_MS = 25_000;
@@ -61,6 +62,8 @@ export function useLive(unreadInitial: number, locale: string) {
       if (vus.current.has(n.id)) return;
       vus.current.add(n.id);
       if (!n.lu) {
+        // Notification reçue en direct, onglet visible : tintement discret (réglage Sons).
+        if (document.visibilityState === "visible") void playSound("notify");
         toast({
           titre: n.titre,
           corps: n.corps,

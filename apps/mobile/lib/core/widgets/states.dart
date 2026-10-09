@@ -9,6 +9,8 @@ import '../i18n/i18n.dart';
 import '../i18n/mobile_dict.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import '../feel/feel.dart';
+import 'alive.dart';
 import 'cards.dart';
 import 'illustration.dart';
 import 'motion.dart';
@@ -39,7 +41,7 @@ class EmptyState extends StatelessWidget {
           const SizedBox(height: 22),
           Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
           if (hint != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(hint!, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.5), textAlign: TextAlign.center)),
-          if (actionLabel != null) Padding(padding: const EdgeInsets.only(top: 22), child: FilledButton(onPressed: onAction, style: FilledButton.styleFrom(minimumSize: const Size(0, 48)), child: Text(actionLabel!))),
+          if (actionLabel != null) Padding(padding: const EdgeInsets.only(top: 22), child: SuEnter(index: 2, child: SuButton(label: actionLabel!, onPressed: onAction))),
         ],
       ),
     );
@@ -167,7 +169,7 @@ class ErrorState extends StatelessWidget {
           const SizedBox(height: 6),
           Text(message, style: t.bodySmall?.copyWith(height: 1.55), textAlign: TextAlign.center),
           if (ref != null && ref.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(fill(d.common.errorReference, {'id': ref}), style: t.labelSmall?.copyWith(fontFamily: 'GeistMono'), textAlign: TextAlign.center)),
-          if (onRetry != null) Padding(padding: const EdgeInsets.only(top: 18), child: OutlinedButton(onPressed: onRetry, style: OutlinedButton.styleFrom(minimumSize: const Size(0, 46)), child: Text(d.common.retry))),
+          if (onRetry != null) Padding(padding: const EdgeInsets.only(top: 18), child: SuButton(label: d.common.retry, variant: SuButtonVariant.secondary, onPressed: onRetry)),
         ],
       ),
     );
@@ -275,7 +277,9 @@ class SuBanner extends StatelessWidget {
       BannerTone.danger => (SuColors.dangerTint, Colors.transparent, SuColors.danger, Icons.error_rounded),
       BannerTone.legal => (SuColors.tile, Colors.transparent, SuColors.ink, Icons.shield_rounded),
     };
-    return Container(
+    // Vivant : une bannière qui apparaît (erreur de formulaire, avertissement) se déplie en
+    // fondu au lieu de pousser le contenu d'un coup.
+    final banner = Container(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20), border: border == Colors.transparent ? null : Border.all(color: border)),
       child: Row(
@@ -296,6 +300,31 @@ class SuBanner extends StatelessWidget {
         ],
       ),
     );
+    if (!Feel.alive) return banner;
+    return Semantics(liveRegion: tone == BannerTone.danger || tone == BannerTone.warn, child: _Unfold(child: banner));
+  }
+}
+
+/// Dépli + fondu au montage (bannières, messages d'état).
+class _Unfold extends StatelessWidget {
+  const _Unfold({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    if (SuMotion.reduced(context)) return child;
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0, end: 1),
+      duration: SuTokens.base,
+      curve: SuMotion.easeOut,
+      child: child,
+      builder: (_, t, ch) => ClipRect(
+        child: Align(
+          alignment: AlignmentDirectional.topStart,
+          heightFactor: t,
+          child: Opacity(opacity: t, child: ch),
+        ),
+      ),
+    );
   }
 }
 
@@ -313,11 +342,14 @@ class LegalGateBanner extends StatelessWidget {
       body: message ?? d.legalGate.bannerBody,
       action: onSettings == null
           ? Text(d.legalGate.notABug, style: Theme.of(context).textTheme.labelSmall)
-          : TextButton(onPressed: onSettings, style: TextButton.styleFrom(padding: EdgeInsets.zero, minimumSize: const Size(0, 36)), child: Text(d.legalGate.goToSettings)),
+          : LinkButton(d.legalGate.goToSettings, onTap: onSettings),
     );
   }
 }
 
 /// Toast (toaster.tsx) : carte blanche, pastille teintée, titre 14 px semibold encre.
 /// Animé, empilable, glissable pour fermer (voir toast.dart).
-void showToast(BuildContext context, String message, {bool error = false}) => SuToaster.show(context, message, error: error);
+void showToast(BuildContext context, String message, {bool error = false}) {
+  if (error) Haptics.error();
+  SuToaster.show(context, message, error: error);
+}

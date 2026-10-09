@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { toast } from "../../lib/toast";
 import { celebrate } from "../../lib/success";
+import { haptic } from "../../lib/feel/haptics";
 import type { ReactNode } from "react";
 import type { FormState } from "../../lib/forms";
 import { Button, type ButtonVariant } from "./button";
@@ -23,16 +24,38 @@ export function SubmitButton({
   disabled?: boolean;
 }) {
   const { pending } = useFormStatus();
-  // Libellé et spinner superposés dans une même cellule : pendant l'envoi le libellé glisse
-  // et s'efface, le spinner éclot à sa place — la largeur du bouton ne bouge jamais.
+  // Vivant : le résultat de l'action (annoncé par <FormAlert> via l'événement `su:form-result`
+  // sur le formulaire) se lit dans le bouton — coche tracée sur succès, secousse sur erreur.
+  const ref = useRef<HTMLButtonElement>(null);
+  const [result, setResult] = useState<"done" | "error" | null>(null);
+  useEffect(() => {
+    const form = ref.current?.form;
+    if (!form) return;
+    let t: number | undefined;
+    const onResult = (e: Event) => {
+      const status = (e as CustomEvent<{ status: string }>).detail.status;
+      if (document.documentElement.dataset.alive === "0") return;
+      setResult(status === "success" ? "done" : status === "error" ? "error" : null);
+      window.clearTimeout(t);
+      t = window.setTimeout(() => setResult(null), status === "success" ? 1100 : 520);
+    };
+    form.addEventListener(FORM_RESULT_EVENT, onResult);
+    return () => {
+      form.removeEventListener(FORM_RESULT_EVENT, onResult);
+      window.clearTimeout(t);
+    };
+  }, []);
+  // Libellé, spinner et coche superposés dans une même cellule : la largeur ne bouge jamais.
   return (
     <Button
+      ref={ref}
       type="submit"
       variant={variant}
       size={size}
-      className={className}
+      className={`${result === "error" ? "animate-shake" : ""} ${className}`}
       disabled={pending || disabled}
       data-pending={pending ? "" : undefined}
+      data-done={result === "done" && !pending ? "" : undefined}
       aria-busy={pending || undefined}
     >
       <span className="su-submit-stack">
@@ -40,10 +63,18 @@ export function SubmitButton({
         <span className="su-submit-spinner" aria-hidden>
           <Spinner />
         </span>
+        <span className="su-submit-done" aria-hidden>
+          <svg viewBox="0 0 18 18" className="size-[18px]">
+            <path d="M4.2 9.4 7.6 12.6 13.8 5.8" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </span>
       </span>
     </Button>
   );
 }
+
+/** Résultat d'une Server Action, diffusé par <FormAlert> sur son <form> (SubmitButton l'écoute). */
+export const FORM_RESULT_EVENT = "su:form-result";
 
 export function Spinner({ className = "" }: { className?: string }) {
   return (
@@ -84,24 +115,40 @@ export function FormAlert({
     if (illustration) celebrate({ titre: succes, corps, illustration });
     else toast({ titre: succes, tone: "ok", duree: 4000 });
   }, [succes, illustration, corps]);
+  // Vivant : chaque nouveau résultat est annoncé au formulaire (SubmitButton : coche / secousse)
+  // et au toucher (Android) — succès confirmé par le serveur, ou refus.
+  const ancre = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (state.status !== "success" && state.status !== "error") return;
+    const form = ancre.current?.closest("form");
+    form?.dispatchEvent(new CustomEvent(FORM_RESULT_EVENT, { detail: { status: state.status } }));
+    if (state.status === "error") haptic(state.code === "VALIDATION_ERROR" || state.legalGate ? "warning" : "error");
+    else haptic("success");
+  }, [state]);
+  const marque = <span ref={ancre} hidden />;
   if (state.status === "success") {
-    if (successRender) return <>{successRender(state.message)}</>;
-    if (!state.message) return null;
-    return <Banner variant="ok">{state.message}</Banner>;
+    if (successRender) return <>{marque}{successRender(state.message)}</>;
+    if (!state.message) return marque;
+    return <>{marque}<Banner variant="ok">{state.message}</Banner></>;
   }
-  if (state.status !== "error") return null;
+  if (state.status !== "error") return marque;
   if (state.legalGate) {
     return (
-      <Banner variant="legal" title={legalGateTitle} action={legalGateAction}>
-        {state.message}
-      </Banner>
+      <>
+        {marque}
+        <Banner variant="legal" title={legalGateTitle} action={legalGateAction}>
+          {state.message}
+        </Banner>
+      </>
     );
   }
   // Les erreurs par champ sont affichées sous les champs — pas de doublon global.
   if (state.code === "VALIDATION_ERROR" && state.fields && Object.keys(state.fields).length > 0) {
-    return null;
+    return marque;
   }
   return (
+    <>
+    {marque}
     <Banner variant="danger">
       {state.message}
       {state.requestId ? (
@@ -110,5 +157,6 @@ export function FormAlert({
         </span>
       ) : null}
     </Banner>
+    </>
   );
 }

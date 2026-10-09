@@ -498,3 +498,108 @@ dialog.su-modal[open][data-closing]::backdrop {
     transition-duration: 0.24s;
   }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Couche « Alive » (docs/ALIVE_GUIDE.md) — primitives vivantes.
+   Tout ce bloc se coupe avec alive_v1 (data-alive="0") et suit « réduire les
+   animations » (système ou réglage Sensations) via la règle globale ci-dessus.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Nombres vivants (components/ui/amount.tsx) : seuls les caractères qui changent roulent ── */
+.amt-chars { display: inline-flex; unicode-bidi: isolate; white-space: pre; }
+.amt-roll { position: relative; display: inline-block; clip-path: inset(-0.05em -0.15em); }
+.amt-ghost { visibility: hidden; }
+.amt-old,
+.amt-new { position: absolute; inset: 0; text-align: center; }
+.amt-old { animation: amt-out-up var(--dur-number) var(--ease-out) both; animation-delay: calc(var(--k, 0) * 40ms); }
+.amt-new { animation: amt-in-up var(--dur-number) var(--ease-out) both; animation-delay: calc(var(--k, 0) * 40ms); }
+.amt-roll-down .amt-old { animation-name: amt-out-down; }
+.amt-roll-down .amt-new { animation-name: amt-in-down; }
+@keyframes amt-out-up { to { transform: translateY(-100%); opacity: 0; } }
+@keyframes amt-in-up { from { transform: translateY(100%); opacity: 0; } }
+@keyframes amt-out-down { to { transform: translateY(100%); opacity: 0; } }
+@keyframes amt-in-down { from { transform: translateY(-100%); opacity: 0; } }
+/* Teinte brève : vert en hausse, rouge en baisse, puis la couleur du texte. */
+.amt-up { animation: amt-tint-up var(--dur-highlight) ease-in both; }
+.amt-down { animation: amt-tint-down var(--dur-highlight) ease-in both; }
+@keyframes amt-tint-up { from { color: var(--color-ok); } }
+@keyframes amt-tint-down { from { color: var(--color-danger); } }
+
+/* ── Champs : l'erreur secoue (miroir RTL) et se pose en fondu ; coche de validité tracée ── */
+.su-field-invalid > :is(input, select, textarea, div) {
+  animation: field-shake 0.46s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes field-shake {
+  15%, 85% { transform: translateX(calc(var(--dir) * 1px)); }
+  30%, 70% { transform: translateX(calc(var(--dir) * 5px)); }
+  45%, 60% { transform: translateX(calc(var(--dir) * -5px)); }
+}
+.su-field-error { animation: rise-sm var(--dur-base) var(--ease-out) both; }
+.su-tick path,
+.su-submit-done path { stroke-dasharray: 16; stroke-dashoffset: 16; animation: draw-check var(--dur-slow) var(--ease-out) forwards; }
+@keyframes draw-check { to { stroke-dashoffset: 0; } }
+
+/* ── Bouton d'envoi : coche après un succès confirmé (FormAlert → su:form-result) ── */
+.su-submit-stack > .su-submit-done { opacity: 0; transform: scale(0.5); }
+[data-done] > .su-submit-stack > .su-submit-done { opacity: 1; transform: none; }
+[data-done] > .su-submit-stack > .su-submit-label { opacity: 0; transform: scale(0.9); }
+.su-submit-stack > .su-submit-done path { animation: none; }
+[data-done] > .su-submit-stack > .su-submit-done path { animation: draw-check var(--dur-slow) var(--ease-out) forwards; }
+
+/* ── Cases, radios : remplissage en ressort, coche qui se trace ── */
+.su-check-mark path { stroke-dasharray: 16; stroke-dashoffset: 16; transition: stroke-dashoffset var(--dur-base) var(--ease-out); }
+.su-check:checked + .su-check-mark path { stroke-dashoffset: 0; }
+.su-check { transition: transform var(--dur-release) var(--ease-spring), background-color var(--dur-toggle) ease, border-color var(--dur-toggle) ease; }
+.su-check:active { transform: scale(0.86); }
+.su-radio-dot { transform: scale(0); transition: transform var(--dur-base) var(--ease-spring); }
+.su-radio:checked + .su-radio-dot { transform: scale(1); }
+.su-radio:active { transform: scale(0.88); }
+
+/* ── Bouton-icône : enfoncement plus marqué ── */
+.su-btn-icon:active:not(:disabled) { transform: scale(var(--press-icon)); }
+
+/* ── Badges : éclosion quand le statut change ; point « en cours » qui pulse UNE fois ── */
+.badge-pop { animation: pop-sm var(--dur-slow) var(--ease-spring) both; }
+.pulse-halo::before { animation-iteration-count: 2; }
+
+/* ── Listes vivantes (components/ui/live-list.tsx) ── */
+[data-live="in"] { animation: live-in var(--dur-highlight) var(--ease-out) both; }
+@keyframes live-in {
+  0% { opacity: 0; transform: translateY(-6px); background-color: color-mix(in srgb, var(--color-lime) 70%, transparent); }
+  25% { opacity: 1; transform: none; }
+  100% { background-color: transparent; }
+}
+[data-live="out"] { animation: live-out 0.38s var(--ease-in) both; pointer-events: none; }
+@keyframes live-out { to { opacity: 0; transform: translateY(-4px) scale(0.98); } }
+
+/* ── Jauges : remplissage par transform (jamais de reflow) ── */
+.pb-scale {
+  width: 100%;
+  transform: scaleX(var(--p, 0));
+  transform-origin: left;
+  transition: transform 0.9s var(--ease-out);
+}
+:root[dir="rtl"] .pb-scale { transform-origin: right; }
+@starting-style {
+  .pb-scale { transform: scaleX(0); }
+}
+
+/* ── Feuille du bas : suit le doigt pendant le glisser ── */
+dialog.su-modal[data-dragging] { transition: none; }
+
+/* ── Interrupteur général : alive_v1 coupé → aucune animation ajoutée par ce bloc ── */
+:root[data-alive="0"] :is(.amt-old, .amt-new, .amt-up, .amt-down, .su-field-invalid > *, .su-field-error, .badge-pop, [data-live]) {
+  animation: none !important;
+}
+:root[data-alive="0"] [data-live="out"] { display: none; }
+
+/* ── Graphiques : la ligne se trace, les barres et points glissent vers les nouvelles valeurs ── */
+.chart-morph { transition: height 0.7s var(--ease-out); }
+.chart-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  transition: d 0.7s var(--ease-out);
+  animation: chart-draw 1.1s var(--ease-out) 0.2s backwards;
+}
+@keyframes chart-draw { from { stroke-dashoffset: 1; } }
+.chart-dot { transition: top 0.7s var(--ease-out), width 0.2s, height 0.2s, background-color 0.2s; }

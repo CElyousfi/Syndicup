@@ -24,8 +24,8 @@ export function ProgressBar({
       className={`h-2 w-full overflow-hidden rounded-full bg-wash ${className}`}
     >
       <div
-        className={`pb-fill h-full rounded-full ${tones[tone]}`}
-        style={{ width: `${pct}%` }}
+        className={`pb-scale h-full rounded-full ${tones[tone]}`}
+        style={{ "--p": pct / 100 } as React.CSSProperties}
       />
     </div>
   );

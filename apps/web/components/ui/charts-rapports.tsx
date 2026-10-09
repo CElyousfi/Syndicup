@@ -56,20 +56,33 @@ export function TresorerieChart({ points, rtl = false, height = 220, legend }: {
               onClick={() => setHover(hover === i ? null : i)}
               aria-hidden
             >
-              <span className="animate-bar-grow w-full max-w-4 rounded-t-full bg-brand" style={{ height: `${hBar(p.entrees)}%`, animationDelay: `${i * 30}ms` }} />
-              <span className="animate-bar-grow w-full max-w-4 rounded-t-full bg-sand" style={{ height: `${hBar(p.sorties)}%`, animationDelay: `${i * 30 + 15}ms` }} />
+              <span className="animate-bar-grow chart-morph w-full max-w-4 rounded-t-full bg-brand" style={{ height: `${hBar(p.entrees)}%`, animationDelay: `${i * 30}ms` }} />
+              <span className="animate-bar-grow chart-morph w-full max-w-4 rounded-t-full bg-sand" style={{ height: `${hBar(p.sorties)}%`, animationDelay: `${i * 30 + 15}ms` }} />
             </div>
           ))}
         </div>
         {/* Solde estimé : ligne encre, pastilles blanches, point lime au survol */}
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" aria-hidden>
-          <polyline points={ligne} fill="none" stroke="var(--color-ink)" strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+          {/* Vivant : la ligne se trace au premier affichage et se transforme (morph `d`) quand
+              l'exercice change, au lieu d'être redessinée. */}
+          <path
+            className="chart-line"
+            pathLength={1}
+            d={`M${ligne.trim().split(/\s+/).join(" L")}`}
+            style={{ d: `path("M${ligne.trim().split(/\s+/).join(" L")}")` } as React.CSSProperties}
+            fill="none"
+            stroke="var(--color-ink)"
+            strokeWidth="2"
+            vectorEffect="non-scaling-stroke"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+          />
         </svg>
         {ordre.map((p, i) => (
           <span
             key={i}
             aria-hidden
-            className={`pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink transition-[width,height,background-color] duration-200 ${hover === i ? "size-3.5 bg-lime" : "size-2.5 bg-surface"}`}
+            className={`chart-dot pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink ${hover === i ? "size-3.5 bg-lime" : "size-2.5 bg-surface"}`}
             style={{ left: `${xC(i)}%`, top: `${yS(p.solde)}%` }}
           />
         ))}
@@ -100,7 +113,7 @@ export function AgeingBars({ items }: { items: { label: ReactNode; value: number
             <span className="tnum font-bold text-ink">{it.display}</span>
           </div>
           <div className="mt-1.5 h-2.5 w-full overflow-hidden rounded-full bg-wash">
-            <div className="pb-fill h-full rounded-full" style={{ width: `${Math.max(it.value > 0 ? 3 : 0, (it.value / max) * 100)}%`, background: couleur[it.tone] }} />
+            <div className="pb-scale h-full rounded-full" style={{ "--p": Math.max(it.value > 0 ? 3 : 0, (it.value / max) * 100) / 100, background: couleur[it.tone] } as React.CSSProperties} />
           </div>
         </li>
       ))}

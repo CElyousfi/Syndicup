@@ -1,12 +1,13 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import '../feel/feel.dart';
 import '../i18n/mobile_dict.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
+import 'alive.dart';
 import 'cards.dart';
 import 'illustration.dart';
 
@@ -25,7 +26,9 @@ Future<void> showSuccess(
   String? secondaryLabel,
   VoidCallback? onSecondary,
 }) async {
-  HapticFeedback.mediumImpact();
+  // Écriture confirmée par le serveur : vibration + son de succès (réglages Sensations).
+  Haptics.success();
+  Sounds.play(SuSound.success);
   final next = await Navigator.of(context, rootNavigator: true).push<bool>(PageRouteBuilder<bool>(
     opaque: true,
     transitionDuration: SuMotion.of(context, const Duration(milliseconds: 420)),
@@ -81,7 +84,7 @@ class _SuccessPage extends StatelessWidget {
                 enter(Text(body!, textAlign: TextAlign.center, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5)), 1),
               ],
               const SizedBox(height: 28),
-              enter(FilledButton(onPressed: () => Navigator.of(context).pop(false), style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(56)), child: Text(doneLabel ?? md.successDone)), 2),
+              enter(SuButton(label: doneLabel ?? md.successDone, size: SuButtonSize.lg, expand: true, haptic: false, onPressed: () => Navigator.of(context).pop(false)), 2),
               if (secondaryLabel != null) ...[
                 const SizedBox(height: 6),
                 enter(Center(child: LinkButton(secondaryLabel!, onTap: () => Navigator.of(context).pop(true))), 3),

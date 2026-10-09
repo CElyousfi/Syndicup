@@ -2,7 +2,6 @@ import 'dart:math' as math;
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
+import '../../core/feel/feel.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/push/niveaux.dart';
@@ -128,13 +128,10 @@ class _AppShellState extends ConsumerState<AppShell> {
       push.afficher(cle: e.id, titre: e.titre, corps: e.corps, niveau: niveau, fil: filPour(e.fil, e.templateCode), badge: e.unread, son: e.son, path: path, notificationId: e.id);
     }
     if (!push.enAvantPlan) return;
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(
-        duration: const Duration(seconds: 6),
-        content: Text(e.titre ?? context.mdict.newNotification, maxLines: 2, overflow: TextOverflow.ellipsis),
-        action: SnackBarAction(label: context.mdict.open, textColor: SuColors.cta, onPressed: () => GoRouter.of(context).push(path)),
-      ));
+    // App ouverte : toast vivant (action « Ouvrir ») + tintement discret — les données concernées
+    // se mettent à jour d'elles-mêmes à l'écran (invalidations ci-dessus, montants qui roulent).
+    Sounds.play(SuSound.notify);
+    SuToaster.show(context, e.titre ?? context.mdict.newNotification, duration: const Duration(seconds: 6), actionLabel: context.mdict.open, onAction: () => GoRouter.of(context).push(path));
   }
 
   @override
@@ -169,6 +166,7 @@ class _AppShellState extends ConsumerState<AppShell> {
         actionLabel: quick.isEmpty ? null : context.mdict.tabAction,
         onAction: () => _openQuick(context, quick),
         onTap: (i) {
+          if (i != (onPlus ? tabs.length : current) && i != tabs.length) Haptics.select();
           if (i == tabs.length) {
             _openMenu(context, ctx, nav, dict);
           } else {
@@ -180,26 +178,13 @@ class _AppShellState extends ConsumerState<AppShell> {
   }
 
   void _openMenu(BuildContext context, AppContext ctx, List<NavSection> nav, Dict dict) {
-    showModalBottomSheet<void>(
-      useRootNavigator: true,
-      context: context,
-      sheetAnimationStyle: SuMotion.sheet,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (sheet) => _MenuSheet(ctx: ctx, nav: nav, dict: dict),
-    );
+    Haptics.select();
+    showSuSheet<void>(context, showDragHandle: false, builder: (sheet) => _MenuSheet(ctx: ctx, nav: nav, dict: dict));
   }
 
   void _openQuick(BuildContext context, List<QuickAction> actions) {
-    HapticFeedback.selectionClick();
-    showModalBottomSheet<void>(
-      useRootNavigator: true,
-      context: context,
-      sheetAnimationStyle: SuMotion.sheet,
-      isScrollControlled: true,
-      useSafeArea: true,
-      builder: (sheet) => _QuickSheet(actions: actions),
-    );
+    Haptics.tap();
+    showSuSheet<void>(context, showDragHandle: false, builder: (sheet) => _QuickSheet(actions: actions));
   }
 }
 
@@ -292,8 +277,9 @@ class _TabBar extends StatelessWidget {
     Widget tab(int i) {
       final sel = i == current;
       return Expanded(
-        child: InkWell(
+        child: SuTap(
           onTap: () => onTap(i),
+          scale: SuTokens.pressChip,
           child: Semantics(
             selected: sel,
             button: true,
@@ -333,18 +319,40 @@ class _TabBar extends StatelessWidget {
       );
     }
 
+    // Indicateur unique qui GLISSE d'un onglet à l'autre (ressort, sens de lecture respecté) ;
+    // l'emplacement du bouton central est sauté.
+    final slots = items.length + (mid >= 0 ? 1 : 0);
+    final slot = current < 0 ? -1 : (mid >= 0 && current >= mid ? current + 1 : current);
     return Container(
       decoration: const BoxDecoration(color: SuColors.surface, border: Border(top: BorderSide(color: SuColors.hairline))),
       child: SafeArea(
         top: false,
         child: SizedBox(
           height: 76,
-          child: Row(
+          child: Stack(
             children: [
-              for (int i = 0; i < items.length; i++) ...[
-                if (i == mid) _ActionTab(label: actionLabel!, onTap: onAction!),
-                tab(i),
-              ],
+              Row(
+                children: [
+                  for (int i = 0; i < items.length; i++) ...[
+                    if (i == mid) _ActionTab(label: actionLabel!, onTap: onAction!),
+                    tab(i),
+                  ],
+                ],
+              ),
+              if (Feel.alive && slot >= 0)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: AnimatedAlign(
+                      alignment: AlignmentDirectional(slots <= 1 ? 0 : -1 + 2 * slot / (slots - 1), -1),
+                      duration: SuMotion.of(context, const Duration(milliseconds: 420)),
+                      curve: SuMotion.spring,
+                      child: FractionallySizedBox(
+                        widthFactor: 1 / slots,
+                        child: Center(child: Container(width: 26, height: 3, decoration: BoxDecoration(color: SuColors.brand, borderRadius: BorderRadius.circular(99)))),
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -365,8 +373,9 @@ class _ActionTab extends StatelessWidget {
         button: true,
         label: label,
         excludeSemantics: true,
-        child: GestureDetector(
-          behavior: HitTestBehavior.opaque,
+        child: SuTap(
+          ink: false,
+          scale: 1,
           onTap: onTap,
           child: Padding(
             padding: const EdgeInsets.only(top: 3, bottom: 4),
@@ -427,10 +436,11 @@ class _MenuSheet extends ConsumerWidget {
                   const IconCircle(Icons.apartment_rounded, tone: Tone.sage, size: 44, iconSize: 22),
                   const SizedBox(width: 12),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? ctx.role), style: t.labelSmall)])),
-                  if (ctx.multiCopro) TextButton(onPressed: () {
-                    Navigator.pop(context);
-                    context.push('/choisir-copropriete');
-                  }, style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 6), minimumSize: const Size(0, 32)), child: Text(dict.a11y.switchCopro, style: const TextStyle(fontSize: 12))),
+                  if (ctx.multiCopro)
+                    LinkButton(dict.a11y.switchCopro, onTap: () {
+                      Navigator.pop(context);
+                      context.push('/choisir-copropriete');
+                    }),
                 ],
               ),
             ),
@@ -498,14 +508,24 @@ class _MenuTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Rangée « Manage » de Wise : pastille ronde, libellé gras, chevron nu.
-    return ListTile(
-      leading: Container(width: 40, height: 40, decoration: BoxDecoration(color: color == null ? SuColors.wash : SuColors.dangerTint, shape: BoxShape.circle), child: Icon(icon, size: 21, color: color ?? SuColors.ink)),
-      title: Text(label, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color ?? SuColors.ink)),
-      trailing: badge > 0 ? _CountBadge(badge) : ChevronEnd(color: color),
-      minTileHeight: 56,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+    return SuTap(
       onTap: onTap,
+      scale: SuTokens.pressRow,
+      borderRadius: BorderRadius.circular(18),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 56),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          child: Row(
+            children: [
+              Container(width: 40, height: 40, decoration: BoxDecoration(color: color == null ? SuColors.wash : SuColors.dangerTint, shape: BoxShape.circle), child: Icon(icon, size: 21, color: color ?? SuColors.ink)),
+              const SizedBox(width: 16),
+              Expanded(child: Text(label, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: color ?? SuColors.ink))),
+              badge > 0 ? _CountBadge(badge) : ChevronEnd(color: color),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -562,7 +582,9 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                     Semantics(
                       button: true,
                       label: dict.nav.profil,
-                      child: GestureDetector(
+                      child: SuTap(
+                        ink: false,
+                        scale: SuTokens.pressIcon,
                         onTap: () => context.push('/profil'),
                         child: Stack(
                           clipBehavior: Clip.none,
@@ -585,9 +607,11 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                     Semantics(
                       label: dict.a11y.notifications,
                       button: true,
-                      child: IconButton(
-                        onPressed: () => context.push('/notifications'),
-                        icon: Stack(
+                      child: SuTap(
+                        customBorder: const CircleBorder(),
+                        scale: SuTokens.pressIcon,
+                        onTap: () => context.push('/notifications'),
+                        child: Padding(padding: const EdgeInsets.all(10), child: Stack(
                           clipBehavior: Clip.none,
                           children: [
                             _RingingBell(count: live.unread),
@@ -602,7 +626,7 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                                 ).animate(key: ValueKey(live.unread)).scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.4, end: 1, duration: 420.ms, curve: SuMotion.spring),
                               ),
                           ],
-                        ),
+                        )),
                       ),
                     ),
                   ],
@@ -646,7 +670,7 @@ class _CoproPill extends ConsumerWidget {
       ),
     );
     if (!ctx.multiCopro) return pill;
-    return SuPressable(child: GestureDetector(onTap: () => context.push('/choisir-copropriete'), child: pill));
+    return SuTap(ink: false, onTap: () => context.push('/choisir-copropriete'), child: pill);
   }
 }
 
@@ -659,7 +683,7 @@ class _CoproMark extends ConsumerWidget {
     if (copro?.logoStoragePath != null) {
       final url = ref.watch(logoUrlProvider(copro!.id)).valueOrNull;
       if (url != null) {
-        return ClipOval(child: Image.network(url, width: 30, height: 30, fit: BoxFit.cover, errorBuilder: (_, __, ___) => const _Mark()));
+        return ClipOval(child: SuImage.network(url, width: 30, height: 30, errorBuilder: (_, __, ___) => const _Mark()));
       }
     }
     return const _Mark();

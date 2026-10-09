@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/api_result.dart';
-import '../feel/haptics.dart';
+import '../feel/feel.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
-import 'motion.dart';
+import 'alive.dart';
 import 'states.dart';
 
 /// Champ de formulaire libellé (label + aide + erreur serveur `fields[name]`).
-class SuField extends StatelessWidget {
+/// Vivant : l'erreur (serveur ou validateur) apparaît en fondu et secoue le champ (miroir RTL,
+/// `warning()`), une saisie [valid] se termine sur une petite coche qui se trace ; l'anneau de
+/// focus est celui, animé, du thème.
+class SuField extends StatefulWidget {
   const SuField({
     super.key,
     required this.label,
@@ -36,6 +39,15 @@ class SuField extends StatelessWidget {
     this.textInputAction,
     this.onSubmitted,
     this.autofillHints,
+    this.valid = false,
+    this.focusNode,
+    this.minLines,
+    this.textCapitalization = TextCapitalization.none,
+    this.readOnly = false,
+    this.onTap,
+    this.initialValue,
+    this.style,
+    this.textAlign = TextAlign.start,
   });
   final String label;
   final TextEditingController? controller;
@@ -45,6 +57,7 @@ class SuField extends StatelessWidget {
   final bool obscureText, required, mono, autofocus, enabled;
   final int maxLines;
   final int? maxLength;
+  final int? minLines;
   final TextDirection? textDirection;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
@@ -52,41 +65,106 @@ class SuField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final ValueChanged<String>? onSubmitted;
   final Iterable<String>? autofillHints;
+  final FocusNode? focusNode;
+  final TextCapitalization textCapitalization;
+  final bool readOnly;
+  final VoidCallback? onTap;
+  final String? initialValue;
+  final TextStyle? style;
+  final TextAlign textAlign;
+
+  /// Saisie reconnue valide (code complet, IBAN reconnu…) : coche en fin de champ.
+  final bool valid;
+
+  @override
+  State<SuField> createState() => _SuFieldState();
+}
+
+class _SuFieldState extends State<SuField> {
+  int _shake = 0;
+  String? _lastValidatorError;
+
+  @override
+  void didUpdateWidget(SuField old) {
+    super.didUpdateWidget(old);
+    if (widget.error != null && widget.error != old.error) _bump();
+  }
+
+  void _bump() {
+    _shake++;
+    Haptics.warning();
+  }
+
+  String? _validate(String? v) {
+    final r = widget.validator!(v);
+    if (r != null && r != _lastValidatorError) {
+      // Après la construction : setState interdit pendant la validation du Form.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(_bump);
+      });
+    }
+    _lastValidatorError = r;
+    return r;
+  }
 
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(label, style: t.labelMedium?.copyWith(color: SuColors.ink)),
-            if (required) Text(' *', style: t.labelMedium?.copyWith(color: SuColors.danger)),
-            if (!required && optionalLabel != null) Text('  ·  $optionalLabel', style: t.labelSmall),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          keyboardType: keyboardType,
-          inputFormatters: inputFormatters,
-          obscureText: obscureText,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          autofocus: autofocus,
-          enabled: enabled,
-          validator: validator,
-          onChanged: onChanged,
-          textDirection: textDirection,
-          textInputAction: textInputAction,
-          onFieldSubmitted: onSubmitted,
-          autofillHints: autofillHints,
-          style: t.bodyLarge?.copyWith(color: SuColors.ink, fontFamily: mono ? 'GeistMono' : null),
-          decoration: InputDecoration(hintText: hint, hintTextDirection: textDirection, errorText: error, suffixIcon: suffix, prefixIcon: prefix),
-        ),
-        if (help != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(help!, style: t.bodySmall)),
-      ],
+    final suffix = widget.valid && Feel.alive
+        ? Row(mainAxisSize: MainAxisSize.min, children: [
+            if (widget.suffix != null) widget.suffix!,
+            Padding(
+              padding: const EdgeInsetsDirectional.only(end: 12),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: SuMotion.reduced(context) ? 1 : 0, end: 1),
+                duration: SuTokens.slow,
+                curve: SuMotion.easeOut,
+                builder: (_, p, __) => CustomPaint(size: const Size.square(20), painter: CheckPainter(progress: p, color: SuColors.ok, stroke: 2.4)),
+              ),
+            ),
+          ])
+        : widget.suffix;
+    return SuShake(
+      trigger: _shake == 0 ? null : _shake,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Flexible(child: Text(widget.label, style: t.labelMedium?.copyWith(color: SuColors.ink))),
+              if (widget.required) Text(' *', style: t.labelMedium?.copyWith(color: SuColors.danger)),
+              if (!widget.required && widget.optionalLabel != null) Text('  ·  ${widget.optionalLabel}', style: t.labelSmall),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+            controller: widget.controller,
+            initialValue: widget.controller == null ? widget.initialValue : null,
+            focusNode: widget.focusNode,
+            keyboardType: widget.keyboardType,
+            inputFormatters: widget.inputFormatters,
+            obscureText: widget.obscureText,
+            maxLines: widget.maxLines,
+            minLines: widget.minLines,
+            maxLength: widget.maxLength,
+            autofocus: widget.autofocus,
+            enabled: widget.enabled,
+            readOnly: widget.readOnly,
+            onTap: widget.onTap,
+            textCapitalization: widget.textCapitalization,
+            textAlign: widget.textAlign,
+            validator: widget.validator == null ? null : _validate,
+            onChanged: widget.onChanged,
+            textDirection: widget.textDirection,
+            textInputAction: widget.textInputAction,
+            onFieldSubmitted: widget.onSubmitted,
+            autofillHints: widget.autofillHints,
+            style: (widget.style ?? t.bodyLarge)?.copyWith(color: SuColors.ink, fontFamily: widget.mono ? 'GeistMono' : null),
+            decoration: InputDecoration(hintText: widget.hint, hintTextDirection: widget.textDirection, errorText: widget.error, suffixIcon: suffix, prefixIcon: widget.prefix),
+          ),
+          if (widget.help != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(widget.help!, style: t.bodySmall)),
+        ],
+      ),
     );
   }
 }
@@ -144,7 +222,10 @@ class SuSelect<T> extends StatelessWidget {
                         ),
                       ),
                     );
-                    if (picked != null) onChanged(picked);
+                    if (picked != null) {
+                      Haptics.select();
+                      onChanged(picked);
+                    }
                   },
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 17),
@@ -201,7 +282,10 @@ class Segmented<T> extends StatelessWidget {
                 Expanded(
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
-                    onTap: () => onChanged(o),
+                    onTap: () {
+                      if (o != value) Haptics.select();
+                      onChanged(o);
+                    },
                     child: SizedBox(
                       height: 42,
                       child: Center(
@@ -223,38 +307,144 @@ class Segmented<T> extends StatelessWidget {
   }
 }
 
-/// Case à cocher avec aide.
+/// Case à cocher avec aide — la case se remplit en ressort et la coche SE TRACE ; `select()`.
 class SuCheckbox extends StatelessWidget {
-  const SuCheckbox({super.key, required this.value, required this.onChanged, required this.label, this.help});
+  const SuCheckbox({super.key, required this.value, required this.onChanged, required this.label, this.help, this.enabled = true});
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
   final String label;
   final String? help;
+  final bool enabled;
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    return InkWell(
-      borderRadius: BorderRadius.circular(12),
-      onTap: () => onChanged(!value),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 6),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(width: 28, height: 28, child: Checkbox(value: value, onChanged: (v) => onChanged(v ?? false), activeColor: SuColors.ink, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)))),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w500)),
-                  if (help != null) Text(help!, style: t.bodySmall),
-                ],
-              ),
+    final can = enabled && onChanged != null;
+    final reduced = SuMotion.reduced(context);
+    return MergeSemantics(
+      child: Semantics(
+        checked: value,
+        enabled: can,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: can
+              ? () {
+                  Haptics.select();
+                  onChanged!(!value);
+                }
+              : null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Center(
+                    child: AnimatedScale(
+                      scale: value ? 1 : 0.94,
+                      duration: reduced ? Duration.zero : SuTokens.base,
+                      curve: SuMotion.spring,
+                      child: AnimatedContainer(
+                        duration: SuMotion.of(context, SuTokens.toggle),
+                        width: 20,
+                        height: 20,
+                        decoration: BoxDecoration(
+                          color: value ? SuColors.ink : SuColors.surface,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: value ? SuColors.ink : (can ? SuColors.hairlineStrong : SuColors.hairline), width: 1.6),
+                        ),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(end: value ? 1 : 0),
+                          duration: reduced ? Duration.zero : SuTokens.base,
+                          curve: SuMotion.easeOut,
+                          builder: (_, p, __) => CustomPaint(painter: CheckPainter(progress: p, color: SuColors.cta, stroke: 2.2)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(label, style: t.bodyMedium?.copyWith(color: can ? SuColors.ink : SuColors.soft, fontWeight: FontWeight.w500)),
+                      if (help != null) Text(help!, style: t.bodySmall),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+}
+
+/// Groupe de choix exclusifs (remplace Radio) : pastille qui se remplit en ressort, `select()`.
+class SuRadioGroup<T> extends StatelessWidget {
+  const SuRadioGroup({super.key, required this.value, required this.options, required this.labelOf, required this.onChanged, this.helpOf});
+  final T? value;
+  final List<T> options;
+  final String Function(T) labelOf;
+  final String? Function(T)? helpOf;
+  final ValueChanged<T> onChanged;
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    final reduced = SuMotion.reduced(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final o in options)
+          MergeSemantics(
+            child: Semantics(
+              inMutuallyExclusiveGroup: true,
+              checked: o == value,
+              child: InkWell(
+                borderRadius: BorderRadius.circular(12),
+                onTap: () {
+                  if (o != value) Haptics.select();
+                  onChanged(o);
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedContainer(
+                        duration: SuMotion.of(context, SuTokens.toggle),
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: o == value ? SuColors.ink : SuColors.hairlineStrong, width: 1.6)),
+                        child: Center(
+                          child: AnimatedScale(
+                            scale: o == value ? 1 : 0,
+                            duration: reduced ? Duration.zero : SuTokens.base,
+                            curve: SuMotion.spring,
+                            child: Container(width: 11, height: 11, decoration: const BoxDecoration(color: SuColors.ink, shape: BoxShape.circle)),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(labelOf(o), style: t.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w500)),
+                            if (helpOf?.call(o) != null) Text(helpOf!(o)!, style: t.bodySmall),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -334,40 +524,28 @@ class FormError extends StatelessWidget {
 
 String? fieldError(ApiFail? f, String name) => f?.error.fields[name];
 
-/// Bouton principal avec état de chargement.
+/// Bouton principal avec état de chargement — délègue à [SuButton] : indicateur DANS le bouton,
+/// coche à la fin d'un envoi réussi, secousse + `warning()` quand [fail] change.
 class SubmitButton extends StatelessWidget {
-  const SubmitButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon, this.danger = false, this.secondary = false});
+  const SubmitButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon, this.danger = false, this.secondary = false, this.fail, this.expand = false});
   final String label;
   final VoidCallback? onPressed;
-  final bool loading, danger, secondary;
+  final bool loading, danger, secondary, expand;
   final IconData? icon;
+
+  /// Échec de la dernière tentative (ex. `_fail` de l'écran) : chaque nouvel échec secoue.
+  final Object? fail;
+
   @override
-  Widget build(BuildContext context) {
-    final labelRow = Row(key: const ValueKey('label'), mainAxisSize: MainAxisSize.min, children: [if (icon != null) ...[Icon(icon, size: 20), const SizedBox(width: 8)], Flexible(child: Text(label, overflow: TextOverflow.ellipsis))]);
-    Widget spinner(Color? c) => SizedBox(key: const ValueKey('spin'), width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: c));
-    // Libellé ↔ spinner en fondu-zoom, sans que le bouton ne change de taille ; pression ressort.
-    Widget swap(Widget w) => AnimatedSwitcher(
-          duration: SuMotion.of(context, const Duration(milliseconds: 240)),
-          switchInCurve: SuMotion.easeOut,
-          switchOutCurve: SuMotion.easeIn,
-          transitionBuilder: (c, a) => FadeTransition(opacity: a, child: ScaleTransition(scale: Tween(begin: 0.7, end: 1.0).animate(a), child: c)),
-          child: w,
-        );
-    if (secondary) {
-      return SuPressable(
-        enabled: !loading && onPressed != null,
-        child: OutlinedButton(onPressed: loading ? null : onPressed, child: swap(loading ? spinner(null) : labelRow)),
+  Widget build(BuildContext context) => SuButton(
+        label: label,
+        icon: icon,
+        onPressed: onPressed,
+        loading: loading,
+        fail: fail,
+        expand: expand,
+        variant: secondary ? SuButtonVariant.secondary : (danger ? SuButtonVariant.danger : SuButtonVariant.primary),
       );
-    }
-    return SuPressable(
-      enabled: !loading && onPressed != null,
-      child: FilledButton(
-        onPressed: loading ? null : onPressed,
-        style: danger ? FilledButton.styleFrom(backgroundColor: SuColors.danger, foregroundColor: Colors.white) : null,
-        child: swap(loading ? spinner(danger ? Colors.white : SuColors.onCta) : labelRow),
-      ),
-    );
-  }
 }
 
 /// Feuille du bas de formulaire (poignée, zone sûre, clavier).
@@ -396,11 +574,12 @@ Future<T?> showFormSheet<T>(BuildContext context, {required String title, requir
   );
 }
 
-/// ConfirmDialog — obligatoire sur toute action irréversible (Master Spec 14.3).
+/// ConfirmDialog — obligatoire sur toute action irréversible (Master Spec 14.3). Entrée en
+/// ressort (showSuDialog) ; confirmer une action dangereuse émet `warning()`.
 Future<bool> confirmDialog(BuildContext context, {required String title, required String body, String? confirmLabel, bool danger = false, bool irreversible = false}) async {
   final d = context.dict;
-  final r = await showDialog<bool>(
-    context: context,
+  final r = await showSuDialog<bool>(
+    context,
     builder: (ctx) => AlertDialog(
       title: Text(title),
       content: Column(
@@ -413,11 +592,14 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
       ),
       actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(d.common.cancel)),
-        FilledButton(
-          onPressed: () => Navigator.pop(ctx, true),
-          style: FilledButton.styleFrom(minimumSize: const Size(0, 46), backgroundColor: danger ? SuColors.danger : SuColors.cta, foregroundColor: danger ? Colors.white : SuColors.onCta),
-          child: Text(confirmLabel ?? d.common.confirm),
+        SuButton(label: d.common.cancel, variant: SuButtonVariant.ghost, onPressed: () => Navigator.pop(ctx, false)),
+        SuButton(
+          label: confirmLabel ?? d.common.confirm,
+          variant: danger ? SuButtonVariant.danger : SuButtonVariant.primary,
+          onPressed: () {
+            if (danger) Haptics.warning();
+            Navigator.pop(ctx, true);
+          },
         ),
       ],
     ),

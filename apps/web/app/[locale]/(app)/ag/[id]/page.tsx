@@ -380,7 +380,7 @@ function QuorumJauge({ atteint, requis }: { atteint: number | null; requis: numb
   return (
     <div className="relative mt-4 h-3 w-full rounded-full bg-wash">
       {atteint !== null ? (
-        <div className="pb-fill h-full rounded-full bg-brand" style={{ width: `${pct(atteint)}%` }} />
+        <div className="pb-scale h-full rounded-full bg-brand" style={{ "--p": pct(atteint) / 100 } as React.CSSProperties} />
       ) : null}
       {requis !== null ? (
         <span
