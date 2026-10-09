@@ -11,7 +11,9 @@ mobile. Elles remplacent les PNG générés par IA (styles inégaux, mains réal
 - Palette de marque uniquement : verts (`#1E7552` et ses tons), lime `#E3EF8D` pour l'accent
   (coches, pièces, lumière), sauge, greige, blanc, encre.
 - Le **logo** est le motif récurrent : l'hexagone (badges de succès, marques sur les urnes) et les
-  trois tours qui montent (accueil, affiche d'onboarding).
+  trois tours qui montent. `welcome-hero` et `poster-onboarding` construisent le logo exact,
+  tracé depuis `syndicuplogo.png` (`scenes_logo.py`) : l'anneau se dessine depuis le sommet, les
+  tours montent, l'aile du toit se pose, les fenêtres s'allument.
 - Une scène = une « scène » teintée (disque sauge pâle) + l'objet + 2–3 étincelles lime.
 
 ## Ce que fait chaque famille

@@ -32,6 +32,12 @@ try:
 except ImportError:
     pass
 try:
+    import scenes_logo  # noqa: E402  (overrides welcome-hero and poster-onboarding)
+
+    _LOGO = scenes_logo.SCENES
+except ImportError:
+    _LOGO = {}
+try:
     import scenes_quick  # noqa: E402
 
     REGISTRY.update(scenes_quick.SCENES)
@@ -43,6 +49,9 @@ try:
     REGISTRY.update(scenes_poster.SCENES)
 except ImportError:
     pass
+
+
+REGISTRY.update(_LOGO)
 
 
 def main():
