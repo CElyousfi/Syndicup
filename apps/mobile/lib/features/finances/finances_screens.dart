@@ -367,7 +367,7 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
                 // Succès plein écran, posé au-dessus du détail une fois celui-ci empilé.
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!racine.mounted) return;
-                  showSuccess(racine, title: formatPeriode(data.periode, l), body: '${d.enums.typeAppel[data.type] ?? data.type} · ${formatMAD(data.montantTotal, l)}\n${d.finances.montantReparti}', illustration: 'ok-general');
+                  showSuccess(racine, title: formatPeriode(data.periode, l), body: '${d.enums.typeAppel[data.type] ?? data.type} · ${formatMAD(data.montantTotal, l)}\n${d.finances.montantReparti}', illustration: 'ok-general', moment: SuMomentKind.sent);
                 });
               case ApiFail<AppelDeFonds>():
                 setState(() {
@@ -566,6 +566,9 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
           title: d.finances.paiementEnregistre,
           body: corps.isEmpty ? null : corps.join('\n'),
           illustration: 'ok-paiement',
+          // Moment signature : le montant enregistré tombe dans le reçu scellé.
+          moment: SuMomentKind.payment,
+          amount: body['montant'] as String?,
           secondaryLabel: quittance == null ? null : d.finances.voirQuittance,
           onSecondary: quittance == null ? null : () => router.push('/finances/quittances/${quittance.id}'),
         );

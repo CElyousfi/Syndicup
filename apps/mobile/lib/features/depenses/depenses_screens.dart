@@ -512,7 +512,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
                       final racine = Navigator.of(this.context, rootNavigator: true).context;
                       Navigator.pop(context);
                       if (!racine.mounted) return;
-                      showSuccess(racine, title: d.depenses.payee, body: x.source == 'FONDS_RESERVE' ? '${x.libelle} · ${formatMAD(x.montantTtc, l)}\n${d.depenses.payeeReserve}' : '${x.libelle} · ${formatMAD(x.montantTtc, l)}', illustration: 'ok-paiement');
+                      showSuccess(racine, title: d.depenses.payee, body: x.source == 'FONDS_RESERVE' ? '${x.libelle} · ${formatMAD(x.montantTtc, l)}\n${d.depenses.payeeReserve}' : '${x.libelle} · ${formatMAD(x.montantTtc, l)}', illustration: 'ok-paiement', moment: SuMomentKind.justified);
                     case ApiFail<Depense>():
                       setState(() {
                         _loading = false;

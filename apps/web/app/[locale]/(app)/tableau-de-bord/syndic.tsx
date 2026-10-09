@@ -28,6 +28,7 @@ import {
 import { versCentimes, versChaine } from "../../../../lib/centimes";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
+import { ResidenceAJour } from "../../../../components/ui/residence-a-jour";
 import { Greeting } from "../../../../components/ui/greeting";
 import { PageHeader } from "../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../components/ui/card";
@@ -158,6 +159,9 @@ export async function DashboardSyndic({
           <ChecklistTile checklist={onboarding} dict={dict} locale={locale} />
         </div>
       ) : null}
+
+      {/* Moment signature 6 : toute la résidence à jour (aucun impayé). */}
+      {impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
 
       {/* Soldes Wise : tuiles chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">

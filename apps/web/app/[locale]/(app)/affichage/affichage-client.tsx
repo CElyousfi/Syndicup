@@ -100,7 +100,7 @@ export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Lo
   useEffect(() => {
     if (state.status !== "success") return;
     setOpen(false);
-    celebrate({ titre: messageSucces, illustration: "ok-general" });
+    celebrate({ titre: messageSucces, illustration: "ok-general", moment: diff?.programmee ? undefined : "sent" });
   }, [state, messageSucces]);
   return (
     <>
@@ -265,7 +265,7 @@ export function RepondreForm({ dict, locale, sondage }: { dict: Dict; locale: Lo
   // Réponse à un sondage = geste de vote : écran de succès plein.
   const envoyee = c.reponseEnvoyee;
   useEffect(() => {
-    if (state.status === "success") celebrate({ titre: envoyee, illustration: "ok-vote" });
+    if (state.status === "success") celebrate({ titre: envoyee, illustration: "ok-vote", moment: "vote" });
   }, [state, envoyee]);
   if (state.status === "success") return <Banner variant="ok">{c.reponseEnvoyee}</Banner>;
   return (

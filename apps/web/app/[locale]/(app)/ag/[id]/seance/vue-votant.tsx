@@ -91,6 +91,7 @@ export function VueVotant({
         titre: a.voteEnregistre,
         corps: `${dict.enums.valeurVote[d.valeur]} · ${a.voteImmuable}`,
         illustration: "ok-vote",
+        moment: "vote",
       });
     }
     // (identite volontairement hors dépendances : on n'applique le vote qu'au retour d'action)

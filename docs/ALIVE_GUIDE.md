@@ -125,6 +125,31 @@ des pages de connexion est mesuré à chaque phase et ne doit pas grossir. Cons�
 
 Jamais au défilement, jamais à la frappe, jamais de son sur un tap ordinaire. Sons : `docs/SOUNDS.md`.
 
+## 4 bis. Moments signature (≤ 1,2 s, passables d'un tap, jamais bloquants, après la réponse 2xx)
+
+| # | Moment | Mobile | Web | Branché sur |
+|---|---|---|---|---|
+| 1 | Paiement enregistré : le montant tombe dans le reçu scellé (solde qui roule en calque) | `showSuccess(moment: SuMomentKind.payment, amount:)` · `SuSignature.payment(...)` | `celebrate({ moment: "payment", amount })` · `signature({ kind: "payment", ... })` | paiement saisi par le syndic, justificatif validé |
+| 2 | **Les 12 annexes générées** : 12 documents cochés en cascade serrée, sceau « Conforme », coffre qui se ferme, `heavy()` + son `signature` | `SuSignature.annexes(context, titles: [...])` | `signature({ kind: "annexes", titles })` | **module comptable à venir** — voir ci-dessous |
+| 3 | Envoi (appel de fonds, annonce publiée) : le message part, coche « Envoyé », son `sent` | `showSuccess(moment: SuMomentKind.sent)` | `celebrate({ moment: "sent" })` | appel de fonds émis, annonce publiée (pas programmée) |
+| 4 | Vote : le bulletin tombe dans l'urne | `SuSignature.vote(context)` (séance, au lieu du toast) · `showSuccess(moment: vote)` (sondage) | `celebrate({ moment: "vote" })` | vote d'AG, réponse de sondage |
+| 5 | Dépense justifiée : la photo du reçu se clipse, badge « Justifiée » | `showSuccess(moment: SuMomentKind.justified)` | `celebrate({ moment: "justified" })` | dépense payée avec reçu |
+| 6 | Résidence 100 % à jour : anneau plein, halo une fois par mois | `_ResidenceAJour` (tableau de bord) · `SuSignature.oncePerPeriod(clé)` | `<ResidenceAJour>` · `unePremiereFois(clé)` | aucun impayé et taux = 100 % |
+| 7 | Bienvenue : le logo, « Bienvenue sur SyndicUp », une fois par utilisateur et appareil | `SuSignature.welcomeOnce(context, userKey:)` (coque, après le relais du lancement) | la visite guidée existante tient ce rôle | première connexion |
+
+**L'appel unique du futur module « annexes » (Décret 2.23.700)** — juste après la réponse 2xx de
+l'endpoint de génération, sans autre logique :
+
+```dart
+SuSignature.annexes(context, titles: annexes.map((a) => a.intitule).toList()); // mobile
+```
+```ts
+signature({ kind: "annexes", titles: annexes.map((a) => a.intitule) }); // web (lib/signature.ts)
+```
+
+Démonstrations : **Profil → Sensations → Tester les sensations** (mobile, debug ou
+`SENSATIONS_TEST=true`) et `/fr/debug/sensations` (web, développement).
+
 ## 5. Règles de retenue
 
 - **Une seule chose bouge pour attirer l'attention à la fois.** Aucune boucle qui réclame l'attention

@@ -9,6 +9,10 @@ export interface SuccessInput {
   /** Nom d'illustration (public/illustrations) : ok-paiement, ok-incident, ok-vote, ok-reservation,
    *  ok-invitation, ok-visiteur, ok-general. */
   illustration?: string;
+  /** Moment signature joué à la place de l'illustration (couche Alive, ≤ 1,2 s). */
+  moment?: "payment" | "sent" | "vote" | "justified";
+  /** Montant enregistré (format API) — affiché par le moment « payment ». */
+  amount?: string;
   /** Lien secondaire « Voir » (ex. le détail créé). */
   href?: string;
   hrefLabel?: string;

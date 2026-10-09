@@ -18,6 +18,7 @@ import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
 import { armSounds, useSensations } from "../../lib/feel";
 import { useBadgePop } from "./badge-pop";
 import { ConnectivityBanner, useScrollReveal } from "./ambient";
+import { SignatureOverlay } from "./signature-overlay";
 import type { Dict } from "../../lib/i18n";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
@@ -425,7 +426,8 @@ export function AppFrame({
           « menu » ouvrent la feuille de navigation à la place de l'ancien tiroir. */}
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
       <Toaster />
-      <SuccessOverlay doneLabel={labels.done} />
+      <SuccessOverlay doneLabel={labels.done} labels={alive} locale={locale} />
+      <SignatureOverlay labels={alive} locale={locale} />
       <ConnectivityBanner offline={alive.horsLigne} online={alive.enLigne} />
     </div>
     </MotionConfig>

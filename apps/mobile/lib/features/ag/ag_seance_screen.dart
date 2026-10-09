@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -10,6 +11,7 @@ import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
+import '../../core/feel/feel.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
@@ -342,8 +344,14 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
           _choix = null;
         });
         ref.invalidate(agResultatsProvider((agId: widget.ag.id, resolutionId: r.id)));
-        // Séance : on vote résolution après résolution — un toast bref, pas d'écran plein.
-        showToast(context, d.ag.voteEnregistre);
+        // Séance : on vote résolution après résolution — moment bref (bulletin dans l'urne, ≤ 1,1 s,
+        // passable d'un tap) au lieu d'un écran plein ; annoncé aux lecteurs d'écran. Repli toast.
+        if (Feel.alive) {
+          SuSignature.vote(context, label: d.ag.voteEnregistre);
+          SemanticsService.announce(d.ag.voteEnregistre, Directionality.of(context));
+        } else {
+          showToast(context, d.ag.voteEnregistre);
+        }
       case ApiFail<AgVote>():
         setState(() {
           _loading = false;

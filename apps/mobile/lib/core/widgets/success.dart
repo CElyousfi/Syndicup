@@ -10,6 +10,7 @@ import '../theme/tokens.dart';
 import 'alive.dart';
 import 'cards.dart';
 import 'illustration.dart';
+import 'signature.dart';
 
 /// Écran de succès plein écran — moment Wise qui clôt une action importante (paiement déclaré,
 /// incident signalé, réservation, invitation, visiteur, vote…) : illustration (ou disque sauge
@@ -25,15 +26,21 @@ Future<void> showSuccess(
   String? doneLabel,
   String? secondaryLabel,
   VoidCallback? onSecondary,
+  SuMomentKind? moment,
+  String? amount,
 }) async {
-  // Écriture confirmée par le serveur : vibration + son de succès (réglages Sensations).
-  Haptics.success();
-  Sounds.play(SuSound.success);
+  // Écriture confirmée par le serveur. Sans moment signature : vibration + son de succès tout de
+  // suite ; avec : ils partent au sommet de la chorégraphie (et le son suit le moment).
+  final m = Feel.alive ? moment : null;
+  if (m == null) {
+    Haptics.success();
+    Sounds.play(SuSound.success);
+  }
   final next = await Navigator.of(context, rootNavigator: true).push<bool>(PageRouteBuilder<bool>(
     opaque: true,
     transitionDuration: SuMotion.of(context, const Duration(milliseconds: 420)),
     reverseTransitionDuration: SuMotion.of(context, const Duration(milliseconds: 240)),
-    pageBuilder: (ctx, _, __) => _SuccessPage(title: title, body: body, illustration: illustration, doneLabel: doneLabel, secondaryLabel: secondaryLabel),
+    pageBuilder: (ctx, _, __) => _SuccessPage(title: title, body: body, illustration: illustration, doneLabel: doneLabel, secondaryLabel: secondaryLabel, moment: m, amount: amount),
     transitionsBuilder: (ctx, a, _, child) => FadeTransition(
       opacity: CurvedAnimation(parent: a, curve: SuMotion.easeOut),
       child: ScaleTransition(scale: Tween(begin: 1.04, end: 1.0).animate(CurvedAnimation(parent: a, curve: SuMotion.easeOut)), child: child),
@@ -42,8 +49,30 @@ Future<void> showSuccess(
   if (next == true) onSecondary?.call();
 }
 
+/// Vibration + son au sommet d'un moment signature (réglages Sensations respectés).
+void _momentPeak(SuMomentKind k) {
+  switch (k) {
+    case SuMomentKind.annexes:
+      Haptics.heavy();
+      Sounds.play(SuSound.signature);
+    case SuMomentKind.sent:
+      Haptics.success();
+      Sounds.play(SuSound.sent);
+    case SuMomentKind.justified:
+      Haptics.success();
+      Sounds.play(SuSound.confirm);
+    case SuMomentKind.vote || SuMomentKind.welcome:
+      Haptics.success();
+    case SuMomentKind.payment:
+      Haptics.success();
+      Sounds.play(SuSound.success);
+  }
+}
+
 class _SuccessPage extends StatelessWidget {
-  const _SuccessPage({required this.title, this.body, required this.illustration, this.doneLabel, this.secondaryLabel});
+  const _SuccessPage({required this.title, this.body, required this.illustration, this.doneLabel, this.secondaryLabel, this.moment, this.amount});
+  final SuMomentKind? moment;
+  final String? amount;
   final String title;
   final String? body;
   final String illustration;
@@ -71,11 +100,14 @@ class _SuccessPage extends StatelessWidget {
               ),
               Expanded(
                 child: Center(
-                  child: SuIllustration(
-                    illustration,
-                    size: math.min(w * 0.62, 260),
-                    fallback: const SuccessBurst(),
-                  ),
+                  child: moment != null
+                      // Moment signature à la place de l'illustration (≤ 1,2 s, puis image finale).
+                      ? SuMomentView(kind: moment!, amount: amount, onPeak: () => _momentPeak(moment!))
+                      : SuIllustration(
+                          illustration,
+                          size: math.min(w * 0.62, 260),
+                          fallback: const SuccessBurst(),
+                        ),
                 ),
               ),
               enter(Text(SuType.posterText(context, title), textAlign: TextAlign.center, style: SuType.poster(context, ((w - 48) * 0.1).clamp(28.0, 42.0))), 0),

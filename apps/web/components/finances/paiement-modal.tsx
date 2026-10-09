@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { Modal } from "../ui/modal";
 import { Segmented } from "../ui/tabs";
 import { Field, Input, Select } from "../ui/field";
@@ -65,6 +65,8 @@ export function PaiementModal({
   const [mode, setMode] = useState<"cible" | "fifo">(modeInitial);
   const [state, action] = useActionState(enregistrerPaiement, IDLE);
   const [resultat, setResultat] = useState<ResultatPaiement | null>(null);
+  // Montant saisi, relu au succès pour le moment signature « paiement enregistré » (affichage seul).
+  const formRef = useRef<HTMLFormElement>(null);
 
   const f = dict.finances;
 
@@ -83,6 +85,8 @@ export function PaiementModal({
       titre: paiementEnregistre,
       corps: r.quittanceId ? quittanceGeneree : undefined,
       illustration: "ok-paiement",
+      moment: "payment",
+      amount: (formRef.current?.elements.namedItem("montant") as HTMLInputElement | null)?.value?.replace(",", ".") || undefined,
       href: r.quittanceId ? `/${locale}/finances/quittances/${r.quittanceId}` : undefined,
       hrefLabel: r.quittanceId ? voirQuittance : undefined,
     });
@@ -143,7 +147,7 @@ export function PaiementModal({
             </div>
           </div>
         ) : (
-          <form action={action} className="space-y-4">
+          <form ref={formRef} action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="mode" value={mode} />
 

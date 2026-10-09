@@ -213,7 +213,7 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     }
     if (succes != null) {
       if (corps != null) {
-        showSuccess(context, title: succes, body: corps, illustration: 'ok-general');
+        showSuccess(context, title: succes, body: corps, illustration: 'ok-general', moment: SuMomentKind.sent);
       } else {
         showToast(context, succes);
       }
@@ -385,7 +385,7 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
     final corps = _programme != null ? fill(c.programmeeLe, {'date': formatDateHeure(_programme!.toIso8601String(), context.locale)}) : c.publierCorps;
     Navigator.pop(context);
     router.push('/affichage/$id');
-    showSuccess(root, title: _programme != null ? c.programmee : c.enregistree, body: corps, illustration: 'ok-general');
+    showSuccess(root, title: _programme != null ? c.programmee : c.enregistree, body: corps, illustration: 'ok-general', moment: _programme != null ? null : SuMomentKind.sent);
   }
 
   @override
@@ -531,7 +531,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                   ref.invalidate(sondageProvider(widget.id));
                   ref.invalidate(sondagesProvider);
                   // Réponse délibérée et unique : succès plein écran.
-                  showSuccess(context, title: c.reponseEnvoyee, body: s.question, illustration: 'ok-vote');
+                  showSuccess(context, title: c.reponseEnvoyee, body: s.question, illustration: 'ok-vote', moment: SuMomentKind.vote);
                 }),
               ]
               else if (s.resultats == null) Text(c.resultatsApres, style: t.bodyMedium?.copyWith(color: SuColors.soft))

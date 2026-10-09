@@ -1,47 +1,60 @@
-# feat(alive): phase 3 — l'application respire (ambiance)
+# feat(alive): phase 4 — moments signature (mouvement + haptique + son)
 
-Branche : `feature/alive-ambient`, empilée sur `feature/alive-components` (phase 2).
-**Présentation uniquement** : aucune donnée, aucun appel d'API ajouté. Toute l'ambiance s'éteint en mode
-lite (appareil modeste, économiseur de batterie, économie de données), en « animations réduites »
-(système ou Sensations) et avec `ALIVE_V1=false`.
+Branche : `feature/alive-signature`, empilée sur `feature/alive-ambient` (phase 3).
+Chaque moment dure ≤ 1,2 s, se passe d'un tap ou d'un clic et ne bloque jamais l'interface. Il est
+joué **après** la réponse 2xx du serveur, donc il n'annonce jamais un succès à la place de l'API.
+Aucune logique métier, aucun appel d'API ajouté ; tout s'éteint avec `ALIVE_V1=false`.
 
-## Ce qui change
+## Les sept moments
 
-| Brief (phase 3) | Mobile | Web |
-|---|---|---|
-| **Données en direct** | Déjà assuré par la phase 2 : invalidations SSE → montants qui roulent, lignes clées qui entrent avec un surlignage, toast « Ouvrir » + son `notify`. | Déjà assuré par la phase 2 : `router.refresh()` (SSE, 25 s, retour d'onglet) → `Amount`, `LiveList`, éclosion des badges. Vérifié de bout en bout (vidéo de la phase 2). |
-| **Présence** | Hors périmètre (D3) → `docs/PRESENCE_TICKET.md`. | Idem. |
-| **Salutation selon l'heure (FR/AR)** | « Bonjour / Bon après-midi / Bonsoir / Bonne nuit {prénom} », révélée mot par mot. | Idem (`<Greeting>`) : heure de Casablanca au rendu serveur, corrigée par l'heure locale au montage. Repli « Bonjour {prénom} » si `alive_v1` est coupé. |
-| **Dérive lente du héros** | `SuHeroDrift` : halo lime à 16 % qui dérive sur la photo du tableau de bord, cycle de 20 s. Le ticker s'arrête hors écran (TickerMode). | `.alive-drift` sur les cartes-affiches : pseudo-élément déplacé par `transform`, donc composité, sans repeint par image. |
-| **Parallaxe** | `SuParallax` (≤ 10 px) sur la photo du tableau de bord et les `PhotoBanner`. | `.su-parallax` en défilement natif (`animation-timeline: view()`, sans JS) sur `PhotoBanner` et `PosterCard`. Ignoré par les navigateurs qui ne le gèrent pas. |
-| **Cartes qui apparaissent au défilement (1re fois seulement)** | `SuEnter` : une ligne clée qui entre à l'écran après la cascade d'arrivée glisse une seule fois par écran (mémoire par route). | `useScrollReveal` : les blocs de `.page-root` sous la ligne de flottaison sont révélés une fois (IntersectionObserver). |
-| **Connectivité** | Bandeau calme sous l'encoche : hors ligne → se déplie ; retour → « Connexion rétablie » 2,6 s, puis se replie. | Pastille flottante identique (`online` / `offline`), `warning()` haptique au passage hors ligne. Le web n'a aucune file d'écriture : les finances ne sont jamais mises en attente (Master Spec 13.3). |
-| **Actions en file hors ligne : en attente → coche** | `SuQueueSyncFlash` sur les quatre files existantes (visites, LCD, présences, tâches) : quand la file baisse, une coche « Synchronisé » se trace, avec `select()`. Les lignes de la file des visites se replient en sortant. | — (pas de file hors ligne côté web) |
-| **Retour au premier plan** | Après ≥ 30 s en arrière-plan, les lectures visibles sont relancées SANS écran blanc (`skipLoadingOnRefresh`) : les montants roulent, les lignes entrent. | Déjà en place (`visibilitychange` → `router.refresh()`), désormais animé. |
-| **Lancement** | `LaunchHandoff` : le logo du démarrage reste une fraction de seconde au-dessus du premier écran puis remonte vers l'en-tête en s'effaçant (650 ms). Les routes gardent `NoTransitionPage`, correctif du 2026-10-01 préservé. | Sans objet (pas d'écran de démarrage) : la page arrive en cascade. |
-| **Inclinaison gyroscope** | Abandonnée (D4). | Abandonnée (D4). |
+| # | Moment | Où (vrais parcours) | Ressenti |
+|---|---|---|---|
+| 1 | **Paiement enregistré** : le montant (pastille lime) tombe dans le reçu ; sceau ✓ tamponné. En calque, le solde roule de l'ancien vers le nouveau. | Mobile : paiement saisi par le syndic, justificatif validé. Web : `PaiementModal`, validation de justificatif. | `success()` + son `success` au tampon |
+| 2 | **Les 12 annexes générées** : 12 documents apparaissent en cascade serrée (≈ 40 ms), chacun coché ; la grille se resserre (le coffre se ferme) ; sceau « CONFORME ». | **Module comptable encore inexistant** : démonstration dans l'écran de test, et l'appel unique est documenté (ci-dessous). | `heavy()` + son `signature` |
+| 3 | **Envoi** : la lettre s'envole vers la fin de ligne (miroir en arabe), la coche éclot, « Envoyé ». | Appel de fonds émis (mobile) ; annonce publiée — pas programmée (mobile + web). | `success()` + son `sent` |
+| 4 | **Vote d'AG** : le bulletin descend dans l'urne, qui se tasse ; « Vote enregistré ». | Mobile : séance (remplace le toast, annonce lecteur d'écran conservée) et sondage. Web : vote en séance, sondage. | `success()` |
+| 5 | **Dépense justifiée** : la photo du reçu se clipse sur la dépense, badge « Justifiée ». | Dépense payée avec reçu (mobile + web). | `success()` + son `confirm` |
+| 6 | **Résidence 100 % à jour** : anneau plein qui se trace, halo unique. | Tableau de bord du syndic, quand il n'y a aucun impayé et que le taux est de 100 %. Le halo ne brille qu'une fois par mois et par résidence (puis l'anneau reste plein, immobile). | `success()` (une fois) |
+| 7 | **Bienvenue** : le logo éclot, « Bienvenue sur SyndicUp ». | Mobile : première connexion de chaque utilisateur sur l'appareil, juste après le relais du lancement. Web : la visite guidée existante (« Bienvenue sur SyndicUp ») tient déjà ce rôle, pas de doublon. | `success()` |
 
-## Fichiers clés
-- **Mobile**
-  - `lib/core/widgets/ambient.dart` : `SuGreeting`/`greetingFor`, `SuHeroDrift`, `SuParallax`, `SuStatusBanner`, `SuSyncState`, `SuQueueSyncFlash`, `LaunchHandoff`, `SuScrollReveal`.
-  - Raccordements : coque (bandeau, retour au premier plan, relais du lancement), tableau de bord, files hors ligne, `PhotoBanner`, `SuEnter`.
-- **Web**
-  - `components/shell/ambient.tsx` (`ConnectivityBanner`, `useScrollReveal`), `components/ui/greeting.tsx`.
-  - CSS dans `app/motion.css` (« phase 3 ») ; classes posées sur `PhotoBanner` et `PosterCard`.
+Sur les écrans de succès plein écran, le moment **remplace l'illustration** au lieu de s'empiler
+dessus (`showSuccess(moment:)` / `celebrate({ moment })`). Le web évite la double vibration : la
+vibration part avec la réponse (`FormAlert`), le son au sommet. Le moment autonome
+`SuSignature` / `signature()` sert là où il n'y a pas d'écran de succès (vote en séance, annexes).
+
+### L'appel unique du futur module « annexes » (Décret 2.23.700)
+Juste après la réponse 2xx de l'endpoint de génération, sans autre logique :
+```dart
+SuSignature.annexes(context, titles: annexes.map((a) => a.intitule).toList()); // mobile
+```
+```ts
+signature({ kind: "annexes", titles: annexes.map((a) => a.intitule) }); // web — lib/signature.ts
+```
+
+### Revue sur téléphone
+**Profil → Sensations → Tester les sensations** (APK debug, ou `--dart-define=SENSATIONS_TEST=true`)
+rejoue les sept moments, chaque son et chaque vibration, sans rien écrire. Web : `/fr/debug/sensations`
+en développement.
+
+## Accessibilité, RTL, retenue
+- « Animations réduites » : l'image finale s'affiche directement puis s'efface ; vibration et son restent (selon les réglages).
+- Lecteurs d'écran : le calque est exclu de la sémantique. Le succès est annoncé par l'écran lui-même, ou par `SemanticsService.announce` pour le vote en séance.
+- RTL : la lettre part vers la fin de ligne ; l'anneau se trace dans le sens de lecture ; le badge éclot depuis le début de ligne.
+- Un seul moment à la fois (un nouveau remplace le précédent). Aucune boucle.
+
+## Correctif inclus (phase 3)
+`fix(alive)` : la révélation au défilement web passe par la Web Animations API. La version de la
+phase 3 posait `data-reveal` sur le DOM avant la fin de l'hydratation d'une page servie en flux, ce
+qui produisait un avertissement React en développement. Les règles CSS correspondantes sont retirées.
 
 ## Vérifications
 - **Mobile**
   - `flutter analyze` : aucune erreur, aucun avertissement.
-  - `flutter test` : 45/45.
+  - `flutter test` : 49/49, dont 4 nouveaux — le calque des annexes affiche « CONFORME » puis se retire seul ; un tap le passe ; `alive_v1` coupé = aucun moment ; l'écran de succès joue le moment avec le montant formaté (« 1 250,00 MAD »).
 - **Web**
   - `tsc` et ESLint propres ; `check:alive` à 100 % ; jetons à jour.
-  - Firefox (Playwright) au format téléphone 390 × 844, tableau de bord du syndic :
-    - salutation « Bonsoir Youssef » ;
-    - passage hors ligne → bandeau `off` « Vous êtes hors ligne — les données affichées peuvent dater. » ;
-    - retour → `back` « Connexion rétablie », puis `ok` ;
-    - défilement : 8 blocs révélés (7 encore en attente plus bas) ;
-    - 0 erreur JS.
-  - Vidéo : `web-ambient-offline-greeting-reveal.webm`.
-- Le poids des pages publiques est inchangé par cette phase : la salutation et le bandeau ne vivent que dans l'espace connecté.
+  - Firefox (Playwright, session réelle) : les 7 démonstrations jouées depuis `/fr/debug/sensations` sans erreur.
+  - Vidéo : `web-signature-moments.webm` ; captures `web-payment-moment.png`, `web-annexes-moment.png`.
+  - 12 pages clés FR/AR rejouées deux fois, connecté : **0 erreur console** après le correctif d'hydratation.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)

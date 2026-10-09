@@ -11,3 +11,4 @@ export 'illustration.dart';
 export 'success.dart';
 export 'alive.dart';
 export 'ambient.dart';
+export 'signature.dart';

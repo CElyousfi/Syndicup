@@ -6,9 +6,10 @@ import { AnimatePresence, m } from "motion/react";
 import { SUCCESS_EVENT, type SuccessInput } from "../../lib/success";
 import { Illustration } from "../ui/illustration";
 import { EASE_IN, EASE_OUT } from "../../lib/motion";
+import { MomentContent, sommetMoment, type SignatureLabels } from "./signature-overlay";
 
 /** Écran de succès plein écran (Wise) — écoute `celebrate()` (lib/success.ts). */
-export function SuccessOverlay({ doneLabel }: { doneLabel: string }) {
+export function SuccessOverlay({ doneLabel, labels, locale }: { doneLabel: string; labels: SignatureLabels; locale: string }) {
   const [item, setItem] = useState<SuccessInput | null>(null);
   const router = useRouter();
   const done = useRef<HTMLButtonElement>(null);
@@ -18,6 +19,14 @@ export function SuccessOverlay({ doneLabel }: { doneLabel: string }) {
     window.addEventListener(SUCCESS_EVENT, on);
     return () => window.removeEventListener(SUCCESS_EVENT, on);
   }, []);
+
+  // Moment signature : son au sommet de la chorégraphie (couche Alive).
+  const moment = item?.moment && typeof document !== "undefined" && document.documentElement.dataset.alive !== "0" ? item.moment : null;
+  useEffect(() => {
+    if (!moment) return;
+    const t = window.setTimeout(() => sommetMoment(moment, { vibrer: false }), moment === "sent" ? 520 : 680);
+    return () => window.clearTimeout(t);
+  }, [item, moment]);
 
   useEffect(() => {
     if (!item) return;
@@ -44,7 +53,16 @@ export function SuccessOverlay({ doneLabel }: { doneLabel: string }) {
             initial={{ scale: 0.6, opacity: 0 }}
             animate={{ scale: 1, opacity: 1, transition: { type: "spring", stiffness: 260, damping: 18, delay: 0.05 } }}
           >
-            <Illustration name={item.illustration ?? "ok-general"} size={220} fallback={<SuccessBurst />} />
+            {moment === "payment" || moment === "sent" || moment === "vote" || moment === "justified" ? (
+              <MomentContent
+                clair
+                labels={labels}
+                locale={locale}
+                moment={moment === "payment" ? { kind: "payment", amount: item.amount ?? "" } : { kind: moment }}
+              />
+            ) : (
+              <Illustration name={item.illustration ?? "ok-general"} size={220} fallback={<SuccessBurst />} />
+            )}
           </m.div>
           <m.h2
             id="su-success-title"

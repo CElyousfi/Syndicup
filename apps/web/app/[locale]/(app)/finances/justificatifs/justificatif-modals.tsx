@@ -30,7 +30,7 @@ export function ValiderModal({ dict, locale, justificatif }: { dict: Dict; local
   useEffect(() => {
     if (state.status !== "success") return;
     setOpen(false);
-    celebrate({ titre: titreValide, illustration: "ok-paiement" });
+    celebrate({ titre: titreValide, illustration: "ok-paiement", moment: "payment" });
   }, [state, titreValide]);
   return (
     <>

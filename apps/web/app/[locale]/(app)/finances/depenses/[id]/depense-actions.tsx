@@ -108,7 +108,7 @@ export function PayerModal({ dict, locale, depense }: Props) {
     if (state.status !== "success") return;
     setOpen(false);
     const reserve = (state.data as { source?: string } | undefined)?.source === "FONDS_RESERVE";
-    celebrate({ titre: payee, corps: reserve ? payeeReserve : undefined, illustration: "ok-paiement" });
+    celebrate({ titre: payee, corps: reserve ? payeeReserve : undefined, illustration: "ok-paiement", moment: "justified" });
   }, [state, payee, payeeReserve]);
   return (
     <>

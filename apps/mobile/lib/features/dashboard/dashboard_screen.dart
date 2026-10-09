@@ -202,6 +202,8 @@ class _DashSyndic extends ConsumerWidget {
             StatTile(icon: Icons.apartment_rounded, label: d.nav.lots, value: '${lots.valueOrNull?.length ?? '…'}', tone: Tone.tosca, hint: '${(lots.valueOrNull ?? const <Lot>[]).where((x) => x.statut == 'OCCUPE').length} ${(d.enums.statutLot['OCCUPE'] ?? '').toLowerCase()}', onTap: () => context.push('/lots')),
             StatTile(icon: Icons.event_available_rounded, label: d.dash.reservationsAValider, value: '${aValider.length}', tone: Tone.neutral, onTap: () => context.push('/reservations')),
           ]),
+          // Moment signature 6 : toute la résidence à jour → anneau plein, halo une fois par mois.
+          if (!synthese.isLoading && tot.impaye == BigInt.zero && tot.taux >= 1) _ResidenceAJour(coproId: ctx.coproprieteId),
           if (!lectureSeule) ...[
             const SizedBox(height: 22),
             Row(
@@ -759,6 +761,49 @@ class OnboardingCard extends ConsumerWidget {
           ]),
         ),
       ]),
+    );
+  }
+}
+
+
+/// Résidence 100 % à jour : anneau plein et halo retenu, joué une seule fois par mois et par
+/// résidence (puis l'anneau reste plein, immobile).
+class _ResidenceAJour extends StatefulWidget {
+  const _ResidenceAJour({required this.coproId});
+  final String coproId;
+  @override
+  State<_ResidenceAJour> createState() => _ResidenceAJourState();
+}
+
+class _ResidenceAJourState extends State<_ResidenceAJour> {
+  bool _glow = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    final periode = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+    SuSignature.oncePerPeriod('residence-a-jour:${widget.coproId}:$periode').then((first) {
+      if (!mounted || !first) return;
+      setState(() => _glow = true);
+      Haptics.success();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.only(top: 14),
+      child: SuCard(
+        child: Row(
+          children: [
+            SuRing(1, size: 52, stroke: 6, glow: _glow, child: const Icon(Icons.verified_rounded, color: SuColors.ok, size: 24)),
+            const SizedBox(width: 14),
+            Expanded(child: Text(context.dict.alive.residenceAJour, style: t.titleMedium)),
+          ],
+        ),
+      ),
     );
   }
 }

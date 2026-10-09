@@ -498,7 +498,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
                     final racine = Navigator.of(this.context, rootNavigator: true).context;
                     Navigator.pop(context);
                     if (widget.valider) {
-                      if (racine.mounted) showSuccess(racine, title: j.valide, body: '${y.lotNumero ?? ''} · ${formatMAD(y.montant, l)}', illustration: 'ok-paiement');
+                      if (racine.mounted) showSuccess(racine, title: j.valide, body: '${y.lotNumero ?? ''} · ${formatMAD(y.montant, l)}', illustration: 'ok-paiement', moment: SuMomentKind.payment, amount: y.montant);
                     } else {
                       showToast(context, j.rejete);
                     }

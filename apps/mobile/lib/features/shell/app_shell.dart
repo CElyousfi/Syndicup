@@ -58,7 +58,14 @@ class _AppShellState extends ConsumerState<AppShell> {
     _life;
     SuPage.rootHeader = () => const ShellHeader();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) LaunchHandoff.play(context);
+      if (!mounted) return;
+      LaunchHandoff.play(context);
+      // Moment signature 7 : première connexion de cet utilisateur sur cet appareil — le logo et
+      // « Bienvenue sur SyndicUp », une seule fois, après le relais du lancement.
+      final uid = ref.read(appContextProvider).profil.id;
+      Future<void>.delayed(const Duration(milliseconds: 750), () {
+        if (mounted) SuSignature.welcomeOnce(context, userKey: uid);
+      });
     });
     // Flux temps réel : toast + invalidation ciblée des lectures concernées.
     _sub = ref.read(notificationsLiveProvider.notifier).events.listen(_onLive);
