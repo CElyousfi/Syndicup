@@ -1,138 +1,16 @@
-"""The logo, built: welcome-hero and poster-onboarding.
+"""The brand symbol, rising: welcome-hero and poster-onboarding.
 
-Geometry is traced from syndicuplogo.png (1254 px, OpenCV contours): the hexagon ring is open at
-the bottom where the two side towers fuse into it; the centre tower carries the roof wing. Each
-piece is a separate layer so the logo can assemble itself: the ring draws from its apex down both
-sides, the towers rise into it, the roof wing lands, the windows light one by one.
+The SyndicUp symbol (two upward chevrons, the lower one on a short stem — traced from
+apps/mobile/assets/images/logo-foreground.png, see objects.symbol) climbs out of a residence:
+the building settles, the lower chevron and its stem rise from behind the roof, the upper chevron
+lands above. Idle: the chevrons keep a slow upward lift, one after the other.
 """
 from __future__ import annotations
 
 import math
 
-from kit import Comp, F, S, circle, ellipse, path, rect_xy
-from objects import crescent, shadow, sparkle
-
-# ── traced logo (1254 px space) ─────────────────────────────────────────────────────────────────
-RING_OUTER = [(390, 914), (305, 864), (285, 840), (270, 799), (269, 468), (279, 433), (321, 396), (622, 215), (646, 220),
-              (954, 410), (976, 436), (983, 461), (983, 795), (971, 834), (940, 870), (862, 917)]
-RING_INNER = [(390, 892), (340, 863), (318, 833), (312, 810), (313, 467), (326, 446), (620, 259), (637, 260),
-              (926, 445), (941, 471), (940, 813), (924, 850), (862, 893)]
-TOWER_L = [(390, 707), (491, 639), (492, 973), (390, 914)]
-TOWER_R = [(728, 577), (860, 666), (862, 917), (730, 997)]
-TOWER_C = [(630, 415), (485, 509), (487, 615), (545, 589), (546, 1004), (624, 1048), (628, 445)]
-ROOF = [(630, 415), (628, 445), (768, 537), (766, 507)]
-RING_W = 44
-LOGO_C = (626, 631)
-
-
-def _resample(pts, n):
-    seg = [math.dist(pts[k], pts[k + 1]) for k in range(len(pts) - 1)]
-    tot = sum(seg)
-    out = []
-    for i in range(n):
-        d = tot * i / (n - 1)
-        for k, s_ in enumerate(seg):
-            if d <= s_ or k == len(seg) - 1:
-                f = min(d / s_, 1) if s_ else 0
-                out.append((pts[k][0] + (pts[k + 1][0] - pts[k][0]) * f, pts[k][1] + (pts[k + 1][1] - pts[k][1]) * f))
-                break
-            d -= s_
-    return out
-
-
-def _ring_centre():
-    """Centre line of the ring, from the bottom-left end, over the apex, to the bottom-right end."""
-    o = _resample(RING_OUTER, 160)
-    i = _resample(RING_INNER, 160)
-    mid = [((a[0] + b[0]) / 2, (a[1] + b[1]) / 2) for a, b in zip(o, i)]
-    # extend both ends a little INTO the towers so the stroke caps hide under them
-    def ext(p, q, d):
-        L = math.dist(p, q)
-        return (p[0] + (p[0] - q[0]) / L * d, p[1] + (p[1] - q[1]) / L * d)
-    mid[0] = ext(mid[0], mid[3], 30)
-    mid[-1] = ext(mid[-1], mid[-4], 30)
-    # split at the apex (topmost point)
-    k = min(range(len(mid)), key=lambda j: mid[j][1])
-    left = list(reversed(mid[: k + 1]))  # apex → bottom-left
-    right = mid[k:]  # apex → bottom-right
-    return _simplify(left), _simplify(right)
-
-
-def _simplify(pts, tol=1.2):
-    out = [pts[0]]
-    for p in pts[1:-1]:
-        a, b = out[-1], p
-        if math.dist(a, b) > 6:
-            out.append(p)
-    out.append(pts[-1])
-    return out
-
-
-class Logo:
-    """Maps logo coordinates into a composition: centre (cx, cy), logo hexagon height h."""
-
-    def __init__(self, cx, cy, h):
-        self.k = h / (1048 - 215)
-        self.cx, self.cy = cx, cy
-
-    def P(self, pts):
-        return [(self.cx + (x - LOGO_C[0]) * self.k, self.cy + (y - LOGO_C[1]) * self.k) for x, y in pts]
-
-    def p(self, x, y):
-        return self.P([(x, y)])[0]
-
-
-def slanted(x0, x1, y_top_at, h, slope):
-    """Parallelogram window between x0 and x1 whose top follows `slope` (dy/dx)."""
-    return path([(x0, y_top_at), (x1, y_top_at + (x1 - x0) * slope), (x1, y_top_at + (x1 - x0) * slope + h), (x0, y_top_at + h)])
-
-
-def build_logo(c: Comp, L: Logo, *, ring="g700", tower="g700", tower_side="g600", roof="lime", win_off="g800", win_on="lime", t0=6, lit=None):
-    """Adds the assembling logo to `c`. Returns the window layers (for idle twinkles)."""
-    k = L.k
-    left, right = _ring_centre()
-    for nm, half in (("ring-l", left), ("ring-r", right)):
-        r = c.layer(nm, [S(path(L.P(half), False), ring, RING_W * k, cap="round")], L.p(*LOGO_C))
-        r.draw(t0, 34, "soft")
-    # towers rise from their own bases (staggered, the centre last and tallest)
-    specs = [("tower-l", TOWER_L, tower_side, 18), ("tower-r", TOWER_R, tower_side, 24), ("tower-c", TOWER_C, tower, 30)]
-    towers = {}
-    for nm, poly, col, t in specs:
-        P = L.P(poly)
-        base = max(y for _, y in P)
-        cxp = sum(x for x, _ in P) / len(P)
-        T = c.layer(nm, [F(path(P), col)], (cxp, base))
-        T.grow_y(t0 + t, 30, 104)
-        towers[nm] = T
-    rf = c.layer("roof", [F(path(L.P(ROOF)), roof)], L.p(698, 476))
-    rf.drop(t0 + 52, -60 * k * 1.6, 22, 6 * k * 1.6)
-    # windows: slits that follow each tower's slope, one column per tower
-    wins = []
-    cols = [
-        ("tower-l", 405, 476, 724, -0.673, 4),
-        ("tower-c", 562, 610, 660, -0.0, 5),
-        ("tower-r", 745, 845, 606, 0.674, 4),
-    ]
-    order = 0
-    lit = lit or {("tower-l", 1), ("tower-l", 3), ("tower-c", 0), ("tower-c", 2), ("tower-c", 3), ("tower-r", 0), ("tower-r", 2)}
-    for tname, x0, x1, ytop, slope, n in cols:
-        step = 58 if tname != "tower-c" else 62
-        for j in range(n):
-            yy = ytop + 26 + j * step
-            if tname == "tower-c":
-                yy = 660 + j * 66
-            pts0 = [(x0, yy), (x1, yy + (x1 - x0) * slope), (x1, yy + (x1 - x0) * slope + 26), (x0, yy + 26)]
-            P = L.P(pts0)
-            on = (tname, j) in lit
-            parts = [F(path(P), win_on if on else win_off)]
-            cxw = sum(x for x, _ in P) / 4
-            cyw = sum(y for _, y in P) / 4
-            W = c.layer(f"win-{tname}-{j}", parts, (cxw, cyw), towers[tname])
-            W.fade(t0 + 44 + order * 2.2, 8)
-            wins.append((W, on))
-            order += 1
-    return wins, towers
-
+from kit import Comp, F, S, circle, ellipse, path, rect, rect_xy
+from objects import arched_window, building, crescent, shadow, sparkle, symbol_low, symbol_top, window_cells
 
 # ── refined palm ───────────────────────────────────────────────────────────────────────────────
 def _quad(p0, p1, p2, t):
@@ -209,49 +87,62 @@ def sparkles(c, spots, t0):
         L_.pop(t0 + k * 6, 20, over=130).twinkle(40, 1, phase=0.15 + k * 0.29)
 
 
+def rising_symbol(c, cx, cy, h, col, t0):
+    """Symbol layers: the lower part climbs from below (hidden by whatever is drawn after it),
+    the upper chevron follows and lands. Returns (low, top)."""
+    low = c.layer("symbol-low", symbol_low(cx, cy, h, col), (cx, cy))
+    low.key("p", t0, [cx, cy + h * 0.62], "out").key("p", t0 + 30, [cx, cy - h * 0.03], "inout").key("p", t0 + 42, [cx, cy], "inout")
+    low.fade(t0, 6)
+    top = c.layer("symbol-top", symbol_top(cx, cy, h, col), (cx, cy))
+    top.drop(t0 + 26, -h * 0.42, 26, h * 0.035)
+    # idle: an upward lift, the top chevron leading
+    low.float(h * 0.012, 1, phase=0.0)
+    top.float(h * 0.03, 1, phase=0.0)
+    return low, top
+
+
+def residence(c, x, y, w, h, t, face, side, win, win_off, roof, door, lit):
+    b = c.layer("residence", building(x, y, w, h, face=face, side=side, win=win, win_off=win_off, floors=2, cols=5, lit=lit, roof=roof, door=door), (x + w / 2, y + h))
+    b.grow_y(t, 30, 103)
+    return b
+
+
 # ── welcome-hero ───────────────────────────────────────────────────────────────────────────────
 def welcome_hero():
     c = Comp("welcome-hero", intro=100)
     disc = c.layer("disc", [F(circle(512, 500, 392), "tint")], (512, 500))
     disc.pop(0, 32, over=103, frm=70)
-    sun = c.layer("sun", [F(circle(780, 236, 64), "lime")], (780, 236))
+    sun = c.layer("sun", [F(circle(786, 250, 58), "lime")], (786, 250))
     sun.pop(16, 28, over=112).breathe(4, 1)
-    for k, (x, y, w, dx, amp) in enumerate(((386, 318, 104, -40, 12), (684, 356, 80, 40, -9))):
+    for k, (x, y, w, dx, amp) in enumerate(((236, 300, 150, -60, 14), (818, 420, 110, 60, -10))):
         cl = c.layer(f"cloud{k}", cloud_pill(x, y, w), (x, y))
-        cl.rise(26 + k * 6, 0, 36, dx=dx)
+        cl.rise(24 + k * 6, 0, 36, dx=dx)
         cl.bob(amp, 1, phase=0.25 * k, axis="x")
-    g = c.layer("ground", shadow(512, 812, 560, 34, "mint"), (512, 812))
-    g.pop(10, 28, over=102, frm=30)
-    add_palm(c, 196, 812, 228, 58, lean=-0.06, phase=0.1)
-    add_palm(c, 862, 812, 220, 64, lean=0.07, phase=0.55)
-    L = Logo(512, 488, 640)
-    wins, towers = build_logo(c, L, t0=6)
-    # a few lit windows breathe after the build (never all at once)
-    for k, (W, on) in enumerate([w for w in wins if w[1]][1:4:2]):
-        W.blink(45, k + 1)
-    sparkles(c, [(360, 150, 18, "lime"), (676, 128, 12, "lime")], 74)
+    g = c.layer("ground", shadow(512, 812, 600, 34, "mint"), (512, 812))
+    g.pop(8, 28, over=102, frm=30)
+    add_palm(c, 196, 812, 236, 52, lean=-0.06, phase=0.1)
+    add_palm(c, 838, 812, 208, 58, lean=0.07, phase=0.55)
+    rising_symbol(c, 512, 418, 350, "g700", 30)
+    residence(c, 262, 580, 500, 232, 6, "paper", "greige_dd", "lime", "sage", "greige_d", "g700", {(0, 1), (0, 3), (1, 0), (1, 4)})
+    sparkles(c, [(340, 180, 18, "lime"), (690, 150, 12, "lime")], 76)
     return c
 
 
-# ── poster-onboarding : the residence at night (ink room) ──────────────────────────────────────
+# ── poster-onboarding : the symbol over the residence, at night (ink room) ─────────────────────
 def poster_onboarding():
     c = Comp("poster-onboarding", 1600, 1000, intro=96)
     c.layer("bg", [F(rect_xy(0, 0, 1600, 1000, 0), "ink")], (800, 500))
-    glow = c.layer("glow", [F(circle(1190, 520, 430), "#17201B"), F(circle(1190, 520, 330), "#1B2620")], (1190, 520))
+    glow = c.layer("glow", [F(circle(1190, 500, 430), "#17201B"), F(circle(1190, 500, 320), "#1B2620")], (1190, 500))
     glow.pop(0, 34, over=103, frm=70).breathe(2, 1)
-    moon = c.layer("moon", crescent(1468, 176, 54, 30, -22, 48, "lime"), (1468, 176))
+    moon = c.layer("moon", crescent(1478, 170, 52, 30, -22, 46, "lime"), (1478, 170))
     moon.pop(18, 28, over=112).float(6, 1)
-    add_palm(c, 846, 838, 300, 56, lean=-0.06, phase=0.2, leaf="g600", leaf_d="g800", trunk="sand_d", trunk_d="#A8956C")
-    add_palm(c, 1496, 838, 230, 62, lean=0.07, phase=0.6, leaf="g600", leaf_d="g800", trunk="sand_d", trunk_d="#A8956C")
-    L = Logo(1190, 500, 660)
-    wins, towers = build_logo(c, L, ring="g700", tower="g700", tower_side="g600", win_off="#123D2B", t0=6,
-                              lit={("tower-l", 0), ("tower-l", 2), ("tower-c", 1), ("tower-c", 2), ("tower-c", 4), ("tower-r", 1), ("tower-r", 3)})
-    for k, (W, on) in enumerate([w for w in wins if w[1]][0:5:2]):
-        W.blink(40, k + 1)
-    # reflection line under the residence (the ground, without cutting the frame)
-    gl = c.layer("ground", [F(rect_xy(860, 832, 660, 10, 5), "g900"), F(rect_xy(930, 856, 520, 8, 4), "#123D2B")], (1190, 840))
-    gl.grow_x(14, 30)
-    sparkles(c, [(960, 210, 18, "lime"), (1060, 120, 9, "paper"), (1330, 96, 11, "lime"), (1550, 380, 9, "paper"), (880, 430, 8, "paper"), (1540, 640, 7, "lime")], 60)
+    add_palm(c, 892, 860, 300, 56, lean=-0.06, phase=0.2, leaf="g600", leaf_d="g800", trunk="sand_d", trunk_d="#A8956C")
+    add_palm(c, 1500, 860, 240, 62, lean=0.07, phase=0.6, leaf="g600", leaf_d="g800", trunk="sand_d", trunk_d="#A8956C")
+    rising_symbol(c, 1190, 400, 420, "lime", 28)
+    residence(c, 950, 640, 480, 220, 6, "g800", "g900", "lime", "#123D2B", "g900", "g950", {(0, 0), (0, 2), (1, 1), (1, 3), (0, 4)})
+    gl = c.layer("ground", [F(rect_xy(860, 864, 660, 10, 5), "g900"), F(rect_xy(930, 888, 520, 8, 4), "#123D2B")], (1190, 870))
+    gl.grow_x(10, 30)
+    sparkles(c, [(960, 210, 18, "lime"), (1060, 120, 9, "paper"), (1330, 96, 11, "lime"), (1550, 380, 9, "paper"), (880, 430, 8, "paper"), (1560, 640, 7, "lime")], 60)
     return c
 
 

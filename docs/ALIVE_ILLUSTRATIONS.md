@@ -10,10 +10,13 @@ mobile. Elles remplacent les PNG générés par IA (styles inégaux, mains réal
   gauche), coins arrondis partout, aucun dégradé, aucun texte.
 - Palette de marque uniquement : verts (`#1E7552` et ses tons), lime `#E3EF8D` pour l'accent
   (coches, pièces, lumière), sauge, greige, blanc, encre.
-- Le **logo** est le motif récurrent : l'hexagone (badges de succès, marques sur les urnes) et les
-  trois tours qui montent. `welcome-hero` et `poster-onboarding` construisent le logo exact,
-  tracé depuis `syndicuplogo.png` (`scenes_logo.py`) : l'anneau se dessine depuis le sommet, les
-  tours montent, l'aile du toit se pose, les fenêtres s'allument.
+- Le **symbole** de la marque (deux chevrons montants, le bas sur une courte tige) est le motif
+  récurrent, à sa géométrie exacte — tracée depuis `apps/mobile/assets/images/logo-foreground.png`
+  (`objects.symbol`, `objects.app_tile`) : marque sur les urnes et le pupitre, tuile d'app sur le
+  téléphone, badge carré arrondi du succès général. `welcome-hero` et `poster-onboarding`
+  (`scenes_logo.py`) : la résidence se pose, la tige et le chevron du bas montent derrière le toit,
+  le chevron du haut se pose au-dessus ; ensuite, une lente poussée vers le haut.
+- `syndicuplogo.png` (racine du repo) est l'ancien logo : ne plus s'en servir.
 - Une scène = une « scène » teintée (disque sauge pâle) + l'objet + 2–3 étincelles lime.
 
 ## Ce que fait chaque famille

@@ -4,7 +4,7 @@ Source unique des 43 illustrations animées (docs/ALIVE_ILLUSTRATIONS.md).
 
 ```
 src/kit.py              géométrie → Lottie (formes, peinture, calques, vocabulaire d'animation)
-src/objects.py          objets dessinés réutilisables (carte, enveloppe, urne, porte, hexagone…)
+src/objects.py          objets dessinés réutilisables (carte, enveloppe, urne, porte, symbole de marque…)
 src/scenes_ok.py        écrans de succès          src/scenes_empty.py      états vides + offline
 src/scenes_onboarding.py onboarding + accueil     src/scenes_quick.py      actions rapides
 src/scenes_poster.py    affiches 1600×1000

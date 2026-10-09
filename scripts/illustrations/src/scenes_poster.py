@@ -13,6 +13,7 @@ from objects import (
     bars_chart,
     chevron_up,
     hex_pts,
+    symbol,
     key,
     keyhole,
     magnifier,
@@ -63,7 +64,7 @@ def poster_ag():
     b.key("o", I + span * 0.56, 0, "linear").key("o", I + span * 0.66, 100, "linear")
     b.key("r", I + span * 0.52, -10, "out").key("r", I + span * 0.82, 0, "inout")
     front = c.layer("box", ballot_box_front(AX, by, 380, 340, face="lime", side="lime_d"), (AX, by + 170), lid)
-    mk = c.layer("mark", [F(rpoly(hex_pts(AX, by + 70, 56), 12), "g700")], (AX, by + 70), lid)
+    mk = c.layer("mark", symbol(AX, by + 70, 112, "g700"), (AX, by + 70), lid)
     mk.pop(40, 20, over=118)
     for k, (x, y, ang) in enumerate(((960, 360, -14), (1450, 330, 12))):
         L = c.layer(f"ballot{k}", rot(ballot(x, y, 120, 150, "paper", "g700"), ang, (x, y)), (x, y))

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import math
 
-from kit import Comp, F, S, circle, ellipse, path, rpoly
+from kit import Comp, F, S, circle, ellipse, path, rect, rpoly
 from objects import (
     ballot,
     ballot_box_front,
@@ -21,6 +21,7 @@ from objects import (
     envelope_back,
     envelope_front,
     hex_pts,
+    symbol,
     hexagon,
     paper,
     ring_float,
@@ -97,7 +98,7 @@ def ok_general():
     ground(c, 800, 300)
     hx = c.layer(
         "hex",
-        [F(rpoly(hex_pts(CX, CY + 26, 214), 40), "g900"), F(rpoly(hex_pts(CX, CY, 214), 40), "g700"), S(rpoly(hex_pts(CX, CY, 168), 26), "g600", 14)],
+        [F(rect(CX, CY + 24, 380, 380, 92), "g900"), F(rect(CX, CY, 380, 380, 92), "g700"), S(rect(CX, CY, 316, 316, 66), "g600", 10)],
         (CX, CY),
     )
     hx.pop(8, 30, over=110).float(10)
@@ -215,7 +216,7 @@ def ok_vote():
     bal.fade(14, 8)
     bal.key("r", 14, -12, "out").key("r", 34, 0, "inout")
     front = c.layer("box", ballot_box_front(CX, by, bw, bh), (CX, by + bh / 2), box_back)
-    hexmark = c.layer("mark", [F(rpoly(hex_pts(CX, by + 60, 46), 10), "lime")], (CX, by + 60), box_back)
+    hexmark = c.layer("mark", symbol(CX, by + 60, 92, "lime"), (CX, by + 60), box_back)
     hexmark.pop(56, 18, over=118)
     check_badge(c, CX + 170, CY - 150, 60, 44)
     confetti(c, 52, skip=(3, 4))

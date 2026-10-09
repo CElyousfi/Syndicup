@@ -18,6 +18,8 @@ from objects import (
     coin,
     drop,
     hex_pts,
+    symbol,
+    app_tile,
     key,
     palm,
     phone,
@@ -83,7 +85,7 @@ def ob_1_residence():
     )
     ph_l.rise(22, 0, 32, dx=140).float(10, 1, phase=0.2)
     ph_l.swing_in(22, 12, 40)
-    hexf = c.layer("hex", [F(rpoly(hex_pts(px + 120, py - 250, 54), 12), "lime"), S(rpoly(hex_pts(px + 120, py - 250, 32), 6), "g700", 9)], (px + 120, py - 250), ph_l)
+    hexf = c.layer("hex", app_tile(px + 120, py - 250, 104, face="lime", side="lime_d", mark="g700"), (px + 120, py - 250), ph_l)
     hexf.pop(48, 22, over=120)
     sparkles(c, [(820, 210, 22, "lime"), (150, 300, 18, "lime")])
     return c
@@ -175,7 +177,7 @@ def ob_4_ag():
     c = Comp("ob-4-ag", intro=84)
     stage(c, 340, 500, 842, 420)
     bxc, byc = CX, 640
-    bb = c.layer("box", ballot_box(bxc, byc, 300, 260) + [F(rpoly(hex_pts(bxc, byc + 40, 44), 10), "lime")], (bxc, byc + 130))
+    bb = c.layer("box", ballot_box(bxc, byc, 300, 260) + symbol(bxc, byc + 40, 90, "lime"), (bxc, byc + 130))
     bb.rise(4, 70, 30).float(6, 1, phase=0.5)
     phones = [(210, 270, -8), (512, 200, 0), (814, 270, 8)]
     for k, (x, y, ang) in enumerate(phones):

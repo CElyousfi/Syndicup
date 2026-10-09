@@ -83,6 +83,38 @@ def badge_disc(cx, cy, r, face="lime", ring="paper", ring_w=None):
     return out
 
 
+# ─── brand symbol (traced from apps/mobile/assets/images/logo-foreground.png) ─────────────────
+SYM_TOP = [(512, 328), (684, 444), (684, 536), (512, 420), (339, 536), (339, 444)]
+SYM_LOW = [(513, 473), (684, 589), (684, 681), (551, 591), (550, 695), (473, 695), (472, 591), (339, 681), (339, 589)]
+SYM_C, SYM_H = (511.5, 511.5), 367.0
+
+
+def _sym(pts, cx, cy, h):
+    k = h / SYM_H
+    return [(cx + (x - SYM_C[0]) * k, cy + (y - SYM_C[1]) * k) for x, y in pts]
+
+
+def symbol_top(cx, cy, h, c="g700"):
+    """Upper chevron of the SyndicUp symbol; (cx, cy) = centre of the WHOLE symbol, h = its height."""
+    return [F(path(_sym(SYM_TOP, cx, cy, h)), c)]
+
+
+def symbol_low(cx, cy, h, c="g700"):
+    """Lower chevron + stem."""
+    return [F(path(_sym(SYM_LOW, cx, cy, h)), c)]
+
+
+def symbol(cx, cy, h, c="g700"):
+    return symbol_low(cx, cy, h, c) + symbol_top(cx, cy, h, c)
+
+
+def app_tile(cx, cy, s, face="g700", side="g900", mark="lime", depth=None):
+    """The app icon: rounded square with the symbol (s = side)."""
+    d = depth if depth is not None else s * 0.06
+    r = s * 0.24
+    return [F(rect(cx, cy + d, s, s, r), side), F(rect(cx, cy, s, s, r), face)] + symbol(cx, cy, s * 0.36, mark)
+
+
 # ─── objects ───────────────────────────────────────────────────────────────────────────────────
 def coin(cx, cy, r, edge=None):
     e = edge if edge is not None else r * 0.22
@@ -532,7 +564,7 @@ def podium(cx, base_y, w, h, face="greige", side="greige_dd", top="g700"):
     out += [F(rpoly([(x + w * 0.1, y + h * 0.16), (x + w * 0.88, y + h * 0.16), (x + w * 0.94, base_y), (x + w * 0.04, base_y)], w * 0.04), face)]
     out += [F(rect_xy(x - w * 0.04, y, w * 1.08, h * 0.17, h * 0.05), top)]
     out += [F(rect_xy(cx - w * 0.14, y + h * 0.36, w * 0.28, w * 0.28, w * 0.06), "g700")]
-    out += [F(rpoly(hex_pts(cx, y + h * 0.36 + w * 0.14, w * 0.09), w * 0.02), "lime")]
+    out += symbol(cx, y + h * 0.36 + w * 0.14, w * 0.17, "lime")
     return out
 
 

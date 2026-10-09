@@ -20,6 +20,7 @@ from objects import (
     envelope_back,
     envelope_front,
     hex_pts,
+    symbol,
     paper,
     plus,
     suitcase,
@@ -41,7 +42,7 @@ def quick_ag():
     b = c.layer("ballot", ballot(256, 170, 150, 180), (256, 170), lid)
     b.key("p", 6, [256, 60], "out").key("p", 26, [256, 170], "out").fade(6, 6)
     c.layer("box", ballot_box_front(256, 300, 330, 300), (256, 450), lid)
-    m = c.layer("mark", [F(rpoly(hex_pts(256, 340, 44), 10), "lime")], (256, 340), lid)
+    m = c.layer("mark", symbol(256, 340, 96, "lime"), (256, 340), lid)
     m.pop(20, 16, over=120)
     return c
 
