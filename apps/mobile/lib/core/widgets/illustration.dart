@@ -88,7 +88,9 @@ class SuLottieArt extends StatefulWidget {
 }
 
 class _SuLottieArtState extends State<SuLottieArt> with SingleTickerProviderStateMixin {
-  late final AnimationController _c = AnimationController(vsync: this);
+  /// Créé seulement si l'animation joue : une illustration au repos n'a ni contrôleur ni ticker.
+  AnimationController? _ctrl;
+  AnimationController get _c => _ctrl ??= AnimationController(vsync: this);
   bool? _motion;
   bool _ambient = false;
   bool _loaded = false;
@@ -103,7 +105,7 @@ class _SuLottieArtState extends State<SuLottieArt> with SingleTickerProviderStat
 
   @override
   void dispose() {
-    _c.dispose();
+    _ctrl?.dispose();
     super.dispose();
   }
 

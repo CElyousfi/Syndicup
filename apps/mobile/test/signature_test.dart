@@ -70,8 +70,9 @@ void main() {
     await t.tap(find.text('go'));
     await t.pump();
     await t.pump(const Duration(milliseconds: 500));
-    // Le montant enregistré est affiché, formaté comme partout.
-    expect(find.textContaining('250,00'), findsOneWidget);
+    // Le montant enregistré est affiché, formaté comme partout (pastille qui tombe ET reçu où il
+    // atterrit — phase 4 « le montant atterrit dans le reçu » : au moins une fois).
+    expect(find.textContaining('250,00'), findsWidgets);
     expect(find.byType(SuMomentView), findsOneWidget);
     await t.pump(const Duration(seconds: 2));
     await t.pumpAndSettle();
