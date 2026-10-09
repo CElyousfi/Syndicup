@@ -322,7 +322,13 @@ class PosterArt extends StatelessWidget {
       width: double.infinity,
       child: Transform.flip(
         flipX: rtl,
-        child: Image.asset(SuIllustration.path(name), fit: BoxFit.cover, alignment: Alignment.centerRight, excludeFromSemantics: true, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        // Affiche vivante : même cadrage (cover, calée à droite) pour l'image et l'animation.
+        child: SuLottieArt(
+          name,
+          fit: BoxFit.cover,
+          alignment: Alignment.centerRight,
+          staticChild: Image.asset(SuIllustration.path(name), fit: BoxFit.cover, alignment: Alignment.centerRight, excludeFromSemantics: true, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+        ),
       ),
     );
   }

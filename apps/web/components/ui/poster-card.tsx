@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { PosterArt } from "./poster-art";
 
 /**
  * Carte-affiche (Wise « BOOST YOUR BALANCE… ») : salle de marque verte (logo inversé), grand
  * titre en capitales d'affiche lime, accroche blanche, action lime. UNE par écran au plus, pour
  * le fait le plus important (prochaine AG, onboarding…). Identique à PosterCard côté mobile.
  *
- * `poster` : affiche 2D (public/illustrations/poster-*.png, 1600×1000, moitié gauche vide) posée
- * en fond — le texte occupe la moitié vide ; en arabe l'affiche est miroitée pour libérer le
- * côté du texte. Sous 640 px, elle devient un bandeau en tête de carte (comme le mobile).
+ * `poster` : affiche animée (public/illustrations/poster-*.png + .json, 1600×1000, moitié gauche
+ * vide) posée en fond — le texte occupe la moitié vide ; en arabe l'affiche est miroitée pour
+ * libérer le côté du texte. Sous 640 px, elle devient un bandeau en tête de carte (comme le mobile).
  */
 export function PosterCard({
   title,
@@ -34,13 +35,13 @@ export function PosterCard({
   className?: string;
 }) {
   const bg = tone === "ink" ? "bg-ink" : "bg-brand";
-  const src = poster ? `/illustrations/${poster}.png` : null;
+  const src = poster ?? null;
   const inner = (
     <div className={`alive-drift relative overflow-hidden rounded-[28px] ${bg} ${className}`}>
       {src ? (
         <>
-          <img src={src} alt="" aria-hidden className="block h-40 w-full object-cover object-right rtl:-scale-x-100 sm:hidden" />
-          <img src={src} alt="" aria-hidden className="su-parallax absolute inset-0 hidden size-full object-cover object-right rtl:-scale-x-100 sm:block" />
+          <PosterArt name={src} className="relative block h-40 w-full sm:hidden" />
+          <PosterArt name={src} className="su-parallax absolute inset-0 hidden size-full sm:block" />
         </>
       ) : null}
       <div className={`relative flex min-h-[200px] items-stretch gap-6 p-7 sm:p-9 ${src ? "sm:min-h-[260px]" : ""}`}>

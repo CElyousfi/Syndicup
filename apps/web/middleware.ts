@@ -170,5 +170,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   // .mjs : worker pdf.js (public/pdf.worker.min.mjs) — actif statique, hors localisation.
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|webp|ico|mjs)$).*)"],
+  // illustrations/ : images de repos ET animations .json (lib/feel/lottie-art) — jamais localisées.
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|illustrations/|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|webp|ico|mjs)$).*)"],
 };

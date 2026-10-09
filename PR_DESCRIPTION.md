@@ -1,72 +1,63 @@
-# feat(alive): phase 4 — moments signature (mouvement + haptique + son)
+# feat(alive): illustrations redessinées et animées (web + mobile)
 
-Branche : `feature/alive-signature`, empilée sur `feature/alive-ambient` (phase 3).
-Chaque moment dure ≤ 1,2 s, se passe d'un tap ou d'un clic et ne bloque jamais l'interface. Il est
-joué **après** la réponse 2xx du serveur, donc il n'annonce jamais un succès à la place de l'API.
-Aucune logique métier, aucun appel d'API ajouté ; tout s'éteint avec `ALIVE_V1=false`.
+Branche : `feature/alive-illustrations`, depuis `main` (phases Alive 1–4 déjà fusionnées).
 
-## Les sept moments
+Les 43 illustrations PNG générées par IA (styles inégaux, mains réalistes à côté d'aplats, « T »
+parasite sur le bouclier, mégaphone coupé, grain) sont **redessinées en vectoriel** dans un seul
+langage visuel tiré du logo (hexagone, tours qui montent) et **animées**. Un seul fichier par
+illustration sert le web et le mobile. Aucune logique métier, aucun appel d'API.
 
-| # | Moment | Où (vrais parcours) | Ressenti |
-|---|---|---|---|
-| 1 | **Paiement enregistré** : le montant (pastille lime) tombe dans le reçu ; sceau ✓ tamponné. En calque, le solde roule de l'ancien vers le nouveau. | Mobile : paiement saisi par le syndic, justificatif validé. Web : `PaiementModal`, validation de justificatif. | `success()` + son `success` au tampon |
-| 2 | **Les 12 annexes générées** : 12 documents apparaissent en cascade serrée (≈ 40 ms), chacun coché ; la grille se resserre (le coffre se ferme) ; sceau « CONFORME ». | **Module comptable encore inexistant** : démonstration dans l'écran de test, et l'appel unique est documenté (ci-dessous). | `heavy()` + son `signature` |
-| 3 | **Envoi** : la lettre s'envole vers la fin de ligne (miroir en arabe), la coche éclot, « Envoyé ». | Appel de fonds émis (mobile) ; annonce publiée — pas programmée (mobile + web). | `success()` + son `sent` |
-| 4 | **Vote d'AG** : le bulletin descend dans l'urne, qui se tasse ; « Vote enregistré ». | Mobile : séance (remplace le toast, annonce lecteur d'écran conservée) et sondage. Web : vote en séance, sondage. | `success()` |
-| 5 | **Dépense justifiée** : la photo du reçu se clipse sur la dépense, badge « Justifiée ». | Dépense payée avec reçu (mobile + web). | `success()` + son `confirm` |
-| 6 | **Résidence 100 % à jour** : anneau plein qui se trace, halo unique. | Tableau de bord du syndic, quand il n'y a aucun impayé et que le taux est de 100 %. Le halo ne brille qu'une fois par mois et par résidence (puis l'anneau reste plein, immobile). | `success()` (une fois) |
-| 7 | **Bienvenue** : le logo éclot, « Bienvenue sur SyndicUp ». | Mobile : première connexion de chaque utilisateur sur l'appareil, juste après le relais du lancement. Web : la visite guidée existante (« Bienvenue sur SyndicUp ») tient déjà ce rôle, pas de doublon. | `success()` |
+## Ce qui change pour l'utilisateur
 
-Sur les écrans de succès plein écran, le moment **remplace l'illustration** au lieu de s'empiler
-dessus (`showSuccess(moment:)` / `celebrate({ moment })`). Le web évite la double vibration : la
-vibration part avec la réponse (`FormAlert`), le son au sommet. Le moment autonome
-`SuSignature` / `signature()` sert là où il n'y a pas d'écran de succès (vote en séance, annexes).
+- **Écrans de succès** : l'objet arrive, le badge lime saute, la coche se trace, confettis calmes.
+- **États vides** : l'objet se pose, puis un seul geste vivant (l'étiquette du bagage se balance,
+  la cloche oscille, la loupe cherche, la balance hésite, les fenêtres s'allument).
+- **Onboarding et accueil** : la scène se construit (la résidence-logo monte tour par tour, les
+  votes voyagent jusqu'à l'urne, la fuite goutte dans le viseur).
+- **Actions rapides** : assemblage court à l'ouverture, puis immobiles (grille).
+- **Affiches** : mégaphone qui émet, bulletin qui tombe dans l'urne, barres qui respirent.
+- La respiration s'arrête après 3 cycles (≈ 12 s) : vivant, jamais insistant.
 
-### L'appel unique du futur module « annexes » (Décret 2.23.700)
-Juste après la réponse 2xx de l'endpoint de génération, sans autre logique :
-```dart
-SuSignature.annexes(context, titles: annexes.map((a) => a.intitule).toList()); // mobile
-```
-```ts
-signature({ kind: "annexes", titles: annexes.map((a) => a.intitule) }); // web — lib/signature.ts
-```
+## Contrat
 
-### Revue sur téléphone
-**Profil → Sensations → Tester les sensations** (APK debug, ou `--dart-define=SENSATIONS_TEST=true`)
-rejoue les sept moments, chaque son et chaque vibration, sans rien écrire. Web : `/fr/debug/sensations`
-en développement.
+- `<nom>.json` (Lottie) + `<nom>.png` (image de repos = dernière image de l'intro, rendue par le
+  même moteur → bascule invisible). Marqueurs `intro` / `idle`.
+- Mouvement coupé (alive_v1 OFF, « Réduites », système) → image de repos seule ; mode lite →
+  intro sans respiration ; hors écran → pause.
+- **Web** : `lottie-web` light (SVG, sans eval) dans un chunk paresseux (163 kB, ≈ 45 kB gz)
+  chargé à la première illustration visible ; aucune page ne le charge d'emblée, pages publiques
+  inchangées (D5, règle ESLint). PNG ≈ 45 → 11 kB.
+- **Mobile** : paquet `lottie` (`^3.3.1`) dans `SuIllustration` et `PosterArt`.
 
-## Accessibilité, RTL, retenue
-- « Animations réduites » : l'image finale s'affiche directement puis s'efface ; vibration et son restent (selon les réglages).
-- Lecteurs d'écran : le calque est exclu de la sémantique. Le succès est annoncé par l'écran lui-même, ou par `SemanticsService.announce` pour le vote en séance.
-- RTL : la lettre part vers la fin de ligne ; l'anneau se trace dans le sens de lecture ; le badge éclot depuis le début de ligne.
-- Un seul moment à la fois (un nouveau remplace le précédent). Aucune boucle.
+## Correctif trouvé en recette
 
-## Correctif inclus (phase 3)
-`fix(alive)` : la révélation au défilement web passe par la Web Animations API. La version de la
-phase 3 posait `data-reveal` sur le DOM avant la fin de l'hydratation d'une page servie en flux, ce
-qui produisait un avertissement React en développement. Les règles CSS correspondantes sont retirées.
+Le middleware redirigeait `/illustrations/*.json` vers une URL localisée (seules les images
+étaient exclues) : `illustrations/` est désormais hors middleware.
 
-## Recette finale (incluse dans cette PR)
-`docs/ALIVE_QA.md` contient la matrice FR/AR, clair/sombre (sans objet), animations réduites,
-sons/vibrations et interrupteur, ainsi que la fluidité mesurée sur émulateur. L'outil opt-in
-`FRAME_STATS` (`lib/core/feel/frame_stats.dart`) sert à relever les chiffres sur un vrai téléphone.
+## Vérifié
 
-Enregistrements à joindre (dossier local `alive-recordings/`, non versionné) :
-`mobile-signature-moments.mp4`, `mobile-otp-handoff-welcome-dashboard.mp4`,
-`mobile-rtl-tabs-refresh.mp4`, `web-signature-moments.webm`.
+- Les 43 animations rendues image par image dans Chromium (lottie-web) **et** avec un second
+  moteur indépendant (rlottie) : rendus identiques.
+- Web : `tsc`, `eslint`, `next build`, `check:alive` (100 %) ; en navigateur sur le build de
+  production : chargement paresseux, intro à la montée côté client, relais sans saut après
+  l'hydratation.
+- Mobile : tests de widget ajoutés (`test/illustration_test.dart`).
 
-Correctif après revue visuelle : sans solde à faire rouler, le montant du paiement « atterrit »
-désormais dans le reçu, au lieu de laisser une carte vide sous le sceau (mobile et web).
+## À faire avant fusion
 
-## Vérifications
-- **Mobile**
-  - `flutter analyze` : aucune erreur, aucun avertissement.
-  - `flutter test` : 49/49, dont 4 nouveaux — le calque des annexes affiche « CONFORME » puis se retire seul ; un tap le passe ; `alive_v1` coupé = aucun moment ; l'écran de succès joue le moment avec le montant formaté (« 1 250,00 MAD »).
-- **Web**
-  - `tsc` et ESLint propres ; `check:alive` à 100 % ; jetons à jour.
-  - Firefox (Playwright, session réelle) : les 7 démonstrations jouées depuis `/fr/debug/sensations` sans erreur.
-  - Vidéo : `web-signature-moments.webm` ; captures `web-payment-moment.png`, `web-annexes-moment.png`.
-  - 12 pages clés FR/AR rejouées deux fois, connecté : **0 erreur console** après le correctif d'hydratation.
+- [ ] `flutter pub get` (ajoute `lottie` au `pubspec.lock`), `flutter analyze`, `flutter test` —
+      pas de SDK Flutter dans l'environnement de cette branche ; la CI le fait.
+- [ ] Regarder sur un vrai téléphone : accueil, onboarding, un écran de succès, un état vide.
+
+## Fichiers
+
+- `scripts/illustrations/` — source (scènes en Python → Lottie), export, outils de relecture.
+- `apps/*/…/illustrations/` — 43 × (.json + .png) ; `PROMPTS.md` (prompts IA) supprimé.
+- Web : `lib/feel/lottie-art.ts`, `components/ui/illustration.tsx`, `poster-art.tsx`,
+  `poster-card.tsx`, bandeau d'onboarding du tableau de bord, `middleware.ts`, ESLint.
+- Mobile : `core/widgets/illustration.dart`, `PosterArt` (`cards.dart`), accueil.
+- Docs : `docs/ALIVE_ILLUSTRATIONS.md`.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+https://claude.ai/code/session_016RDr9bhMHyxXjASucUyCud

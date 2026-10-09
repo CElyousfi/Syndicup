@@ -37,6 +37,8 @@ dependencies:
   flutter_local_notifications: ^18.0.1
   collection: ^1.19.0
   flutter_animate: ^4.5.2
+  # Illustrations animées (mêmes fichiers .json que le web) — docs/ALIVE_ILLUSTRATIONS.md.
+  lottie: ^3.3.1
   audioplayers: ^6.6.0
   battery_plus: ^7.1.2
   device_info_plus: ^12.4.0

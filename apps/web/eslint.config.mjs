@@ -17,6 +17,8 @@ const MOTION_PATHS = [
 ];
 const MOTION_PATTERNS = [
   { group: ["**/lib/motion", "**/lib/motion-features"], message: "Ré-exporte `motion` : réservé à components/shell et components/ui." },
+  // Le lecteur Lottie n'est chargé qu'à la demande, par un seul module (jamais au premier chargement).
+  { group: ["lottie-web", "lottie-web/*"], message: "Passer par lib/feel/lottie-art (chargé paresseusement, illustrations animées)." },
 ];
 /** Primitives ui/ qui importent `motion` — interdites dans les pages publiques. */
 const MOTION_UI = [];
@@ -25,7 +27,7 @@ export default [
   ...base,
   {
     files: ["**/*.{ts,tsx}"],
-    ignores: ["components/shell/**", "components/ui/**", "lib/motion.ts", "lib/motion-features.ts"],
+    ignores: ["components/shell/**", "components/ui/**", "lib/motion.ts", "lib/motion-features.ts", "lib/feel/lottie-art.ts"],
     rules: { "no-restricted-imports": ["error", { paths: MOTION_PATHS, patterns: MOTION_PATTERNS }] },
   },
   {
