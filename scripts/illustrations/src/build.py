@@ -52,6 +52,12 @@ except ImportError:
 
 
 REGISTRY.update(_LOGO)
+try:
+    import scenes_editorial  # noqa: E402  (painted onboarding, overrides ob-2/3/4)
+
+    REGISTRY.update(scenes_editorial.SCENES)
+except ImportError as e:
+    print("editorial scenes unavailable:", e)
 
 
 def main():

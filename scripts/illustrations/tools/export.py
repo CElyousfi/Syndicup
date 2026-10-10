@@ -51,9 +51,14 @@ def main():
     for n in names:
         png = os.path.join(pdir, f"{n}.png")
         im = Image.open(png).convert("RGBA")
-        # Flat vector art: an adaptive 256-colour palette is visually lossless and ~5× smaller.
-        q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
-        q.save(png, optimize=True)
+        if getattr(REGISTRY[n], "__module__", "") == "scenes_editorial":
+            # Painted art (grain, soft shading): keep every colour — a palette would band it. Shown
+            # ≤ ~320 dp (≈ 960 px at 3×): 800 px is visually identical and half the weight.
+            im.resize((800, 800), Image.LANCZOS).save(png, optimize=True)
+        else:
+            # Flat vector art: an adaptive 256-colour palette is visually lossless and ~5× smaller.
+            q = im.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE)
+            q.save(png, optimize=True)
         for t in TARGETS:
             os.makedirs(t, exist_ok=True)
             shutil.copyfile(os.path.join(jdir, f"{n}.json"), os.path.join(t, f"{n}.json"))
