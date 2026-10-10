@@ -67,3 +67,22 @@ que les pastilles (rien ne boucle indéfiniment).
 Tout est du code dans `scripts/illustrations/` (voir son README) : objets réutilisables
 (`objects.py`), scènes par famille (`scenes_*.py`), export vers les deux apps (`tools/export.py`).
 Ne jamais modifier un `.json` ou un `.png` à la main : ils sont régénérés.
+
+## Illustrations vidéo (accueil et onboarding)
+
+L'accueil (`welcome-hero`) et les quatre pages d'onboarding (`ob-1` → `ob-4`) utilisent des
+illustrations **éditoriales** (style collage mid-century, grain d'impression) animées en vidéo.
+
+- **Fabrication** : images générées (Higgsfield, ChatGPT/GPT Image) sur références de style, puis
+  animées image→vidéo ; le premier plan doit rester identique à l'image.
+- **Mise en boucle** : `scripts/illustrations/tools/video_loop.py in.mp4 out.mp4 out.png` —
+  fondu des 12 dernières images dans les premières (boucle sans couture), suppression des textes
+  inventés sur les boutons (`--erase x0,y0,x1,y1`), H.264 720 px sans son (≈ 400 Ko), première
+  image en affiche. Web : une copie WebM/VP9 en plus (`ffmpeg … -c:v libvpx-vp9 -crf 33 -b:v 0`).
+- **Fichiers** : `apps/mobile/assets/videos/<nom>.mp4|.jpg` ; web (panneau de connexion)
+  `apps/web/public/videos/welcome-hero.webm|.mp4|.jpg`.
+- **Lecture** : mobile `SuVideoArt` (`core/widgets/video_art.dart`, paquet `video_player`) — muette,
+  en boucle, seulement sur la page visible ; image fixe si mouvement réduit, mode lite ou alive_v1
+  coupé ; repli sur l'illustration Lottie si les fichiers manquent. Web : `<video>` sans JavaScript,
+  masquée par CSS (`.su-ambient-video`, `app/motion.css`) dans les mêmes cas ; le middleware laisse
+  passer `videos/`.

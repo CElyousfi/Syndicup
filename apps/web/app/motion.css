@@ -706,3 +706,12 @@ dialog.su-modal[data-dragging] { transition: none; }
   100% { box-shadow: 0 0 0 0 transparent; }
 }
 :root[data-alive="0"] :is(.ring-draw, .ring-glow::after) { animation: none; }
+
+/* ── Illustrations éditoriales en vidéo (panneau de connexion) : image fixe si le mouvement est
+   réduit (système ou Sensations), l'appareil modeste ou alive_v1 coupé. ── */
+@media (prefers-reduced-motion: reduce) {
+  .su-ambient-video { display: none; }
+}
+:root[data-motion="reduced"] .su-ambient-video,
+:root[data-lite="1"] .su-ambient-video,
+:root[data-alive="0"] .su-ambient-video { display: none; }

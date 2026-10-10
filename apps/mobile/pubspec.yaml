@@ -39,6 +39,8 @@ dependencies:
   flutter_animate: ^4.5.2
   # Illustrations animées (mêmes fichiers .json que le web) — docs/ALIVE_ILLUSTRATIONS.md.
   lottie: ^3.3.1
+  # Illustrations éditoriales animées en vidéo (accueil, onboarding) — core/widgets/video_art.dart.
+  video_player: ^2.9.2
   audioplayers: ^6.6.0
   battery_plus: ^7.1.2
   device_info_plus: ^12.4.0
@@ -56,6 +58,7 @@ flutter:
   assets:
     - assets/images/
     - assets/illustrations/
+    - assets/videos/
     - assets/sounds/
   fonts:
     # Langage « Wise » : Inter pour toute l'interface, Archivo semi-condensé Black pour les

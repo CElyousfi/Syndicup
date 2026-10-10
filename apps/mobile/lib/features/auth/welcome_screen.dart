@@ -115,8 +115,8 @@ class WelcomeScreen extends StatelessWidget {
                       clipBehavior: Clip.none,
                       alignment: Alignment.center,
                       children: [
-                        // L'illustration se construit elle-même (intro Lottie) : pas d'entrée en plus.
-                        SuIllustration('welcome-hero', size: sphere * 1.15, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: sphere)),
+                        // Illustration éditoriale animée (vidéo en boucle) ; repli : l'illustration Lottie.
+                        SuVideoArt('welcome-hero', size: sphere * 1.15, fallback: SuIllustration('welcome-hero', size: sphere * 1.15, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: sphere))),
                         PositionedDirectional(
                           end: 0,
                           bottom: sphere * 0.04,
