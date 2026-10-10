@@ -120,7 +120,12 @@ describe("M19 — cycle de vie, échéancier, dépenses", () => {
     expect(c.est_assurance).toBe(false);
     // Chemin hors périmètre refusé.
     await expect(creerContrat(S(), { type: "AUTRE", libelle: "y", date_debut: "2026-01-01", periodicite: "PONCTUELLE", document: { storage_path: `${randomUUID()}/contrats/x.pdf`, nom: "x.pdf" } })).rejects.toThrow();
+    // L'échéancier part d'« aujourd'hui » : on fige l'horloge (Date seulement) au NOW du fichier,
+    // sinon le test dépend du jour où il tourne (il cassait dès octobre 2026).
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
     const active = await activerContrat(S(), ascenseur, randomUUID());
+    vi.useRealTimers();
     expect(active.statut).toBe("ACTIF");
     const ech = await listerEcheances(C(), ascenseur);
     const paiements = ech.filter((e) => e.type === "PAIEMENT");
@@ -129,8 +134,10 @@ describe("M19 — cycle de vie, échéancier, dépenses", () => {
     expect(paiements.every((e) => e.montant === "1500.00")).toBe(true);
     expect(paiements.some((e) => e.dateEcheance.toISOString().slice(0, 10) === "2026-09-30")).toBe(true);
     expect(ech.some((e) => e.type === "RENOUVELLEMENT" && e.dateEcheance.toISOString().slice(0, 10) === "2026-11-01")).toBe(true);
-    // Régénération : rien de nouveau.
-    const regen = await genererEcheances(S(), ascenseur);
+    // Régénération (même jour) : rien de nouveau.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(NOW);
+    const regen = await genererEcheances(S(), ascenseur).finally(() => vi.useRealTimers());
     expect(regen.creees).toBe(0);
     expect(await admin.contratEcheance.count({ where: { contratId: ascenseur } })).toBe(ech.length);
     expect(await admin.contratLog.count({ where: { contratId: ascenseur, type: "ECHEANCES_GENEREES" } })).toBe(2);

@@ -240,14 +240,16 @@ describe("M23 — jobs", () => {
     await attribuerEmplacement(S(), e.id, { lot_id: lot2, type: "LOCATION_INTERNE", date_debut: iso(plus(-40)), redevance_mensuelle: "150.00" });
     const e2 = await creerEmplacement(S(), { type: "PARKING_COMMUN", code: "P-R2", attribuable: true });
     await attribuerEmplacement(S(), e2.id, { lot_id: lot2, type: "LOCATION_INTERNE", date_debut: iso(plus(-40)), redevance_mensuelle: "50.50" });
-    const now = new Date("2026-10-01T06:00:00Z");
+    // Mois lointain : seules les deux locations sans fin ci-dessus y sont actives. (Un mois proche
+    // du jour réel croisait la location à durée limitée créée plus haut, relative à « aujourd'hui ».)
+    const now = new Date("2099-01-01T06:00:00Z");
     const r1 = await withTenant(SYS(), (db) => executerRedevancesParking(db, copro, now));
     expect(r1).toEqual({ appels: 1, lignes: 1 });
-    const appel = await admin.appelDeFonds.findUniqueOrThrow({ where: { coproprieteId_periode_type: { coproprieteId: copro, periode: "2026-10", type: "REDEVANCE_PARKING" } }, include: { lignes: true } });
+    const appel = await admin.appelDeFonds.findUniqueOrThrow({ where: { coproprieteId_periode_type: { coproprieteId: copro, periode: "2099-01", type: "REDEVANCE_PARKING" } }, include: { lignes: true } });
     expect(appel.montantTotal.toString()).toBe("200.5");
     expect(appel.lignes).toHaveLength(1);
     expect(appel.lignes[0]!.lotId).toBe(lot2);
-    expect(appel.dateEcheance.toISOString().slice(0, 10)).toBe("2026-10-15");
+    expect(appel.dateEcheance.toISOString().slice(0, 10)).toBe("2099-01-15");
     expect(await withTenant(SYS(), (db) => executerRedevancesParking(db, copro, now))).toEqual({ appels: 0, lignes: 0 });
     expect(await withTenant(SYS(), (db) => executerRedevancesParking(db, copro, new Date("2020-01-01T06:00:00Z")))).toEqual({ appels: 0, lignes: 0 });
   });

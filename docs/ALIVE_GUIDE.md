@@ -178,3 +178,7 @@ Démonstrations : **Profil → Sensations → Tester les sensations** (mobile, d
 6. Changement d'état visible (filtre, onglet, mode) : `SuFadeSwitch` / transition CSS — rien ne saute.
 7. Textes FR + AR ; vérifier en RTL.
 8. `npm run alive:report` puis relire la ligne de votre écran dans `docs/ALIVE_COVERAGE.md`.
+
+## Illustrations vivantes
+
+Les 43 illustrations sont dessinées en vectoriel et animées (intro + respiration plafonnée), mêmes fichiers sur le web et le mobile : voir [ALIVE_ILLUSTRATIONS.md](ALIVE_ILLUSTRATIONS.md).
