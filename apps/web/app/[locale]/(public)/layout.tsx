@@ -36,19 +36,29 @@ export default async function PublicLayout({
         </footer>
       </main>
 
-      {/* Panneau de marque — illustration 2D de la résidence-logo sur tuile greige, titre-affiche
-          vert (moment de marque, mêmes visuels que l'app mobile). À plat, sans ombre. */}
+      {/* Panneau de marque — illustration éditoriale de la résidence, animée en vidéo (boucle muette,
+          ≈ 400 Ko, sans JavaScript : décision D5 respectée), même visuel que l'accueil mobile. La
+          première image s'affiche d'emblée ; la vidéo est masquée (image fixe) si le mouvement est
+          réduit, l'appareil modeste ou alive_v1 coupé (app/motion.css, .su-ambient-video). */}
       <aside className="relative m-3 hidden w-[44%] flex-col overflow-hidden rounded-[28px] bg-tile lg:flex">
         <div className="hero-zoom flex flex-1 items-center justify-center px-10 pt-10">
-          <Image
-            src="/illustrations/welcome-hero.png"
-            alt=""
-            width={1024}
-            height={1024}
-            priority
-            sizes="40vw"
-            className="h-auto w-full max-w-[460px] object-contain"
-          />
+          <div className="relative aspect-square w-full max-w-[460px] overflow-hidden rounded-[28px]">
+            <Image src="/videos/welcome-hero.jpg" alt="" fill priority sizes="40vw" className="object-cover" />
+            <video
+              className="su-ambient-video absolute inset-0 size-full object-cover"
+              poster="/videos/welcome-hero.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+            >
+              {/* WebM (VP9) d'abord, plus léger ; MP4 (H.264) pour Safari et les navigateurs sans VP9. */}
+              <source src="/videos/welcome-hero.webm" type="video/webm" />
+              <source src="/videos/welcome-hero.mp4" type="video/mp4" />
+            </video>
+          </div>
         </div>
         <div className="px-10 pb-10 xl:px-12 xl:pb-12">
           <p className="font-poster max-w-lg text-[44px] text-brand xl:text-[56px] [:root[lang=ar]_&]:text-[36px] xl:[:root[lang=ar]_&]:text-[44px]">

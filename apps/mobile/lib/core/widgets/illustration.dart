@@ -32,7 +32,7 @@ class SuIllustration extends StatelessWidget {
   static Future<void> init() async {
     try {
       final m = await AssetManifest.loadFromAssetBundle(rootBundle);
-      _assets = m.listAssets().where((a) => a.startsWith('assets/illustrations/')).toSet();
+      _assets = m.listAssets().where((a) => a.startsWith('assets/illustrations/') || a.startsWith('assets/videos/')).toSet();
     } catch (_) {
       _assets = const {}; // manifeste illisible (tests) : replis partout
     }
@@ -46,6 +46,9 @@ class SuIllustration extends StatelessWidget {
 
   /// Son animation aussi.
   static bool hasAnim(String name) => _assets.contains(animPath(name));
+
+  /// Un fichier précis du manifeste (illustrations, vidéos).
+  static bool hasAsset(String path) => _assets.contains(path);
 
   @visibleForTesting
   static void debugSetAssets(Set<String> assets) => _assets = assets;

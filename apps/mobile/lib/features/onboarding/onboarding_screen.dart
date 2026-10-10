@@ -172,7 +172,11 @@ class _Slide extends StatelessWidget {
                     // La sphère glisse moins vite que la page et tourne légèrement (parallaxe).
                     Transform.translate(
                       offset: Offset(reduced ? 0 : delta * 70 * dir, 0),
-                      child: Transform.rotate(angle: reduced ? 0 : delta * 0.25, child: SuIllustration(art, size: sphere * 1.15, fallback: PhotoSphere(asset: photo, size: sphere))),
+                      child: Transform.rotate(
+                        angle: reduced ? 0 : delta * 0.06,
+                        // Illustration éditoriale animée (vidéo) ; repli : l'illustration Lottie, puis la photo.
+                        child: SuVideoArt(art, size: sphere * 1.15, active: active, fallback: SuIllustration(art, size: sphere * 1.15, fallback: PhotoSphere(asset: photo, size: sphere))),
+                      ),
                     ),
                     // La carte flottante arrive en ressort, plus vite que la sphère.
                     PositionedDirectional(
