@@ -16,7 +16,7 @@ import type { InvitationsMasseInput } from "./schemas";
 export class PermissionRefuseeError extends Error {}
 
 export function lienInvitation(code: string, langue: "FR" | "AR" = "FR") {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.syndicup.ma").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.syndicup.pro").replace(/\/$/, "");
   return `${base}/${langue.toLowerCase()}/invitation/${encodeURIComponent(code)}`;
 }
 
