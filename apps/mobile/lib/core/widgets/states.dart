@@ -37,7 +37,7 @@ class EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 28),
       child: Column(
         children: [
-          SuEnter(offset: 0.15, child: SuIllustration(illustration ?? '', size: 168, fallback: icon == null ? const MotifResidence() : IconCircle(icon!, tone: tone, size: 72))),
+          SuEnter(offset: 0.15, child: SuIllustration(illustration ?? '', size: 200, fallback: icon == null ? const MotifResidence() : IconCircle(icon!, tone: tone, size: 72))),
           const SizedBox(height: 22),
           Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
           if (hint != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(hint!, style: t.bodyMedium?.copyWith(color: SuColors.soft, height: 1.5), textAlign: TextAlign.center)),

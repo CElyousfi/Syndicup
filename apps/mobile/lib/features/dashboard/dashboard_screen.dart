@@ -300,13 +300,21 @@ class _AgCard extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final a = ag;
     if (a == null) {
+      // L'action passe sous le texte : côte à côte, elle l'écrasait syllabe par syllabe.
       return SuCard(
         child: Row(
           children: [
             const IconCircle(Icons.how_to_vote_rounded, tone: Tone.lilac),
             const SizedBox(width: 12),
-            Expanded(child: Text(d.dash.aucuneAg, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
-            if (creer != null) SuButton(variant: SuButtonVariant.ghost, onPressed: creer, label: d.dash.creerAg),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(d.dash.aucuneAg, style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                  if (creer != null) Padding(padding: const EdgeInsets.only(top: 4), child: LinkButton(d.dash.creerAg, onTap: creer!)),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -728,7 +736,7 @@ class OnboardingCard extends ConsumerWidget {
       padding: EdgeInsets.zero,
       child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
         if (SuIllustration.has('poster-onboarding'))
-          const ClipRRect(borderRadius: BorderRadius.vertical(top: Radius.circular(SuRadius.card)), child: PosterArt('poster-onboarding', height: 120)),
+          const ClipRRect(borderRadius: BorderRadius.vertical(top: Radius.circular(SuRadius.card)), child: PosterArt('poster-onboarding', height: 160)),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

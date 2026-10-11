@@ -32,8 +32,14 @@ class PublicScaffold extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Row(
                   children: [
-                    if (back) CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()) else const Brand(size: 36),
-                    const Spacer(),
+                    if (back) ...[
+                      CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()),
+                      const Spacer(),
+                    ] else ...[
+                      // Petit écran : la marque se réduit plutôt que de pousser la langue hors de l'écran.
+                      const Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: FittedBox(fit: BoxFit.scaleDown, child: Brand(size: 36)))),
+                      const SizedBox(width: 12),
+                    ],
                     const LocaleSwitch(),
                   ],
                 ),
@@ -82,8 +88,8 @@ class HeroImageCard extends StatelessWidget {
       );
 }
 
-/// A0 — entrée hors session, en écran d'accueil Wise : la marque, la sphère photo de la
-/// résidence et sa carte de résident, le titre-affiche en capitales, puis les deux chemins
+/// A0 — entrée hors session, en écran d'accueil Wise : la marque, l'illustration vidéo de la
+/// résidence en grand, le titre-affiche en capitales, puis les deux chemins
 /// (se connecter / j'ai un code) en pills pleine largeur.
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
@@ -93,43 +99,33 @@ class WelcomeScreen extends StatelessWidget {
     final d = context.dict;
     final md = context.mdict;
     final t = Theme.of(context).textTheme;
-    final reduced = SuMotion.reduced(context);
-    final h = MediaQuery.sizeOf(context).height;
-    final sphere = (h * 0.27).clamp(150.0, 250.0);
     return Scaffold(
       backgroundColor: SuColors.surface,
       body: SafeArea(
-        child: Padding(
+        // Écran court (< 620) : le visuel garde une vraie taille et la page défile, au lieu
+        // d'écraser l'illustration pour tout faire tenir.
+        child: LayoutBuilder(builder: (context, page) {
+          final compact = page.maxHeight < 620;
+          Widget video(double art) => SuVideoArt('welcome-hero', size: art, radius: 32, fallback: SuIllustration('welcome-hero', size: art, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: art * 0.87)));
+          final column = Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 14),
-              const Row(children: [Brand(size: 36), Spacer(), LocaleSwitch()]),
-              Expanded(
-                child: Center(
-                  child: SizedBox(
-                    width: sphere * 1.45,
-                    height: sphere * 1.1,
-                    child: Stack(
-                      clipBehavior: Clip.none,
-                      alignment: Alignment.center,
-                      children: [
-                        // Illustration éditoriale animée (vidéo en boucle) ; repli : l'illustration Lottie.
-                        SuVideoArt('welcome-hero', size: sphere * 1.15, fallback: SuIllustration('welcome-hero', size: sphere * 1.15, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: sphere))),
-                        PositionedDirectional(
-                          end: 0,
-                          bottom: sphere * 0.04,
-                          child: Transform.rotate(
-                            angle: -0.07 * SuMotion.sign(context),
-                            child: reduced ? const ResidentCardMock() : const ResidentCardMock().animate().slideY(begin: 0.35, end: 0, duration: 800.ms, delay: 250.ms, curve: SuMotion.spring).fadeIn(duration: 300.ms, delay: 250.ms),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+              // Petit écran : la marque se réduit plutôt que de pousser la langue hors de l'écran.
+              const Row(children: [Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: FittedBox(fit: BoxFit.scaleDown, child: Brand(size: 36)))), SizedBox(width: 12), LocaleSwitch()]),
+              // Illustration éditoriale animée (vidéo en boucle), seule et aussi grande que
+              // l'espace le permet ; repli : l'illustration Lottie.
+              if (compact)
+                Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Center(child: video((page.maxWidth - 48).clamp(0.0, 300.0))))
+              else
+                Expanded(
+                  child: LayoutBuilder(builder: (context, box) {
+                    final art = (box.maxWidth < box.maxHeight - 24 ? box.maxWidth : box.maxHeight - 24).clamp(0.0, 440.0);
+                    return Center(child: video(art));
+                  }),
                 ),
-              ),
               SuEnter(index: 2, child: Text(SuType.posterText(context, md.welcomeTitle), textAlign: TextAlign.center, style: SuType.poster(context, ((MediaQuery.sizeOf(context).width - 48) * 0.1).clamp(28.0, 44.0)))),
               const SizedBox(height: 12),
               SuEnter(index: 3, child: Text(d.brand.subtitle, textAlign: TextAlign.center, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5))),
@@ -149,7 +145,9 @@ class WelcomeScreen extends StatelessWidget {
               const SizedBox(height: 12),
             ],
           ),
-        ),
+          );
+          return compact ? SingleChildScrollView(child: column) : column;
+        }),
       ),
     );
   }

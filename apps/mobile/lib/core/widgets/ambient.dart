@@ -73,7 +73,10 @@ class _SuHeroDriftState extends State<SuHeroDrift> with SingleTickerProviderStat
   @override
   Widget build(BuildContext context) {
     if (!Feel.ambient(context)) return widget.child;
+    // expand : l'image garde toute la taille du bandeau (sinon, contrainte lâche, elle se réduit
+    // à son ratio et n'en couvre qu'un tiers).
     return Stack(
+      fit: StackFit.expand,
       children: [
         widget.child,
         Positioned.fill(

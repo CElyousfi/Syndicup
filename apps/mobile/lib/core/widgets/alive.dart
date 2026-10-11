@@ -258,7 +258,8 @@ class _SuButtonState extends State<SuButton> {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (widget.icon != null) ...[Icon(widget.icon, size: 20), const SizedBox(width: 8)],
-            Flexible(child: Text(widget.label!, overflow: TextOverflow.ellipsis)),
+            // Libellé long : il passe sur deux lignes au lieu d'être coupé (« Télécharger toutes mes don… »).
+            Flexible(child: Text(widget.label!, maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis)),
           ],
         );
     final Widget content;

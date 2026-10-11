@@ -103,10 +103,13 @@ class _SuccessPage extends StatelessWidget {
                   child: moment != null
                       // Moment signature à la place de l'illustration (≤ 1,2 s, puis image finale).
                       ? SuMomentView(kind: moment!, amount: amount, onPeak: () => _momentPeak(moment!))
-                      : SuIllustration(
-                          illustration,
-                          size: math.min(w * 0.62, 260),
-                          fallback: const SuccessBurst(),
+                      // Taille bornée par la place réelle : entière même sur un petit écran.
+                      : LayoutBuilder(
+                          builder: (context, box) => SuIllustration(
+                            illustration,
+                            size: math.max(96.0, math.min(math.min(w * 0.7, 300), box.maxHeight - 16)),
+                            fallback: const SuccessBurst(),
+                          ),
                         ),
                 ),
               ),

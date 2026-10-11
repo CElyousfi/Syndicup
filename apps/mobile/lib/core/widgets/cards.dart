@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../theme/motion.dart';
@@ -275,7 +277,7 @@ class PosterCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (image != null) SizedBox(height: 170, child: image),
+              if (image != null) SizedBox(height: 190, child: image),
               Padding(
                 padding: EdgeInsets.fromLTRB(22, image == null ? 24 : 16, 22, 24),
                 child: Column(
@@ -287,7 +289,7 @@ class PosterCard extends StatelessWidget {
                     if (ctaLabel != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 18),
-                        child: SuButton(label: ctaLabel!, onPressed: onCta ?? onTap),
+                        child: SuButton(label: ctaLabel!, onPressed: onCta ?? onTap, expand: true),
                       ),
                   ],
                 ),
@@ -306,12 +308,22 @@ class PosterCard extends StatelessWidget {
   }
 }
 
-/// Bande d'affiche (`poster-*`, 1600×1000, visuel sur la moitié de fin) : recadrée vers le
-/// visuel, miroir en RTL comme sur le web. Rien si l'asset n'est pas livré.
+/// Bande d'affiche (`poster-*`, 1600×1000, fond uni, visuel sur la partie de fin) : le visuel
+/// est posé EN ENTIER dans la bande, calé à la fin, le reste prolongé de la couleur du fond —
+/// jamais rogné, quel que soit le ratio de la bande. Miroir en RTL comme sur le web. Rien si
+/// l'asset n'est pas livré.
 class PosterArt extends StatelessWidget {
   const PosterArt(this.name, {super.key, this.height});
   final String name;
   final double? height;
+
+  static const double _w = 1600, _h = 1000;
+
+  /// Zone du visuel dans l'affiche (marge comprise pour le mouvement de l'animation).
+  static const Rect _focus = Rect.fromLTRB(680, 70, 1600, 950);
+
+  /// Fond uni de chaque affiche (prolonge l'image hors du visuel).
+  static Color background(String name) => name == 'poster-annonce' || name == 'poster-onboarding' ? const Color(0xFF111111) : const Color(0xFF1E7551);
 
   @override
   Widget build(BuildContext context) {
@@ -320,14 +332,29 @@ class PosterArt extends StatelessWidget {
     return SizedBox(
       height: height,
       width: double.infinity,
-      child: Transform.flip(
-        flipX: rtl,
-        // Affiche vivante : même cadrage (cover, calée à droite) pour l'image et l'animation.
-        child: SuLottieArt(
-          name,
-          fit: BoxFit.cover,
-          alignment: Alignment.centerRight,
-          staticChild: Image.asset(SuIllustration.path(name), fit: BoxFit.cover, alignment: Alignment.centerRight, excludeFromSemantics: true, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+      child: ColoredBox(
+        color: background(name),
+        child: Transform.flip(
+          flipX: rtl,
+          child: LayoutBuilder(builder: (context, box) {
+            final s = math.min(box.maxWidth / _focus.width, box.maxHeight / _focus.height);
+            return ClipRect(
+              child: Stack(children: [
+                Positioned(
+                  left: box.maxWidth - _focus.right * s,
+                  top: (box.maxHeight - _focus.height * s) / 2 - _focus.top * s,
+                  width: _w * s,
+                  height: _h * s,
+                  // Affiche vivante : même cadrage pour l'image et l'animation.
+                  child: SuLottieArt(
+                    name,
+                    fit: BoxFit.fill,
+                    staticChild: Image.asset(SuIllustration.path(name), fit: BoxFit.fill, excludeFromSemantics: true, errorBuilder: (_, __, ___) => const SizedBox.shrink()),
+                  ),
+                ),
+              ]),
+            );
+          }),
         ),
       ),
     );
