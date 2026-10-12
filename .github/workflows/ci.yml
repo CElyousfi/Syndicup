@@ -128,16 +128,24 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyse statique
-        # Les diagnostics sont aussi publiés dans le résumé du job (lisible via l'API, à la
-        # différence des logs bruts hébergés hors GitHub).
+        id: analyze
         run: |
           set +e
           flutter analyze --no-fatal-infos | tee analyze.txt
-          code=${PIPESTATUS[0]}
-          if [ "$code" != "0" ]; then
-            { echo '### flutter analyze'; echo '```'; grep -E "^\s*(error|warning)" analyze.txt | head -60; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
-          fi
-          exit $code
+          echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
+      - name: Diagnostics en commentaire de PR (si échec)
+        # Les logs bruts sont hébergés hors GitHub ; un commentaire reste lisible par l'API.
+        if: steps.analyze.outputs.code != '0' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const out = fs.readFileSync('apps/mobile/analyze.txt', 'utf8').split('\n').filter(l => /^\s*(error|warning|info)/.test(l)).slice(0, 80).join('\n');
+            await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number,
+              body: '### `flutter analyze` a échoué\n```\n' + (out || '(aucune ligne error/warning capturée)') + '\n```' });
+      - name: Échec si l'analyse a échoué
+        if: steps.analyze.outputs.code != '0'
+        run: exit 1
       - name: Tests
         run: flutter test
       - name: APK debug (vérifie la chaîne Gradle/Kotlin/plugins)
