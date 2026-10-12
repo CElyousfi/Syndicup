@@ -12,7 +12,7 @@ class GardienWidget : SyndicUpWidget() {
   override val layout = R.layout.widget_gardien
 
   override fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean) {
-    views.texte(R.id.w_title, snapshot.optString("residence"))
+    views.texte(R.id.w_title, snapshot.optString("nom"))
     val visites = data.optInt("visites")
     views.texte(R.id.w_t1_value, visites.toString())
     views.texte(R.id.w_t1_label, data.optString("visites_label"))

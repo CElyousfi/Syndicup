@@ -187,7 +187,7 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
     'vide': false,
     'rtl': rtl,
     'langue': locale.languageCode,
-    'residence': copro?['nom']?.toString() ?? 'SyndicUp',
+    'nom': copro?['nom']?.toString() ?? 'SyndicUp',
     'maj': maj,
     'genere_le': j['genere_le'],
     'labels': {

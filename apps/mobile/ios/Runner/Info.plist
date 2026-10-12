@@ -12,6 +12,20 @@
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
+	<!-- Ouverture depuis un widget (home_widget) : syndicup://widget?route=/…&homeWidget -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>ma.syndicup.app.widget</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>syndicup</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleName</key>
 	<string>syndicup</string>
 	<key>CFBundlePackageType</key>

@@ -13,7 +13,7 @@ class ChargesWidget : SyndicUpWidget() {
 
   override fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean) {
     val aJour = data.optBoolean("a_jour")
-    views.texte(R.id.w_title, snapshot.optString("residence"))
+    views.texte(R.id.w_title, snapshot.optString("nom"))
     views.texte(R.id.w_amount, if (masquer) "•••• MAD" else data.optString("montant"))
     views.setTextColor(R.id.w_amount, color(context, if (aJour) R.color.w_brand else R.color.w_ink))
     views.texte(R.id.w_subtitle, data.optString("sous_titre"))

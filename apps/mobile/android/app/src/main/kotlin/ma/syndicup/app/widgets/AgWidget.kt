@@ -20,7 +20,7 @@ class AgWidget : SyndicUpWidget() {
       "AUCUNE" -> {
         views.visible(R.id.w_chip, false)
         views.texte(R.id.w_line1, data.optString("compte"))
-        views.texte(R.id.w_line2, snapshot.optString("residence"))
+        views.texte(R.id.w_line2, snapshot.optString("nom"))
         views.texte(R.id.w_cta, snapshot.optJSONObject("labels")?.optString("ouvrir"))
       }
       else -> {

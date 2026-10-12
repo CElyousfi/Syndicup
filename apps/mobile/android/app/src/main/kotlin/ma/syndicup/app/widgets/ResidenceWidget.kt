@@ -14,7 +14,7 @@ class ResidenceWidget : SyndicUpWidget() {
   override val layout = R.layout.widget_residence
 
   override fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean) {
-    views.texte(R.id.w_title, snapshot.optString("residence"))
+    views.texte(R.id.w_title, snapshot.optString("nom"))
     views.texte(R.id.w_rate, data.optString("taux_fmt"))
     views.texte(R.id.w_rate_label, data.optString("recouvrement"))
     views.setImageViewBitmap(R.id.w_spark, sparkline(context, data.optJSONArray("serie") ?: JSONArray()))

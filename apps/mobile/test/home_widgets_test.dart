@@ -21,7 +21,7 @@ void main() {
       'copropriete': {'id': 'c', 'nom': 'Résidence Al Manar'},
       'charges': {'solde_du': '0.00', 'nb_lots': 1, 'lot_id': 'lot-1', 'prochaine_echeance': null, 'prochain_montant': null, 'taux_paye': 1, 'nb_quittances': 3},
     });
-    expect(aJour['residence'], 'Résidence Al Manar');
+    expect(aJour['nom'], 'Résidence Al Manar');
     expect(aJour['charges']['a_jour'], isTrue);
     expect(aJour['charges']['route'], '/lots/lot-1?onglet=finances');
     expect(aJour['charges']['sous_titre'], MobileDict.fr.widgetAJour);
