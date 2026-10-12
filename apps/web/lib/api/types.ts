@@ -1467,8 +1467,9 @@ export interface PreferencesNotification {
   push_info: boolean;
   push_son: boolean;
   heures_calmes: HeuresCalmes | null;
+  resume_matin: boolean;
 }
-export const PREFERENCES_NOTIFICATION_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null };
+export const PREFERENCES_NOTIFICATION_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null, resume_matin: false };
 
 // ── M22 — Tâches ──────────────────────────────────────────────────────────────
 export type OrigineTache = "MANUELLE" | "RESOLUTION_AG" | "CONTRAT" | "INCIDENT" | "RAPPORT" | "SYSTEME";

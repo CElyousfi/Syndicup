@@ -44,6 +44,7 @@ const URGENTS = new Set([
 ]);
 
 const INFOS = new Set([
+  "RESUME_MATIN",
   "PV_DISPONIBLE",
   "DOCUMENT_PUBLIE",
   "RAPPORT_GESTION_DISPONIBLE",
@@ -147,3 +148,24 @@ export function livraisonPush(templateCode: string, prefs: PreferencesPush = PRE
   const interruption = calme || niveau === "INFO" ? "passive" : "active";
   return { niveau, livrer, son, interruption, canalAndroid: calme ? CANAUX_ANDROID.INFO : CANAUX_ANDROID[niveau], fil };
 }
+
+// ── Actions dans la notification (boutons) ────────────────────────────────────
+/**
+ * Boutons proposés dans la bannière système, décidés côté serveur pour qu'Android (données seules →
+ * notification locale) et iOS (catégorie APNs) montrent les mêmes. Le premier bouton nomme la
+ * catégorie iOS (`SYNDICUP_<premier>`), enregistrée par l'app.
+ *  - AUTORISER / REFUSER : réponse au gardien sans ouvrir l'app (PATCH /visites/:id/statut).
+ *  - PAYER : écran de paiement ; VOTER : pupitre de séance ; APPELER : numéro du prestataire ;
+ *  - VOIR : ouvre l'objet ; MARQUER_LU : marque lue sans ouvrir.
+ */
+export type ActionPush = "AUTORISER" | "REFUSER" | "PAYER" | "VOTER" | "APPELER" | "VOIR" | "MARQUER_LU";
+
+export function actionsPush(templateCode: string, donnees: Record<string, string> = {}): ActionPush[] {
+  if (templateCode === "VISITE_NOUVELLE" && donnees.visite_id) return ["AUTORISER", "REFUSER"];
+  if (templateCode === "APPEL_DE_FONDS_EMIS" || /^IMPAYE_N\d$/.test(templateCode)) return ["PAYER", "VOIR"];
+  if (templateCode === "AG_OUVERTE" && donnees.ag_id) return ["VOTER", "VOIR"];
+  if (templateCode.startsWith("INCIDENT_") && donnees.prestataire_tel) return ["APPELER", "VOIR"];
+  return ["VOIR", "MARQUER_LU"];
+}
+
+export const categorieIos = (actions: ActionPush[]) => `SYNDICUP_${actions[0] ?? "VOIR"}`;

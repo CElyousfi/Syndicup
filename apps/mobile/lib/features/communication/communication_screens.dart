@@ -719,6 +719,7 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
   late bool _pushInfo = widget.initial.pushInfo;
   late bool _pushSon = widget.initial.pushSon;
   late bool _calmes = widget.initial.heuresCalmes != null;
+  late bool _resumeMatin = widget.initial.resumeMatin;
   late String _calmesDebut = widget.initial.heuresCalmes?.debut ?? '22:00';
   late String _calmesFin = widget.initial.heuresCalmes?.fin ?? '07:00';
   bool _loading = false;
@@ -754,6 +755,8 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       const SizedBox(height: 8),
       SuCheckbox(value: _pushSon, onChanged: (v) => setState(() => _pushSon = v), label: c.pushSon, help: c.pushSonAide),
       const SizedBox(height: 8),
+      SuCheckbox(value: _resumeMatin, onChanged: (v) => setState(() => _resumeMatin = v), label: c.resumeMatin, help: c.resumeMatinAide),
+      const SizedBox(height: 8),
       SuCheckbox(value: _calmes, onChanged: (v) => setState(() => _calmes = v), label: c.heuresCalmes, help: c.heuresCalmesAide),
       if (_calmes) ...[
         const SizedBox(height: 8),
@@ -768,7 +771,7 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       if (_fail != null) const SizedBox(height: 12),
       SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: () async {
         setState(() { _loading = true; _fail = null; });
-        final r = await ref.read(apiClientProvider).request<dynamic>('PUT', '/users/me/preferences-notification', body: PreferencesNotification(digestHebdo: _digest, canalDigest: _canal, annoncesPush: _push, pushNormal: _pushNormal, pushInfo: _pushInfo, pushSon: _pushSon, heuresCalmes: _calmes ? HeuresCalmes(debut: _calmesDebut, fin: _calmesFin) : null).toJson());
+        final r = await ref.read(apiClientProvider).request<dynamic>('PUT', '/users/me/preferences-notification', body: PreferencesNotification(digestHebdo: _digest, canalDigest: _canal, annoncesPush: _push, pushNormal: _pushNormal, pushInfo: _pushInfo, pushSon: _pushSon, heuresCalmes: _calmes ? HeuresCalmes(debut: _calmesDebut, fin: _calmesFin) : null, resumeMatin: _resumeMatin).toJson());
         if (!mounted) return;
         if (r is ApiFail) { setState(() { _loading = false; _fail = r; }); return; }
         ref.invalidate(preferencesNotificationProvider);

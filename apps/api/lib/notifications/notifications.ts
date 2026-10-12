@@ -18,7 +18,7 @@ import { render, templateExiste } from "./templates";
 import { transportPour } from "./transports";
 import { logger } from "../logging/logger";
 import { retirerTokensInvalides, tokensPushDe } from "../users/appareils";
-import { livraisonPush, PREFERENCES_PUSH_DEFAUT, type PreferencesPush } from "./push-niveaux";
+import { actionsPush, livraisonPush, PREFERENCES_PUSH_DEFAUT, type PreferencesPush } from "./push-niveaux";
 
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
@@ -85,6 +85,12 @@ export async function envoyerNotification(
   for (const [k, v] of Object.entries((params.contenuJson ?? {}) as Record<string, unknown>)) {
     if (v === null || v === undefined) continue;
     donnees[k] = typeof v === "string" ? v : JSON.stringify(v);
+  }
+  if (canal === "PUSH") {
+    // Regroupement par résidence sur le téléphone + boutons d'action (push-niveaux.ts).
+    const copro = await db.copropriete.findUnique({ where: { id: params.coproprieteId }, select: { nom: true } }).catch(() => null);
+    if (copro?.nom) donnees.copropriete_nom = copro.nom;
+    donnees.actions = actionsPush(params.templateCode, donnees).join(",");
   }
 
   let statutEnvoi: "EN_ATTENTE" | "ENVOYE" | "ECHOUE" = "EN_ATTENTE";

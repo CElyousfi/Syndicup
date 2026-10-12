@@ -2303,6 +2303,8 @@ export const fr = {
     pushInfoAide: "Documents, procès-verbaux, récapitulatifs, sondages : bannière discrète, sans son.",
     pushSon: "Son et vibration",
     pushSonAide: "Désactivé, les notifications courantes restent visibles mais silencieuses.",
+    resumeMatin: "Résumé du matin",
+    resumeMatinAide: "À 8 h, une notification discrète : charges à régler, assemblée à venir, incidents, annonces non lues. Rien n'est envoyé s'il n'y a rien à dire.",
     heuresCalmes: "Heures calmes",
     heuresCalmesAide: "Pendant la plage, rien ne sonne ni ne réveille l’écran — sauf les urgences. Heure de Casablanca.",
     heuresCalmesDebut: "Début",

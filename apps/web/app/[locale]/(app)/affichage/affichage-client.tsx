@@ -372,6 +372,7 @@ export function PreferencesForm({ dict, locale, prefs }: { dict: Dict; locale: L
           <Switch name="push_normal" label={c.pushNormal} hint={c.pushNormalAide} defaultChecked={prefs.push_normal} />
           <Switch name="push_info" label={c.pushInfo} hint={c.pushInfoAide} defaultChecked={prefs.push_info} />
           <Switch name="push_son" label={c.pushSon} hint={c.pushSonAide} defaultChecked={prefs.push_son} />
+          <Switch name="resume_matin" label={c.resumeMatin} hint={c.resumeMatinAide} defaultChecked={prefs.resume_matin} />
           <Switch name="heures_calmes" label={c.heuresCalmes} hint={c.heuresCalmesAide} defaultChecked={prefs.heures_calmes !== null} />
           <div className="grid grid-cols-2 gap-3">
             <Field label={c.heuresCalmesDebut} htmlFor="heures_calmes_debut"><Input id="heures_calmes_debut" name="heures_calmes_debut" type="time" defaultValue={prefs.heures_calmes?.debut ?? "22:00"} /></Field>

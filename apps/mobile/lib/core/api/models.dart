@@ -1342,10 +1342,10 @@ class HeuresCalmes {
 }
 
 class PreferencesNotification {
-  final bool digestHebdo, annoncesPush, pushNormal, pushInfo, pushSon;
+  final bool digestHebdo, annoncesPush, pushNormal, pushInfo, pushSon, resumeMatin;
   final String canalDigest;
   final HeuresCalmes? heuresCalmes;
-  const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true, this.pushNormal = true, this.pushInfo = true, this.pushSon = true, this.heuresCalmes});
+  const PreferencesNotification({this.digestHebdo = true, this.canalDigest = 'EMAIL', this.annoncesPush = true, this.pushNormal = true, this.pushInfo = true, this.pushSon = true, this.heuresCalmes, this.resumeMatin = false});
   factory PreferencesNotification.fromJson(Map<String, dynamic> j) {
     final hc = j['heures_calmes'];
     return PreferencesNotification(
@@ -1355,10 +1355,11 @@ class PreferencesNotification {
       pushNormal: j['push_normal'] is bool ? j['push_normal'] as bool : true,
       pushInfo: j['push_info'] is bool ? j['push_info'] as bool : true,
       pushSon: j['push_son'] is bool ? j['push_son'] as bool : true,
+      resumeMatin: j['resume_matin'] == true,
       heuresCalmes: hc is Map && hc['debut'] is String && hc['fin'] is String ? HeuresCalmes(debut: hc['debut'] as String, fin: hc['fin'] as String) : null,
     );
   }
-  Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush, 'push_normal': pushNormal, 'push_info': pushInfo, 'push_son': pushSon, 'heures_calmes': heuresCalmes?.toJson()};
+  Map<String, Object?> toJson() => {'digest_hebdo': digestHebdo, 'canal_digest': canalDigest, 'annonces_push': annoncesPush, 'push_normal': pushNormal, 'push_info': pushInfo, 'push_son': pushSon, 'heures_calmes': heuresCalmes?.toJson(), 'resume_matin': resumeMatin};
 }
 
 // ── M22 — Tâches ─────────────────────────────────────────────────────────────

@@ -4,7 +4,7 @@
  * badge / fil / catégorie d'actions ; silencieux = données seules + content-available).
  */
 import { describe, expect, it } from "vitest";
-import { CANAUX_ANDROID, dansHeuresCalmes, filPush, livraisonPush, niveauPush } from "../lib/notifications/push-niveaux";
+import { CANAUX_ANDROID, actionsPush, categorieIos, dansHeuresCalmes, filPush, livraisonPush, niveauPush } from "../lib/notifications/push-niveaux";
 import { construireMessageFcm } from "../lib/notifications/transports/fcm";
 import { render, templateExiste } from "../lib/notifications/templates";
 import { preferencesPushDe } from "../lib/notifications/notifications";
@@ -58,28 +58,32 @@ describe("push — niveaux, heures calmes, préférences", () => {
     expect(preferencesPushDe({ heures_calmes: { debut: 22 } }).heures_calmes).toBeNull();
   });
 
-  it("corps FCM : Android canal / PRIORITY_MAX / PUBLIC / compteur ; iOS time-sensitive / son / badge / fil / catégorie ; sans son = pas de sound", () => {
+  it("corps FCM : Android données seules (l'app affiche : boutons, résidence, image) ; iOS time-sensitive / son / badge / fil par résidence / catégorie ; sans son = pas de sound", () => {
     const rendu = render("INCIDENT_URGENCE_MAXIMALE", "FR", { categorie: "Fuite", localisation: "Hall" });
     const m = construireMessageFcm("tok", {
       destinataire: { utilisateurId: "u", email: null, telephone: null, tokensPush: ["tok"] },
       titre: rendu.titre, corps: rendu.corps, langue: "FR", templateCode: "INCIDENT_URGENCE_MAXIMALE",
-      donnees: { incident_id: "i1", notification_id: "n1" },
+      donnees: { incident_id: "i1", notification_id: "n1", copropriete_id: "c1", prestataire_tel: "0600000000" },
       push: { niveau: "URGENT", badge: 3, son: true, interruption: "time-sensitive", canalAndroid: "syndicup_urgent", fil: "incidents", cleRegroupement: "incident:i1" },
-    }) as { android: { priority: string; collapse_key?: string; notification: Record<string, unknown> }; apns: { headers: Record<string, string>; payload: { aps: Record<string, unknown> } }; data: Record<string, string>; notification: { title: string } };
+    }) as { android: { priority: string; collapse_key?: string; notification?: Record<string, unknown> }; apns: { headers: Record<string, string>; payload: { aps: Record<string, unknown> } }; data: Record<string, string>; notification?: { title: string } };
     expect(m.android.priority).toBe("high");
     expect(m.android.collapse_key).toBe("incident:i1");
-    expect(m.android.notification).toMatchObject({ channel_id: "syndicup_urgent", notification_priority: "PRIORITY_MAX", visibility: "PUBLIC", notification_count: 3, sound: "default", tag: "incident:i1", click_action: "FLUTTER_NOTIFICATION_CLICK" });
+    // Android : aucune bannière système — l'app la construit (actions, regroupement par résidence, image).
+    expect(m.notification).toBeUndefined();
+    expect(m.android.notification).toBeUndefined();
     expect(m.apns.headers).toMatchObject({ "apns-priority": "10", "apns-push-type": "alert", "apns-collapse-id": "incident:i1" });
-    expect(m.apns.payload.aps).toMatchObject({ badge: 3, sound: "default", "interruption-level": "time-sensitive", "thread-id": "incidents", category: "SYNDICUP_NOTIFICATION", alert: { title: rendu.titre } });
-    expect(m.data).toMatchObject({ niveau: "URGENT", canal_android: "syndicup_urgent", fil: "incidents", badge: "3", son: "1", notification_id: "n1", incident_id: "i1", template_code: "INCIDENT_URGENCE_MAXIMALE", langue: "FR" });
+    expect(m.apns.payload.aps).toMatchObject({ badge: 3, sound: "default", "interruption-level": "time-sensitive", "thread-id": "copro:c1", category: "SYNDICUP_APPELER", "mutable-content": 1, alert: { title: rendu.titre } });
+    expect(m.data).toMatchObject({ niveau: "URGENT", canal_android: "syndicup_urgent", fil: "incidents", badge: "3", son: "1", notification_id: "n1", incident_id: "i1", template_code: "INCIDENT_URGENCE_MAXIMALE", langue: "FR", cle_regroupement: "incident:i1", titre: rendu.titre });
+    expect(JSON.parse((m.apns.payload as { payload: string }).payload).incident_id).toBe("i1");
 
     const discret = construireMessageFcm("tok", {
       destinataire: { utilisateurId: "u", email: null, telephone: null }, titre: "T", corps: "C", langue: "AR", templateCode: "PV_DISPONIBLE",
       push: { niveau: "INFO", badge: 1, son: false, interruption: "passive", canalAndroid: "syndicup_info", fil: "ag" },
-    }) as { android: { notification: Record<string, unknown> }; apns: { payload: { aps: Record<string, unknown> } } };
-    expect(discret.android.notification).toMatchObject({ channel_id: "syndicup_info", notification_priority: "PRIORITY_DEFAULT", default_sound: false });
-    expect(discret.android.notification.sound).toBeUndefined();
+    }) as { data: Record<string, string>; apns: { payload: { aps: Record<string, unknown> } } };
+    expect(discret.data).toMatchObject({ canal_android: "syndicup_info", son: "0" });
     expect(discret.apns.payload.aps.sound).toBeUndefined();
+    expect(discret.apns.payload.aps["thread-id"]).toBe("ag");
+    expect(discret.apns.payload.aps.category).toBe("SYNDICUP_VOIR");
     expect(discret.apns.payload.aps["interruption-level"]).toBe("passive");
   });
 
@@ -92,5 +96,16 @@ describe("push — niveaux, heures calmes, préférences", () => {
     expect(m.android).toEqual({ priority: "normal" });
     expect(m.apns.headers).toEqual({ "apns-priority": "5", "apns-push-type": "background" });
     expect(m.apns.payload.aps).toEqual({ "content-available": 1, badge: 0 });
+  });
+
+  it("boutons d'action par template : porte, argent, séance, prestataire, défaut", () => {
+    expect(actionsPush("VISITE_NOUVELLE", { visite_id: "v1" })).toEqual(["AUTORISER", "REFUSER"]);
+    expect(actionsPush("VISITE_NOUVELLE")).toEqual(["VOIR", "MARQUER_LU"]);
+    expect(actionsPush("APPEL_DE_FONDS_EMIS")).toEqual(["PAYER", "VOIR"]);
+    expect(actionsPush("IMPAYE_N3")).toEqual(["PAYER", "VOIR"]);
+    expect(actionsPush("AG_OUVERTE", { ag_id: "a" })).toEqual(["VOTER", "VOIR"]);
+    expect(actionsPush("INCIDENT_STATUT_CHANGE", { prestataire_tel: "06" })).toEqual(["APPELER", "VOIR"]);
+    expect(actionsPush("INCIDENT_STATUT_CHANGE")).toEqual(["VOIR", "MARQUER_LU"]);
+    expect(categorieIos(["PAYER", "VOIR"])).toBe("SYNDICUP_PAYER");
   });
 });

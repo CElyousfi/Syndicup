@@ -284,6 +284,10 @@ const TEMPLATES: Record<string, Entree> = {
       corps: "سُجلت دفعة بمبلغ {{montant}} درهم لوحدتكم. رصيدكم محدَّث في التطبيق.",
     },
   },
+  RESUME_MATIN: {
+    FR: { titre: "Bonjour · {{residence}}", corps: "{{resume}}" },
+    AR: { titre: "صباح الخير · {{residence}}", corps: "{{resume}}" },
+  },
   AG_OUVERTE: {
     FR: {
       titre: "Assemblée générale ouverte",

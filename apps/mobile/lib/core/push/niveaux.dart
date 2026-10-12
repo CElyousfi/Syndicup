@@ -54,3 +54,13 @@ String canalAndroidPour(String niveau) => switch (niveau) {
       niveauSilencieux => 'syndicup_silencieux',
       _ => 'syndicup',
     };
+
+/// Boutons d'une notification — miroir de `actionsPush` (apps/api/lib/notifications/push-niveaux.ts)
+/// pour le flux temps réel, qui ne porte pas le champ `actions` du push.
+List<String> actionsPour(String template, Map<String, String> donnees) {
+  if (template == 'VISITE_NOUVELLE' && (donnees['visite_id'] ?? '').isNotEmpty) return const ['AUTORISER', 'REFUSER'];
+  if (template == 'APPEL_DE_FONDS_EMIS' || RegExp(r'^IMPAYE_N\d$').hasMatch(template)) return const ['PAYER', 'VOIR'];
+  if (template == 'AG_OUVERTE' && (donnees['ag_id'] ?? '').isNotEmpty) return const ['VOTER', 'VOIR'];
+  if (template.startsWith('INCIDENT_') && (donnees['prestataire_tel'] ?? '').isNotEmpty) return const ['APPELER', 'VOIR'];
+  return const ['VOIR', 'MARQUER_LU'];
+}

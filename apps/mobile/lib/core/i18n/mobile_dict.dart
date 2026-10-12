@@ -163,10 +163,16 @@ class MobileDict {
     this.quickAg = '',
     this.quickAffichage = '',
     this.quickVisiteur = '',
+    this.pushAutoriser = '',
+    this.pushRefuser = '',
+    this.pushPayer = '',
+    this.pushVoter = '',
+    this.pushAppeler = '',
   });
 
   final String bioEnableTitle, bioEnableBody, bioEnableYes, bioEnableLater, bioUnlockReason, bioUnlockButton, bioUseOther, bioSetting,
       updateRequiredTitle, updateRequiredBody, updateButton, updateAvailable, updateLater;
+  final String pushAutoriser, pushRefuser, pushPayer, pushVoter, pushAppeler;
   final String widgetCharges, widgetAJour, widgetEnRetard, widgetEcheanceAujourdhui, widgetEcheanceDans, widgetAg, widgetAucuneAg, widgetEnDirect, widgetAgAujourdhui, widgetAgDemain, widgetAgDans, widgetVotees, widgetResolutions, widgetVoter, widgetOuvrir, widgetResidence, widgetRecouvrement, widgetImpayes, widgetIncidents, widgetSla, widgetAValider, widgetAffichage, widgetNonLues, widgetToutLu, widgetAucuneAnnonce, widgetGardien, widgetVisiteurs, widgetArrivees, widgetDeparts, widgetMisAJour, widgetIlYAMin, widgetIlYAH, widgetIlYAJ, quickPayer, quickEncaisser, quickSignaler, quickAg, quickAffichage, quickVisiteur;
 
   final String welcomeTitle, welcomeBody, haveCode, offline, online, queueTitle, queueLocal, queueHint, pendingSend, synced, worksOffline,
@@ -307,6 +313,11 @@ class MobileDict {
     quickAg: 'Assemblées',
     quickAffichage: "Tableau d'affichage",
     quickVisiteur: 'Enregistrer un visiteur',
+    pushAutoriser: 'Autoriser',
+    pushRefuser: 'Refuser',
+    pushPayer: 'Payer',
+    pushVoter: 'Voter',
+    pushAppeler: 'Appeler',
     pushMarquerLu: 'Marquer comme lu',
     pushCanalUrgent: 'Urgences',
     pushCanalUrgentAide: 'Visiteur à la porte, incident grave, impayé avancé — toujours livrées, même en mode Ne pas déranger.',
@@ -465,6 +476,11 @@ class MobileDict {
     quickAg: 'الجموع العامة',
     quickAffichage: 'لوحة الإعلانات',
     quickVisiteur: 'تسجيل زائر',
+    pushAutoriser: 'السماح',
+    pushRefuser: 'الرفض',
+    pushPayer: 'الدفع',
+    pushVoter: 'التصويت',
+    pushAppeler: 'الاتصال',
     pushMarquerLu: 'وضع علامة مقروء',
     pushCanalUrgent: 'الحالات العاجلة',
     pushCanalUrgentAide: 'زائر عند الباب، عطب خطير، متأخرات متقدمة — تُرسل دائمًا حتى في وضع عدم الإزعاج.',

@@ -2386,6 +2386,8 @@
   "communication_pushInfoAide": "Documents, procès-verbaux, récapitulatifs, sondages : bannière discrète, sans son.",
   "communication_pushSon": "Son et vibration",
   "communication_pushSonAide": "Désactivé, les notifications courantes restent visibles mais silencieuses.",
+  "communication_resumeMatin": "Résumé du matin",
+  "communication_resumeMatinAide": "À 8 h, une notification discrète : charges à régler, assemblée à venir, incidents, annonces non lues. Rien n'est envoyé s'il n'y a rien à dire.",
   "communication_heuresCalmes": "Heures calmes",
   "communication_heuresCalmesAide": "Pendant la plage, rien ne sonne ni ne réveille l’écran — sauf les urgences. Heure de Casablanca.",
   "communication_heuresCalmesDebut": "Début",

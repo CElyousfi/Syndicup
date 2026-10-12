@@ -13,6 +13,7 @@
 import { importPKCS8, SignJWT } from "jose";
 import type { MessageNotification, NotificationTransport, ResultatEnvoi } from "./types";
 import { logger } from "../../logging/logger";
+import { actionsPush, categorieIos } from "../push-niveaux";
 
 interface ServiceAccount {
   project_id: string;
@@ -35,13 +36,14 @@ export function parseServiceAccount(json: string): ServiceAccount {
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
- * Corps FCM v1 pour un appareil — bannières, alertes, écran verrouillé, badge, fils, actions :
- *  - Android : canal par niveau (créé côté app), `notification_priority`, `visibility: PUBLIC`
- *    (contenu visible sur l'écran verrouillé), `notification_count` (badge), `tag` (remplacement),
- *    `click_action` FLUTTER_NOTIFICATION_CLICK ; en silencieux : données seules, priorité normale.
- *  - iOS (APNs) : `alert` + `sound` + `badge` + `interruption-level` + `thread-id` + `category`
- *    (actions Ouvrir / Marquer comme lu) ; `apns-priority` 10 (immédiat) sauf silencieux (5,
- *    `content-available`, push-type background).
+ * Corps FCM v1 pour un appareil.
+ *  - Android : **données seules** (pas de bloc `notification`) — l'app affiche elle-même la
+ *    bannière (flutter_local_notifications, aussi en arrière-plan) : c'est ce qui permet les
+ *    boutons d'action, le regroupement par résidence, l'image en grand et le canal par niveau.
+ *    Priorité `high` (réveil immédiat, Doze compris) sauf silencieux.
+ *  - iOS (APNs) : `alert` + `sound` + `badge` + `interruption-level` + `thread-id` (par résidence)
+ *    + `category` (jeu de boutons, décidé par push-niveaux.ts) + `mutable-content` (l'extension
+ *    de service ajoute l'image) ; `apns-priority` 10 sauf silencieux (5, `content-available`).
  * Exporté pour les tests.
  */
 export function construireMessageFcm(token: string, message: MessageNotification): Record<string, unknown> {
@@ -57,6 +59,7 @@ export function construireMessageFcm(token: string, message: MessageNotification
     badge: String(push?.badge ?? 0),
     son: push?.son === false ? "0" : "1",
     langue: message.langue,
+    ...(push?.cleRegroupement ? { cle_regroupement: push.cleRegroupement } : {}),
   };
   if (push?.silencieux) {
     return {
@@ -71,39 +74,30 @@ export function construireMessageFcm(token: string, message: MessageNotification
   }
   const urgent = push?.niveau === "URGENT";
   const son = push?.son !== false;
-  const androidNotification: Record<string, unknown> = {
-    channel_id: push?.canalAndroid ?? "syndicup",
-    notification_priority: urgent ? "PRIORITY_MAX" : push?.niveau === "INFO" || push?.interruption === "passive" ? "PRIORITY_DEFAULT" : "PRIORITY_HIGH",
-    visibility: "PUBLIC",
-    default_vibrate_timings: urgent || son,
-    notification_count: push?.badge ?? undefined,
-    click_action: "FLUTTER_NOTIFICATION_CLICK",
-    ticker: message.titre,
-  };
-  if (son) androidNotification.sound = "default";
-  else androidNotification.default_sound = false;
-  if (push?.cleRegroupement) androidNotification.tag = push.cleRegroupement;
+  const actions = actionsPush(message.templateCode ?? "", donnees);
+  const copro = message.donnees?.copropriete_id;
   const aps: Record<string, unknown> = {
     alert: { title: message.titre, body: message.corps },
     badge: push?.badge ?? undefined,
     "interruption-level": push?.interruption ?? "active",
-    "thread-id": push?.fil ?? "general",
-    category: "SYNDICUP_NOTIFICATION",
+    "thread-id": copro ? `copro:${copro}` : (push?.fil ?? "general"),
+    category: categorieIos(actions),
     "mutable-content": 1,
   };
   if (son) aps.sound = "default";
   return {
     token,
-    notification: { title: message.titre, body: message.corps },
     data: donnees,
     android: {
       priority: "high",
       ...(push?.cleRegroupement ? { collapse_key: push.cleRegroupement } : {}),
-      notification: androidNotification,
+      ...(urgent ? { ttl: "3600s" } : {}),
     },
     apns: {
       headers: { "apns-priority": "10", "apns-push-type": "alert", ...(push?.cleRegroupement ? { "apns-collapse-id": push.cleRegroupement } : {}) },
-      payload: { aps },
+      // `payload` : les données complètes, lues par flutter_local_notifications quand un bouton de
+      // la bannière APNs est touché (Payer / Voter / Appeler / Autoriser).
+      payload: { aps, payload: JSON.stringify(donnees) },
     },
   };
 }

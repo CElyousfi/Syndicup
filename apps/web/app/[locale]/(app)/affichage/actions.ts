@@ -222,6 +222,7 @@ export async function enregistrerPreferences(_prev: FormState, fd: FormData): Pr
     push_info: champ(fd, "push_info") === "on",
     push_son: champ(fd, "push_son") === "on",
     heures_calmes: calmes ? { debut: champ(fd, "heures_calmes_debut") || "22:00", fin: champ(fd, "heures_calmes_fin") || "07:00" } : null,
+    resume_matin: champ(fd, "resume_matin") === "on",
   };
   const res = await apiFetch<PreferencesNotification>("/users/me/preferences-notification", { method: "PUT", body });
   if (!res.ok) return fromApiError(res);
