@@ -7,7 +7,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 
 import '../auth/session.dart';
-import 'api_client.dart';
 import 'api_result.dart';
 
 /// Lectures « stale-while-revalidate » (M26-F) : la dernière réponse connue s'affiche tout de
