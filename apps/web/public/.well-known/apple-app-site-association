@@ -1,0 +1,8 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      { "appID": "TEAMID.ma.syndicup.app", "paths": ["/fr/*", "/ar/*"] }
+    ]
+  }
+}

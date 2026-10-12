@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // apple-app-site-association n'a pas d'extension : Content-Type JSON explicite (Universal Links iOS).
+  async headers() {
+    return [{ source: "/.well-known/apple-app-site-association", headers: [{ key: "Content-Type", value: "application/json" }] }];
+  },
   // Le web ne parle jamais directement à la base : tout passe par l'API (apps/api, port 3001)
   // via les Server Components / Server Actions — le JWT vit dans un cookie httpOnly, jamais
   // exposé au JavaScript client (CLAUDE.md §1.4).

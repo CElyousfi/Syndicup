@@ -11,6 +11,7 @@ import 'core/feel/frame_stats.dart';
 import 'core/i18n/i18n.dart';
 import 'core/push/push_service.dart';
 import 'core/home_widgets/home_widgets.dart';
+import 'core/deeplinks/deeplinks.dart';
 import 'core/live/live_activities.dart';
 import 'core/widgets/illustration.dart';
 
@@ -28,6 +29,7 @@ Future<void> main() async {
   await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));
   await HomeWidgets.instance.init();
   await LiveActivities.instance.init();
+  await DeepLinks.instance.init();
 
   runApp(
     ProviderScope(

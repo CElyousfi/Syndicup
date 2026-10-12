@@ -19,6 +19,7 @@ import UserNotifications
     // Badge d'icône piloté par l'app (compteur de non lues) — canal natif « ma.syndicup.app/badge ».
     if let controller = window?.rootViewController as? FlutterViewController {
       liveActivities.attach(to: controller.binaryMessenger)
+      SpotlightBridge.shared.attach(to: controller.binaryMessenger)
       let badge = FlutterMethodChannel(name: "ma.syndicup.app/badge", binaryMessenger: controller.binaryMessenger)
       badge.setMethodCallHandler { call, result in
         guard call.method == "setBadge" else { result(FlutterMethodNotImplemented); return }
@@ -32,5 +33,11 @@ import UserNotifications
       }
     }
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
+
+  // Spotlight : un résultat touché ouvre l'objet dans l'app (route poussée à Flutter).
+  override func application(_ application: UIApplication, continue userActivity: NSUserActivity, restorationHandler: @escaping ([UIUserActivityRestoring]?) -> Void) -> Bool {
+    if SpotlightBridge.shared.traiter(activity: userActivity) { return true }
+    return super.application(application, continue: userActivity, restorationHandler: restorationHandler)
   }
 }

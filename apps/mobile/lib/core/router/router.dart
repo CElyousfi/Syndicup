@@ -43,6 +43,7 @@ import '../../features/profil/sensations_test_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
 import '../auth/app_state.dart';
+import '../deeplinks/deeplinks.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
 
@@ -115,6 +116,10 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: false,
     redirect: (context, state) {
       final st = ref.read(appStateProvider);
+      // Liens de l'app web (https://app.syndicup.pro/fr/…) et schéma syndicup:/// : le préfixe de
+      // langue est retiré, la langue reste un état de l'app.
+      final sansLangue = DeepLinks.sansLangue(state.uri.path);
+      if (sansLangue != state.uri.path) return Uri(path: sansLangue, query: state.uri.hasQuery ? state.uri.query : null).toString();
       final path = state.uri.path;
       if (st.isLoading || (st.hasError && !st.hasValue)) return path == '/splash' ? null : '/splash';
       final s = st.valueOrNull;
@@ -182,7 +187,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: '/ag/:id/pv', builder: (_, s) => AgPvScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/ag/:id/resolutions/:rid/votes', builder: (_, s) => AgVotesScreen(agId: s.pathParameters['id']!, resolutionId: s.pathParameters['rid']!)),
           GoRoute(path: '/incidents', pageBuilder: (_, s) => tabPage(s, const IncidentsScreen())),
-          GoRoute(path: '/incidents/nouveau', builder: (_, s) => IncidentFormScreen(sejourId: s.uri.queryParameters['sejour'])),
+          GoRoute(path: '/incidents/nouveau', builder: (_, s) => IncidentFormScreen(sejourId: s.uri.queryParameters['sejour'], photoInitiale: s.uri.queryParameters['photo'])),
           GoRoute(path: '/incidents/:id', builder: (_, s) => IncidentDetailScreen(id: s.pathParameters['id']!)),
           GoRoute(path: '/prestataires', builder: (_, __) => const PrestatairesScreen()),
           GoRoute(path: '/payer', builder: (_, __) => const PayerScreen()),

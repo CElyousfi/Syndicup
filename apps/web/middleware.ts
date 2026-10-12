@@ -172,5 +172,7 @@ export const config = {
   // .mjs : worker pdf.js (public/pdf.worker.min.mjs) — actif statique, hors localisation.
   // illustrations/ : images de repos ET animations .json (lib/feel/lottie-art) — jamais localisées.
   // videos/ : illustrations éditoriales animées (.mp4 + première image .jpg).
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|illustrations/|videos/|manifest\\.webmanifest|.*\\.(?:svg|png|jpg|webp|ico|mjs)$).*)"],
+  // `.well-known/` : assetlinks.json (Android App Links) et apple-app-site-association (Universal
+  // Links) doivent être servis bruts, sans redirection de langue ni session.
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|illustrations/|videos/|manifest\\.webmanifest|\\.well-known/|.*\\.(?:svg|png|jpg|webp|ico|mjs)$).*)"],
 };

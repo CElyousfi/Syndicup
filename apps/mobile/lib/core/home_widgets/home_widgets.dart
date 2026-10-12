@@ -137,7 +137,9 @@ class HomeWidgets {
         if (ctx.role != 'GARDIEN' && ctx.role != 'PRESTATAIRE') ShortcutItem(type: 'ag', localizedTitle: md.quickAg, icon: 'ic_quick_ag'),
         ShortcutItem(type: 'affichage', localizedTitle: md.quickAffichage, icon: 'ic_quick_affichage'),
       ];
-      await qa.setShortcutItems(items.take(4).toList());
+      // Android : « Payer » et « Signaler » sont déjà des raccourcis statiques (App Actions, res/xml/shortcuts.xml).
+      final dynamiques = Platform.isAndroid ? items.where((i) => i.type != 'payer' && i.type != 'signaler').take(2) : items.take(4);
+      await qa.setShortcutItems(dynamiques.toList());
     } catch (e) {
       debugPrint('Raccourcis : $e');
     }

@@ -107,7 +107,9 @@ Tone incidentTone(String statut) => switch (statut) {
 
 // ── F2 Signalement guidé ──────────────────────────────────────────────────────
 class IncidentFormScreen extends ConsumerStatefulWidget {
-  const IncidentFormScreen({super.key, this.sejourId});
+  const IncidentFormScreen({super.key, this.sejourId, this.photoInitiale});
+  /// Photo reçue par la cible de partage (chemin local) — pré-remplie dans le formulaire.
+  final String? photoInitiale;
   /// Séjour LCD à lier (deep-link depuis la fiche séjour — M15).
   final String? sejourId;
   @override
@@ -132,6 +134,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.photoInitiale != null && widget.photoInitiale!.isNotEmpty) _photos.add(XFile(widget.photoInitiale!));
     _sejour = widget.sejourId;
   }
 

@@ -40,14 +40,34 @@
             <intent-filter>
                 <action android:name="es.antonborri.home_widget.action.LAUNCH"/>
             </intent-filter>
-            <!-- Lien d'invitation (QR du hall) : https://app.copropriete-maroc.ma/{fr|ar}/invitation/{code} -->
+            <!-- Liens de l'app web (invitation du QR du hall, et toute page) : https://app.syndicup.pro/{fr|ar}/… —
+                 ouverts dans l'app, le routeur retire le préfixe de langue. Vérification Android App Links :
+                 /.well-known/assetlinks.json servi par l'app web (apps/web/public). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
-                <data android:scheme="https" android:host="app.copropriete-maroc.ma" android:pathPrefix="/fr/invitation/"/>
-                <data android:scheme="https" android:host="app.copropriete-maroc.ma" android:pathPrefix="/ar/invitation/"/>
+                <data android:scheme="https" android:host="app.syndicup.pro" android:pathPrefix="/fr/"/>
+                <data android:scheme="https" android:host="app.syndicup.pro" android:pathPrefix="/ar/"/>
             </intent-filter>
+            <!-- Schéma de l'app (Assistant / App Actions, raccourcis, Siri sur iOS) : syndicup:///payer -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="syndicup"/>
+            </intent-filter>
+            <!-- Cible de partage : une photo → signalement d'incident ; un PDF → preuve de paiement. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="image/*"/>
+                <data android:mimeType="application/pdf"/>
+            </intent-filter>
+            <!-- Les liens https/syndicup:// arrivent au routeur Flutter (go_router) comme route initiale. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="true"/>
+            <!-- App Actions (Assistant Google). -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts"/>
         </activity>
         <meta-data
             android:name="flutterEmbedding"

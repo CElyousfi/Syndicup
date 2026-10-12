@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">دفع رسومي</string>
+    <string name="sc_signaler">الإبلاغ عن حادث</string>
+    <string name="sc_ag">الجموع العامة</string>
+    <string name="sc_affichage">لوحة الإعلانات</string>
+    <string-array name="sc_payer_synonymes">
+        <item>دفع الرسوم</item>
+        <item>الدفع</item>
+        <item>الرسوم</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>الإبلاغ عن حادث</item>
+        <item>حادث</item>
+        <item>عطل</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>الجمع العام</item>
+        <item>الجموع العامة</item>
+        <item>التصويت</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>لوحة الإعلانات</item>
+        <item>الإعلانات</item>
+    </string-array>
+</resources>

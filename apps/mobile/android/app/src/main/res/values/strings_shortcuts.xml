@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Payer mes charges</string>
+    <string name="sc_signaler">Signaler un incident</string>
+    <string name="sc_ag">Assemblées</string>
+    <string name="sc_affichage">Tableau d\'affichage</string>
+    <string-array name="sc_payer_synonymes">
+        <item>payer mes charges</item>
+        <item>paiement</item>
+        <item>charges</item>
+        <item>régler mes charges</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>signaler un incident</item>
+        <item>incident</item>
+        <item>panne</item>
+        <item>fuite</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>assemblée générale</item>
+        <item>assemblées</item>
+        <item>AG</item>
+        <item>vote</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>tableau d\'affichage</item>
+        <item>annonces</item>
+        <item>affichage</item>
+    </string-array>
+</resources>
