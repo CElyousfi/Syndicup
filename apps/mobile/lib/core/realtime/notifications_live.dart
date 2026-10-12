@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../api/api_client.dart';
+import '../api/api_result.dart';
+import '../api/swr.dart';
 import '../api/models.dart';
 import '../auth/app_state.dart';
 import '../auth/session.dart';
@@ -187,8 +189,9 @@ final notificationsLiveProvider = NotifierProvider<NotificationsLive, LiveState>
 
 /// Boîte de réception (liste) — invalidée à chaque événement live.
 final notificationsProvider = FutureProvider.autoDispose<List<NotificationItem>>((ref) async {
-  final api = ref.watch(apiClientProvider);
-  final r = await api.get<List<NotificationItem>>('/notifications', parse: (j) => parseList(j, NotificationItem.fromJson));
-  final list = r.dataOrNull ?? const <NotificationItem>[];
-  return list;
+  try {
+    return await swr(ref, '/notifications', parse: (j) => parseList(j, NotificationItem.fromJson));
+  } on ApiException {
+    return const <NotificationItem>[];
+  }
 });

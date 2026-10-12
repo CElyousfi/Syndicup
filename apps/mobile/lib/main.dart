@@ -6,13 +6,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'app.dart';
 import 'core/auth/session.dart';
+import 'core/bootstrap.dart';
 import 'core/feel/feel.dart';
 import 'core/feel/frame_stats.dart';
 import 'core/i18n/i18n.dart';
-import 'core/push/push_service.dart';
-import 'core/home_widgets/home_widgets.dart';
-import 'core/deeplinks/deeplinks.dart';
-import 'core/live/live_activities.dart';
 import 'core/widgets/illustration.dart';
 
 Future<void> main() async {
@@ -26,10 +23,9 @@ Future<void> main() async {
   installFrameStats();
   await SuIllustration.init();
   final session = await SessionStorage().read();
-  await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));
-  await HomeWidgets.instance.init();
-  await LiveActivities.instance.init();
-  await DeepLinks.instance.init();
+  // Le reste (Firebase / notifications, widgets, activités en direct, liens système) attend la
+  // première image : démarrage à froid plus court, rien de perdu (la coque attend Bootstrap.pret).
+  Bootstrap.differe(prefs);
 
   runApp(
     ProviderScope(
