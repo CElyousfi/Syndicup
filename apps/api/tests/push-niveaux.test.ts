@@ -74,7 +74,7 @@ describe("push — niveaux, heures calmes, préférences", () => {
     expect(m.apns.headers).toMatchObject({ "apns-priority": "10", "apns-push-type": "alert", "apns-collapse-id": "incident:i1" });
     expect(m.apns.payload.aps).toMatchObject({ badge: 3, sound: "default", "interruption-level": "time-sensitive", "thread-id": "copro:c1", category: "SYNDICUP_APPELER", "mutable-content": 1, alert: { title: rendu.titre } });
     expect(m.data).toMatchObject({ niveau: "URGENT", canal_android: "syndicup_urgent", fil: "incidents", badge: "3", son: "1", notification_id: "n1", incident_id: "i1", template_code: "INCIDENT_URGENCE_MAXIMALE", langue: "FR", cle_regroupement: "incident:i1", titre: rendu.titre });
-    expect(JSON.parse((m.apns.payload as { payload: string }).payload).incident_id).toBe("i1");
+    expect(JSON.parse((m.apns.payload as unknown as { payload: string }).payload).incident_id).toBe("i1");
 
     const discret = construireMessageFcm("tok", {
       destinataire: { utilisateurId: "u", email: null, telephone: null }, titre: "T", corps: "C", langue: "AR", templateCode: "PV_DISPONIBLE",
