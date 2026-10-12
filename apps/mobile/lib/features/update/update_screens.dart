@@ -78,9 +78,10 @@ class UpdateBanner extends ConsumerWidget {
               const Icon(Icons.system_update_rounded, size: 20, color: SuColors.ink),
               const SizedBox(width: 10),
               Expanded(child: Text(md.updateAvailable, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w600))),
-              TextButton(onPressed: () => _openStore(verdict.storeUrl), child: Text(md.updateButton)),
-              IconButton(
-                icon: const Icon(Icons.close_rounded, size: 20),
+              SuButton(label: md.updateButton, variant: SuButtonVariant.ghost, size: SuButtonSize.sm, onPressed: () => _openStore(verdict.storeUrl)),
+              SuIconButton(
+                icon: Icons.close_rounded,
+                iconSize: 20,
                 tooltip: md.updateLater,
                 onPressed: () => ref.read(updateBannerDismissedProvider.notifier).state = true,
               ),

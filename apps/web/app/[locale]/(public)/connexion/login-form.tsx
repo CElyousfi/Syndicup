@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { Field, Input } from "../../../../components/ui/field";
+import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE } from "../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
@@ -66,10 +67,7 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
         </Field>
 
         <div className="flex items-center justify-between gap-4">
-          <label className="flex cursor-pointer items-center gap-2.5 text-[14px] text-body">
-            <input type="checkbox" name="rester" value="1" defaultChecked className="h-4 w-4 rounded border-hairline-strong accent-[var(--color-action)]" />
-            {dict.auth.rememberMe}
-          </label>
+          <Checkbox name="rester" value="1" defaultChecked label={dict.auth.rememberMe} className="text-[14px] text-body" />
           <Link href={`/${locale}/mot-de-passe-oublie`} className="link text-[14px]">
             {dict.auth.forgotPassword}
           </Link>

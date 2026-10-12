@@ -72,18 +72,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await bio.markAsked();
     if (!mounted) return;
     final md = context.mdict;
-    final yes = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(md.bioEnableTitle),
-        content: Text(md.bioEnableBody),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(md.bioEnableLater)),
-          FilledButton(onPressed: () => Navigator.of(ctx).pop(true), child: Text(md.bioEnableYes)),
-        ],
-      ),
-    );
-    if (yes == true && await bio.authenticate(md.bioUnlockReason)) await bio.setEnabled(true);
+    final yes = await confirmDialog(context, title: md.bioEnableTitle, body: md.bioEnableBody, confirmLabel: md.bioEnableYes);
+    if (yes && await bio.authenticate(md.bioUnlockReason)) await bio.setEnabled(true);
   }
 
   @override
@@ -123,8 +113,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 onSubmitted: (_) => _login(),
                 autofillHints: const [AutofillHints.password],
                 error: invalid ? d.auth.invalidCredentials : fieldError(_fail, 'mot_de_passe'),
-                suffix: IconButton(
-                  icon: Icon(_showPwd ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 20, color: SuColors.faint),
+                suffix: SuIconButton(
+                  icon: _showPwd ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  iconSize: 20,
+                  color: SuColors.faint,
                   onPressed: () => setState(() => _showPwd = !_showPwd),
                 ),
               ),
