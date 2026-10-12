@@ -28,4 +28,12 @@ Vérification rapide sur simulateur : lancer l'app, se connecter, revenir à l'�
 appui long → « + » → SyndicUp → les cinq widgets apparaissent avec les vraies données.
 Écran verrouillé (iOS 16+) : Personnaliser → ajouter « Mes charges » ou « Assemblée ».
 
+## Live Activities (M26)
+
+Runner compile déjà `Runner/LiveActivityBridge.swift` et `Runner/SyndicUpActivityAttributes.swift`
+(ajoutés au projet). Ajoute à la cible **SyndicUpWidgets** : `SyndicUpWidgets/SyndicUpActivityAttributes.swift`
+(copie identique — garde les deux fichiers synchronisés) et `LiveActivityViews.swift`. `Info.plist` de Runner porte déjà
+`NSSupportsLiveActivities`. Les mises à jour arrivent par APNs via FCM (`live_activity_token`) :
+rien à configurer de plus que la clé APNs déjà posée dans Firebase.
+
 Android n'a besoin de rien : tout est dans `android/app/src/main` (receivers, layouts, Kotlin).

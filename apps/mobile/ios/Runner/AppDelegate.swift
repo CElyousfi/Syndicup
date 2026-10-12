@@ -4,6 +4,9 @@ import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
+  // Live Activities (M26) — ios/Runner/LiveActivityBridge.swift.
+  private let liveActivities = LiveActivityBridge()
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
@@ -15,6 +18,7 @@ import UserNotifications
     }
     // Badge d'icône piloté par l'app (compteur de non lues) — canal natif « ma.syndicup.app/badge ».
     if let controller = window?.rootViewController as? FlutterViewController {
+      liveActivities.attach(to: controller.binaryMessenger)
       let badge = FlutterMethodChannel(name: "ma.syndicup.app/badge", binaryMessenger: controller.binaryMessenger)
       badge.setMethodCallHandler { call, result in
         guard call.method == "setBadge" else { result(FlutterMethodNotImplemented); return }

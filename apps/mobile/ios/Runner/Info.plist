@@ -13,6 +13,11 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<!-- Ouverture depuis un widget (home_widget) : syndicup://widget?route=/…&homeWidget -->
+	<!-- Live Activities (M26) : séance d'AG, paiement, incident — écran verrouillé + île dynamique. -->
+	<key>NSSupportsLiveActivities</key>
+	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
