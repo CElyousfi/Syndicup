@@ -128,7 +128,16 @@ jobs:
           cache: true
       - run: flutter pub get
       - name: Analyse statique
-        run: flutter analyze --no-fatal-infos
+        # Les diagnostics sont aussi publiés dans le résumé du job (lisible via l'API, à la
+        # différence des logs bruts hébergés hors GitHub).
+        run: |
+          set +e
+          flutter analyze --no-fatal-infos | tee analyze.txt
+          code=${PIPESTATUS[0]}
+          if [ "$code" != "0" ]; then
+            { echo '### flutter analyze'; echo '```'; grep -E "^\s*(error|warning)" analyze.txt | head -60; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit $code
       - name: Tests
         run: flutter test
       - name: APK debug (vérifie la chaîne Gradle/Kotlin/plugins)
