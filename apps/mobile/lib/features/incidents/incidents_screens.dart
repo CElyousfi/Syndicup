@@ -14,6 +14,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/live/live_activities.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -288,6 +289,13 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
     switch (r) {
       case ApiOk<Incident>(:final data):
         ref.invalidate(incidentsProvider);
+        // M26 — activité en direct : le déclarant voit l'avancement (ouvert → en cours → résolu) sans ouvrir l'app.
+        LiveActivities.instance.suivre(ref,
+            type: 'INCIDENT',
+            objetId: data.id,
+            etat: {'statut': data.statut, 'etape': '0', 'nb_etapes': '3', 'categorie': data.categorie, 'sous_categorie': data.sousCategorie},
+            titre: scinderMessage(context.dict.incidents.signale).$1,
+            corps: data.sousCategorie);
         // Succès plein écran (navigateur racine) posé au-dessus de la fiche qui remplace le formulaire.
         final (titre, corps) = scinderMessage(_urgence == 'URGENCE_MAXIMALE' ? context.dict.incidents.signaleUrgent : context.dict.incidents.signale);
         final racine = Navigator.of(context, rootNavigator: true).context;

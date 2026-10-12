@@ -6,7 +6,7 @@ import type { CanalNotification, NotificationTransport } from "./types";
 import { noopTransport } from "./noop";
 import { resendTransport } from "./resend";
 import { smtpTransport } from "./smtp";
-import { fcmTransport } from "./fcm";
+import { fcmTransport, type EnvoyerBrut } from "./fcm";
 import { devSmsTransport, genericSmsTransport, twilioSmsTransport } from "./sms";
 import { resendFromDe } from "../../config/env";
 
@@ -64,6 +64,12 @@ export function transportPour(canal: CanalNotification): NotificationTransport {
   }
   cache.set(canal, transport);
   return transport;
+}
+
+/** Envoi FCM brut (activités en direct) — null quand FCM n'est pas configuré. */
+export function envoyeurBrutPush(): EnvoyerBrut | null {
+  const t = transportPour("PUSH") as NotificationTransport & { envoyerBrut?: EnvoyerBrut };
+  return t.envoyerBrut ?? null;
 }
 
 /** Réservé aux tests : force la re-résolution des transports. */

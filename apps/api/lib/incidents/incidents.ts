@@ -5,6 +5,7 @@
 import { normaliserImmatriculation } from "../parkings/schemas";
 import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
+import { pousserActivite, etatIncident } from "../notifications/activites";
 import { withTenant } from "../tenant/db";
 import type { TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
@@ -349,6 +350,18 @@ export async function changerStatutIncident(
         },
       }),
     ]);
+    // M26 — activité en direct : étape du ticket (ouvert → en cours → résolu), fin à la clôture.
+    if (statutAvant !== input.statut) {
+      const prestataire = incident.assigneAId ? await db.prestataire.findUnique({ where: { id: incident.assigneAId }, select: { nom: true } }).catch(() => null) : null;
+      await pousserActivite(db, ctx, {
+        type: "INCIDENT",
+        objetId: incidentId,
+        fin: input.statut === "RESOLU" || input.statut === "FERME",
+        etat: etatIncident({ statut: input.statut, categorie: incident.categorie, sousCategorie: incident.sousCategorie, prestataireNom: prestataire?.nom, slaDeadline: incident.slaDeadline }),
+        titre: { FR: input.statut === "RESOLU" ? "Incident résolu" : input.statut === "EN_COURS" ? "Intervention en cours" : input.statut === "FERME" ? "Ticket fermé" : "Incident ouvert", AR: input.statut === "RESOLU" ? "تم حل الحادث" : input.statut === "EN_COURS" ? "التدخل جارٍ" : input.statut === "FERME" ? "أُغلقت التذكرة" : "الحادث مفتوح" },
+        corps: { FR: `${incident.sousCategorie}${prestataire ? ` · ${prestataire.nom}` : ""}`, AR: `${incident.sousCategorie}${prestataire ? ` · ${prestataire.nom}` : ""}` },
+      });
+    }
     // Matrice Master Spec 7.1 : "Changement de statut ticket incident → Push → Créateur du
     // ticket" (pas d'auto-notification si le créateur change lui-même le statut).
     // M22 — hook : incident RESOLU dont la dépense n'est pas encore réglée → tâche « Régler la dépense » (une fois).
@@ -457,6 +470,14 @@ export async function assignerIncident(
             }),
           ]
         : []),
+      // M26 — activité en direct : prestataire assigné (étape « en cours »).
+      pousserActivite(db, ctx, {
+        type: "INCIDENT",
+        objetId: incidentId,
+        etat: etatIncident({ statut: nouveauStatut, categorie: incident.categorie, sousCategorie: incident.sousCategorie, prestataireNom: prestataire.nom, slaDeadline: incident.slaDeadline }),
+        titre: { FR: "Prestataire assigné", AR: "تم تعيين مقدم الخدمة" },
+        corps: { FR: `${prestataire.nom} prend en charge « ${incident.sousCategorie} ».`, AR: `${prestataire.nom} يتكفل بـ « ${incident.sousCategorie} ».` },
+      }),
       ...(nouveauStatut !== statutAvant && incident.creePar !== ctx.utilisateurId
         ? [
             envoyerNotification(db, {

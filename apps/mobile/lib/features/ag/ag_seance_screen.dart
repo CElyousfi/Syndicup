@@ -15,6 +15,7 @@ import '../../core/feel/feel.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
+import '../../core/live/live_activities.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
@@ -32,6 +33,7 @@ class AgSeanceScreen extends ConsumerStatefulWidget {
 
 class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
   Timer? _poll;
+  bool _suivi = false;
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,18 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
     ref.listen(agProvider(widget.id), (_, next) {
       final a = next.valueOrNull;
       if (a != null && a.statut == 'CLOTUREE' && !ctx.isGestion) context.pushReplacement('/ag/${widget.id}/pv');
+      // M26 — activité en direct : la séance suit l'utilisateur sur l'écran verrouillé / l'île dynamique.
+      if (a != null && a.statut == 'EN_COURS' && !_suivi) {
+        _suivi = true;
+        final courante = a.resolutions.where((r) => r.resultat == 'EN_ATTENTE').firstOrNull;
+        final finalisees = a.resolutions.where((r) => r.resultat != 'EN_ATTENTE').length;
+        LiveActivities.instance.suivre(ref,
+            type: 'AG_SEANCE',
+            objetId: a.id,
+            etat: {'statut': 'EN_COURS', 'ordre': '${courante?.ordre ?? ''}', 'nb_resolutions': '${a.resolutions.length}', 'nb_finalisees': '$finalisees', 'texte': courante?.texte ?? '', 'nb_votants': '0'},
+            titre: context.mdict.seanceEnCours,
+            corps: courante?.texte ?? d.ag.seance);
+      }
     });
     return ag.when(
       loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: const [LoadingList(count: 3, height: 150)]),

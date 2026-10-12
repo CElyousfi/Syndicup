@@ -6,6 +6,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
+import { pousserActivite, etatAppelDeFonds } from "../notifications/activites";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
 import { emitEvent } from "../events/emit";
@@ -395,6 +396,20 @@ export async function appliquerPaiement(
         tropPercuAutorise: depasse ? true : undefined,
       },
     });
+
+    // M26 — activité en direct « appel de fonds » : progression dû → payé, fin quand soldé.
+    {
+      const appel = await db.appelDeFonds.findUnique({ where: { id: ligne.appelDeFondsId }, select: { periode: true, dateEcheance: true } });
+      const reste = subtract(ligne.montantDu.toString(), montantPaieMaj.toString());
+      await pousserActivite(db, ctx, {
+        type: "APPEL_DE_FONDS",
+        objetId: ligne.id,
+        fin: nouveauStatut === "PAYE",
+        etat: etatAppelDeFonds({ montantDu: ligne.montantDu.toString(), montantPaye: montantPaieMaj.toString(), statut: nouveauStatut, periode: appel?.periode ?? "", echeance: appel?.dateEcheance.toISOString().slice(0, 10) ?? "" }),
+        titre: { FR: nouveauStatut === "PAYE" ? "Charges réglées" : "Paiement reçu", AR: nouveauStatut === "PAYE" ? "تم تسديد الرسوم" : "تم استلام الدفعة" },
+        corps: { FR: nouveauStatut === "PAYE" ? "Votre quittance est disponible." : `Reste à payer : ${toApiString(reste)} MAD.`, AR: nouveauStatut === "PAYE" ? "وصل الأداء متاح." : `المتبقي: ${toApiString(reste)} MAD.` },
+      });
+    }
 
     let quittance = null;
     if (nouveauStatut === "PAYE") {

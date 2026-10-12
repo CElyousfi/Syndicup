@@ -273,5 +273,6 @@ struct SyndicUpWidgetsBundle: WidgetBundle {
     SyndicUpResidence()
     SyndicUpAffichage()
     SyndicUpGardien()
+    if #available(iOS 16.1, *) { SyndicUpLiveActivity() }
   }
 }

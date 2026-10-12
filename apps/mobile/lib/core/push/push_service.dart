@@ -13,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../api/api_client.dart';
 import '../auth/session.dart';
 import '../config/app_config.dart';
+import '../i18n/i18n.dart';
 import '../i18n/mobile_dict.dart';
 import '../util/notifications_link.dart';
 import 'niveaux.dart';
@@ -67,6 +68,10 @@ class PushService {
 
   bool get firebaseActif => AppConfig.pushEnabled && AppConfig.firebaseAppId.isNotEmpty;
   bool get pret => _localPret;
+
+  /// Jeton FCM de l'appareil (Android : inscription aux activités en direct).
+  String? get token => _token;
+  static const canalDirect = 'syndicup_direct';
 
   Future<void> init({Locale? locale}) async {
     _d = MobileDict.of(locale ?? const Locale('fr'));
@@ -157,6 +162,8 @@ class PushService {
         _Canal(canalAndroidPour(niveauNormal), _d.pushCanalNormal, _d.pushCanalNormalAide, Importance.high, true),
         _Canal(canalAndroidPour(niveauInfo), _d.pushCanalInfo, _d.pushCanalInfoAide, Importance.defaultImportance, false),
         _Canal(canalAndroidPour(niveauSilencieux), _d.pushCanalSilencieux, _d.pushCanalSilencieuxAide, Importance.low, false),
+        // Activités en direct : notification persistante à progression, silencieuse, mise à jour sur place.
+        _Canal(canalDirect, _d.pushCanalDirect, _d.pushCanalDirectAide, Importance.low, false),
       ];
 
   /// Demande l'autorisation système (Android 13+ POST_NOTIFICATIONS, iOS alerte + badge + son).
@@ -307,6 +314,27 @@ class PushService {
   /// Bannière construite depuis les données FCM (Android : seul chemin d'affichage ; iOS : au
   /// premier plan seulement — le système a déjà affiché l'alerte APNs en arrière-plan).
   Future<void> afficherDepuisPush(Map<String, dynamic> data, {bool arrierePlan = false}) async {
+    // Mise à jour d'une activité en direct (Android) : la notification persistante, pas une bannière.
+    if (data['activite_type'] != null) {
+      if (arrierePlan) {
+        _d = MobileDict.of(Locale(data['langue']?.toString().toLowerCase() == 'ar' ? 'ar' : 'fr'));
+        await _initLocal();
+      }
+      Map<String, String> etat = const {};
+      try {
+        final j = jsonDecode(data['activite_etat']?.toString() ?? '{}');
+        if (j is Map) etat = {for (final e in j.entries) e.key.toString(): e.value?.toString() ?? ''};
+      } catch (_) {}
+      await afficherActivite(
+        type: data['activite_type'].toString(),
+        objetId: data['activite_objet_id']?.toString() ?? '',
+        etat: etat,
+        titre: data['titre']?.toString() ?? '',
+        corps: data['corps']?.toString() ?? '',
+        fin: data['activite_fin'] == '1',
+      );
+      return;
+    }
     final template = data['template_code']?.toString() ?? '';
     final niveau = niveauPour(data['niveau']?.toString(), template);
     final badge = int.tryParse(data['badge']?.toString() ?? '');
@@ -338,6 +366,52 @@ class PushService {
       groupeNom: data['copropriete_nom']?.toString(),
       imageUrl: data['image_url']?.toString(),
     );
+  }
+
+  /// Notification persistante d'une activité en direct (Android) : progression, mise à jour sur
+  /// place sans son (`onlyAlertOnce`), retirée 15 min après la fin (dernier état visible).
+  Future<void> afficherActivite({required String type, required String objetId, required Map<String, String> etat, required String titre, required String corps, bool fin = false}) async {
+    if (!_localPret || Platform.isIOS) return;
+    final id = 'activite:$objetId'.hashCode;
+    final progression = progressionActivite(type, etat);
+    final path = switch (type) {
+      'AG_SEANCE' => '/ag/$objetId/seance',
+      'INCIDENT' => '/incidents/$objetId',
+      _ => etat['lot_id'] != null ? '/lots/${etat['lot_id']}?onglet=finances' : '/finances/appels-de-fonds',
+    };
+    final android = AndroidNotificationDetails(
+      canalDirect,
+      _d.pushCanalDirect,
+      channelDescription: _d.pushCanalDirectAide,
+      importance: Importance.low,
+      priority: Priority.low,
+      ongoing: !fin,
+      autoCancel: fin,
+      onlyAlertOnce: true,
+      showProgress: progression != null,
+      maxProgress: 100,
+      progress: ((progression ?? 0) * 100).round(),
+      indeterminate: false,
+      category: AndroidNotificationCategory.progress,
+      visibility: NotificationVisibility.public,
+      color: const Color(0xFF1E7552),
+      subText: sousTitreActivite(type, etat, _d),
+      styleInformation: BigTextStyleInformation(corps, contentTitle: titre),
+      timeoutAfter: fin ? 15 * 60 * 1000 : null,
+      actions: [AndroidNotificationAction('VOIR', _d.open, showsUserInterface: true)],
+    );
+    try {
+      await _local.show(id, titre, corps, NotificationDetails(android: android), payload: jsonEncode({'path': path}));
+    } catch (e) {
+      debugPrint('Activité en direct : affichage impossible ($e)');
+    }
+  }
+
+  Future<void> retirerActivite(String objetId) async {
+    if (!_localPret) return;
+    try {
+      await _local.cancel('activite:$objetId'.hashCode);
+    } catch (_) {}
   }
 
   /// Badge d'icône : iOS via le canal natif (l'API pose aussi `aps.badge`) ; Android = compteur
@@ -532,4 +606,34 @@ class _Canal {
   final Importance importance;
   final bool son;
   const _Canal(this.id, this.nom, this.description, this.importance, this.son);
+}
+
+/// Part accomplie d'une activité (0..1) — null si l'objet n'a pas de progression (AG sans résolution).
+double? progressionActivite(String type, Map<String, String> etat) {
+  switch (type) {
+    case 'APPEL_DE_FONDS':
+      return double.tryParse(etat['progression'] ?? '');
+    case 'INCIDENT':
+      final e = int.tryParse(etat['etape'] ?? '') ?? 0;
+      final n = int.tryParse(etat['nb_etapes'] ?? '') ?? 3;
+      return n > 0 ? (e / n).clamp(0, 1).toDouble() : null;
+    case 'AG_SEANCE':
+      final f = int.tryParse(etat['nb_finalisees'] ?? '') ?? 0;
+      final n = int.tryParse(etat['nb_resolutions'] ?? '') ?? 0;
+      return n > 0 ? (f / n).clamp(0, 1).toDouble() : null;
+  }
+  return null;
+}
+
+/// Sous-titre court de la notification persistante (résolution n/N, reste à payer, étape).
+String sousTitreActivite(String type, Map<String, String> etat, MobileDict d) {
+  switch (type) {
+    case 'AG_SEANCE':
+      return etat['statut'] == 'CLOTUREE' ? d.liveTermine : fill(d.liveResolution, {'n': etat['ordre'] ?? '', 'total': etat['nb_resolutions'] ?? ''});
+    case 'APPEL_DE_FONDS':
+      return etat['statut'] == 'PAYE' ? d.livePaye : fill(d.liveReste, {'montant': etat['reste'] ?? ''});
+    case 'INCIDENT':
+      return fill(d.liveEtape, {'n': '${(int.tryParse(etat['etape'] ?? '') ?? 0) + 1}', 'total': etat['nb_etapes'] ?? '3'});
+  }
+  return '';
 }

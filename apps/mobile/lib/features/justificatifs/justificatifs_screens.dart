@@ -11,6 +11,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/live/live_activities.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
@@ -265,6 +266,15 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
                   switch (r) {
                     case ApiOk<Map<String, dynamic>>():
                       widget.onDone();
+                      // M26 — activité en direct : la ligne d'appel suit le résident jusqu'au « Réglé ».
+                      if (r.data['appel_de_fonds_lot_id'] is String) {
+                        LiveActivities.instance.suivre(ref,
+                            type: 'APPEL_DE_FONDS',
+                            objetId: r.data['appel_de_fonds_lot_id'] as String,
+                            etat: {'statut': 'EN_ATTENTE', 'lot_id': _lot!.id},
+                            titre: j.declare,
+                            corps: j.declareAide);
+                      }
                       // Succès plein écran Wise (virement déclaré / espèces reçues).
                       final racine = Navigator.of(this.context, rootNavigator: true).context;
                       Navigator.pop(context);

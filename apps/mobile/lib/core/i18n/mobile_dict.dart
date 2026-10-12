@@ -168,11 +168,21 @@ class MobileDict {
     this.pushPayer = '',
     this.pushVoter = '',
     this.pushAppeler = '',
+    this.pushCanalDirect = '',
+    this.pushCanalDirectAide = '',
+    this.liveTermine = '',
+    this.liveResolution = '',
+    this.livePaye = '',
+    this.liveReste = '',
+    this.liveEtape = '',
+    this.liveSuivre = '',
+    this.liveSuivi = '',
   });
 
   final String bioEnableTitle, bioEnableBody, bioEnableYes, bioEnableLater, bioUnlockReason, bioUnlockButton, bioUseOther, bioSetting,
       updateRequiredTitle, updateRequiredBody, updateButton, updateAvailable, updateLater;
   final String pushAutoriser, pushRefuser, pushPayer, pushVoter, pushAppeler;
+  final String pushCanalDirect, pushCanalDirectAide, liveTermine, liveResolution, livePaye, liveReste, liveEtape, liveSuivre, liveSuivi;
   final String widgetCharges, widgetAJour, widgetEnRetard, widgetEcheanceAujourdhui, widgetEcheanceDans, widgetAg, widgetAucuneAg, widgetEnDirect, widgetAgAujourdhui, widgetAgDemain, widgetAgDans, widgetVotees, widgetResolutions, widgetVoter, widgetOuvrir, widgetResidence, widgetRecouvrement, widgetImpayes, widgetIncidents, widgetSla, widgetAValider, widgetAffichage, widgetNonLues, widgetToutLu, widgetAucuneAnnonce, widgetGardien, widgetVisiteurs, widgetArrivees, widgetDeparts, widgetMisAJour, widgetIlYAMin, widgetIlYAH, widgetIlYAJ, quickPayer, quickEncaisser, quickSignaler, quickAg, quickAffichage, quickVisiteur;
 
   final String welcomeTitle, welcomeBody, haveCode, offline, online, queueTitle, queueLocal, queueHint, pendingSend, synced, worksOffline,
@@ -318,6 +328,15 @@ class MobileDict {
     pushPayer: 'Payer',
     pushVoter: 'Voter',
     pushAppeler: 'Appeler',
+    pushCanalDirect: 'En direct',
+    pushCanalDirectAide: "Séance d’AG, paiement en cours, suivi d’incident : une seule notification mise à jour sur place, sans son.",
+    liveTermine: 'Séance terminée',
+    liveResolution: 'Résolution {n} / {total}',
+    livePaye: 'Réglé',
+    liveReste: 'Reste {montant} MAD',
+    liveEtape: 'Étape {n} / {total}',
+    liveSuivre: 'Suivre en direct',
+    liveSuivi: "Suivi en direct activé : vous verrez l’avancement sur l’écran verrouillé.",
     pushMarquerLu: 'Marquer comme lu',
     pushCanalUrgent: 'Urgences',
     pushCanalUrgentAide: 'Visiteur à la porte, incident grave, impayé avancé — toujours livrées, même en mode Ne pas déranger.',
@@ -481,6 +500,15 @@ class MobileDict {
     pushPayer: 'الدفع',
     pushVoter: 'التصويت',
     pushAppeler: 'الاتصال',
+    pushCanalDirect: 'مباشر',
+    pushCanalDirectAide: 'جلسة الجمع العام، دفعة جارية، متابعة حادث: إشعار واحد يُحدَّث في مكانه، بلا صوت.',
+    liveTermine: 'انتهت الجلسة',
+    liveResolution: 'القرار {n} / {total}',
+    livePaye: 'مُسدَّد',
+    liveReste: 'المتبقي {montant} MAD',
+    liveEtape: 'المرحلة {n} / {total}',
+    liveSuivre: 'متابعة مباشرة',
+    liveSuivi: 'المتابعة المباشرة مفعّلة: سترون التقدم على شاشة القفل.',
     pushMarquerLu: 'وضع علامة مقروء',
     pushCanalUrgent: 'الحالات العاجلة',
     pushCanalUrgentAide: 'زائر عند الباب، عطب خطير، متأخرات متقدمة — تُرسل دائمًا حتى في وضع عدم الإزعاج.',

@@ -21,3 +21,13 @@ export const appareilPushCreateSchema = z.object({
   version_app: z.string().max(40).nullish(),
 });
 export type AppareilPushCreateInput = z.infer<typeof appareilPushCreateSchema>;
+
+/** M26 — Inscription d'un téléphone à une activité en direct (Live Activity iOS / notification persistante Android). */
+export const activiteDirectCreateSchema = z.object({
+  type: z.enum(["AG_SEANCE", "APPEL_DE_FONDS", "INCIDENT"]),
+  objet_id: z.string().uuid(),
+  /** iOS : jeton ActivityKit de l'activité ; Android : jeton FCM de l'appareil. */
+  token: z.string().min(20).max(4096),
+  plateforme: z.enum(["ANDROID", "IOS"]),
+});
+export type ActiviteDirectCreateInput = z.infer<typeof activiteDirectCreateSchema>;

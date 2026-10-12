@@ -3772,6 +3772,69 @@ paths:
                   data: { $ref: "#/components/schemas/AppareilPush" }
         "400": { $ref: "#/components/responses/ValidationError" }
 
+  /users/me/appareils/activite:
+    post:
+      tags: [Utilisateurs]
+      summary: >
+        Le téléphone suit un objet en direct (M26) : séance d'AG, ligne d'appel de fonds ou incident.
+        iOS : jeton ActivityKit de la Live Activity (mises à jour poussées en push-type liveactivity,
+        île dynamique) ; Android : jeton FCM de l'appareil (notification persistante à progression,
+        mise à jour par données seules). Idempotent par (type, objet, plateforme) — le jeton est
+        rafraîchi. Terminée automatiquement à la dernière mise à jour de l'objet.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, objet_id, token, plateforme]
+              properties:
+                type: { type: string, enum: [AG_SEANCE, APPEL_DE_FONDS, INCIDENT] }
+                objet_id: { type: string, format: uuid, description: "AG, appel_de_fonds_lot ou incident." }
+                token: { type: string, minLength: 20, maxLength: 4096 }
+                plateforme: { type: string, enum: [ANDROID, IOS] }
+      responses:
+        "201":
+          description: Inscription enregistrée (ou rafraîchie).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      type: { type: string }
+                      objet_id: { type: string, format: uuid }
+                      plateforme: { type: string }
+                      cree_le: { type: string, format: date-time }
+                      terminee_le: { type: string, format: date-time, nullable: true }
+        "400": { $ref: "#/components/responses/ValidationError" }
+
+  /users/me/appareils/activite/{id}:
+    delete:
+      tags: [Utilisateurs]
+      summary: L'utilisateur a fermé l'activité en direct — ses propres inscriptions uniquement (M26).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Retirée.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      supprime: { type: boolean }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /users/me/appareils/{token}:
     delete:
       tags: [Utilisateurs]
