@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="w_charges_label">رسومي</string>
+    <string name="w_charges_desc">الرصيد، الاستحقاق القادم وزر الدفع.</string>
+    <string name="w_ag_label">الجمع العام</string>
+    <string name="w_ag_desc">الجمع القادم، العد التنازلي، التصويت أثناء الجلسة.</string>
+    <string name="w_residence_label">إقامتي</string>
+    <string name="w_residence_desc">التحصيل، المتأخرات، الحوادث، الحجوزات للمصادقة.</string>
+    <string name="w_affichage_label">لوحة الإعلانات</string>
+    <string name="w_affichage_desc">آخر إعلانات الإقامة.</string>
+    <string name="w_gardien_label">الحراسة</string>
+    <string name="w_gardien_desc">زوار في الانتظار، وصول اليوم، الإبلاغ.</string>
+    <string name="w_sign_in">افتحوا SyndicUp لتسجيل الدخول.</string>
+    <string name="w_open">فتح</string>
+    <string name="w_toggle_amounts">إخفاء أو إظهار المبالغ</string>
+</resources>

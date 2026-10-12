@@ -18,6 +18,7 @@ import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
+import '../../core/home_widgets/home_widgets.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../../core/theme/motion.dart';
@@ -85,6 +86,17 @@ class _AppShellState extends ConsumerState<AppShell> {
       // Notification qui a lancé l'app (app fermée) : on ouvre l'objet concerné.
       final initial = push.prendreCheminInitial();
       if (initial != null && mounted) GoRouter.of(context).push(initial);
+      // Widgets d'écran d'accueil + raccourcis d'icône : ouverture ciblée, données à jour, menu par rôle.
+      final hw = HomeWidgets.instance;
+      hw.onOpen = (p) {
+        if (mounted) GoRouter.of(context).push(p);
+      };
+      final depuisWidget = hw.prendreCheminInitial();
+      if (depuisWidget != null && mounted) GoRouter.of(context).push(depuisWidget);
+      hw.refresh(ref, force: true);
+      hw.setQuickActions(ctx, context.mdict, open: (p) {
+        if (mounted) GoRouter.of(context).push(p);
+      });
       // Membre de cabinet sans rôle de copropriété (M25) : pas d'enregistrement push tenant.
       if (!ctx.isMembreCabinetSeul) PushService.instance.registerToken(ref.read(apiClientProvider), langue: ctx.profil.languePreferee);
       // Le gardien rejoue sa file de visites dès l'ouverture et met en cache les lots
@@ -116,6 +128,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   void _onLive(LiveEvent e) {
     ref.invalidate(notificationsProvider);
     final t = e.templateCode;
+    if (HomeWidgets.concerne(t)) HomeWidgets.instance.refresh(ref);
     if (t.startsWith('VISITE_')) ref.invalidate(visitesProvider);
     if (t.startsWith('INCIDENT_')) ref.invalidate(incidentsProvider);
     if (t.startsWith('AG_') || t == 'PV_DISPONIBLE') ref.invalidate(agListProvider);

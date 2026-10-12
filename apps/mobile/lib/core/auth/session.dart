@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../home_widgets/home_widgets.dart';
 
 /// Session locale : jetons Supabase (rotatifs) + copropriété active. Stockés dans le trousseau
 /// (Keychain / EncryptedSharedPreferences), jamais en clair.
@@ -100,6 +101,8 @@ class SessionController extends Notifier<Session?> implements TokenSource {
   Future<void> signOut() async {
     state = null;
     await _storage.clear();
+    // Plus aucune donnée personnelle sur l'écran d'accueil ni dans les raccourcis.
+    await HomeWidgets.instance.clear();
   }
 
   @override

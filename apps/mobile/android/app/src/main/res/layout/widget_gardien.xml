@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/w_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/w_bg" android:orientation="vertical" android:paddingStart="16dp" android:paddingEnd="16dp" android:paddingTop="14dp" android:paddingBottom="14dp">
+    
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical">
+        <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/w_ic_building" android:contentDescription="@null"/>
+        <TextView android:id="@+id/w_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:layout_marginStart="6dp" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_soft" android:textSize="11sp" android:textStyle="bold" android:textAllCaps="true" android:letterSpacing="0.04"/>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="10dp">
+        
+        <LinearLayout android:id="@+id/w_t1_tile" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"
+            android:background="@drawable/w_bg_tile" android:padding="8dp" android:layout_marginEnd="6dp">
+            <TextView android:id="@+id/w_t1_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_ink" android:textSize="15sp" android:textStyle="bold" android:textDirection="ltr" android:gravity="start"/>
+            <TextView android:id="@+id/w_t1_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_soft" android:textSize="10sp"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/w_t2_tile" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"
+            android:background="@drawable/w_bg_tile" android:padding="8dp" android:layout_marginEnd="6dp">
+            <TextView android:id="@+id/w_t2_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_ink" android:textSize="15sp" android:textStyle="bold" android:textDirection="ltr" android:gravity="start"/>
+            <TextView android:id="@+id/w_t2_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_soft" android:textSize="10sp"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/w_t3_tile" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical"
+            android:background="@drawable/w_bg_tile" android:padding="8dp" android:layout_marginEnd="6dp">
+            <TextView android:id="@+id/w_t3_value" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_ink" android:textSize="15sp" android:textStyle="bold" android:textDirection="ltr" android:gravity="start"/>
+            <TextView android:id="@+id/w_t3_label" android:layout_width="match_parent" android:layout_height="wrap_content" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_soft" android:textSize="10sp"/>
+        </LinearLayout>
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:layout_marginTop="10dp">
+        <TextView android:id="@+id/w_cta" android:layout_width="0dp" android:layout_weight="1" android:layout_height="34dp" android:gravity="center" android:singleLine="true" android:ellipsize="end"
+            android:background="@drawable/w_bg_cta" android:textColor="@color/w_on_cta" android:textSize="13sp" android:textStyle="bold"/>
+        <TextView android:id="@+id/w_cta2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="34dp" android:layout_marginStart="8dp" android:gravity="center" android:singleLine="true" android:ellipsize="end"
+            android:background="@drawable/w_bg_tile" android:textColor="@color/w_ink" android:textSize="13sp" android:textStyle="bold"/>
+    </LinearLayout>
+</LinearLayout>

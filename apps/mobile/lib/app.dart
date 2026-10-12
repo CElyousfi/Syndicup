@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/auth/app_state.dart';
 import 'core/auth/biometric_lock.dart';
 import 'core/auth/session.dart';
 import 'core/feel/feel.dart';
@@ -10,6 +11,7 @@ import 'core/i18n/i18n.dart';
 import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/update_gate.dart';
+import 'core/home_widgets/home_widgets.dart';
 import 'features/auth/lock_screen.dart';
 import 'features/auth/welcome_screen.dart';
 import 'features/update/update_screens.dart';
@@ -29,6 +31,8 @@ class _SyndicUpAppState extends ConsumerState<SyndicUpApp> {
       Feel.onResume();
       ref.read(lockedProvider.notifier).onResumed();
       ref.invalidate(updateVerdictProvider);
+      // Widgets d'écran d'accueil : relus au retour (si une session est ouverte et le contexte prêt).
+      if (ref.read(sessionProvider) != null && ref.read(appStateProvider).valueOrNull is AppReady) HomeWidgets.instance.refresh(ref);
     },
     onPause: () => ref.read(lockedProvider.notifier).onPaused(),
   );

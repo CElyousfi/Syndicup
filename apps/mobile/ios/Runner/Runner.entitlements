@@ -9,5 +9,10 @@
 	     coché dans le portail développeur Apple (Time Sensitive Notifications) pour l'App ID ma.syndicup.app. -->
 	<key>com.apple.developer.usernotifications.time-sensitive</key>
 	<true/>
+	<!-- Stockage partagé app ↔ extension de widgets (home_widget). À cocher aussi pour l'App ID. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.ma.syndicup.app</string>
+	</array>
 </dict>
 </plist>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Libellés du sélecteur de widgets (le contenu des widgets vient de l'app, déjà traduit). -->
+<resources>
+    <string name="w_charges_label">Mes charges</string>
+    <string name="w_charges_desc">Solde, prochaine échéance et bouton Payer.</string>
+    <string name="w_ag_label">Assemblée</string>
+    <string name="w_ag_desc">Prochaine AG, compte à rebours, vote en séance.</string>
+    <string name="w_residence_label">Ma résidence</string>
+    <string name="w_residence_desc">Recouvrement, impayés, incidents, réservations à valider.</string>
+    <string name="w_affichage_label">Affichage</string>
+    <string name="w_affichage_desc">Les dernières annonces de la résidence.</string>
+    <string name="w_gardien_label">Loge</string>
+    <string name="w_gardien_desc">Visiteurs en attente, arrivées du jour, signalement.</string>
+    <string name="w_sign_in">Ouvrez SyndicUp pour vous connecter.</string>
+    <string name="w_open">Ouvrir</string>
+    <string name="w_toggle_amounts">Masquer ou afficher les montants</string>
+</resources>

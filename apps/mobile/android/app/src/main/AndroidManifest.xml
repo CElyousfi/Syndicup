@@ -36,6 +36,10 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Ouverture depuis un widget d'écran d'accueil (home_widget) : syndicup://widget?route=/… -->
+            <intent-filter>
+                <action android:name="es.antonborri.home_widget.action.LAUNCH"/>
+            </intent-filter>
             <!-- Lien d'invitation (QR du hall) : https://app.copropriete-maroc.ma/{fr|ar}/invitation/{code} -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
@@ -48,6 +52,31 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+        <!-- Widgets d'écran d'accueil (contenu écrit par l'app : lib/core/widget/home_widgets.dart). -->
+        <receiver android:name=".widgets.ChargesWidget" android:exported="true" android:label="@string/w_charges_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_charges_info"/>
+        </receiver>
+        <receiver android:name=".widgets.AgWidget" android:exported="true" android:label="@string/w_ag_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ag_info"/>
+        </receiver>
+        <receiver android:name=".widgets.ResidenceWidget" android:exported="true" android:label="@string/w_residence_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_residence_info"/>
+        </receiver>
+        <receiver android:name=".widgets.AffichageWidget" android:exported="true" android:label="@string/w_affichage_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_affichage_info"/>
+        </receiver>
+        <receiver android:name=".widgets.GardienWidget" android:exported="true" android:label="@string/w_gardien_label">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE"/></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_gardien_info"/>
+        </receiver>
+        <!-- Bouton « œil » des widgets : bascule sans ouvrir l'app (callback Dart en arrière-plan). -->
+        <receiver android:name="es.antonborri.home_widget.HomeWidgetBackgroundReceiver" android:exported="true">
+            <intent-filter><action android:name="es.antonborri.home_widget.action.BACKGROUND"/></intent-filter>
+        </receiver>
         <!-- Push FCM affiché par le système (app en arrière-plan) : canal par défaut, icône de barre d'état, couleur. -->
         <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="syndicup"/>
         <meta-data android:name="com.google.firebase.messaging.default_notification_icon" android:resource="@drawable/ic_stat_syndicup"/>

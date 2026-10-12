@@ -1,0 +1,11 @@
+"w_charges_label" = "Mes charges";
+"w_charges_desc" = "Solde, prochaine échéance et bouton Payer.";
+"w_ag_label" = "Assemblée";
+"w_ag_desc" = "Prochaine AG, compte à rebours, vote en séance.";
+"w_residence_label" = "Ma résidence";
+"w_residence_desc" = "Recouvrement, impayés, incidents, réservations à valider.";
+"w_affichage_label" = "Affichage";
+"w_affichage_desc" = "Les dernières annonces de la résidence.";
+"w_gardien_label" = "Loge";
+"w_gardien_desc" = "Visiteurs en attente, arrivées du jour, signalement.";
+"w_sign_in" = "Ouvrez SyndicUp pour vous connecter.";
