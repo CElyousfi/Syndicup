@@ -112,6 +112,10 @@ jobs:
   # Les builds signés (AAB/IPA) se font hors CI tant que les comptes stores ne sont pas ouverts (M14).
   mobile-flutter:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
     defaults:
       run:
         working-directory: apps/mobile
