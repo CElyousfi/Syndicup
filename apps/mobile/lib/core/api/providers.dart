@@ -6,10 +6,14 @@ import '../format/centimes.dart';
 import 'api_client.dart';
 import 'api_result.dart';
 import 'models.dart';
+import 'swr.dart';
 
 /// Lectures (server state) — un provider par ressource, invalidé de façon ciblée après chaque
 /// mutation (`ref.invalidate(...)`), jamais de refetch global (Master Spec 11.5). Aucune
-/// donnée financière n'est mise en cache au-delà de l'écran (autoDispose).
+/// donnée financière n'est mise en cache au-delà de l'écran (autoDispose) : la synthèse passe
+/// par `swr(..., disque: false)` (mémoire seule) ; les lectures non financières du tableau de
+/// bord (lots, AG, incidents, annonces, documents) sont servies d'abord depuis la dernière copie
+/// sur le téléphone puis revalidées (swr.dart — M26-F).
 
 final profilProvider = FutureProvider.autoDispose<Profil>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/users/me', parse: (j) => Profil.fromJson(asMap(j))));
@@ -42,7 +46,7 @@ final logoUrlProvider = FutureProvider.autoDispose.family<String?, String>((ref,
 });
 
 final lotsProvider = FutureProvider.autoDispose<List<Lot>>((ref) async {
-  return unwrap(await ref.watch(apiClientProvider).get('/lots', query: {'limit': 100}, parse: (j) => parseList(j, Lot.fromJson)));
+  return swr(ref, '/lots', query: {'limit': 100}, parse: (j) => parseList(j, Lot.fromJson));
 });
 
 final lotProvider = FutureProvider.autoDispose.family<Lot, String>((ref, id) async {
@@ -54,12 +58,16 @@ final soldeLotProvider = FutureProvider.autoDispose.family<SoldeLot, String>((re
 });
 
 final syntheseProvider = FutureProvider.autoDispose<SyntheseFinanciere>((ref) async {
-  final r = await ref.watch(apiClientProvider).get<SyntheseFinanciere>('/finances/synthese', parse: (j) => SyntheseFinanciere.fromJson(asMap(j)));
-  // Rôles sans lecture financière (gardien, prestataire) : synthèse vide plutôt qu'une erreur.
-  // Toute autre erreur (réseau, 401, 500) remonte : jamais un état « aucun appel » mensonger mis
-  // en cache — AsyncView affiche alors « Réessayer ».
-  if (r is ApiFail<SyntheseFinanciere> && r.status == 403) return const SyntheseFinanciere();
-  return unwrap(r);
+  try {
+    // Mémoire seule (jamais sur le disque) : instantané entre deux onglets, revalidé en arrière-plan.
+    return await swr(ref, '/finances/synthese', disque: false, parse: (j) => SyntheseFinanciere.fromJson(asMap(j)));
+  } on ApiException catch (e) {
+    // Rôles sans lecture financière (gardien, prestataire) : synthèse vide plutôt qu'une erreur.
+    // Toute autre erreur (réseau, 401, 500) remonte : jamais un état « aucun appel » mensonger mis
+    // en cache — AsyncView affiche alors « Réessayer ».
+    if (e.status == 403) return const SyntheseFinanciere();
+    rethrow;
+  }
 });
 
 final budgetsProvider = FutureProvider.autoDispose<List<BudgetAg>>((ref) async {
@@ -89,7 +97,7 @@ final contestationsProvider = FutureProvider.autoDispose<List<Contestation>>((re
 });
 
 final agListProvider = FutureProvider.autoDispose<List<AssembleeGenerale>>((ref) async {
-  return unwrap(await ref.watch(apiClientProvider).get('/ag', query: {'limit': 50}, parse: (j) => parseList(j, AssembleeGenerale.fromJson)));
+  return swr(ref, '/ag', query: {'limit': 50}, parse: (j) => parseList(j, AssembleeGenerale.fromJson));
 });
 
 final agProvider = FutureProvider.autoDispose.family<AssembleeGenerale, String>((ref, id) async {
@@ -115,7 +123,7 @@ final agPvProvider = FutureProvider.autoDispose.family<AgPv, String>((ref, id) a
 });
 
 final incidentsProvider = FutureProvider.autoDispose<List<Incident>>((ref) async {
-  return unwrap(await ref.watch(apiClientProvider).get('/incidents', query: {'limit': 100}, parse: (j) => parseList(j, Incident.fromJson)));
+  return swr(ref, '/incidents', query: {'limit': 100}, parse: (j) => parseList(j, Incident.fromJson));
 });
 
 final incidentProvider = FutureProvider.autoDispose.family<Incident, String>((ref, id) async {
@@ -169,7 +177,7 @@ final planningProvider = FutureProvider.autoDispose.family<PlanningSemaine, Stri
 // ── M21 — Communication ──────────────────────────────────────────────────────
 /// Annonces visibles (épinglées d'abord) ; clé = catégorie ou null.
 final annoncesProvider = FutureProvider.autoDispose.family<List<Annonce>, String?>((ref, categorie) async {
-  return unwrap(await ref.watch(apiClientProvider).get('/annonces', query: {'limit': 50, if (categorie != null) 'categorie': categorie}, parse: (j) => parseList(j, Annonce.fromJson)));
+  return swr(ref, '/annonces', query: {'limit': 50, if (categorie != null) 'categorie': categorie}, parse: (j) => parseList(j, Annonce.fromJson));
 });
 /// Nombre d'annonces non lues (badge) — `meta.total` de la liste filtrée.
 final annoncesNonLuesProvider = FutureProvider.autoDispose<int>((ref) async {
@@ -272,8 +280,11 @@ final reservationsProvider = FutureProvider.autoDispose<List<Reservation>>((ref)
 });
 
 final documentsProvider = FutureProvider.autoDispose<List<DocumentCopro>>((ref) async {
-  final r = await ref.watch(apiClientProvider).get<List<DocumentCopro>>('/documents', parse: (j) => parseList(j, DocumentCopro.fromJson));
-  return r.dataOrNull ?? const [];
+  try {
+    return await swr(ref, '/documents', parse: (j) => parseList(j, DocumentCopro.fromJson));
+  } on ApiException {
+    return const [];
+  }
 });
 
 final litigesProvider = FutureProvider.autoDispose<List<Litige>>((ref) async {

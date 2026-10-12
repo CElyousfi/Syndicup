@@ -12,6 +12,7 @@ import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
+import '../../core/bootstrap.dart';
 import '../../core/feel/feel.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
@@ -76,6 +77,9 @@ class _AppShellState extends ConsumerState<AppShell> {
     _sub = ref.read(notificationsLiveProvider.notifier).events.listen(_onLive);
     // Push : jeton d'appareil enregistré côté API (no-op si Firebase absent du build).
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Les services différés (push, widgets, liens) doivent être prêts avant de lire un chemin d'ouverture.
+      await Bootstrap.pret;
+      if (!mounted) return;
       final ctx = ref.read(appContextProvider);
       final push = PushService.instance;
       push.onOpen = (p) => GoRouter.of(context).push(p);

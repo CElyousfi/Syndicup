@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/api_client.dart';
 import '../api/models.dart';
+import '../api/swr.dart';
 import '../home_widgets/home_widgets.dart';
 
 /// Session locale : jetons Supabase (rotatifs) + copropriété active. Stockés dans le trousseau
@@ -103,6 +104,7 @@ class SessionController extends Notifier<Session?> implements TokenSource {
     await _storage.clear();
     // Plus aucune donnée personnelle sur l'écran d'accueil ni dans les raccourcis.
     await HomeWidgets.instance.clear();
+    await ReadCache.instance.clear();
   }
 
   @override
