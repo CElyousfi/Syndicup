@@ -28,4 +28,18 @@ void main() {
     expect(PreferencesNotification.fromJson({'heures_calmes': {'debut': 22}}).heuresCalmes, isNull);
     expect(const PreferencesNotification().toJson()['heures_calmes'], isNull);
   });
+
+  test('boutons de notification : miroir du serveur (porte, argent, séance, prestataire, défaut)', () {
+    expect(actionsPour('VISITE_NOUVELLE', {'visite_id': 'v'}), ['AUTORISER', 'REFUSER']);
+    expect(actionsPour('VISITE_NOUVELLE', {}), ['VOIR', 'MARQUER_LU']);
+    expect(actionsPour('IMPAYE_N2', {}), ['PAYER', 'VOIR']);
+    expect(actionsPour('AG_OUVERTE', {'ag_id': 'a'}), ['VOTER', 'VOIR']);
+    expect(actionsPour('INCIDENT_STATUT_CHANGE', {'prestataire_tel': '06'}), ['APPELER', 'VOIR']);
+    expect(actionsPour('PV_DISPONIBLE', {}), ['VOIR', 'MARQUER_LU']);
+  });
+
+  test('préférences : résumé du matin (opt-in) sérialisé', () {
+    expect(PreferencesNotification.fromJson({'resume_matin': true}).resumeMatin, isTrue);
+    expect(const PreferencesNotification().toJson()['resume_matin'], isFalse);
+  });
 }

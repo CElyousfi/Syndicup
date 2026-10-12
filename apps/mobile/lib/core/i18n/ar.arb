@@ -2386,6 +2386,8 @@
   "communication_pushInfoAide": "الوثائق، المحاضر، الملخصات، الاستطلاعات: لافتة هادئة بدون صوت.",
   "communication_pushSon": "الصوت والاهتزاز",
   "communication_pushSonAide": "عند التعطيل تبقى الإشعارات العادية ظاهرة لكن صامتة.",
+  "communication_resumeMatin": "ملخص الصباح",
+  "communication_resumeMatinAide": "على الساعة 8، إشعار هادئ: رسوم للتسديد، جمع عام قادم، حوادث، إعلانات غير مقروءة. لا يُرسل شيء إن لم يكن هناك ما يُقال.",
   "communication_heuresCalmes": "ساعات الهدوء",
   "communication_heuresCalmesAide": "خلال هذه الفترة لا يصدر صوت ولا تُضاء الشاشة — إلا للحالات العاجلة. توقيت الدار البيضاء.",
   "communication_heuresCalmesDebut": "البداية",

@@ -19,8 +19,9 @@ import { tachesRappelsQuotidien } from "../../../inngest/functions/taches";
 import { parkingsQuotidien, parkingsRedevancesMensuel } from "../../../inngest/functions/parkings";
 import { importExecuter, demoPurgeQuotidien } from "../../../inngest/functions/import";
 import { portefeuilleKpiRefresh } from "../../../inngest/functions/cabinet";
+import { resumeMatinQuotidien } from "../../../inngest/functions/resume-matin";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance, contratsEcheances, contratsAssurance, personnelMensuel, personnelCongesRappel, communicationDigestHebdo, communicationProgrammees, tachesRappelsQuotidien, parkingsQuotidien, parkingsRedevancesMensuel, importExecuter, demoPurgeQuotidien, portefeuilleKpiRefresh],
+  functions: [escaladeImpayes, anonymisationCndp, agRappels, appelDeFondsFanout, lcdSejours, depensesFactures, justificatifsRelance, contratsEcheances, contratsAssurance, personnelMensuel, personnelCongesRappel, communicationDigestHebdo, communicationProgrammees, tachesRappelsQuotidien, parkingsQuotidien, parkingsRedevancesMensuel, importExecuter, demoPurgeQuotidien, portefeuilleKpiRefresh, resumeMatinQuotidien],
 });

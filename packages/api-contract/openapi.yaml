@@ -2274,6 +2274,7 @@ components:
           properties:
             debut: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', example: "22:00" }
             fin: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$', example: "07:00" }
+        resume_matin: { type: boolean, default: false, description: "Résumé du matin (08:00 Casablanca, push discret) : charges, AG, incidents, annonces non lues — rien d'envoyé s'il n'y a rien à dire." }
     Tache:
       type: object
       properties:

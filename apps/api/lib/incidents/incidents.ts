@@ -10,7 +10,7 @@ import type { TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
-import { creerUrlSignee, creerUrlUploadSignee } from "../storage/supabase-storage";
+import { creerUrlSignee, PUSH_IMAGE_TTL_SECONDS, creerUrlUploadSignee } from "../storage/supabase-storage";
 import { verifierSejourPourIncident, lierIncidentAuSejour, LcdError, IntrouvableError as SejourIntrouvableError } from "../lcd/lcd";
 import { presenterPrestataire } from "../prestataires/prestataires";
 import { money, toApiString } from "../money";
@@ -158,8 +158,11 @@ export { LcdError };
 async function notifierNouveauSignalement(
   db: TenantDb,
   ctx: TenantContext,
-  incident: { id: string; categorie: string; sousCategorie: string; urgence: string }
+  incident: { id: string; categorie: string; sousCategorie: string; urgence: string; photos?: string[] }
 ) {
+  // Aperçu riche : la première photo du signalement, en URL signée longue (le téléphone la
+  // télécharge à la réception, parfois différée). Jamais bloquant.
+  const imageUrl = incident.photos?.[0] ? await creerUrlSignee(incident.photos[0], PUSH_IMAGE_TTL_SECONDS).catch(() => null) : null;
   const destinataires = await db.roleUtilisateur.findMany({
     where: { coproprieteId: ctx.coproprieteId, actif: true, role: { in: ["SYNDIC", "GARDIEN"] } },
     select: { utilisateurId: true },
@@ -177,7 +180,7 @@ async function notifierNouveauSignalement(
           utilisateurId: d.utilisateurId,
           templateCode: urgence ? "INCIDENT_URGENCE_MAXIMALE" : "INCIDENT_NOUVEAU",
           canal: "PUSH",
-          contenuJson: { incident_id: incident.id, categorie: incident.categorie, sous_categorie: incident.sousCategorie },
+          contenuJson: { incident_id: incident.id, categorie: incident.categorie, sous_categorie: incident.sousCategorie, ...(imageUrl ? { image_url: imageUrl } : {}) },
         })
       )
   );
@@ -465,6 +468,9 @@ export async function assignerIncident(
                 incident_id: incidentId,
                 categorie: incident.categorie,
                 statut: nouveauStatut,
+                // Bouton « Appeler le prestataire » dans la bannière (push-niveaux.ts).
+                prestataire_nom: prestataire.nom,
+                ...(prestataire.telephone ? { prestataire_tel: prestataire.telephone } : {}),
               },
             }),
           ]

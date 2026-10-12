@@ -173,7 +173,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     final push = PushService.instance;
     final niveau = niveauPour(e.niveau, e.templateCode);
     if (e.livrer && (niveau == niveauUrgent || !push.enAvantPlan)) {
-      push.afficher(cle: e.id, titre: e.titre, corps: e.corps, niveau: niveau, fil: filPour(e.fil, e.templateCode), badge: e.unread, son: e.son, path: path, notificationId: e.id);
+      final ctx = ref.read(appContextProvider);
+      final donnees = {for (final x in (e.contenuJson ?? const <String, dynamic>{}).entries) x.key: x.value?.toString() ?? ''};
+      push.afficher(
+        cle: e.id, titre: e.titre, corps: e.corps, niveau: niveau, fil: filPour(e.fil, e.templateCode), badge: e.unread, son: e.son, path: path, notificationId: e.id,
+        actions: actionsPour(e.templateCode, donnees), donnees: donnees, groupeId: ctx.coproprieteId, groupeNom: ctx.copropriete?.nom,
+        imageUrl: donnees['image_url'],
+      );
     }
     if (!push.enAvantPlan) return;
     // App ouverte : toast vivant (action « Ouvrir ») + tintement discret — les données concernées

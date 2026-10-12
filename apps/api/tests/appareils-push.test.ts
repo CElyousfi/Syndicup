@@ -151,11 +151,14 @@ describe("M19 — transport FCM v1 (fetch simulé)", () => {
     expect(r.tokensInvalides).toEqual(["jeton-mort-0123456789"]);
     expect(appels[0]!.url).toContain("oauth2");
     expect(appels[0]!.body).toContain("grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer");
-    const envoi = JSON.parse(appels[1]!.body) as { message: { token: string; data: Record<string, string>; notification: { title: string } } };
+    const envoi = JSON.parse(appels[1]!.body) as { message: { token: string; data: Record<string, string>; apns: { payload: { aps: { alert: { title: string }; category: string } } } } };
     expect(envoi.message.token).toBe("jeton-vivant-0123456789");
     expect(envoi.message.data.template_code).toBe("VISITE_NOUVELLE");
     expect(envoi.message.data.visite_id).toBe("v1");
-    expect(envoi.message.notification.title).toBe("Visiteur en attente");
+    expect(envoi.message.data.titre).toBe("Visiteur en attente");
+    expect(envoi.message.data.actions).toBe("AUTORISER,REFUSER");
+    expect(envoi.message.apns.payload.aps.alert.title).toBe("Visiteur en attente");
+    expect(envoi.message.apns.payload.aps.category).toBe("SYNDICUP_AUTORISER");
     // Le jeton OAuth est mis en cache : 1 appel token + 2 envois.
     expect(appels).toHaveLength(3);
   });

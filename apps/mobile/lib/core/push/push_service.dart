@@ -6,37 +6,41 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../api/api_client.dart';
+import '../auth/session.dart';
 import '../config/app_config.dart';
 import '../i18n/mobile_dict.dart';
 import '../util/notifications_link.dart';
 import 'niveaux.dart';
 
 /// Notifications sur le téléphone (Master Spec 13.4) — bannières, alertes, écran verrouillé,
-/// badge d'icône, actions, regroupement par fil — sur Android et iOS.
+/// badge d'icône, **boutons d'action**, **regroupement par résidence**, **image en grand** —
+/// sur Android et iOS.
 ///
 /// Deux sources, une seule mise en forme :
-///  - **FCM** (push serveur, app en arrière-plan ou fermée) — activé quand un projet Firebase est
-///    fourni au build (`--dart-define=FIREBASE_ENABLED=true` + clés). Le système affiche lui-même
-///    le message (canal / niveau d'interruption calculés par l'API) ; au premier plan, l'app le
-///    réaffiche en notification locale avec les mêmes règles.
-///  - **Flux temps réel** (SSE, app ouverte ou juste mise en arrière-plan) — chaque événement
-///    devient une notification système quand l'app n'est pas au premier plan, ou toujours quand
-///    il est URGENT (alerte « heads-up » même l'app ouverte). Sans Firebase, c'est ce chemin qui
-///    porte les bannières et l'écran verrouillé.
+///  - **FCM** (push serveur). Sur Android le serveur n'envoie que des données : c'est l'app qui
+///    construit la bannière, au premier plan comme en arrière-plan ([pushBackgroundHandler],
+///    isolate dédié) — c'est ce qui permet les boutons, le regroupement et l'image. Sur iOS, le
+///    système affiche l'alerte APNs (catégorie = jeu de boutons, `thread-id` = résidence).
+///  - **Flux temps réel** (SSE, app ouverte) — chaque événement devient une notification système
+///    quand l'app n'est pas visible, ou toujours quand il est URGENT.
 ///
-/// Niveaux (voir niveaux.dart) : URGENT = canal importance MAX + `time-sensitive` iOS, son et
-/// vibration, visible verrouillé, jamais filtré ; NORMAL = bannière + son ; INFO = bannière
-/// discrète sans son ; SILENCIEUX = synchronisation du badge, rien d'affiché.
+/// Boutons (décidés côté serveur, `actions` dans les données — push-niveaux.ts) :
+/// AUTORISER / REFUSER (porte : réponse sans ouvrir l'app), PAYER, VOTER, APPELER (prestataire),
+/// VOIR, MARQUER_LU (sans ouvrir l'app).
 class PushService {
   PushService._();
   static final PushService instance = PushService._();
 
   static const _badgeChannel = MethodChannel('ma.syndicup.app/badge');
-  static const categorieIos = 'SYNDICUP_NOTIFICATION';
-  static const actionOuvrir = 'OUVRIR';
+  static const actionOuvrir = 'VOIR';
   static const actionMarquerLu = 'MARQUER_LU';
+  static const actionsFond = {'AUTORISER', 'REFUSER', 'MARQUER_LU'};
+  static const categoriesIos = ['AUTORISER', 'PAYER', 'VOTER', 'APPELER', 'VOIR'];
 
   final _local = FlutterLocalNotificationsPlugin();
   bool _localPret = false;
@@ -83,16 +87,12 @@ class PushService {
         requestAlertPermission: false,
         requestBadgePermission: false,
         requestSoundPermission: false,
-        notificationCategories: [
-          DarwinNotificationCategory(categorieIos, actions: [
-            DarwinNotificationAction.plain(actionOuvrir, _d.open, options: {DarwinNotificationActionOption.foreground}),
-            DarwinNotificationAction.plain(actionMarquerLu, _d.pushMarquerLu, options: {DarwinNotificationActionOption.foreground}),
-          ], options: {DarwinNotificationCategoryOption.hiddenPreviewShowTitle}),
-        ],
+        notificationCategories: [for (final c in categoriesIos) _categorieIos(c)],
       );
       await _local.initialize(
         InitializationSettings(android: androidInit, iOS: iosInit),
         onDidReceiveNotificationResponse: _onReponse,
+        onDidReceiveBackgroundNotificationResponse: pushBackgroundResponse,
       );
       final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       if (android != null) {
@@ -111,14 +111,46 @@ class PushService {
       }
       final lancement = await _local.getNotificationAppLaunchDetails();
       if (lancement?.didNotificationLaunchApp == true) {
-        final p = _payload(lancement!.notificationResponse?.payload);
-        _cheminInitial = p['path'];
+        final r = lancement!.notificationResponse;
+        _cheminInitial = _cheminPour(r?.actionId, _payload(r?.payload));
       }
       _localPret = true;
     } catch (e) {
       debugPrint('Notifications locales indisponibles : $e');
     }
   }
+
+  /// Catégorie iOS = jeu de boutons ; le premier bouton la nomme (`SYNDICUP_<premier>`).
+  DarwinNotificationCategory _categorieIos(String premiere) {
+    final actions = switch (premiere) {
+      'AUTORISER' => ['AUTORISER', 'REFUSER'],
+      'PAYER' => ['PAYER', 'VOIR'],
+      'VOTER' => ['VOTER', 'VOIR'],
+      'APPELER' => ['APPELER', 'VOIR'],
+      _ => ['VOIR', 'MARQUER_LU'],
+    };
+    return DarwinNotificationCategory(
+      'SYNDICUP_$premiere',
+      actions: [
+        for (final a in actions)
+          DarwinNotificationAction.plain(a, _libelleAction(a), options: {
+            if (!actionsFond.contains(a)) DarwinNotificationActionOption.foreground,
+            if (a == 'REFUSER') DarwinNotificationActionOption.destructive,
+          }),
+      ],
+      options: {DarwinNotificationCategoryOption.hiddenPreviewShowTitle},
+    );
+  }
+
+  String _libelleAction(String a) => switch (a) {
+        'AUTORISER' => _d.pushAutoriser,
+        'REFUSER' => _d.pushRefuser,
+        'PAYER' => _d.pushPayer,
+        'VOTER' => _d.pushVoter,
+        'APPELER' => _d.pushAppeler,
+        'MARQUER_LU' => _d.pushMarquerLu,
+        _ => _d.open,
+      };
 
   List<_Canal> get _canaux => [
         _Canal(canalAndroidPour(niveauUrgent), _d.pushCanalUrgent, _d.pushCanalUrgentAide, Importance.max, true),
@@ -147,6 +179,8 @@ class PushService {
   }
 
   /// Affiche une notification système. `cle` = identifiant de la notification métier (dédoublonnage).
+  /// `actions` : boutons (ordre serveur) ; `donnees` : variables du template (visite_id, ag_id,
+  /// prestataire_tel…) rejouées dans le payload pour exécuter l'action ; `groupe` : résidence.
   Future<void> afficher({
     required String cle,
     String? titre,
@@ -157,6 +191,11 @@ class PushService {
     bool son = true,
     String? path,
     String? notificationId,
+    List<String> actions = const ['VOIR', 'MARQUER_LU'],
+    Map<String, String> donnees = const {},
+    String? groupeId,
+    String? groupeNom,
+    String? imageUrl,
   }) async {
     if (!_localPret || niveau == niveauSilencieux) return;
     if ((titre == null || titre.isEmpty) && (corps == null || corps.isEmpty)) return;
@@ -164,6 +203,17 @@ class PushService {
     final urgent = niveau == niveauUrgent;
     final info = niveau == niveauInfo;
     final canal = _canaux.firstWhere((c) => c.id == canalAndroidPour(niveau));
+    final payload = jsonEncode({
+      'path': path,
+      'notification_id': notificationId,
+      'visite_id': donnees['visite_id'],
+      'ag_id': donnees['ag_id'],
+      'lot_id': donnees['lot_id'],
+      'tel': donnees['prestataire_tel'],
+      'copro': groupeId,
+    });
+    final image = await _telechargerImage(imageUrl);
+    final groupKey = groupeId != null ? 'ma.syndicup.copro.$groupeId' : 'ma.syndicup.$fil';
     final android = AndroidNotificationDetails(
       canal.id,
       canal.nom,
@@ -176,13 +226,25 @@ class PushService {
       playSound: son && !info,
       enableVibration: urgent || (son && !info),
       number: badge,
-      groupKey: 'ma.syndicup.$fil',
+      groupKey: groupKey,
+      subText: groupeNom,
       ticker: titre,
       color: const Color(0xFF1E7552),
-      styleInformation: BigTextStyleInformation(corps ?? '', contentTitle: titre),
+      largeIcon: image != null ? FilePathAndroidBitmap(image) : null,
+      styleInformation: image != null
+          ? BigPictureStyleInformation(FilePathAndroidBitmap(image), contentTitle: titre, summaryText: corps, hideExpandedLargeIcon: true)
+          : BigTextStyleInformation(corps ?? '', contentTitle: titre),
       actions: [
-        AndroidNotificationAction(actionOuvrir, _d.open, showsUserInterface: true),
-        if (notificationId != null) AndroidNotificationAction(actionMarquerLu, _d.pushMarquerLu, showsUserInterface: true, cancelNotification: true),
+        for (final a in actions.take(3))
+          if (a != 'MARQUER_LU' || notificationId != null)
+            AndroidNotificationAction(
+              a,
+              _libelleAction(a),
+              // Fond : exécuté sans ouvrir l'app (porte, marquer lu) ; sinon l'app s'ouvre au bon endroit.
+              showsUserInterface: !actionsFond.contains(a),
+              cancelNotification: actionsFond.contains(a) || a == 'PAYER' || a == 'VOTER',
+              contextual: a == 'APPELER',
+            ),
       ],
     );
     final ios = DarwinNotificationDetails(
@@ -190,15 +252,92 @@ class PushService {
       presentBadge: badge != null,
       presentSound: son && !info,
       badgeNumber: badge,
-      threadIdentifier: fil,
-      categoryIdentifier: categorieIos,
+      threadIdentifier: groupeId != null ? 'copro:$groupeId' : fil,
+      categoryIdentifier: 'SYNDICUP_${actions.isEmpty ? 'VOIR' : actions.first}',
       interruptionLevel: urgent ? InterruptionLevel.timeSensitive : (info || !son) ? InterruptionLevel.passive : InterruptionLevel.active,
+      attachments: image != null ? [DarwinNotificationAttachment(image)] : null,
     );
     try {
-      await _local.show(cle.hashCode, titre, corps, NotificationDetails(android: android, iOS: ios), payload: jsonEncode({'path': path, 'notification_id': notificationId}));
+      await _local.show(cle.hashCode, titre, corps, NotificationDetails(android: android, iOS: ios), payload: payload);
+      // Android : une ligne « résumé » par résidence, pour que les bannières s'empilent proprement.
+      if (Platform.isAndroid && groupeId != null) {
+        await _local.show(
+          groupKey.hashCode,
+          groupeNom ?? 'SyndicUp',
+          null,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              canal.id,
+              canal.nom,
+              channelDescription: canal.description,
+              importance: canal.importance,
+              groupKey: groupKey,
+              setAsGroupSummary: true,
+              playSound: false,
+              enableVibration: false,
+              color: const Color(0xFF1E7552),
+              styleInformation: InboxStyleInformation(const [], contentTitle: groupeNom ?? 'SyndicUp'),
+            ),
+          ),
+          payload: jsonEncode({'path': '/notifications'}),
+        );
+      }
     } catch (e) {
       debugPrint('Affichage notification impossible : $e');
     }
+  }
+
+  /// Image jointe (photo d'incident, affiche d'annonce) : téléchargée dans le cache, 6 s max,
+  /// jamais bloquante — sans image, la bannière est textuelle.
+  Future<String?> _telechargerImage(String? url) async {
+    if (url == null || url.isEmpty) return null;
+    try {
+      final res = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 6));
+      if (res.statusCode != 200 || res.bodyBytes.length > 4 * 1024 * 1024) return null;
+      final dir = await getTemporaryDirectory();
+      final ext = url.contains('.png') ? 'png' : 'jpg';
+      final f = File('${dir.path}/push_${url.hashCode}.$ext');
+      await f.writeAsBytes(res.bodyBytes);
+      return f.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Bannière construite depuis les données FCM (Android : seul chemin d'affichage ; iOS : au
+  /// premier plan seulement — le système a déjà affiché l'alerte APNs en arrière-plan).
+  Future<void> afficherDepuisPush(Map<String, dynamic> data, {bool arrierePlan = false}) async {
+    final template = data['template_code']?.toString() ?? '';
+    final niveau = niveauPour(data['niveau']?.toString(), template);
+    final badge = int.tryParse(data['badge']?.toString() ?? '');
+    if (niveau == niveauSilencieux) {
+      if (badge != null) await setBadge(badge);
+      return;
+    }
+    if (arrierePlan) {
+      _d = MobileDict.of(Locale(data['langue']?.toString().toLowerCase() == 'ar' ? 'ar' : 'fr'));
+      await _initLocal();
+    } else if (fluxConnecte && niveau != niveauUrgent) {
+      // Au premier plan avec le flux connecté, l'événement arrive aussi par le flux (toast in-app).
+      return;
+    }
+    final donnees = {for (final e in data.entries) e.key: e.value?.toString() ?? ''};
+    await afficher(
+      cle: data['notification_id']?.toString() ?? data['cle_regroupement']?.toString() ?? '${data.hashCode}',
+      titre: data['titre']?.toString(),
+      corps: data['corps']?.toString(),
+      niveau: niveau,
+      fil: filPour(data['fil']?.toString(), template),
+      badge: badge,
+      son: data['son'] != '0',
+      path: _pathFor(data),
+      notificationId: data['notification_id']?.toString(),
+      actions: (data['actions']?.toString() ?? '').split(',').where((a) => a.isNotEmpty).toList(),
+      donnees: donnees,
+      groupeId: data['copropriete_id']?.toString(),
+      groupeNom: data['copropriete_nom']?.toString(),
+      imageUrl: data['image_url']?.toString(),
+    );
   }
 
   /// Badge d'icône : iOS via le canal natif (l'API pose aussi `aps.badge`) ; Android = compteur
@@ -231,13 +370,36 @@ class PushService {
     return true;
   }
 
-  Map<String, String?> _payload(String? raw) {
+  /// Payload d'une notification : JSON {path, notification_id, …} (locales) ou les données FCM
+  /// complètes (alerte APNs affichée par le système — `template_code` présent).
+  static Map<String, String?> _payload(String? raw) {
     if (raw == null || raw.isEmpty) return const {};
     try {
       final j = jsonDecode(raw);
-      if (j is Map) return {'path': j['path']?.toString(), 'notification_id': j['notification_id']?.toString()};
+      if (j is Map) {
+        final m = {for (final e in j.entries) e.key.toString(): e.value?.toString()};
+        if (m['template_code'] != null && m['path'] == null) {
+          m['path'] = lienNotification(m['template_code']!, j.cast<String, dynamic>());
+          m['tel'] ??= m['prestataire_tel'];
+          m['copro'] ??= m['copropriete_id'];
+        }
+        return m;
+      }
     } catch (_) {}
     return {'path': raw};
+  }
+
+  /// Chemin ouvert pour une action « avec interface » : Payer, Voter, Voir, ou la cible par défaut.
+  static String? _cheminPour(String? action, Map<String, String?> p) {
+    switch (action) {
+      case 'PAYER':
+        return p['lot_id'] != null ? '/lots/${p['lot_id']}?onglet=finances' : '/payer';
+      case 'VOTER':
+        return p['ag_id'] != null ? '/ag/${p['ag_id']}/seance' : (p['path'] ?? '/ag');
+      default:
+        final path = p['path'];
+        return path != null && path.isNotEmpty ? path : null;
+    }
   }
 
   void _onReponse(NotificationResponse r) {
@@ -247,8 +409,15 @@ class PushService {
       if (id != null && id.isNotEmpty) onMarquerLu?.call(id);
       return;
     }
-    final path = p['path'];
-    if (path != null && path.isNotEmpty) onOpen?.call(path);
+    if (r.actionId == 'APPELER') {
+      final tel = p['tel'];
+      if (tel != null && tel.isNotEmpty) {
+        launchUrl(Uri(scheme: 'tel', path: tel.replaceAll(' ', '')));
+        return;
+      }
+    }
+    final path = _cheminPour(r.actionId, p);
+    if (path != null) onOpen?.call(path);
   }
 
   // ── FCM ────────────────────────────────────────────────────────────────────
@@ -265,7 +434,9 @@ class PushService {
       );
       final fm = FirebaseMessaging.instance;
       if (Platform.isIOS) await fm.setForegroundNotificationPresentationOptions(alert: true, badge: true, sound: true);
-      FirebaseMessaging.onMessage.listen(_onMessageFcm);
+      FirebaseMessaging.onMessage.listen((m) => afficherDepuisPush(m.data));
+      // Android : données seules → l'app construit la bannière même fermée (isolate dédié).
+      FirebaseMessaging.onBackgroundMessage(pushBackgroundHandler);
       FirebaseMessaging.onMessageOpenedApp.listen((m) => _open(m.data));
       final initial = await fm.getInitialMessage();
       if (initial != null) _cheminInitial = _pathFor(initial.data);
@@ -274,32 +445,6 @@ class PushService {
     } catch (e) {
       debugPrint('Push FCM désactivé : $e');
     }
-  }
-
-  Future<void> _onMessageFcm(RemoteMessage m) async {
-    final data = m.data;
-    final template = data['template_code']?.toString() ?? '';
-    final niveau = niveauPour(data['niveau']?.toString(), template);
-    final badge = int.tryParse(data['badge']?.toString() ?? '');
-    if (niveau == niveauSilencieux) {
-      if (badge != null) await setBadge(badge);
-      return;
-    }
-    // Au premier plan avec le flux connecté, l'événement arrive aussi par le flux (toast in-app) :
-    // on ne double pas la bannière, sauf URGENT (alerte visible dans tous les cas).
-    if (enAvantPlan && fluxConnecte && niveau != niveauUrgent) return;
-    final n = m.notification;
-    await afficher(
-      cle: data['notification_id']?.toString() ?? m.messageId ?? '${m.hashCode}',
-      titre: n?.title ?? data['titre']?.toString(),
-      corps: n?.body ?? data['corps']?.toString(),
-      niveau: niveau,
-      fil: filPour(data['fil']?.toString(), template),
-      badge: badge,
-      son: data['son'] != '0',
-      path: _pathFor(data),
-      notificationId: data['notification_id']?.toString(),
-    );
   }
 
   String _pathFor(Map<String, dynamic> data) {
@@ -332,6 +477,54 @@ class PushService {
     if (!_firebasePret || t == null) return;
     await api.delete<dynamic>('/users/me/appareils/${Uri.encodeComponent(t)}');
   }
+
+  // ── Actions exécutées sans ouvrir l'app ────────────────────────────────────
+  /// Porte (AUTORISER / REFUSER) et MARQUER_LU : un appel API direct avec la session stockée.
+  /// Aucune interface : si la session manque ou l'appel échoue, l'app s'ouvre au prochain lancement
+  /// sur l'objet concerné (le chemin reste dans la notification).
+  static Future<void> executerActionFond(String? action, Map<String, String?> p) async {
+    if (action == null || !actionsFond.contains(action)) return;
+    final session = await SessionStorage().read();
+    if (session == null) return;
+    final headers = {
+      'Authorization': 'Bearer ${session.accessToken}',
+      'Content-Type': 'application/json',
+      if ((p['copro'] ?? session.coproprieteId) != null) 'X-Copropriete-Id': (p['copro'] ?? session.coproprieteId)!,
+    };
+    final base = AppConfig.apiBaseUrl;
+    try {
+      if (action == 'MARQUER_LU' && p['notification_id'] != null) {
+        await http.patch(Uri.parse('$base/notifications/${p['notification_id']}/read'), headers: headers).timeout(const Duration(seconds: 10));
+      } else if ((action == 'AUTORISER' || action == 'REFUSER') && p['visite_id'] != null) {
+        await http
+            .patch(Uri.parse('$base/visites/${p['visite_id']}/statut'), headers: headers, body: jsonEncode({'statut': action == 'AUTORISER' ? 'AUTORISE' : 'REFUSE'}))
+            .timeout(const Duration(seconds: 10));
+        if (p['notification_id'] != null) {
+          await http.patch(Uri.parse('$base/notifications/${p['notification_id']}/read'), headers: headers).timeout(const Duration(seconds: 10)).catchError((_) => http.Response('', 0));
+        }
+      }
+    } catch (e) {
+      debugPrint('Action de notification en arrière-plan impossible : $e');
+    }
+  }
+}
+
+/// Android — message FCM reçu app fermée / en arrière-plan : isolate dédié, l'app construit la
+/// bannière (boutons, résidence, image). Doit être une fonction de premier niveau.
+@pragma('vm:entry-point')
+Future<void> pushBackgroundHandler(RemoteMessage m) async {
+  try {
+    await PushService.instance.afficherDepuisPush(m.data, arrierePlan: true);
+  } catch (e) {
+    debugPrint('Push en arrière-plan : $e');
+  }
+}
+
+/// Bouton « sans interface » touché (AUTORISER / REFUSER / MARQUER_LU) — isolate dédié.
+@pragma('vm:entry-point')
+void pushBackgroundResponse(NotificationResponse r) {
+  final p = PushService._payload(r.payload);
+  PushService.executerActionFond(r.actionId, p);
 }
 
 class _Canal {

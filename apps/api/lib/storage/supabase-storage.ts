@@ -11,6 +11,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const SIGNED_URL_TTL_SECONDS = 15 * 60;
+/** Image jointe à une notification push : le téléphone peut la télécharger plus tard (hors ligne, Doze). */
+export const PUSH_IMAGE_TTL_SECONDS = 24 * 60 * 60;
 const BUCKET_DOCUMENTS = "documents";
 
 let client: SupabaseClient | null = null;
@@ -77,12 +79,12 @@ export async function creerUrlUploadSignee(
  * (Master Spec Partie 9.3). L'appelant DOIT avoir déjà vérifié la permission/RLS sur le document
  * correspondant — cette fonction ne fait aucune vérification d'accès elle-même.
  */
-export async function creerUrlSignee(storagePath: string): Promise<string> {
+export async function creerUrlSignee(storagePath: string, ttlSecondes: number = SIGNED_URL_TTL_SECONDS): Promise<string> {
   await ensureBucketDocuments();
   const supabase = getServiceRoleClient();
   const { data, error } = await supabase.storage
     .from(BUCKET_DOCUMENTS)
-    .createSignedUrl(storagePath, SIGNED_URL_TTL_SECONDS);
+    .createSignedUrl(storagePath, ttlSecondes);
   if (error || !data) {
     throw new Error(`Échec de génération de l'URL signée : ${error?.message ?? "inconnu"}`);
   }

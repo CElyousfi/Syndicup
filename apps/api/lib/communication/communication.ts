@@ -18,6 +18,7 @@ import type { Pagination, Tri } from "../http/pagination";
 import { journaliserExport, type CelluleCsv, type FormatExport } from "../http/export";
 import { assertCheminDansPerimetre, attacherDocument, preparerUploadModule, urlsSigneesDocuments, CheminHorsPerimetreError } from "../documents/attach";
 import { assainirMarkdown, texteBrut } from "./sanitize";
+import { creerUrlSignee, PUSH_IMAGE_TTL_SECONDS } from "../storage/supabase-storage";
 import { PREFERENCES_DEFAUT, preferencesNotificationSchema, type AnnonceCreateInput, type AnnoncePublierInput, type AnnonceUpdateInput, type AnnoncesFiltres, type Audience, type CommentaireCreateInput, type CommunicationUploadUrlInput, type ContactUtileInput, type ContactUtileUpdateInput, type PreferencesNotification, type TRIS_ANNONCE } from "./schemas";
 
 export class PermissionRefuseeError extends Error {}
@@ -300,7 +301,10 @@ export async function diffuserAnnonce(db: TenantDb, ctx: TenantContext, a: { id:
   const smsDisponible = Boolean(process.env.SMS_PROVIDER) || process.env.NODE_ENV !== "production";
   const prefs = await db.utilisateur.findMany({ where: { id: { in: destinataires } }, select: { id: true, preferencesNotificationJson: true } });
   const parId = new Map(prefs.map((p) => [p.id, preferencesDe(p.preferencesNotificationJson)]));
-  const contenu = { annonce_id: a.id, titre: a.titre, categorie: a.categorie, apercu: texteBrut(a.contenu, 140) };
+  // Aperçu riche : la première pièce jointe image (affiche), en URL signée longue — jamais bloquant.
+  const pj = await db.document.findFirst({ where: { annonceId: a.id }, select: { nom: true, storagePath: true }, orderBy: { creeLe: "asc" } }).catch(() => null);
+  const imageUrl = pj && /\.(jpe?g|png|webp)$/i.test(pj.nom) ? await creerUrlSignee(pj.storagePath, PUSH_IMAGE_TTL_SECONDS).catch(() => null) : null;
+  const contenu = { annonce_id: a.id, titre: a.titre, categorie: a.categorie, apercu: texteBrut(a.contenu, 140), ...(imageUrl ? { image_url: imageUrl } : {}) };
   let envoyes = 0;
   for (const u of destinataires) {
     const pref = parId.get(u) ?? PREFERENCES_DEFAUT;

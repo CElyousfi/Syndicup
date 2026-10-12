@@ -111,7 +111,9 @@ export const preferencesNotificationSchema = z.object({
   push_son: z.boolean().default(true),
   /** Heures calmes (heure de Casablanca) : NORMAL / INFO livrés sans son ni réveil de l'écran. */
   heures_calmes: z.object({ debut: heureHHMM, fin: heureHHMM }).nullable().default(null),
+  /** Résumé du matin (08:00 Casablanca, push discret) : charges, AG, incidents, annonces non lues. Opt-in. */
+  resume_matin: z.boolean().default(false),
 });
 export type PreferencesNotification = z.infer<typeof preferencesNotificationSchema>;
-export const PREFERENCES_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null };
+export const PREFERENCES_DEFAUT: PreferencesNotification = { digest_hebdo: true, canal_digest: "EMAIL", annonces_push: true, push_normal: true, push_info: true, push_son: true, heures_calmes: null, resume_matin: false };
 export { uuid as uuidSchema };
