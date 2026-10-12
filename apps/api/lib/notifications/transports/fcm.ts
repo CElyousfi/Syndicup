@@ -75,6 +75,8 @@ export function construireMessageFcm(token: string, message: MessageNotification
   const urgent = push?.niveau === "URGENT";
   const son = push?.son !== false;
   const actions = actionsPush(message.templateCode ?? "", donnees);
+  // Même jeu de boutons sur Android (données) et iOS (catégorie), même si l'appelant ne l'a pas posé.
+  if (!donnees.actions) donnees.actions = actions.join(",");
   const copro = message.donnees?.copropriete_id;
   const aps: Record<string, unknown> = {
     alert: { title: message.titre, body: message.corps },
