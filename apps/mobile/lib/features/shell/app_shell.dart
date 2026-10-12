@@ -1,11 +1,14 @@
-import 'dart:math' as math;
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
@@ -18,6 +21,7 @@ import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
+import '../../core/deeplinks/deeplinks.dart';
 import '../../core/home_widgets/home_widgets.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
@@ -97,6 +101,17 @@ class _AppShellState extends ConsumerState<AppShell> {
       hw.setQuickActions(ctx, context.mdict, open: (p) {
         if (mounted) GoRouter.of(context).push(p);
       });
+      // Entrées système : contenu partagé (photo → signalement, PDF → paiement), Spotlight / Siri (iOS).
+      final dl = DeepLinks.instance;
+      dl.onRoute = (p) {
+        if (mounted) GoRouter.of(context).push(p);
+      };
+      _partageSub ??= dl.partages.listen((p) {
+        if (mounted) GoRouter.of(context).push(DeepLinks.routePour(p));
+      });
+      final partage = await dl.prendrePartage();
+      if (partage != null && mounted) GoRouter.of(context).push(DeepLinks.routePour(partage));
+      _indexerSpotlight();
       // Membre de cabinet sans rôle de copropriété (M25) : pas d'enregistrement push tenant.
       if (!ctx.isMembreCabinetSeul) PushService.instance.registerToken(ref.read(apiClientProvider), langue: ctx.profil.languePreferee);
       // Le gardien rejoue sa file de visites dès l'ouverture et met en cache les lots
@@ -123,6 +138,26 @@ class _AppShellState extends ConsumerState<AppShell> {
     for (final p in [visitesProvider, incidentsProvider, lotsProvider, syntheseProvider, notificationsProvider, agListProvider, reservationsProvider, documentsProvider]) {
       ref.invalidate(p);
     }
+  }
+
+  StreamSubscription<Partage>? _partageSub;
+
+  /// Spotlight (iOS) : lots, incidents ouverts, annonces, documents — recherche depuis l'écran d'accueil.
+  Future<void> _indexerSpotlight() async {
+    if (kIsWeb || !Platform.isIOS) return;
+    try {
+      final d = context.dict;
+      final items = <SpotlightItem>[];
+      final lots = await ref.read(lotsProvider.future).catchError((_) => <Lot>[]);
+      items.addAll(lots.map((l) => SpotlightItem(id: 'lot:${l.id}', titre: '${d.nav.lots} ${l.numero}', sousTitre: l.batiment, route: '/lots/${l.id}', type: 'lot')));
+      final incidents = await ref.read(incidentsProvider.future).catchError((_) => <Incident>[]);
+      items.addAll(incidents.where((i) => i.ouvert).map((i) => SpotlightItem(id: 'incident:${i.id}', titre: i.sousCategorie, sousTitre: d.enums.categorieIncident[i.categorie], route: '/incidents/${i.id}', type: 'incident')));
+      final annonces = await ref.read(annoncesProvider(null).future).catchError((_) => <Annonce>[]);
+      items.addAll(annonces.map((a) => SpotlightItem(id: 'annonce:${a.id}', titre: a.titre, sousTitre: a.apercu, route: '/affichage/${a.id}', type: 'annonce')));
+      final documents = await ref.read(documentsProvider.future).catchError((_) => <DocumentCopro>[]);
+      items.addAll(documents.map((x) => SpotlightItem(id: 'document:${x.id}', titre: x.nom, sousTitre: d.nav.documents, route: '/documents', type: 'document')));
+      await DeepLinks.instance.indexerSpotlight(items.take(400).toList());
+    } catch (_) {}
   }
 
   void _onLive(LiveEvent e) {
@@ -191,6 +226,7 @@ class _AppShellState extends ConsumerState<AppShell> {
   @override
   void dispose() {
     _sub?.cancel();
+    _partageSub?.cancel();
     _backTimer?.cancel();
     _life.dispose();
     super.dispose();

@@ -14,6 +14,9 @@
 	<string>6.0</string>
 	<!-- Ouverture depuis un widget (home_widget) : syndicup://widget?route=/…&homeWidget -->
 	<!-- Live Activities (M26) : séance d'AG, paiement, incident — écran verrouillé + île dynamique. -->
+	<!-- Liens https://app.syndicup.pro/… et syndicup:/// → route initiale du routeur Flutter. -->
+	<key>FlutterDeepLinkingEnabled</key>
+	<true/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
