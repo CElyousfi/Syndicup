@@ -24,7 +24,7 @@ async function lotsDe(db: TenantDb, ctx: TenantContext) {
     where: { utilisateurId: ctx.utilisateurId, dateFin: null, lot: { coproprieteId: ctx.coproprieteId } },
     select: { lotId: true },
   });
-  return [...new Set<string>(rows.map((r: { lotId: string }) => r.lotId))];
+  return Array.from(new Set<string>(rows.map((r: { lotId: string }) => r.lotId)));
 }
 
 async function chargerCharges(db: TenantDb, ctx: TenantContext): Promise<WidgetCharges | null> {

@@ -2,7 +2,7 @@
  * Composition pure de l'instantané widget (GET /users/me/widget) — aucune dépendance base,
  * testable seule. Les montants restent des Decimal / chaînes (jamais de float).
  */
-import { money, toApiString } from "../money";
+import { money, toApiString, type MoneyInput } from "../money";
 
 // ── Types de sortie ──────────────────────────────────────────────────────────
 
@@ -72,8 +72,8 @@ export interface WidgetSnapshot {
 
 export interface LigneCharge {
   lotId: string;
-  montantDu: string | number;
-  montantPaye: string | number;
+  montantDu: MoneyInput;
+  montantPaye: MoneyInput;
   statut: "PAYE" | "PARTIEL" | "IMPAYE";
   dateEcheance: Date;
   appelStatut: "BROUILLON" | "EMIS" | "CLOTURE";
@@ -113,7 +113,7 @@ export interface AppelPourResidence {
   statut: "BROUILLON" | "EMIS" | "CLOTURE";
 }
 
-export function composerRecouvrement(appels: AppelPourResidence[], lignes: Array<{ appelDeFondsId: string; montantDu: string | number; montantPaye: string | number }>) {
+export function composerRecouvrement(appels: AppelPourResidence[], lignes: Array<{ appelDeFondsId: string; montantDu: MoneyInput; montantPaye: MoneyInput }>) {
   const emis = appels.filter((a) => a.statut !== "BROUILLON").sort((a, b) => a.periode.localeCompare(b.periode));
   const parAppel = new Map<string, { du: ReturnType<typeof money>; paye: ReturnType<typeof money> }>();
   for (const l of lignes) {

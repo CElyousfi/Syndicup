@@ -10,6 +10,7 @@ import 'package:quick_actions/quick_actions.dart';
 import '../api/api_client.dart';
 import '../api/api_result.dart';
 import '../auth/app_state.dart';
+import '../auth/session.dart';
 import '../feel/haptics.dart';
 import '../format/format.dart';
 import '../i18n/i18n.dart';

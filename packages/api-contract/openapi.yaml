@@ -3814,7 +3814,6 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/WidgetSnapshot" }
-        "401": { $ref: "#/components/responses/Unauthorized" }
 
   /finances/budgets:
     get:
