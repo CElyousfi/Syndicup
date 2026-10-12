@@ -285,6 +285,7 @@ model Copropriete {
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
+  activitesEnDirect           ActiviteEnDirect[]
   rolesUtilisateur        RoleUtilisateur[]
   importJobs              ImportJob[]
   importJobLogs           ImportJobLog[]
@@ -376,6 +377,7 @@ model Utilisateur {
   visitesGardien           Visite[]                  @relation("VisiteGardien")
   litigesCrees             ConflitLitige[]           @relation("LitigeCreateur")
   appareilsPush            AppareilPush[]
+  activitesEnDirect        ActiviteEnDirect[]
   lcdDeclarations          LotLocationCourteDuree[]  @relation("LcdDeclarant")
   lcdGestions              LotLocationCourteDuree[]  @relation("LcdGestionnaire")
   lcdDecisions             LotLocationCourteDuree[]  @relation("LcdDecideur")
@@ -688,6 +690,12 @@ enum PlateformeAppareil {
   IOS
 }
 
+enum TypeActiviteDirect {
+  AG_SEANCE
+  APPEL_DE_FONDS
+  INCIDENT
+}
+
 model AppareilPush {
   id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   utilisateurId String             @map("utilisateur_id") @db.Uuid
@@ -701,6 +709,29 @@ model AppareilPush {
 
   @@index([utilisateurId])
   @@map("appareil_push")
+}
+
+// M26 — Activités en direct (Live Activities iOS / notifications persistantes Android) : un
+// téléphone suit un objet (séance d'AG, ligne d'appel de fonds, incident) et reçoit ses mises à
+// jour d'état. iOS : jeton ActivityKit par activité ; Android : jeton FCM de l'appareil.
+model ActiviteEnDirect {
+  id            String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  utilisateurId String             @map("utilisateur_id") @db.Uuid
+  utilisateur   Utilisateur        @relation(fields: [utilisateurId], references: [id], onDelete: Cascade)
+  coproprieteId String             @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete        @relation(fields: [coproprieteId], references: [id], onDelete: Cascade)
+  type          TypeActiviteDirect
+  objetId       String             @map("objet_id") @db.Uuid
+  token         String
+  plateforme    PlateformeAppareil
+  creeLe        DateTime           @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe     DateTime           @updatedAt @map("modifie_le") @db.Timestamptz
+  termineeLe    DateTime?          @map("terminee_le") @db.Timestamptz
+
+  @@unique([utilisateurId, type, objetId, plateforme])
+  @@index([coproprieteId, type, objetId])
+  @@index([utilisateurId])
+  @@map("activite_en_direct")
 }
 
 // ============================================================================

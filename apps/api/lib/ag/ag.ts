@@ -21,6 +21,7 @@
 import { createHash } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
+import { pousserActivite, etatAgSeance } from "../notifications/activites";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantContext } from "../tenant/context";
@@ -384,7 +385,7 @@ export async function voter(
     if (tantiemes == null) throw new AgIntrouvableError("Lot introuvable.");
 
     try {
-      return await db.agVote.create({
+      const vote = await db.agVote.create({
         data: {
           resolutionId: input.resolution_id,
           lotId,
@@ -393,6 +394,9 @@ export async function voter(
           tantiemesRepresentes: money(tantiemes.toString()).toString(),
         },
       });
+      // M26 — activité en direct (séance) : compteur de votants de la résolution en cours.
+      await pousserEtatSeance(db, ctx, agId, resolution.id);
+      return vote;
     } catch (e) {
       if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
         throw new ContrainteMetierError("Ce lot a déjà voté pour cette résolution.");
@@ -513,6 +517,8 @@ export async function finaliserResolution(ctx: TenantContext, agId: string, reso
       copropriete?.totalTantiemes ? money(copropriete.totalTantiemes).toString() : null
     );
     const maj = await db.agResolution.update({ where: { id: resolutionId }, data: { resultat } });
+    // M26 — activité en direct (séance) : résultat de la résolution, passage à la suivante.
+    await pousserEtatSeance(db, ctx, agId, resolutionId, resultat);
     // M18 — hook : une résolution « approbation des comptes » finalisée bascule le rapport de gestion
     // lié en APPROUVE / REJETE (Doc A §6 / §8) — même transaction, audité.
     const { finaliserRapportsLies } = await import("../rapports/gestion");
@@ -841,5 +847,26 @@ export async function revoquerProcuration(ctx: TenantContext, agId: string, proc
       where: { id: procurationId },
       data: { revoqueeLe: new Date() },
     });
+  });
+}
+
+/**
+ * M26 — Activité en direct de la séance : résolution en cours (première EN_ATTENTE), nombre de
+ * votants, résultat de la dernière finalisée ; `fin` quand toutes sont finalisées ou l'AG close.
+ */
+async function pousserEtatSeance(db: TenantDb, ctx: TenantContext, agId: string, resolutionId?: string, resultat?: string | null) {
+  const resolutions = await db.agResolution.findMany({ where: { agId }, orderBy: { ordre: "asc" }, select: { id: true, ordre: true, texte: true, resultat: true } });
+  const finalisees = resolutions.filter((r) => r.resultat !== "EN_ATTENTE").length;
+  const courante = resolutions.find((r) => r.resultat === "EN_ATTENTE") ?? resolutions.find((r) => r.id === resolutionId) ?? null;
+  const nbVotants = courante ? await db.agVote.count({ where: { resolutionId: courante.id } }) : 0;
+  const fin = finalisees === resolutions.length;
+  const derniere = resolutionId ? resolutions.find((r) => r.id === resolutionId) : null;
+  await pousserActivite(db, ctx, {
+    type: "AG_SEANCE",
+    objetId: agId,
+    fin,
+    etat: etatAgSeance({ statut: fin ? "CLOTUREE" : "EN_COURS", ordre: courante?.ordre ?? null, nbResolutions: resolutions.length, nbFinalisees: finalisees, texte: courante?.texte, nbVotants, resultat: resultat ?? derniere?.resultat ?? null }),
+    titre: { FR: fin ? "Séance terminée" : `Résolution ${courante?.ordre ?? ""} · ${nbVotants} vote(s)`, AR: fin ? "انتهت الجلسة" : `القرار ${courante?.ordre ?? ""} · ${nbVotants} صوت` },
+    corps: { FR: fin ? `${finalisees} résolution(s) finalisée(s).` : (courante?.texte ?? "").slice(0, 100), AR: fin ? `${finalisees} قرارات مُنهاة.` : (courante?.texte ?? "").slice(0, 100) },
   });
 }

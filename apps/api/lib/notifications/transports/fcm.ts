@@ -137,8 +137,27 @@ export function fcmTransport(
     return data.access_token;
   }
 
-  return {
+  const transport: NotificationTransport & { envoyerBrut: EnvoyerBrut } = {
     canal: "PUSH",
+    /** Message FCM v1 déjà construit (activités en direct) — `ok` si accepté, `invalide` si le jeton est mort. */
+    async envoyerBrut(message: Record<string, unknown>): Promise<{ ok: boolean; invalide: boolean }> {
+      try {
+        const bearer = await accessToken();
+        const res = await fetchImpl(`https://fcm.googleapis.com/v1/projects/${sa.project_id}/messages:send`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ message }),
+        });
+        if (res.ok) return { ok: true, invalide: false };
+        const err = (await res.json().catch(() => ({}))) as { error?: { status?: string; details?: Array<{ errorCode?: string }> } };
+        const code = err.error?.details?.find((d) => d.errorCode)?.errorCode ?? err.error?.status;
+        logger.warn("FCM : mise à jour d'activité refusée", { statut_http: res.status, code });
+        return { ok: false, invalide: res.status === 404 || code === "UNREGISTERED" || code === "INVALID_ARGUMENT" };
+      } catch (e) {
+        logger.warn("FCM : erreur réseau (activité)", { erreur: e instanceof Error ? e.message : String(e) });
+        return { ok: false, invalide: false };
+      }
+    },
     async envoyer(message): Promise<ResultatEnvoi> {
       const tokens = message.destinataire.tokensPush ?? [];
       if (tokens.length === 0) return { statut: "EN_ATTENTE" };
@@ -185,5 +204,55 @@ export function fcmTransport(
         tokensInvalides: invalides.length > 0 ? invalides : undefined,
       };
     },
+  };
+  return transport;
+}
+
+export type EnvoyerBrut = (message: Record<string, unknown>) => Promise<{ ok: boolean; invalide: boolean }>;
+
+/**
+ * Message FCM v1 d'une mise à jour d'activité en direct.
+ *  - iOS : `live_activity_token` + push-type `liveactivity` ; `content-state` = l'état (chaînes),
+ *    `event` update / end, `relevance-score` haut pour l'île dynamique.
+ *  - Android : données seules vers le jeton de l'appareil — l'app met à jour sa notification
+ *    persistante à progression (ou la retire à la fin).
+ */
+export function construireMessageActivite(
+  a: { token: string; plateforme: "ANDROID" | "IOS" },
+  maj: { type: string; objetId: string; etat: Record<string, string>; fin: boolean; titre: string; corps: string }
+): Record<string, unknown> {
+  const now = Math.floor(Date.now() / 1000);
+  if (a.plateforme === "IOS") {
+    return {
+      token: a.token,
+      apns: {
+        live_activity_token: a.token,
+        headers: { "apns-push-type": "liveactivity", "apns-priority": maj.fin ? "5" : "10", "apns-topic": "ma.syndicup.app.push-type.liveactivity" },
+        payload: {
+          aps: {
+            timestamp: now,
+            event: maj.fin ? "end" : "update",
+            "content-state": { ...maj.etat, titre: maj.titre, corps: maj.corps },
+            "relevance-score": maj.fin ? 0 : 100,
+            ...(maj.fin ? { "dismissal-date": now + 15 * 60 } : {}),
+            alert: { title: maj.titre, body: maj.corps },
+          },
+        },
+      },
+    };
+  }
+  return {
+    token: a.token,
+    data: {
+      activite_type: maj.type,
+      activite_objet_id: maj.objetId,
+      activite_fin: maj.fin ? "1" : "0",
+      activite_etat: JSON.stringify(maj.etat),
+      titre: maj.titre,
+      corps: maj.corps,
+      template_code: "ACTIVITE_DIRECT",
+      niveau: "SILENCIEUX",
+    },
+    android: { priority: "high", collapse_key: `activite:${maj.objetId}` },
   };
 }
