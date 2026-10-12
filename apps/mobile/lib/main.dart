@@ -10,6 +10,7 @@ import 'core/feel/feel.dart';
 import 'core/feel/frame_stats.dart';
 import 'core/i18n/i18n.dart';
 import 'core/push/push_service.dart';
+import 'core/home_widgets/home_widgets.dart';
 import 'core/widgets/illustration.dart';
 
 Future<void> main() async {
@@ -24,6 +25,7 @@ Future<void> main() async {
   await SuIllustration.init();
   final session = await SessionStorage().read();
   await PushService.instance.init(locale: Locale(prefs.getString('locale') ?? 'fr'));
+  await HomeWidgets.instance.init();
 
   runApp(
     ProviderScope(

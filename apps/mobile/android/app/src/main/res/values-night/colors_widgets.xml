@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="w_surface">#FF1A1B1A</color>
+    <color name="w_tile">#FF262826</color>
+    <color name="w_ink">#FFF4F3EE</color>
+    <color name="w_body">#FFC9CFCB</color>
+    <color name="w_soft">#FFA8B0AB</color>
+    <color name="w_faint">#FF7D8583</color>
+    <color name="w_hairline">#FF33362F</color>
+    <color name="w_brand">#FF7FC7A3</color>
+    <color name="w_brand_tint">#FF1F3A2E</color>
+    <color name="w_cta">#FFE3EF8D</color>
+    <color name="w_on_cta">#FF121212</color>
+    <color name="w_danger">#FFF08A80</color>
+    <color name="w_danger_tint">#FF3C1F1C</color>
+    <color name="w_live">#FFF08A80</color>
+</resources>

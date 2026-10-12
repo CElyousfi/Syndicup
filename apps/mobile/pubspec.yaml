@@ -47,6 +47,9 @@ dependencies:
   # Déverrouillage biométrique (Face ID / empreinte) et porte de mise à jour.
   local_auth: ^2.3.0
   package_info_plus: ^8.3.0
+  # Widgets d'écran d'accueil (Android AppWidget / iOS WidgetKit) et raccourcis d'icône.
+  home_widget: ^0.7.0
+  quick_actions: ^1.1.0
 
 dev_dependencies:
   flutter_test:

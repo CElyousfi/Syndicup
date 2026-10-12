@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Palette des widgets d'écran d'accueil — mêmes jetons que lib/core/theme/tokens.dart. -->
+<resources>
+    <color name="w_surface">#FFFFFFFF</color>
+    <color name="w_tile">#FFECEBE4</color>
+    <color name="w_ink">#FF121212</color>
+    <color name="w_body">#FF45515C</color>
+    <color name="w_soft">#FF596269</color>
+    <color name="w_faint">#FF7D8583</color>
+    <color name="w_hairline">#FFE9E7DF</color>
+    <color name="w_brand">#FF1E7552</color>
+    <color name="w_brand_tint">#FFE2EEE7</color>
+    <color name="w_cta">#FFE3EF8D</color>
+    <color name="w_on_cta">#FF121212</color>
+    <color name="w_danger">#FFB42318</color>
+    <color name="w_danger_tint">#FFFBE9E7</color>
+    <color name="w_live">#FFB42318</color>
+</resources>
