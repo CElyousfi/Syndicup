@@ -137,6 +137,81 @@ components:
         plateforme: { type: string, enum: [ANDROID, IOS] }
         langue: { type: string, enum: [FR, AR] }
         version_app: { type: string, maxLength: 40, nullable: true }
+    WidgetSnapshot:
+      type: object
+      description: Instantané pour les widgets mobiles. Un bloc à `null` = non visible pour ce rôle.
+      required: [genere_le, role, copropriete, charges, ag, residence, affichage, gardien]
+      properties:
+        genere_le: { type: string, format: date-time }
+        role: { type: string }
+        copropriete:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            nom: { type: string }
+        charges:
+          type: object
+          nullable: true
+          description: Propriétaires / indivisaires / représentants — leurs lots uniquement.
+          properties:
+            solde_du: { type: string, example: "1750.00" }
+            nb_lots: { type: integer }
+            lot_id: { type: string, format: uuid, nullable: true, description: Lot à ouvrir si unique. }
+            prochaine_echeance: { type: string, format: date, nullable: true }
+            prochain_montant: { type: string, nullable: true }
+            taux_paye: { type: number, minimum: 0, maximum: 1, description: Part payée des appels émis (anneau). }
+            nb_quittances: { type: integer }
+        ag:
+          type: object
+          nullable: true
+          description: Prochaine AG planifiée / convoquée / en cours.
+          properties:
+            id: { type: string, format: uuid }
+            type: { type: string }
+            date_ag: { type: string, format: date-time }
+            statut: { type: string, enum: [PLANIFIEE, CONVOQUEE, EN_COURS] }
+            nb_resolutions: { type: integer }
+            nb_votees: { type: integer, description: Résolutions déjà votées par les lots de l'appelant (séance en cours). }
+        residence:
+          type: object
+          nullable: true
+          description: Syndic / conseil / comptable.
+          properties:
+            taux_recouvrement: { type: number, minimum: 0, maximum: 1 }
+            impaye_total: { type: string }
+            incidents_ouverts: { type: integer }
+            incidents_sla_depasse: { type: integer }
+            reservations_a_valider: { type: integer }
+            recouvrement_6:
+              type: array
+              description: Taux des 6 derniers appels émis, du plus ancien au plus récent (sparkline).
+              items: { type: number }
+        affichage:
+          type: object
+          nullable: true
+          properties:
+            non_lues: { type: integer }
+            annonces:
+              type: array
+              maxItems: 3
+              items:
+                type: object
+                properties:
+                  id: { type: string, format: uuid }
+                  titre: { type: string }
+                  categorie: { type: string }
+                  urgent: { type: boolean, description: URGENCE / COUPURE / SECURITE → bande rouge. }
+                  publie_le: { type: string, format: date-time, nullable: true }
+                  lu: { type: boolean }
+        gardien:
+          type: object
+          nullable: true
+          properties:
+            visites_en_attente: { type: integer }
+            arrivees_lcd_aujourdhui: { type: integer }
+            departs_lcd_aujourdhui: { type: integer }
+            incidents_ouverts: { type: integer }
     AppareilPush:
       type: object
       properties:
@@ -3722,6 +3797,25 @@ paths:
   # ══════════════════════════════════════════════════════════════════════
   # FINANCES — syndic (write), résident (read scopé à son lot)
   # ══════════════════════════════════════════════════════════════════════
+  /users/me/widget:
+    get:
+      tags: [Utilisateurs]
+      summary: >
+        Instantané compact pour les widgets d'écran d'accueil / écran verrouillé du mobile
+        (Android AppWidget, iOS WidgetKit). Un seul appel, lecture seule ; chaque bloc n'est
+        renseigné que si le rôle y a droit (même matrice que les écrans, RLS en seconde couche).
+        Montants en chaînes décimales. Cache privé 60 s.
+      responses:
+        "200":
+          description: Instantané.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/WidgetSnapshot" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /finances/budgets:
     get:
       tags: [Finances]
