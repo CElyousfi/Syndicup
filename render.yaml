@@ -81,20 +81,23 @@ services:
         sync: false
       - key: CMI_WEBHOOK_HMAC_SECRET
         sync: false
-      # Hook GoTrue « Send SMS » — code de connexion réel via Infobip (M0, apps/api/lib/auth/send-sms-hook.ts).
-      - key: SUPABASE_AUTH_HOOK_SEND_SMS_SECRET
+      # Porte de mise à jour mobile (GET /v1/app/version) — deux niveaux, modifiables sans
+      # redéploiement : MIN bloque l'app, LATEST affiche un bandeau refermable. Semver « 1.2.3 ».
+      - key: APP_MIN_VERSION_ANDROID
+        value: "1.0.0"
+      - key: APP_LATEST_VERSION_ANDROID
+        value: "1.0.0"
+      - key: APP_MIN_VERSION_IOS
+        value: "1.0.0"
+      - key: APP_LATEST_VERSION_IOS
+        value: "1.0.0"
+      - key: APP_STORE_URL_ANDROID
+        value: https://play.google.com/store/apps/details?id=ma.syndicup.app
+      - key: APP_STORE_URL_IOS
         sync: false
-      - key: INFOBIP_API_KEY
-        sync: false
-      - key: INFOBIP_BASE_URL
-        sync: false
-      - key: INFOBIP_SENDER
-        sync: false
-      - key: RATE_LIMIT_AUTH_HOOK_SMS_MAX
-        value: "30"
       # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
       # depuis le tableau de bord sans redéploiement.
-      - key: RATE_LIMIT_OTP_REQUEST_MAX
+      - key: RATE_LIMIT_PASSWORD_RESET_MAX
         value: "5"
       - key: RATE_LIMIT_AUTH_MAX
         value: "10"
@@ -206,20 +209,23 @@ services:
         sync: false
       - key: CMI_WEBHOOK_HMAC_SECRET
         sync: false
-      # Hook GoTrue « Send SMS » — code de connexion réel via Infobip (M0, apps/api/lib/auth/send-sms-hook.ts).
-      - key: SUPABASE_AUTH_HOOK_SEND_SMS_SECRET
+      # Porte de mise à jour mobile (GET /v1/app/version) — deux niveaux, modifiables sans
+      # redéploiement : MIN bloque l'app, LATEST affiche un bandeau refermable. Semver « 1.2.3 ».
+      - key: APP_MIN_VERSION_ANDROID
+        value: "1.0.0"
+      - key: APP_LATEST_VERSION_ANDROID
+        value: "1.0.0"
+      - key: APP_MIN_VERSION_IOS
+        value: "1.0.0"
+      - key: APP_LATEST_VERSION_IOS
+        value: "1.0.0"
+      - key: APP_STORE_URL_ANDROID
+        value: https://play.google.com/store/apps/details?id=ma.syndicup.app
+      - key: APP_STORE_URL_IOS
         sync: false
-      - key: INFOBIP_API_KEY
-        sync: false
-      - key: INFOBIP_BASE_URL
-        sync: false
-      - key: INFOBIP_SENDER
-        sync: false
-      - key: RATE_LIMIT_AUTH_HOOK_SMS_MAX
-        value: "30"
       # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
       # depuis le tableau de bord sans redéploiement.
-      - key: RATE_LIMIT_OTP_REQUEST_MAX
+      - key: RATE_LIMIT_PASSWORD_RESET_MAX
         value: "5"
       - key: RATE_LIMIT_AUTH_MAX
         value: "10"

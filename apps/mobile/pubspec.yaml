@@ -1,7 +1,7 @@
 name: syndicup
 description: "SyndicUp — gestion de copropriété (Maroc). Application mobile iOS/Android."
 publish_to: "none"
-version: 0.1.0+1
+version: 1.0.0+1
 
 environment:
   sdk: ^3.7.2
@@ -44,6 +44,9 @@ dependencies:
   audioplayers: ^6.6.0
   battery_plus: ^7.1.2
   device_info_plus: ^12.4.0
+  # Déverrouillage biométrique (Face ID / empreinte) et porte de mise à jour.
+  local_auth: ^2.3.0
+  package_info_plus: ^8.3.0
 
 dev_dependencies:
   flutter_test:

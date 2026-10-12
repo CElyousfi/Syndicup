@@ -18,6 +18,8 @@ const vide = (v: unknown) => (typeof v === "string" && v.trim() === "" ? undefin
 const optStr = (max = 4000) => z.preprocess(vide, z.string().max(max).optional());
 const optUrl = () => z.preprocess(vide, z.string().url("doit être une URL absolue (https://…)").optional());
 const optEntier = () => z.preprocess(vide, z.coerce.number().int().positive().optional());
+/** Semver « 1.2.3 » — versions mobiles de la porte de mise à jour. */
+const optSemver = () => z.preprocess(vide, z.string().regex(/^\d+\.\d+\.\d+$/, "semver attendu (ex. 1.2.0)").optional());
 const postgresUrl = () =>
   z.preprocess(vide, z.string().regex(/^postgres(ql)?:\/\//, "doit commencer par postgresql://").optional());
 
@@ -26,6 +28,16 @@ export const envSchema = z.object({
   NODE_ENV: z.preprocess(vide, z.enum(["development", "test", "production"]).optional()),
   /** Environnement applicatif (Sentry, garde-fous) — remplace VERCEL_ENV. Repli : NODE_ENV. */
   APP_ENV: z.preprocess(vide, z.enum(APP_ENVS).optional()),
+  // ── Porte de mise à jour mobile, deux niveaux (GET /v1/app/version) ──
+  // MIN : en dessous, l'app se bloque jusqu'à mise à jour (changement cassant / sécurité).
+  // LATEST : en dessous, bandeau « mise à jour disponible », refermable.
+  APP_MIN_VERSION_ANDROID: optSemver(),
+  APP_LATEST_VERSION_ANDROID: optSemver(),
+  APP_MIN_VERSION_IOS: optSemver(),
+  APP_LATEST_VERSION_IOS: optSemver(),
+  /** URL de la fiche Play Store / App Store, affichée par l'écran de mise à jour. */
+  APP_STORE_URL_ANDROID: optUrl(),
+  APP_STORE_URL_IOS: optUrl(),
   PORT: optEntier(),
   /** Posé par Render à chaque déploiement (exposé par GET /api/health). */
   RENDER_GIT_COMMIT: optStr(64),
@@ -51,7 +63,7 @@ export const envSchema = z.object({
   // ── Rate limiting global (Upstash Redis REST) ──
   UPSTASH_REDIS_REST_URL: optUrl(),
   UPSTASH_REDIS_REST_TOKEN: optStr(),
-  RATE_LIMIT_OTP_REQUEST_MAX: optEntier(),
+  RATE_LIMIT_PASSWORD_RESET_MAX: optEntier(),
   RATE_LIMIT_AUTH_MAX: optEntier(),
   RATE_LIMIT_FINANCE_MAX: optEntier(),
   RATE_LIMIT_COMMENTAIRE_MAX: optEntier(),
@@ -93,12 +105,7 @@ export const envSchema = z.object({
   CMI_API_URL: optUrl(),
   CMI_WEBHOOK_HMAC_SECRET: optStr(),
 
-  RATE_LIMIT_AUTH_HOOK_SMS_MAX: optEntier(),
 
-  // ── Hook GoTrue « Send SMS » + agrégateur Infobip (test réel — M0, agrégateur SMS marocain non
-  // encore contractualisé, voir ROADMAP_BACKLOG.md M0) — optionnel : sans ces variables, GoTrue
-  // appelle le hook mais l'API répond 500 explicite (jamais un envoi simulé).
-  SUPABASE_AUTH_HOOK_SEND_SMS_SECRET: z.preprocess(vide, z.string().regex(/^v1,whsec_[A-Za-z0-9+/=]{32,88}$/, "doit être au format v1,whsec_<base64>").optional()),
   INFOBIP_API_KEY: optStr(),
   INFOBIP_BASE_URL: optStr(200),
   INFOBIP_SENDER: optStr(24),
@@ -178,9 +185,6 @@ export function parseEnv(env: Record<string, string | undefined> = process.env):
   }
   if (env.SMS_PROVIDER === "generic" && !(env.SMS_API_URL && env.SMS_API_KEY)) {
     problemes.push("SMS_API_URL / SMS_API_KEY : requis avec SMS_PROVIDER=generic");
-  }
-  if (env.SUPABASE_AUTH_HOOK_SEND_SMS_SECRET && !(env.INFOBIP_API_KEY && env.INFOBIP_BASE_URL)) {
-    problemes.push("INFOBIP_API_KEY / INFOBIP_BASE_URL : requis avec SUPABASE_AUTH_HOOK_SEND_SMS_SECRET (hook GoTrue configuré sans fournisseur SMS)");
   }
   if (problemes.length > 0) throw new EnvironnementInvalideError(problemes);
   return valeurs;

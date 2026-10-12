@@ -17,7 +17,7 @@ const COOKIE_REFRESH = "su_refresh";
 const COOKIE_LOCALE = "su_locale";
 
 /** Préfixes publics (relatifs, après la locale). */
-const PUBLIC_PREFIXES = ["/connexion", "/invitation", "/compte"];
+const PUBLIC_PREFIXES = ["/connexion", "/invitation", "/compte", "/mot-de-passe-oublie", "/reinitialiser"];
 export const COOKIE_INVITATION = "su_invitation";
 
 function jwtPayload(token: string): { exp?: number; roles?: Array<{ role?: string }> } | null {

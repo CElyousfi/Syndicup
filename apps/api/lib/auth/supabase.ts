@@ -5,8 +5,8 @@
  * autorisée, mais on garde le contrat /auth/* stable côté API).
  *
  * Interface volontairement minimale + injectable (tests : mock de SupabaseAuthPort, la CI n'a
- * pas de GoTrue). En local, l'OTP SMS utilise les numéros de test de supabase/config.toml
- * ([auth.sms.test_otp]) — mock SMS en attendant l'agrégateur marocain (ROADMAP, notes).
+ * pas de GoTrue). Connexion par e-mail + mot de passe uniquement : l'OTP SMS a été retiré
+ * (décision produit, oct. 2026 — simplicité et aucune dépendance à un agrégateur SMS).
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -17,16 +17,24 @@ export interface SessionTokens {
 }
 
 export interface SupabaseAuthPort {
-  otpRequest(telephone: string): Promise<{ error: string | null }>;
-  otpVerify(
-    telephone: string,
-    code: string
-  ): Promise<{ session: SessionTokens | null; userId: string | null; error: string | null }>;
   loginEmail(
     email: string,
     motDePasse: string
   ): Promise<{ session: SessionTokens | null; userId: string | null; error: string | null }>;
   refresh(refreshToken: string): Promise<{ session: SessionTokens | null; error: string | null }>;
+  /**
+   * Envoie l'e-mail « mot de passe oublié » (GoTrue → lien vers `redirectTo` avec un code PKCE
+   * ou un token_hash). Ne révèle jamais si l'adresse existe.
+   */
+  demanderReinitialisation(email: string, redirectTo: string): Promise<{ error: string | null }>;
+  /**
+   * Finalise la réinitialisation : vérifie le `token_hash` reçu par e-mail (type `recovery`),
+   * puis pose le nouveau mot de passe sur la session obtenue. Renvoie la session ouverte.
+   */
+  reinitialiserMotDePasse(
+    tokenHash: string,
+    nouveauMotDePasse: string
+  ): Promise<{ session: SessionTokens | null; userId: string | null; error: string | null }>;
 }
 
 /**
@@ -96,22 +104,6 @@ export function createSupabaseAuth(): SupabaseAuthPort {
   });
 
   return {
-    async otpRequest(telephone) {
-      const { error } = await client.auth.signInWithOtp({ phone: telephone });
-      return { error: error?.message ?? null };
-    },
-    async otpVerify(telephone, code) {
-      const { data, error } = await client.auth.verifyOtp({
-        phone: telephone,
-        token: code,
-        type: "sms",
-      });
-      return {
-        session: toTokens(data.session),
-        userId: data.user?.id ?? null,
-        error: error?.message ?? null,
-      };
-    },
     async loginEmail(email, motDePasse) {
       const { data, error } = await client.auth.signInWithPassword({
         email,
@@ -128,6 +120,28 @@ export function createSupabaseAuth(): SupabaseAuthPort {
         refresh_token: refreshToken,
       });
       return { session: toTokens(data.session), error: error?.message ?? null };
+    },
+    async demanderReinitialisation(email, redirectTo) {
+      const { error } = await client.auth.resetPasswordForEmail(email, { redirectTo });
+      return { error: error?.message ?? null };
+    },
+    async reinitialiserMotDePasse(tokenHash, nouveauMotDePasse) {
+      // Chaque appel utilise un client neuf : la session de récupération ne doit jamais fuiter
+      // entre deux requêtes (persistSession: false, mais on isole quand même).
+      const scoped: SupabaseClient = createClient(url, anonKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const verif = await scoped.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+      if (verif.error || !verif.data.session) {
+        return { session: null, userId: null, error: verif.error?.message ?? "Lien invalide ou expiré." };
+      }
+      const maj = await scoped.auth.updateUser({ password: nouveauMotDePasse });
+      if (maj.error) return { session: null, userId: null, error: maj.error.message };
+      return {
+        session: toTokens(verif.data.session),
+        userId: verif.data.user?.id ?? null,
+        error: null,
+      };
     },
   };
 }

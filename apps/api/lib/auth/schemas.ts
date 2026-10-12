@@ -4,24 +4,21 @@
  */
 import { z } from "zod";
 
-// E.164 sans le "+" côté Supabase (ex. 212612345678) — on accepte les deux et on normalise.
-const telephoneSchema = z
-  .string()
-  .regex(/^\+?[1-9]\d{7,14}$/, "Numéro de téléphone invalide (format E.164 attendu).")
-  .transform((v) => v.replace(/^\+/, ""));
-
-export const otpRequestSchema = z.object({
-  telephone: telephoneSchema,
-});
-
-export const otpVerifySchema = z.object({
-  telephone: telephoneSchema,
-  code: z.string().regex(/^\d{6}$/, "Code OTP à 6 chiffres attendu."),
-});
-
 export const loginSchema = z.object({
   email: z.string().email(),
   mot_de_passe: z.string().min(8),
+});
+
+/** Mot de passe oublié : l'e-mail suffit ; la réponse est identique que l'adresse existe ou non. */
+export const motDePasseOublieSchema = z.object({
+  email: z.string().email().max(200),
+  langue: z.enum(["fr", "ar"]).default("fr"),
+});
+
+/** Réinitialisation : `token_hash` du lien reçu par e-mail + nouveau mot de passe. */
+export const motDePasseReinitialiserSchema = z.object({
+  token_hash: z.string().min(16).max(512),
+  mot_de_passe: z.string().min(8).max(128),
 });
 
 export const refreshSchema = z.object({
