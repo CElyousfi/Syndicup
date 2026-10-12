@@ -20,6 +20,7 @@ security:
 
 tags:
   - name: Auth
+  - name: App
   - name: Config
   - name: Copropriétés
   - name: Lots
@@ -2802,10 +2803,11 @@ paths:
   # ══════════════════════════════════════════════════════════════════════
   # AUTH — Master Spec Partie 4.3. Public / invité, pas de bearerAuth requis.
   # ══════════════════════════════════════════════════════════════════════
-  /auth/otp/request:
+  /auth/password/forgot:
     post:
       tags: [Auth]
-      summary: Demande un code OTP par SMS.
+      summary: Mot de passe oublié — envoie le lien de réinitialisation par e-mail.
+      description: Réponse identique que l'adresse existe ou non (pas d'énumération). Rate limit 5/heure/e-mail.
       security: []
       requestBody:
         required: true
@@ -2813,17 +2815,18 @@ paths:
           application/json:
             schema:
               type: object
-              required: [telephone]
+              required: [email]
               properties:
-                telephone: { type: string, example: "+212600000000" }
+                email: { type: string, format: email }
+                langue: { type: string, enum: [fr, ar], default: fr }
       responses:
-        "200": { description: OTP envoyé (rate limit 5/heure/numéro — Master Spec Partie 3.4). }
+        "200": { description: Demande prise en compte. }
         "429": { description: Rate limit dépassé. }
 
-  /auth/otp/verify:
+  /auth/password/reset:
     post:
       tags: [Auth]
-      summary: Vérifie le code OTP et retourne un JWT Supabase.
+      summary: Pose le nouveau mot de passe depuis le lien reçu par e-mail et ouvre la session.
       security: []
       requestBody:
         required: true
@@ -2831,13 +2834,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [telephone, code]
+              required: [token_hash, mot_de_passe]
               properties:
-                telephone: { type: string }
-                code: { type: string, example: "123456" }
+                token_hash: { type: string, description: Valeur `token_hash` du lien de récupération GoTrue. }
+                mot_de_passe: { type: string, minLength: 8, maxLength: 128 }
       responses:
         "200":
-          description: JWT émis.
+          description: Session ouverte.
           content:
             application/json:
               schema:
@@ -2848,12 +2851,50 @@ paths:
                     properties:
                       access_token: { type: string }
                       refresh_token: { type: string }
+                      expires_in: { type: integer }
+                      utilisateur_id: { type: string, format: uuid }
         "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /app/version:
+    get:
+      tags: [App]
+      summary: Porte de mise à jour mobile (deux niveaux).
+      description: |
+        `bloquer` si la version du client est inférieure à la version minimale (changement cassant),
+        `proposer` si elle est inférieure à la dernière publiée (bandeau refermable), `ok` sinon.
+        Piloté par APP_MIN_VERSION_* / APP_LATEST_VERSION_* côté serveur. Cache public 5 min.
+      security: []
+      parameters:
+        - in: query
+          name: plateforme
+          required: true
+          schema: { type: string, enum: [android, ios] }
+        - in: query
+          name: version
+          required: false
+          schema: { type: string, example: "1.2.0" }
+      responses:
+        "200":
+          description: Verdict.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      plateforme: { type: string, enum: [android, ios] }
+                      version_client: { type: string, nullable: true }
+                      minimale: { type: string, nullable: true }
+                      derniere: { type: string, nullable: true }
+                      url_store: { type: string, nullable: true }
+                      statut: { type: string, enum: [bloquer, proposer, ok] }
 
   /auth/login:
     post:
       tags: [Auth]
-      summary: Connexion email + mot de passe (option MRE/syndic — Master Spec Partie 4.3).
+      summary: Connexion e-mail + mot de passe (seul mode de connexion depuis oct. 2026).
       security: []
       requestBody:
         required: true

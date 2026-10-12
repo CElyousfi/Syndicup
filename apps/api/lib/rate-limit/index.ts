@@ -35,9 +35,9 @@ function envInt(nom: string, defaut: number): number {
 
 /** Plafonds par catégorie — Master Spec Partie 3.4, surchargables par env (techniques). */
 export const RATE_LIMITS = {
-  /** OTP : 5 / heure / numéro (Partie 3.4 "Auth (OTP request)"). */
-  otpRequest: () => ({ max: envInt("RATE_LIMIT_OTP_REQUEST_MAX", 5), windowMs: 60 * 60_000 }),
-  /** Vérification OTP / login : borne les tentatives de force brute. */
+  /** Mot de passe oublié : 5 / heure / e-mail (anti-spam de la boîte d'un tiers). */
+  motDePasseOublie: () => ({ max: envInt("RATE_LIMIT_PASSWORD_RESET_MAX", 5), windowMs: 60 * 60_000 }),
+  /** Login / réinitialisation : borne les tentatives de force brute. */
   authAttempt: () => ({ max: envInt("RATE_LIMIT_AUTH_MAX", 10), windowMs: 15 * 60_000 }),
   /** Écriture financière : 30 / minute / utilisateur (Partie 3.4). */
   ecritureFinanciere: () => ({ max: envInt("RATE_LIMIT_FINANCE_MAX", 30), windowMs: 60_000 }),
@@ -45,6 +45,4 @@ export const RATE_LIMITS = {
   commentaire: () => ({ max: envInt("RATE_LIMIT_COMMENTAIRE_MAX", 10), windowMs: 10 * 60_000 }),
   /** Webhook CMI : par IP — la vraie authentification est la signature HMAC. */
   webhookCmi: () => ({ max: envInt("RATE_LIMIT_CMI_WEBHOOK_MAX", 120), windowMs: 60_000 }),
-  /** Hook « Send SMS » GoTrue : par IP — protège le solde Infobip, la vraie authentification est la signature Standard Webhooks. */
-  authHookSms: () => ({ max: envInt("RATE_LIMIT_AUTH_HOOK_SMS_MAX", 30), windowMs: 60_000 }),
 } as const;

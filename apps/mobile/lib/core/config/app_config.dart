@@ -19,7 +19,7 @@ class AppConfig {
   ///   10.0.2.2, le simulateur iOS via localhost.
   static String get apiBaseUrl {
     if (_apiBaseUrlDefine.isNotEmpty) return _apiBaseUrlDefine;
-    if (kReleaseMode) return 'https://api.copropriete-maroc.ma/v1';
+    if (kReleaseMode) return 'https://api.syndicup.pro/v1';
     if (Platform.isAndroid) return 'http://10.0.2.2:3001/v1';
     return 'http://localhost:3001/v1';
   }
@@ -27,7 +27,7 @@ class AppConfig {
   /// Base publique du web (liens d'invitation `/{locale}/invitation/{code}` scannés en QR).
   static const String webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'https://app.copropriete-maroc.ma',
+    defaultValue: 'https://app.syndicup.pro',
   );
 
   /// Push FCM — activé uniquement si un projet Firebase est fourni au build.
@@ -37,5 +37,6 @@ class AppConfig {
   static const String firebaseProjectId = String.fromEnvironment('FIREBASE_PROJECT_ID');
   static const String firebaseSenderId = String.fromEnvironment('FIREBASE_SENDER_ID');
 
-  static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '0.1.0');
+  /// Version de repli si package_info n'est pas disponible (tests) — la vraie vient du build.
+  static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
 }

@@ -48,8 +48,8 @@ class ApiClient {
 
   String get baseUrl => _dio.options.baseUrl;
 
-  Future<ApiResult<T>> get<T>(String path, {Map<String, Object?>? query, Parse<T>? parse, String? coproprieteId}) =>
-      request<T>('GET', path, query: query, parse: parse, coproprieteId: coproprieteId);
+  Future<ApiResult<T>> get<T>(String path, {Map<String, Object?>? query, Parse<T>? parse, String? coproprieteId, bool auth = true}) =>
+      request<T>('GET', path, query: query, parse: parse, coproprieteId: coproprieteId, auth: auth);
 
   Future<ApiResult<T>> post<T>(String path, {Object? body, bool idempotent = false, String? idempotencyKey, Parse<T>? parse, bool auth = true, String? coproprieteId, String? accessToken}) =>
       request<T>('POST', path, body: body, idempotent: idempotent, idempotencyKey: idempotencyKey, parse: parse, auth: auth, coproprieteId: coproprieteId, accessToken: accessToken);

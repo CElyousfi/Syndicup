@@ -31,19 +31,24 @@ export async function readSession(): Promise<SessionCookies> {
   };
 }
 
+/** Durée du cookie de rafraîchissement : « rester connecté » = 90 jours, sinon 30 jours. */
+const REFRESH_MAX_AGE = { rester: 60 * 60 * 24 * 90, session: 60 * 60 * 24 * 30 } as const;
+
 /** À appeler uniquement depuis une Server Action ou un Route Handler. */
-export async function writeTokens(tokens: {
-  access_token: string;
-  refresh_token: string;
-  expires_in: number;
-}): Promise<void> {
+export async function writeTokens(
+  tokens: { access_token: string; refresh_token: string; expires_in: number },
+  opts: { rester?: boolean } = {}
+): Promise<void> {
   const jar = await cookies();
   jar.set(COOKIE_ACCESS, tokens.access_token, {
     ...BASE_OPTS,
     maxAge: Math.max(60, tokens.expires_in),
   });
-  // Le refresh token Supabase est rotatif et sans expiration courte — 30 jours de session max.
-  jar.set(COOKIE_REFRESH, tokens.refresh_token, { ...BASE_OPTS, maxAge: 60 * 60 * 24 * 30 });
+  // Le refresh token Supabase est rotatif : la durée du cookie borne la session, pas GoTrue.
+  jar.set(COOKIE_REFRESH, tokens.refresh_token, {
+    ...BASE_OPTS,
+    maxAge: opts.rester ? REFRESH_MAX_AGE.rester : REFRESH_MAX_AGE.session,
+  });
 }
 
 export async function writeCoproprieteId(id: string): Promise<void> {

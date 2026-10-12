@@ -48,6 +48,8 @@
 		<string>fr</string>
 		<string>ar</string>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>SyndicUp utilise Face ID pour déverrouiller l'application sans ressaisir votre mot de passe.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>SyndicUp utilise l'appareil photo pour joindre des photos à un signalement d'incident et scanner le QR code d'invitation de votre immeuble.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

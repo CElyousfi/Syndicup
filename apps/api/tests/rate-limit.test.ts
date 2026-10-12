@@ -52,9 +52,9 @@ describe("enforceRateLimit", () => {
 
 describe("RATE_LIMITS (env-surchargables)", () => {
   it("expose des défauts sains et lit la surcharge env", () => {
-    expect(RATE_LIMITS.otpRequest().max).toBe(5);
-    process.env.RATE_LIMIT_OTP_REQUEST_MAX = "9";
-    expect(RATE_LIMITS.otpRequest().max).toBe(9);
-    delete process.env.RATE_LIMIT_OTP_REQUEST_MAX;
+    expect(RATE_LIMITS.motDePasseOublie().max).toBe(5);
+    process.env.RATE_LIMIT_PASSWORD_RESET_MAX = "9";
+    expect(RATE_LIMITS.motDePasseOublie().max).toBe(9);
+    delete process.env.RATE_LIMIT_PASSWORD_RESET_MAX;
   });
 });

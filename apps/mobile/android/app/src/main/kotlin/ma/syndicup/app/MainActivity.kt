@@ -1,5 +1,6 @@
 package ma.syndicup.app
 
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+// FlutterFragmentActivity (et non FlutterActivity) : requis par local_auth pour la biométrie.
+class MainActivity : FlutterFragmentActivity()

@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
+import '../../core/auth/biometric_lock.dart';
 import '../../core/auth/session.dart';
-import '../../core/feel/feel.dart';
-import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
-import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
 import 'welcome_screen.dart';
 
-/// A1 — connexion : OTP téléphone par défaut (résidents/gardiens), e-mail + mot de passe pour
-/// les MRE/syndics. `next` : chemin de retour (ex. /invitation/{code}).
+/// A1 — connexion : e-mail + mot de passe, un seul chemin (l'OTP SMS a été retiré — oct. 2026).
+/// Après la première connexion réussie, propose d'activer Face ID / l'empreinte.
+/// `next` : chemin de retour (ex. /invitation/{code}).
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key, this.next});
   final String? next;
@@ -27,52 +24,28 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  String _mode = 'phone';
-  final _tel = TextEditingController();
   final _email = TextEditingController();
   final _pwd = TextEditingController();
   bool _loading = false;
+  bool _showPwd = false;
   ApiFail? _fail;
-  String? _telError;
 
   @override
   void dispose() {
-    _tel.dispose();
     _email.dispose();
     _pwd.dispose();
     super.dispose();
   }
 
-  Future<void> _sendOtp() async {
-    final d = context.dict;
-    final tel = normaliserTelephone(_tel.text);
-    if (tel == null) {
-      setState(() => _telError = d.auth.invalidPhone);
-      return;
-    }
-    setState(() {
-      _loading = true;
-      _fail = null;
-      _telError = null;
-    });
-    final res = await ref.read(apiClientProvider).post<dynamic>('/auth/otp/request', body: {'telephone': tel}, auth: false);
-    if (!mounted) return;
-    setState(() => _loading = false);
-    if (res is ApiFail) {
-      setState(() => _fail = res);
-      return;
-    }
-    context.push('/connexion/code?tel=${Uri.encodeComponent(tel)}${widget.next != null ? '&next=${Uri.encodeComponent(widget.next!)}' : ''}');
-  }
-
-  Future<void> _loginEmail() async {
+  Future<void> _login() async {
+    if (_email.text.trim().isEmpty || _pwd.text.length < 8) return;
     setState(() {
       _loading = true;
       _fail = null;
     });
     final res = await ref.read(apiClientProvider).post<SessionTokens>(
           '/auth/login',
-          body: {'email': _email.text.trim(), 'mot_de_passe': _pwd.text},
+          body: {'email': _email.text.trim().toLowerCase(), 'mot_de_passe': _pwd.text},
           auth: false,
           parse: (j) => SessionTokens.fromJson(asMap(j)),
         );
@@ -80,6 +53,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     switch (res) {
       case ApiOk<SessionTokens>(:final data):
         await ref.read(sessionProvider.notifier).signIn(data);
+        if (!mounted) return;
+        await _proposeBiometrics();
         if (!mounted) return;
         if (widget.next != null) context.go(widget.next!);
       case ApiFail<SessionTokens>():
@@ -90,11 +65,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
   }
 
+  /// Une seule fois par installation, si l'appareil a une biométrie enrôlée.
+  Future<void> _proposeBiometrics() async {
+    final bio = ref.read(biometricLockProvider);
+    if (bio.alreadyAsked || bio.enabled || !await bio.available) return;
+    await bio.markAsked();
+    if (!mounted) return;
+    final md = context.mdict;
+    final yes = await confirmDialog(context, title: md.bioEnableTitle, body: md.bioEnableBody, confirmLabel: md.bioEnableYes);
+    if (yes && await bio.authenticate(md.bioUnlockReason)) await bio.setEnabled(true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
-    final md = context.mdict;
     final t = Theme.of(context).textTheme;
+    final invalid = _fail?.error.code == 'UNAUTHENTICATED';
     return PublicScaffold(
       showBack: true,
       children: [
@@ -102,254 +88,151 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 8),
         Text(d.auth.loginSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
         const SizedBox(height: 28),
-        Padding(
-          padding: EdgeInsets.zero,
+        AutofillGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Segmented<String>(value: _mode, options: const ['phone', 'email'], labelOf: (m) => m == 'phone' ? d.auth.tabPhone : d.auth.tabEmail, onChanged: (m) => setState(() { _mode = m; _fail = null; })),
-              const SizedBox(height: 20),
-              SuFadeSwitch(
-                value: _mode,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-              if (_mode == 'phone') ...[
-                SuField(
-                  label: d.auth.phoneLabel,
-                  controller: _tel,
-                  keyboardType: TextInputType.phone,
-                  textDirection: TextDirection.ltr,
-                  hint: '+212 6 00 00 00 00',
-                  help: d.auth.phoneHint,
-                  error: _telError ?? fieldError(_fail, 'telephone'),
-                  autofocus: true,
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _sendOtp(),
-                  autofillHints: const [AutofillHints.telephoneNumber],
-                  inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+ ]'))],
-                ),
-                const SizedBox(height: 16),
-                FormError(_fail),
-                if (_fail != null) const SizedBox(height: 12),
-                SubmitButton(label: d.auth.sendCode, loading: _loading, onPressed: _sendOtp, fail: _fail),
-              ] else ...[
-                SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, error: fieldError(_fail, 'email'), autofillHints: const [AutofillHints.email], textInputAction: TextInputAction.next),
-                const SizedBox(height: 14),
-                SuField(label: d.auth.passwordLabel, controller: _pwd, obscureText: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'mot_de_passe'), autofillHints: const [AutofillHints.password], textInputAction: TextInputAction.done, onSubmitted: (_) => _loginEmail()),
-                const SizedBox(height: 16),
-                if (_fail?.status == 401) SuBanner(tone: BannerTone.danger, body: d.auth.invalidCredentials) else FormError(_fail),
-                if (_fail != null) const SizedBox(height: 12),
-                SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: _loginEmail, fail: _fail),
-              ],
-                  ],
+              SuField(
+                label: d.auth.emailLabel,
+                controller: _email,
+                keyboardType: TextInputType.emailAddress,
+                textDirection: TextDirection.ltr,
+                hint: 'nom@exemple.ma',
+                autofocus: true,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.email],
+                error: fieldError(_fail, 'email'),
+              ),
+              const SizedBox(height: 16),
+              SuField(
+                label: d.auth.passwordLabel,
+                controller: _pwd,
+                obscureText: !_showPwd,
+                textDirection: TextDirection.ltr,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
+                autofillHints: const [AutofillHints.password],
+                error: invalid ? d.auth.invalidCredentials : fieldError(_fail, 'mot_de_passe'),
+                suffix: SuIconButton(
+                  icon: _showPwd ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  iconSize: 20,
+                  color: SuColors.faint,
+                  onPressed: () => setState(() => _showPwd = !_showPwd),
                 ),
               ),
+              const SizedBox(height: 10),
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: SuButton(
+                  label: d.auth.forgotPassword,
+                  variant: SuButtonVariant.ghost,
+                  size: SuButtonSize.sm,
+                  onPressed: () => context.push('/connexion/mot-de-passe-oublie${_email.text.trim().isEmpty ? '' : '?email=${Uri.encodeComponent(_email.text.trim())}'}'),
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (!invalid) FormError(_fail),
+              if (!invalid && _fail != null) const SizedBox(height: 12),
+              SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: _login, fail: _fail),
             ],
           ),
         ),
-        const SizedBox(height: 24),
-        SuButton(label: md.startScan, icon: Icons.qr_code_scanner_rounded, variant: SuButtonVariant.secondary, onPressed: () => context.push('/invitation/scan')),
-        const SizedBox(height: 12),
-        Center(child: SuButton(label: d.auth.inviteEnterCode, variant: SuButtonVariant.ghost, onPressed: () => context.push('/invitation'))),
+        const SizedBox(height: 28),
+        Center(
+          child: SuButton(
+            label: d.auth.inviteEnterCode,
+            variant: SuButtonVariant.ghost,
+            onPressed: () => context.push('/invitation'),
+            style: TextButton.styleFrom(foregroundColor: SuColors.soft),
+          ),
+        ),
       ],
     );
   }
 }
 
-/// A2 — code à 6 chiffres, auto-avance, coller supporté, renvoi avec compte à rebours.
-class OtpScreen extends ConsumerStatefulWidget {
-  const OtpScreen({super.key, required this.telephone, this.next});
-  final String telephone;
-  final String? next;
+/// Mot de passe oublié : un e-mail, et un lien part (réponse identique que le compte existe ou
+/// non). Le lien ouvre app.syndicup.pro/{langue}/reinitialiser dans le navigateur.
+class ForgotPasswordScreen extends ConsumerStatefulWidget {
+  const ForgotPasswordScreen({super.key, this.email});
+  final String? email;
   @override
-  ConsumerState<OtpScreen> createState() => _OtpScreenState();
+  ConsumerState<ForgotPasswordScreen> createState() => _ForgotPasswordScreenState();
 }
 
-class _OtpScreenState extends ConsumerState<OtpScreen> {
-  final _code = TextEditingController();
-  final _focus = FocusNode();
+class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
+  late final _email = TextEditingController(text: widget.email ?? '');
   bool _loading = false;
+  bool _sent = false;
   ApiFail? _fail;
-  int _countdown = 60;
-  bool _resent = false;
-  /// Nombre d'échecs : clé de l'animation de tremblement (rejouée à chaque mauvais code).
-  int _echecs = 0;
-  /// Code accepté : les cases passent au vert un instant avant l'entrée dans l'app.
-  bool _succes = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _tick();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _focus.requestFocus());
-  }
-
-  void _tick() {
-    Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      if (_countdown > 0) {
-        setState(() => _countdown--);
-        _tick();
-      }
-    });
-  }
 
   @override
   void dispose() {
-    _code.dispose();
-    _focus.dispose();
+    _email.dispose();
     super.dispose();
   }
 
-  Future<void> _verify() async {
-    final code = _code.text.replaceAll(RegExp(r'\D'), '');
-    if (code.length != 6) return;
+  Future<void> _send() async {
+    final email = _email.text.trim().toLowerCase();
+    if (!email.contains('@')) return;
     setState(() {
       _loading = true;
       _fail = null;
     });
-    final res = await ref.read(apiClientProvider).post<SessionTokens>(
-          '/auth/otp/verify',
-          body: {'telephone': widget.telephone, 'code': code},
-          auth: false,
-          parse: (j) => SessionTokens.fromJson(asMap(j)),
-        );
+    final langue = Localizations.localeOf(context).languageCode == 'ar' ? 'ar' : 'fr';
+    final res = await ref.read(apiClientProvider).post<dynamic>('/auth/password/forgot', body: {'email': email, 'langue': langue}, auth: false);
     if (!mounted) return;
-    switch (res) {
-      case ApiOk<SessionTokens>(:final data):
-        Haptics.tap();
-        setState(() => _succes = true);
-        if (!SuMotion.reduced(context)) await Future<void>.delayed(const Duration(milliseconds: 420));
-        if (!mounted) return;
-        await ref.read(sessionProvider.notifier).signIn(data);
-        if (!mounted) return;
-        if (widget.next != null) context.go(widget.next!);
-      case ApiFail<SessionTokens>():
-        if (res.status == 401) Haptics.error();
-        setState(() {
-          _loading = false;
-          _fail = res;
-          _code.clear();
-          if (res.status == 401) _echecs++;
-        });
-    }
-  }
-
-  /// Tremblement latéral (amorti) à chaque mauvais code — symétrique, donc identique en RTL.
-  Widget _shake(Widget child) {
-    if (_echecs == 0 || SuMotion.reduced(context)) return child;
-    return child.animate(key: ValueKey('shake$_echecs')).shakeX(hz: 5, amount: 7, duration: 480.ms, curve: Curves.easeOut);
-  }
-
-  Future<void> _resend() async {
-    final res = await ref.read(apiClientProvider).post<dynamic>('/auth/otp/request', body: {'telephone': widget.telephone}, auth: false);
-    if (!mounted) return;
-    if (res is ApiFail) {
-      setState(() => _fail = res);
-    } else {
-      setState(() {
-        _countdown = 60;
-        _resent = true;
-        _fail = null;
-      });
-      _tick();
-    }
+    setState(() {
+      _loading = false;
+      if (res is ApiFail) {
+        _fail = res;
+      } else {
+        _sent = true;
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
-    final digits = _code.text.replaceAll(RegExp(r'\D'), '');
+    if (_sent) {
+      return PublicScaffold(
+        showBack: true,
+        children: [
+          const Icon(Icons.mark_email_read_rounded, size: 44, color: SuColors.brand),
+          const SizedBox(height: 16),
+          Text(d.auth.forgotSentTitle, style: t.displayMedium),
+          const SizedBox(height: 10),
+          Text(fill(d.auth.forgotSentBody, {'email': _email.text.trim()}), style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+          const SizedBox(height: 28),
+          SuButton(label: d.auth.backToLogin, onPressed: () => context.go('/connexion'), size: SuButtonSize.lg, expand: true),
+        ],
+      );
+    }
     return PublicScaffold(
       showBack: true,
       children: [
-        Text(d.auth.otpTitle, style: t.displayMedium),
+        Text(d.auth.forgotTitle, style: t.displayMedium),
         const SizedBox(height: 8),
-        Text(fill(d.auth.otpSubtitle, {'telephone': '\u2066${formatTelephone(widget.telephone)}\u2069'}), style: t.bodyLarge?.copyWith(color: SuColors.soft)),
+        Text(d.auth.forgotSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
         const SizedBox(height: 28),
-        Padding(
-          padding: EdgeInsets.zero,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              SuTap(
-                ink: false,
-                scale: 1,
-                onTap: () => _focus.requestFocus(),
-                child: Stack(
-                  children: [
-                    Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: _shake(Row(
-                        children: [
-                          for (int i = 0; i < 6; i++) ...[
-                            Expanded(
-                              child: Semantics(
-                                label: fill(d.a11y.otpDigit, {'n': i + 1}),
-                                // Case active soulignée en douceur ; pendant la vérification, une
-                                // vague teinte les cases l'une après l'autre ; chaque chiffre éclot.
-                                child: AnimatedContainer(
-                                  duration: SuMotion.of(context, Duration(milliseconds: _loading ? 260 + i * 50 : 180)),
-                                  curve: SuMotion.easeOut,
-                                  height: 60,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: _succes ? SuColors.okTint : _loading ? SuColors.sageTint : SuColors.tile,
-                                    borderRadius: BorderRadius.circular(SuRadius.field),
-                                    border: Border.all(color: _succes ? SuColors.ok : _loading ? SuColors.sage : i == digits.length ? SuColors.ink : Colors.transparent, width: 2),
-                                  ),
-                                  child: i < digits.length
-                                      ? Text(digits[i], key: ValueKey('d$i${digits[i]}'), style: t.headlineMedium?.copyWith(fontSize: 24, fontFeatures: const [FontFeature.tabularFigures()]))
-                                          .animate()
-                                          .scaleXY(begin: SuMotion.reduced(context) ? 1 : 0.6, end: 1, duration: 320.ms, curve: SuMotion.spring)
-                                      : const SizedBox.shrink(),
-                                ),
-                              ),
-                            ),
-                            if (i < 5) const SizedBox(width: 6),
-                          ],
-                        ],
-                      )),
-                    ),
-                    Opacity(
-                      opacity: 0,
-                      // alive:allow champ OTP invisible (opacité 0) sous les 6 cases dessinées — SuField afficherait libellé/cadre
-                      child: TextField(
-                        controller: _code,
-                        focusNode: _focus,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-                        autofillHints: const [AutofillHints.oneTimeCode],
-                        onChanged: (v) {
-                          setState(() {});
-                          if (v.length == 6) _verify();
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (_fail != null) ...[
-                const SizedBox(height: 12),
-                _fail!.status == 401
-                    ? SuEnter(key: ValueKey('err$_echecs'), offset: 0.3, child: Text(d.auth.otpInvalid, style: t.bodySmall?.copyWith(color: SuColors.danger)))
-                    : FormError(_fail),
-              ],
-              if (_resent) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.ok, body: d.auth.otpResend)],
-              const SizedBox(height: 20),
-              SubmitButton(label: d.auth.signIn, loading: _loading, onPressed: digits.length == 6 ? _verify : null, fail: _fail),
-            ],
-          ),
+        SuField(
+          label: d.auth.emailLabel,
+          controller: _email,
+          keyboardType: TextInputType.emailAddress,
+          textDirection: TextDirection.ltr,
+          hint: 'nom@exemple.ma',
+          autofocus: true,
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _send(),
+          autofillHints: const [AutofillHints.email],
+          error: fieldError(_fail, 'email'),
         ),
-        const SizedBox(height: 20),
-        Center(
-          child: _countdown > 0
-              ? Text(fill(d.auth.otpResendIn, {'s': _countdown}), style: t.labelSmall?.copyWith(fontSize: 13, fontWeight: FontWeight.w400))
-              : SuButton(label: d.auth.otpResend, variant: SuButtonVariant.ghost, onPressed: _resend),
-        ),
-        Center(child: SuButton(label: d.auth.otpChangeNumber, variant: SuButtonVariant.ghost, onPressed: () => context.pop(), style: TextButton.styleFrom(foregroundColor: SuColors.soft))),
+        const SizedBox(height: 16),
+        FormError(_fail),
+        if (_fail != null) const SizedBox(height: 12),
+        SubmitButton(label: d.auth.forgotSubmit, loading: _loading, onPressed: _send, fail: _fail),
       ],
     );
   }
