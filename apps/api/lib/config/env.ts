@@ -68,6 +68,7 @@ export const envSchema = z.object({
   RATE_LIMIT_FINANCE_MAX: optEntier(),
   RATE_LIMIT_COMMENTAIRE_MAX: optEntier(),
   RATE_LIMIT_CMI_WEBHOOK_MAX: optEntier(),
+  RATE_LIMIT_ASSISTANT_MAX: optEntier(),
 
   // ── Transports de notification (optionnels : noop honnête sinon) ──
   RESEND_API_KEY: optStr(),
@@ -95,6 +96,9 @@ export const envSchema = z.object({
       }, "doit être le JSON complet du service account (project_id, client_email, private_key)")
       .optional()
   ),
+
+  // ── Dari, l'assistant (Groq, compatible OpenAI) — optionnel : 501 sur /assistant/messages sinon ──
+  GROQ_API_KEY: optStr(),
 
   // ── Observabilité ──
   SENTRY_DSN: optUrl(),

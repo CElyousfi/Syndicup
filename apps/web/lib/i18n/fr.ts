@@ -1547,7 +1547,7 @@ export const fr = {
     stepOf: "Étape {n} sur {total}",
     welcomeTitle: "Bienvenue sur SyndicUp",
     welcomeBody:
-      "Suivez le guide : en une minute, nous vous montrons où tout se trouve — directement dans l'application, écran par écran.",
+      "Je suis Dari, votre assistant. Suivez-moi : en une minute, je vous montre où tout se trouve — directement dans l'application, écran par écran.",
     navDashTitle: "Le tableau de bord",
     navDashBody:
       "Tout part d'ici. Cliquez sur cette entrée du menu à tout moment pour revenir à votre vue d'ensemble.",
@@ -1583,7 +1583,7 @@ export const fr = {
       "Paiements, convocations, réponses à vos signalements : tout ce qui vous concerne arrive ici.",
     doneTitle: "Vous êtes prêt !",
     doneBody:
-      "Vous connaissez maintenant le parcours essentiel. Bonne navigation — et bienvenue dans votre copropriété.",
+      "Vous connaissez maintenant le parcours essentiel. Et si une question vous vient, je suis juste là, en bas de l'écran. Bienvenue dans votre copropriété !",
     clickHint: "Cliquez sur l'élément en surbrillance pour continuer",
     adminNavTitle: "Votre console",
     adminNavBody:
@@ -1591,6 +1591,34 @@ export const fr = {
     adminNewTitle: "Créer une résidence",
     adminNewBody:
       "Deux étapes, tout dans l'interface : la résidence, puis le code d'invitation du syndic à lui transmettre. Aucun mot de passe à gérer.",
+    dariTitle: "Et moi, c'est Dari",
+    dariBody:
+      "Votre assistant. Je connais votre résidence et chaque écran de l'application : posez-moi vos questions à tout moment, je vous réponds et je vous emmène au bon endroit.",
+  },
+  dari: {
+    nom: "Dari",
+    sousTitre: "Votre assistant SyndicUp",
+    ouvrir: "Demander à Dari",
+    fermer: "Fermer l'assistant",
+    nouvelle: "Nouvelle conversation",
+    bonjour: "Bonjour {prenom} ! Je suis Dari.",
+    intro: "Je connais votre résidence et l'application. Voici ce qui compte aujourd'hui :",
+    rienAFaire: "Rien d'urgent pour le moment — tout est en ordre.",
+    suggestionsTitre: "Vous pouvez me demander",
+    placeholder: "Posez votre question…",
+    envoyer: "Envoyer",
+    reflechit: "Dari réfléchit…",
+    ecrit: "Dari écrit…",
+    ouvrirEcran: "Ouvrir",
+    indisponible: "La conversation n'est pas encore activée sur cet espace. Les repères ci-dessus restent à jour.",
+    sature: "Je suis très sollicité en ce moment — réessayez dans quelques secondes.",
+    trop: "Vous m'avez posé beaucoup de questions : faisons une petite pause de quelques minutes.",
+    erreur: "Je n'ai pas pu répondre. Vérifiez votre connexion et réessayez.",
+    reessayer: "Réessayer",
+    avertissement: "Dari peut se tromper : vérifiez les montants dans l'écran concerné.",
+    bulleTitre: "Une question ?",
+    bulleTexte: "Je suis Dari, votre assistant. Je vous guide partout dans l'application.",
+    chargement: "Dari regarde votre résidence…",
   },
   comptabilite: {
     appeleResident: "Ma part appelée",

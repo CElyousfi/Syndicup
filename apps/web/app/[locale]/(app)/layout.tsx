@@ -63,6 +63,7 @@ export default async function AppLayout({
       alive={dict.alive}
       quick={buildQuickActions(nav, ctx.role, ctx.roles, dict, ctx.locale)}
       tour={dict.onboarding}
+      dari={ctx.role === "MEMBRE_CABINET" ? null : { labels: dict.dari, prenom: ctx.profil.prenom ?? "" }}
     >
       {children}
     </AppFrame>

@@ -62,6 +62,8 @@ qui est marqué ★ doit aussi être renseigné pour que le service soit utile.
 | `INFOBIP_SENDER` | non (test M0) — obligatoire tant que le compte Infobip est en essai | infobip.com → tableau de bord *Send your first message* → expéditeur assigné au compte ; un compte d'essai n'envoie qu'au numéro vérifié à l'inscription |
 | `RATE_LIMIT_AUTH_HOOK_SMS_MAX` | non (`value:` déjà posée à 30/min dans render.yaml) | protège le solde Infobip contre un webhook rejoué/forgé |
 | `RATE_LIMIT_OTP_REQUEST_MAX` / `RATE_LIMIT_AUTH_MAX` / `RATE_LIMIT_FINANCE_MAX` / `RATE_LIMIT_COMMENTAIRE_MAX` / `RATE_LIMIT_CMI_WEBHOOK_MAX`, `AG_RAPPEL_JOURS_AVANT` | non (`value:` déjà posées dans render.yaml — 5/10/30/10/120/3) | plafonds techniques / délai de confort, ajustables depuis le tableau de bord Render sans redéploiement |
+| `GROQ_API_KEY` | non — sans elle, Dari affiche ses repères mais ne converse pas (`POST /v1/assistant/messages` → **501**) | console.groq.com → *API Keys*. Secret serveur uniquement : jamais dans le web ni le mobile |
+| `RATE_LIMIT_ASSISTANT_MAX` | non (`value:` posée à 30 / 10 min / utilisateur dans render.yaml) | borne le coût du modèle de Dari |
 | `INNGEST_DEV` | **interdit** en production | local uniquement |
 
 ### Web (`syndicup-web*`)
