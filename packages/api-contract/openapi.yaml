@@ -25,6 +25,8 @@ tags:
   - name: Copropriétés
   - name: Lots
   - name: Utilisateurs
+  - name: Assistant
+    description: "Dari, l'assistant intégré (web + mobile) : repères du moment calculés sur les données de l'utilisateur (même filtrage par rôle que les écrans, RLS en seconde couche) et réponses conversationnelles ancrées sur ces données et sur la carte des écrans de son rôle. Lecture seule ; rien n'est stocké."
   - name: Finances
   - name: Assemblées Générales
   - name: Incidents
@@ -137,6 +139,66 @@ components:
         plateforme: { type: string, enum: [ANDROID, IOS] }
         langue: { type: string, enum: [FR, AR] }
         version_app: { type: string, maxLength: 40, nullable: true }
+    # ── Domaine : Assistant Dari ─────────────────────────────────────────────
+    AssistantEcran:
+      type: object
+      description: Écran de l'application proposé par Dari — toujours un écran autorisé pour le rôle de l'appelant.
+      required: [cle, libelle, web, mobile]
+      properties:
+        cle: { type: string, example: payer }
+        libelle: { type: string, example: Payer mes charges }
+        web: { type: string, description: "Chemin web sans préfixe de locale.", example: /finances/payer }
+        mobile: { type: string, nullable: true, description: "Chemin go_router ; null si l'écran n'existe que sur le web.", example: /payer }
+    AssistantInsight:
+      type: object
+      required: [cle, niveau, texte, ecran]
+      properties:
+        cle: { type: string, example: charges_echeance }
+        niveau: { type: string, enum: [attention, info, succes] }
+        texte: { type: string }
+        ecran:
+          nullable: true
+          allOf: [{ $ref: "#/components/schemas/AssistantEcran" }]
+    AssistantEtat:
+      type: object
+      required: [disponible, insights, suggestions]
+      properties:
+        disponible: { type: boolean, description: "false si la conversation n'est pas configurée sur ce déploiement (les repères restent servis)." }
+        insights:
+          type: array
+          maxItems: 4
+          items: { $ref: "#/components/schemas/AssistantInsight" }
+        suggestions:
+          type: array
+          items: { type: string }
+    AssistantMessage:
+      type: object
+      required: [role, contenu]
+      properties:
+        role: { type: string, enum: [user, assistant] }
+        contenu: { type: string, minLength: 1, maxLength: 2000 }
+    AssistantQuestion:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          minItems: 1
+          maxItems: 12
+          description: Historique court de la conversation ; le dernier message vient de l'utilisateur.
+          items: { $ref: "#/components/schemas/AssistantMessage" }
+        page: { type: string, maxLength: 200, description: "Chemin de l'écran ouvert, pour situer la question.", example: /fr/finances/payer }
+        langue: { type: string, enum: [fr, ar], default: fr }
+    AssistantReponse:
+      type: object
+      required: [reponse, ecrans]
+      properties:
+        reponse: { type: string }
+        ecrans:
+          type: array
+          maxItems: 3
+          items: { $ref: "#/components/schemas/AssistantEcran" }
+
     WidgetSnapshot:
       type: object
       description: Instantané pour les widgets mobiles. Un bloc à `null` = non visible pour ce rôle.
@@ -3878,6 +3940,72 @@ paths:
                 type: object
                 properties:
                   data: { $ref: "#/components/schemas/WidgetSnapshot" }
+
+  /assistant:
+    get:
+      tags: [Assistant]
+      summary: >
+        Repères de Dari pour l'utilisateur connecté (charges à régler, AG, incidents hors délai,
+        annonces non lues, visiteurs en attente…) et questions proposées. Calcul déterministe sur
+        le même instantané que /users/me/widget — aucun appel au modèle.
+      parameters:
+        - name: langue
+          in: query
+          required: false
+          schema: { type: string, enum: [fr, ar], default: fr }
+      responses:
+        "200":
+          description: Repères et suggestions.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssistantEtat" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+
+  /assistant/messages:
+    post:
+      tags: [Assistant]
+      summary: >
+        Pose une question à Dari. La réponse est ancrée sur les données de l'utilisateur (filtrées
+        par rôle, RLS) et sur la carte des écrans de son rôle ; les écrans proposés sont revalidés
+        côté serveur. Lecture seule, rien n'est stocké. Plafond par utilisateur
+        (RATE_LIMIT_ASSISTANT_MAX / 10 min).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssistantQuestion" }
+      responses:
+        "200":
+          description: Réponse de Dari.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/AssistantReponse" }
+                  meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "401": { $ref: "#/components/responses/Unauthenticated" }
+        "429":
+          description: Trop de questions — réessayer après Retry-After.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "501":
+          description: Conversation non configurée sur ce déploiement (GROQ_API_KEY absente).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "503":
+          description: Modèles saturés — réessayer dans un instant.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /finances/budgets:
     get:

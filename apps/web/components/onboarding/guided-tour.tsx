@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Visite guidée du premier lancement — parcours INTERACTIF à travers l'application :
+ * Visite guidée du premier lancement, animée par Dari (l'assistant) — parcours INTERACTIF :
  * chaque étape met en lumière un élément réel de l'interface (projecteur + carte
  * explicative), navigue de page en page (tableau de bord → appels de fonds →
  * incidents → documents) et montre où cliquer.
@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { BrandTile } from "../brand";
+import { DariAvatar, DariMotion } from "../assistant/dari";
 import { Button } from "../ui/button";
 import { fill } from "../../lib/i18n";
 
@@ -62,6 +62,8 @@ export interface TourLabels {
   adminNavBody: string;
   adminNewTitle: string;
   adminNewBody: string;
+  dariTitle: string;
+  dariBody: string;
 }
 
 interface Etape {
@@ -134,6 +136,8 @@ export function GuidedTour({
     { cible: "doc-view", route: "/documents", requiert: "nav-file", action: true, titre: labels.docViewTitle, corps: labels.docViewBody },
     { cible: "search", titre: labels.searchTitle, corps: labels.searchBody },
     { cible: "bell", titre: labels.bellTitle, corps: labels.bellBody },
+    // Dari, l'assistant : le lanceur reste sur chaque écran après la visite.
+    { cible: "dari", titre: labels.dariTitle, corps: labels.dariBody },
     { titre: labels.doneTitle, corps: labels.doneBody },
   ];
   const etape = etapes[idx]!;
@@ -142,6 +146,8 @@ export function GuidedTour({
   const terminer = useCallback(() => {
     try {
       window.localStorage.setItem(CLE_STOCKAGE, new Date().toISOString());
+      // Dari a été présenté pendant la visite : pas de bulle d'introduction ensuite.
+      window.localStorage.setItem("syndicup:dari:intro", new Date().toISOString());
     } catch {
       // sans stockage : fermeture pour la session
     }
@@ -356,9 +362,11 @@ export function GuidedTour({
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-4">
           <div key={idx} className="pointer-events-auto w-full max-w-md rounded-card bg-surface p-6 shadow-pop animate-in-up sm:p-8">
             <div className="flex flex-col items-center text-center">
-              {/* Icône d'app : symbole lime sur carré vert — le moment de marque de la visite. */}
-              <BrandTile size={72} />
-              <h2 className="mt-6 text-[24px] font-bold leading-tight tracking-[-0.02em] text-ink">{etape.titre}</h2>
+              {/* Dari, l'assistant, anime la visite : il salue à l'accueil et parle à la fin. */}
+              <span className="-mt-2 flex size-[132px] items-end justify-center overflow-hidden rounded-full bg-sage-tint">
+                <DariMotion clip={derniere ? "talk" : "wave"} size={150} eager className="-mb-2" />
+              </span>
+              <h2 className="mt-5 text-[24px] font-bold leading-tight tracking-[-0.02em] text-ink">{etape.titre}</h2>
               <p className="mt-2.5 text-[15px] leading-relaxed text-soft">{etape.corps}</p>
             </div>
             <PiedDeCarte
@@ -378,8 +386,13 @@ export function GuidedTour({
           className="pointer-events-auto absolute inset-x-3 bottom-3 rounded-card bg-surface p-5 shadow-pop animate-in-up sm:inset-auto sm:p-5"
           style={carteStyle}
         >
-          <h2 className="text-[17px] font-bold tracking-tight text-ink">{etape.titre}</h2>
-          <p className="mt-1.5 text-[14px] leading-relaxed text-soft">{etape.corps}</p>
+          <div className="flex items-start gap-3">
+            <DariAvatar size={40} />
+            <div className="min-w-0 flex-1">
+              <h2 className="text-[17px] font-bold tracking-tight text-ink">{etape.titre}</h2>
+              <p className="mt-1.5 text-[14px] leading-relaxed text-soft">{etape.corps}</p>
+            </div>
+          </div>
           {etape.action ? (
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-cta px-3 py-1 text-[12px] font-semibold text-ink">
               <span className="size-1.5 rounded-full bg-ink animate-pulse-dot" aria-hidden />

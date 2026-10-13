@@ -19,6 +19,7 @@ import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../documents/documents_screen.dart';
 import '../communication/communication_screens.dart';
+import '../assistant/assistant_screen.dart';
 import '../shell/app_shell.dart';
 
 /// B1→B5 : LE tableau de bord est différent par rôle.
@@ -191,6 +192,7 @@ class _DashSyndic extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: lectureSeule ? d.dash.controleTitle : ctx.copropriete?.nom),
+          const DariDashboardCard(),
           if (synthese.hasError) ErrorState(error: synthese.error!, onRetry: refresh),
           // M24 — checklist de démarrage (lecture) : visible tant que tout n'est pas en place.
           const OnboardingCard(),
@@ -416,6 +418,7 @@ class _DashResident extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, subtitle: '${libelleRole(context, ctx.role)}${mesLots.isNotEmpty ? ' · ${mesLots.map((x) => x.numero).join(', ')}' : ''}'),
+          const DariDashboardCard(),
           TileCarousel(height: 196, children: [
             if (!locataire) StatTile(icon: Icons.account_balance_wallet_rounded, label: d.dash.monSolde, value: synthese?.isLoading ?? false ? '…' : formatMAD(versChaine(totalDu), l), tone: totalDu > BigInt.zero ? Tone.danger : Tone.ok, onTap: lotsAffiches.length == 1 ? () => context.push('/lots/${lotsAffiches.first.id}?onglet=finances') : () => context.push('/lots')),
             StatTile(icon: Icons.home_rounded, label: d.lots.mesLots, value: '${lotsAffiches.length}', tone: Tone.sage, onTap: () => context.push('/lots')),
@@ -602,6 +605,7 @@ class _DashGardien extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, photo: 'entree', subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
+          const DariDashboardCard(),
           SuCard(
             onTap: () => context.push('/visites?enregistrer=1'),
             color: SuColors.ink,
@@ -690,6 +694,7 @@ class _DashPrestataire extends ConsumerWidget {
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
         children: [
           _Greeting(ctx: ctx, photo: 'cour', subtitle: '${libelleRole(context, ctx.role)} · ${ctx.copropriete?.nom ?? ''}'),
+          const DariDashboardCard(),
           TwoCols([
             StatTile(icon: Icons.confirmation_number_rounded, label: d.dash.mesTickets, value: '${tickets.length}', tone: Tone.sage),
             StatTile(icon: Icons.build_rounded, label: d.dash.incidentsOuverts, value: '${ouverts.length}', tone: Tone.sand),

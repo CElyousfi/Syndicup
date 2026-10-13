@@ -53,6 +53,9 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      # Dari (assistant, Groq) — secret, posé dans le tableau de bord Render, jamais commité.
+      - key: GROQ_API_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM
@@ -107,6 +110,8 @@ services:
         value: "10"
       - key: RATE_LIMIT_CMI_WEBHOOK_MAX
         value: "120"
+      - key: RATE_LIMIT_ASSISTANT_MAX
+        value: "30"
       # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
       - key: AG_RAPPEL_JOURS_AVANT
         value: "3"
@@ -181,6 +186,9 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      # Dari (assistant, Groq) — secret, posé dans le tableau de bord Render, jamais commité.
+      - key: GROQ_API_KEY
+        sync: false
       - key: RESEND_API_KEY
         sync: false
       - key: RESEND_FROM
@@ -235,6 +243,8 @@ services:
         value: "10"
       - key: RATE_LIMIT_CMI_WEBHOOK_MAX
         value: "120"
+      - key: RATE_LIMIT_ASSISTANT_MAX
+        value: "30"
       # Délai de confort du rappel d'AG (pas une valeur légale — lib/ag/rappels.ts).
       - key: AG_RAPPEL_JOURS_AVANT
         value: "3"

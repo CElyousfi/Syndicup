@@ -172,7 +172,8 @@ export const config = {
   // .mjs : worker pdf.js (public/pdf.worker.min.mjs) — actif statique, hors localisation.
   // illustrations/ : images de repos ET animations .json (lib/feel/lottie-art) — jamais localisées.
   // videos/ : illustrations éditoriales animées (.mp4 + première image .jpg).
+  // brand/ : mascotte Dari (boucles .avif / .webp transparentes + poster .png).
   // `.well-known/` : assetlinks.json (Android App Links) et apple-app-site-association (Universal
   // Links) doivent être servis bruts, sans redirection de langue ni session.
-  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|illustrations/|videos/|manifest\\.webmanifest|\\.well-known/|.*\\.(?:svg|png|jpg|webp|ico|mjs)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon\\.ico|fonts/|icons/|illustrations/|videos/|brand/|manifest\\.webmanifest|\\.well-known/|.*\\.(?:svg|png|jpg|webp|avif|ico|mjs)$).*)"],
 };

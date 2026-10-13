@@ -8,6 +8,7 @@ import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
+import '../assistant/dari.dart';
 import '../auth/welcome_screen.dart';
 
 /// Clé de préférence : l'onboarding de premier lancement a été vu (terminé ou passé).
@@ -97,7 +98,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     // Décalage de page continu (−1…1) pour la parallaxe du visuel.
                     final page = _pages.hasClients && _pages.position.haveDimensions ? (_pages.page ?? 0) : 0.0;
                     final delta = (i - page).clamp(-1.0, 1.0);
-                    return _Slide(title: slides[i].$1, body: slides[i].$2, photo: slides[i].$3, art: slides[i].$4, delta: delta, active: i == _index);
+                    return _Slide(index: i, title: slides[i].$1, body: slides[i].$2, photo: slides[i].$3, art: slides[i].$4, delta: delta, active: i == _index);
                   },
                 ),
               ),
@@ -138,7 +139,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 }
 
 class _Slide extends StatelessWidget {
-  const _Slide({required this.title, required this.body, required this.photo, required this.art, required this.delta, required this.active});
+  const _Slide({required this.index, required this.title, required this.body, required this.photo, required this.art, required this.delta, required this.active});
+  /// Étape (0…3) : choisit la réplique de Dari.
+  final int index;
   final String title;
   /// Illustration éditoriale animée (vidéo), seule et aussi grande que l'espace le permet.
   final String art;
@@ -180,6 +183,9 @@ class _Slide extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
+                  // Dari accompagne chaque étape (sauf sur les très petits écrans : l'illustration
+                  // garde toute sa place) — il salue d'abord, puis commente.
+                  if (c.maxHeight >= 480) Padding(padding: const EdgeInsets.only(bottom: 10), child: _DariReplique(index: index, active: active)),
                   Text(SuType.posterText(context, title), textAlign: TextAlign.center, style: SuType.poster(context, (c.maxWidth * 0.105).clamp(30.0, 46.0))),
                   const SizedBox(height: 14),
                   Text(body, textAlign: TextAlign.center, style: t.bodyLarge?.copyWith(color: SuColors.soft, height: 1.5)),
@@ -191,6 +197,40 @@ class _Slide extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+/// Dari et sa réplique d'onboarding (bulle), à côté — jamais posé sur l'illustration.
+class _DariReplique extends StatelessWidget {
+  const _DariReplique({required this.index, required this.active});
+  final int index;
+  final bool active;
+  @override
+  Widget build(BuildContext context) {
+    final repliques = context.dari.obBulle;
+    return AnimatedOpacity(
+      opacity: active ? 1 : 0,
+      duration: SuMotion.of(context, SuMotion.slow),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          DariMotion(index == 0 ? DariClip.wave : DariClip.talk, size: 68),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Container(
+              margin: const EdgeInsets.only(bottom: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: const BoxDecoration(
+                color: SuColors.actionTint,
+                borderRadius: BorderRadiusDirectional.only(topStart: Radius.circular(18), topEnd: Radius.circular(18), bottomEnd: Radius.circular(18), bottomStart: Radius.circular(4)),
+              ),
+              child: Text(repliques[index.clamp(0, repliques.length - 1)], style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SuColors.inkStrong, fontWeight: FontWeight.w600, height: 1.35)),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

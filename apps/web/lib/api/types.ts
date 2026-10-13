@@ -1719,3 +1719,30 @@ export interface EvenementAgendaCabinet { type: "AG" | "ECHEANCE_CONTRAT" | "TAC
 export interface AlerteCabinet { code: AlerteCode; niveau: "danger" | "warn" | "info"; copropriete_id: string; copropriete: string; valeur: string | number | null; lien: string }
 export interface CabinetPrestataire { id: string; cabinetId: string; nom: string; specialite: string; telephone: string | null; email: string | null; ice: string | null; rc: string | null; adresse: string | null; notes: string | null; creeLe: string }
 export interface MandatCopropriete { id: string; statut: StatutMandat; dateDebutMandat: string; dateFinMandat: string | null; honorairesMensuels: string | null; contratId: string | null; cabinet: { id: string; nom: string; raison_sociale: string | null; telephone: string | null; email: string | null }; gestionnairePrincipal: IdentiteCourte | null; peutConfirmer: boolean }
+
+// ── Assistant Dari (GET /assistant, POST /assistant/messages) ───────────────
+export interface AssistantEcran {
+  cle: string;
+  libelle: string;
+  /** Chemin web sans préfixe de locale. */
+  web: string;
+  mobile: string | null;
+}
+
+export interface AssistantInsight {
+  cle: string;
+  niveau: "attention" | "info" | "succes";
+  texte: string;
+  ecran: AssistantEcran | null;
+}
+
+export interface AssistantEtat {
+  disponible: boolean;
+  insights: AssistantInsight[];
+  suggestions: string[];
+}
+
+export interface AssistantReponse {
+  reponse: string;
+  ecrans: AssistantEcran[];
+}

@@ -10,6 +10,7 @@ import { Avatar } from "../ui/avatar";
 import { CBuilding, IconCircle } from "../ui/color-icons";
 import { Illustration } from "../ui/illustration";
 import { GuidedTour, type TourLabels } from "../onboarding/guided-tour";
+import { DariAssistant } from "../assistant/dari-assistant";
 import { Toaster } from "./toaster";
 import { SuccessOverlay } from "./success-overlay";
 import { useLive } from "./live";
@@ -118,6 +119,7 @@ export function AppFrame({
   alive,
   tour,
   quick = [],
+  dari = null,
   children,
 }: {
   locale: "fr" | "ar";
@@ -139,6 +141,8 @@ export function AppFrame({
   alive: Dict["alive"];
   tour: TourLabels;
   quick?: QuickAction[];
+  /** Dari, l'assistant (absent pour les comptes sans copropriété, ex. membre de cabinet seul). */
+  dari?: { labels: Dict["dari"]; prenom: string } | null;
   children: React.ReactNode;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -425,6 +429,7 @@ export function AppFrame({
       {/* Visite guidée interactive — premier lancement uniquement. Sur mobile, les étapes
           « menu » ouvrent la feuille de navigation à la place de l'ancien tiroir. */}
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
+      {dari ? <DariAssistant locale={locale} labels={dari.labels} prenom={dari.prenom} /> : null}
       <Toaster />
       <SuccessOverlay doneLabel={labels.done} labels={alive} locale={locale} />
       <SignatureOverlay labels={alive} locale={locale} />

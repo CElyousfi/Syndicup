@@ -37,6 +37,7 @@ import '../../features/communication/communication_screens.dart';
 import '../../features/taches/taches_screens.dart';
 import '../../features/parkings/parkings_screens.dart';
 import '../../features/cabinet/cabinet_screens.dart';
+import '../../features/assistant/assistant_screen.dart';
 import '../../features/profil/profil_screens.dart';
 import '../../features/profil/sensations_section.dart';
 import '../../features/profil/sensations_test_screen.dart';
@@ -166,6 +167,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/invitation/:code', builder: (_, s) => InvitationCodeScreen(code: s.pathParameters['code']!.toUpperCase())),
       GoRoute(path: '/choisir-copropriete', builder: (_, __) => const ChooseCoproScreen()),
       GoRoute(path: '/compte/:kind', builder: (_, s) => CompteEtatScreen(kind: s.pathParameters['kind']!)),
+      // Dari, l'assistant — plein écran (clavier et fil de conversation sans barre d'onglets).
+      GoRoute(path: '/assistant', builder: (_, s) => AssistantScreen(question: s.uri.queryParameters['q'], depuis: s.uri.queryParameters['depuis'])),
       ShellRoute(
         pageBuilder: (context, state, child) => NoTransitionPage<void>(key: state.pageKey, child: AppShell(child: child)),
         routes: [

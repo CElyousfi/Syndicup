@@ -26,6 +26,7 @@ import '../../core/deeplinks/deeplinks.dart';
 import '../../core/home_widgets/home_widgets.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
+import '../assistant/dari.dart';
 import '../../core/theme/motion.dart';
 
 /// Coque applicative mobile : barre de titre compacte (copropriété + cloche), barre d'onglets
@@ -715,6 +716,8 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                     ),
                     const Spacer(),
                     _CoproPill(ctx: ctx, online: online, offlineLabel: md.offline),
+                    // Dari, l'assistant : sur chaque écran racine, à côté de la cloche.
+                    if (!ctx.isMembreCabinetSeul) const _DariButton(),
                     Semantics(
                       label: dict.a11y.notifications,
                       button: true,
@@ -747,6 +750,49 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
                 Padding(
                   padding: const EdgeInsetsDirectional.only(top: 10, end: 8),
                   child: Text(title!, style: t.displayMedium, maxLines: 1, overflow: TextOverflow.ellipsis),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Bouton Dari de l'en-tête : la tête animée sur le vert de la marque ; une pastille compte les
+/// repères « attention » (charges en retard, SLA dépassé, visiteurs en attente…).
+class _DariButton extends ConsumerWidget {
+  const _DariButton();
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final attention = ref.watch(assistantEtatProvider).valueOrNull?.attention ?? 0;
+    return Semantics(
+      button: true,
+      label: context.dari.ouvrir,
+      excludeSemantics: true,
+      child: SuTap(
+        customBorder: const CircleBorder(),
+        scale: SuTokens.pressIcon,
+        onTap: () {
+          Haptics.select();
+          final ici = GoRouter.of(context).routerDelegate.currentConfiguration.uri.path;
+          context.push('/assistant?depuis=${Uri.encodeComponent(ici)}');
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const DariAvatar(size: 38),
+              if (attention > 0)
+                PositionedDirectional(
+                  end: -4,
+                  top: -3,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                    decoration: BoxDecoration(color: SuColors.danger, borderRadius: BorderRadius.circular(999), border: Border.all(color: SuColors.surface, width: 1.5)),
+                    child: Text('$attention', textDirection: TextDirection.ltr, style: const TextStyle(color: Colors.white, fontSize: 10.5, fontWeight: FontWeight.w700)),
+                  ),
                 ),
             ],
           ),
