@@ -4,10 +4,9 @@
  */
 import { withApiHandler } from "../../../lib/http/handler";
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
-import { ok, fail, failZod } from "../../../lib/http/respond";
+import { ok, failZod } from "../../../lib/http/respond";
 import { etatAssistant } from "../../../lib/assistant";
 import { assistantQuerySchema } from "../../../lib/assistant/schemas";
-import { PermissionRefuseeError } from "../../../lib/users/widget";
 
 async function handleGET(req: Request) {
   try {
@@ -19,7 +18,6 @@ async function handleGET(req: Request) {
   } catch (e) {
     const mapped = mapAuthError(e);
     if (mapped) return mapped;
-    if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
     throw e;
   }
 }

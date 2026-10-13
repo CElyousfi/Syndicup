@@ -161,9 +161,18 @@ components:
           allOf: [{ $ref: "#/components/schemas/AssistantEcran" }]
     AssistantEtat:
       type: object
-      required: [disponible, insights, suggestions]
+      required: [disponible, moi, insights, suggestions]
       properties:
         disponible: { type: boolean, description: "false si la conversation n'est pas configurée sur ce déploiement (les repères restent servis)." }
+        moi:
+          type: object
+          description: Qui est l'utilisateur pour Dari (accueil personnalisé).
+          required: [prenom, role, residence, lots]
+          properties:
+            prenom: { type: string, nullable: true }
+            role: { type: string }
+            residence: { type: string, nullable: true }
+            lots: { type: array, items: { type: string }, description: "Libellés des lots de l'utilisateur (« B-12 (étage 3) »)." }
         insights:
           type: array
           maxItems: 4
@@ -193,7 +202,7 @@ components:
       type: object
       required: [reponse, ecrans]
       properties:
-        reponse: { type: string }
+        reponse: { type: string, description: "Texte avec **gras** et retours à la ligne ; un écran cité apparaît sous la forme [[cle|Libellé|/chemin-web|/chemin-mobile]] (toujours autorisé pour le rôle ; chemin mobile vide si web uniquement) — à rendre comme un lien vers l'écran." }
         ecrans:
           type: array
           maxItems: 3

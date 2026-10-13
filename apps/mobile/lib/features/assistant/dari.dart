@@ -86,13 +86,28 @@ class AssistantInsight {
       );
 }
 
+class AssistantMoi {
+  const AssistantMoi({this.prenom, required this.role, this.residence, this.lots = const []});
+  final String? prenom, residence;
+  final String role;
+  final List<String> lots;
+  factory AssistantMoi.fromJson(Map<String, dynamic> j) => AssistantMoi(
+        prenom: j['prenom'] as String?,
+        role: (j['role'] as String?) ?? '',
+        residence: j['residence'] as String?,
+        lots: ((j['lots'] as List?) ?? const []).whereType<String>().toList(),
+      );
+}
+
 class AssistantEtat {
-  const AssistantEtat({required this.disponible, required this.insights, required this.suggestions});
+  const AssistantEtat({required this.disponible, this.moi, required this.insights, required this.suggestions});
   final bool disponible;
+  final AssistantMoi? moi;
   final List<AssistantInsight> insights;
   final List<String> suggestions;
   factory AssistantEtat.fromJson(Map<String, dynamic> j) => AssistantEtat(
         disponible: j['disponible'] == true,
+        moi: j['moi'] is Map ? AssistantMoi.fromJson(asMap(j['moi'])) : null,
         insights: parseList(j['insights'], AssistantInsight.fromJson),
         suggestions: ((j['suggestions'] as List?) ?? const []).whereType<String>().toList(),
       );
@@ -108,7 +123,10 @@ class AssistantReponse {
 }
 
 /// Repères de Dari pour l'utilisateur connecté, dans la langue de l'interface.
-final assistantEtatProvider = FutureProvider.autoDispose<AssistantEtat>((ref) async {
+/// Conservé entre les écrans (pas autoDispose) : l'ouverture de Dari est instantanée, l'écran
+/// rafraîchit derrière (`ref.invalidate`). Dépend du client API (session, copropriété) : à la
+/// déconnexion ou au changement de résidence il est recalculé, rien ne survit à la session.
+final assistantEtatProvider = FutureProvider<AssistantEtat>((ref) async {
   final langue = ref.watch(localeProvider).languageCode == 'ar' ? 'ar' : 'fr';
   return unwrap(await ref.watch(apiClientProvider).get('/assistant', query: {'langue': langue}, parse: (j) => AssistantEtat.fromJson(asMap(j))));
 });
@@ -141,8 +159,9 @@ class DariDict {
     required this.carteQuestion,
     required this.obBulle,
     required this.retour,
+    required this.introMoi,
   });
-  final String nom, sousTitre, ouvrir, nouvelle, bonjour, intro, rienAFaire, suggestionsTitre, placeholder, envoyer, reflechit, ecrit, indisponible, sature, trop, erreur, reessayer, avertissement, webSeulement, carteTitre, carteVide, carteQuestion, retour;
+  final String nom, sousTitre, ouvrir, nouvelle, bonjour, intro, introMoi, rienAFaire, suggestionsTitre, placeholder, envoyer, reflechit, ecrit, indisponible, sature, trop, erreur, reessayer, avertissement, webSeulement, carteTitre, carteVide, carteQuestion, retour;
 
   /// Bulles de Dari sur les écrans d'onboarding (une par étape).
   final List<String> obBulle;
@@ -171,6 +190,7 @@ class DariDict {
     carteVide: 'Rien d\'urgent aujourd\'hui. Une question ? Je suis là.',
     carteQuestion: 'Poser une question',
     retour: 'Retour',
+    introMoi: '{role} · {residence} ({lots}). Je connais votre dossier et chaque écran de l\'application — voici ce qui compte aujourd\'hui :',
     obBulle: [
       'Bonjour, je suis Dari ! Je vous accompagne partout dans l\'application.',
       'Une question sur vos charges ? Demandez-moi, je vous réponds au dirham près.',
@@ -203,6 +223,7 @@ class DariDict {
     carteVide: 'لا شيء مستعجل اليوم. لديكم سؤال؟ أنا هنا.',
     carteQuestion: 'طرح سؤال',
     retour: 'رجوع',
+    introMoi: '{role} · {residence} ({lots}). أعرف ملفكم وكل شاشة في التطبيق — إليكم ما يهم اليوم:',
     obBulle: [
       'مرحبًا، أنا داري! أرافقكم في كل أنحاء التطبيق.',
       'سؤال عن رسومكم؟ اسألوني، أجيبكم حتى آخر درهم.',

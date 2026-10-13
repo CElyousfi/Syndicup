@@ -1738,6 +1738,7 @@ export interface AssistantInsight {
 
 export interface AssistantEtat {
   disponible: boolean;
+  moi: { prenom: string | null; role: string; residence: string | null; lots: string[] };
   insights: AssistantInsight[];
   suggestions: string[];
 }

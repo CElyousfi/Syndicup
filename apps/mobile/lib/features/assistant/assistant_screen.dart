@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/feel/feel.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/widgets.dart';
@@ -58,7 +60,11 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
   void initState() {
     super.initState();
     final q = widget.question;
-    if (q != null && q.trim().isNotEmpty) WidgetsBinding.instance.addPostFrameCallback((_) => _envoyer(q));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Le dernier état connu s'affiche tout de suite ; le réseau rafraîchit derrière.
+      if (mounted) ref.invalidate(assistantEtatProvider);
+      if (q != null && q.trim().isNotEmpty) _envoyer(q);
+    });
   }
 
   @override
@@ -141,8 +147,13 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
     final t = Theme.of(context).textTheme;
     final etat = ref.watch(assistantEtatProvider);
     final messages = ref.watch(_conversationProvider);
-    final prenom = ref.watch(appContextProvider).profil.prenom ?? '';
+    final appCtx = ref.watch(appContextProvider);
+    final moi = etat.valueOrNull?.moi;
+    final prenom = moi?.prenom ?? appCtx.profil.prenom ?? '';
     final bonjour = prenom.isEmpty ? dd.bonjour.replaceAll(RegExp(r' ?\{prenom\}'), '') : fill(dd.bonjour, {'prenom': prenom});
+    final intro = moi == null
+        ? dd.intro
+        : fill(dd.introMoi, {'role': libelleRole(context, moi.role), 'residence': moi.residence ?? '', 'lots': moi.lots.join(', ')}).replaceAll(RegExp(r'\s*\(\s*\)'), '').replaceAll(RegExp(r' {2,}'), ' ');
     final disponible = etat.valueOrNull?.disponible ?? true;
 
     return Scaffold(
@@ -221,7 +232,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Text(bonjour, style: t.titleSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 2),
-                      Text(dd.intro, style: t.bodyMedium?.copyWith(color: SuColors.body, height: 1.45)),
+                      Text(intro, style: t.bodyMedium?.copyWith(color: SuColors.body, height: 1.45)),
                     ]),
                   ),
                   const SizedBox(height: 10),
@@ -293,7 +304,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                                     for (final e in m.ecrans) _Puce(label: e.mobile == null ? '${e.libelle} · ${dd.webSeulement}' : e.libelle, accent: e.mobile != null, onTap: e.mobile == null ? null : () => _ouvrir(e)),
                                   ]),
                               ],
-                              child: _TexteRiche(m.contenu, style: t.bodyMedium?.copyWith(color: m.erreur ? SuColors.warn : SuColors.body, height: 1.5)),
+                              child: _TexteRiche(m.contenu, style: t.bodyMedium?.copyWith(color: m.erreur ? SuColors.warn : SuColors.body, height: 1.5), onEcran: _ouvrir),
                             ),
                     ),
                   if (_enCours) _BulleDari(child: Semantics(label: _ecrit ? dd.ecrit : dd.reflechit, child: const LoadingOrb(size: 9, color: SuColors.faint))),
@@ -465,23 +476,65 @@ class _Puce extends StatelessWidget {
   }
 }
 
-/// Texte de Dari : **gras** et retours à la ligne, rien d'autre n'est interprété.
-class _TexteRiche extends StatelessWidget {
-  const _TexteRiche(this.texte, {this.style});
+/// Texte de Dari : **gras**, retours à la ligne et liens d'écran `[[cle|Libellé|/web|/mobile]]`
+/// (toujours autorisés pour le rôle — revalidés par l'API) ; rien d'autre n'est interprété.
+class _TexteRiche extends StatefulWidget {
+  const _TexteRiche(this.texte, {this.style, required this.onEcran});
   final String texte;
   final TextStyle? style;
+  final void Function(AssistantEcran) onEcran;
+  @override
+  State<_TexteRiche> createState() => _TexteRicheState();
+}
+
+class _TexteRicheState extends State<_TexteRiche> {
+  final _recognizers = <TapGestureRecognizer>[];
+
+  @override
+  void dispose() {
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final spans = <TextSpan>[];
-    final re = RegExp(r'\*\*([^*]+)\*\*');
+    for (final r in _recognizers) {
+      r.dispose();
+    }
+    _recognizers.clear();
+    final spans = <InlineSpan>[];
+    final re = RegExp(r'\*\*([^*]+)\*\*|\[\[([a-z0-9_]+)\|([^\]|]+)\|([^\]|]*)\|([^\]|]*)\]\]');
     var i = 0;
-    for (final m in re.allMatches(texte)) {
-      if (m.start > i) spans.add(TextSpan(text: texte.substring(i, m.start)));
-      spans.add(TextSpan(text: m.group(1), style: const TextStyle(fontWeight: FontWeight.w700, color: SuColors.ink)));
+    for (final m in re.allMatches(widget.texte)) {
+      if (m.start > i) spans.add(TextSpan(text: widget.texte.substring(i, m.start)));
+      if (m.group(1) != null) {
+        spans.add(TextSpan(text: m.group(1), style: const TextStyle(fontWeight: FontWeight.w700, color: SuColors.ink)));
+      } else {
+        final ecran = AssistantEcran(cle: m.group(2)!, libelle: m.group(3)!, web: m.group(4)!, mobile: (m.group(5) ?? '').isEmpty ? null : m.group(5));
+        final r = TapGestureRecognizer()..onTap = ecran.mobile == null ? null : () => widget.onEcran(ecran);
+        _recognizers.add(r);
+        spans.add(WidgetSpan(
+          alignment: PlaceholderAlignment.middle,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(color: SuColors.actionTint, borderRadius: BorderRadius.circular(999)),
+              child: Text.rich(TextSpan(
+                recognizer: r,
+                text: '${ecran.libelle} ${Directionality.of(context) == TextDirection.rtl ? '←' : '→'}',
+                style: (widget.style ?? const TextStyle()).copyWith(color: SuColors.brandDeep, fontWeight: FontWeight.w700, fontSize: 13),
+              )),
+            ),
+          ),
+        ));
+      }
       i = m.end;
     }
-    if (i < texte.length) spans.add(TextSpan(text: texte.substring(i)));
-    return Text.rich(TextSpan(style: style, children: spans));
+    if (i < widget.texte.length) spans.add(TextSpan(text: widget.texte.substring(i)));
+    return Text.rich(TextSpan(style: widget.style, children: spans));
   }
 }
 

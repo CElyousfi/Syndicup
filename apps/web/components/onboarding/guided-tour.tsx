@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { DariAvatar, DariMotion } from "../assistant/dari";
+import { DariAvatar, DariMotion, preloadDari } from "../assistant/dari";
 import { Button } from "../ui/button";
 import { fill } from "../../lib/i18n";
 
@@ -113,7 +113,11 @@ export function GuidedTour({
 
   useEffect(() => {
     try {
-      if (!window.localStorage.getItem(CLE_STOCKAGE)) setOuvert(true);
+      if (!window.localStorage.getItem(CLE_STOCKAGE)) {
+        // Les boucles de Dari sont chargées avant l'ouverture : aucune attente sur la première carte.
+        preloadDari(["wave", "talk", "head"]);
+        setOuvert(true);
+      }
     } catch {
       // stockage indisponible : ne jamais bloquer l'app
     }
@@ -218,7 +222,7 @@ export function GuidedTour({
       const bureau = window.matchMedia("(min-width: 1024px)").matches;
       if (etape.tiroir && !bureau) {
         onDrawer(true);
-        await new Promise((r) => setTimeout(r, 420)); // fin de l'animation du tiroir
+        await new Promise((r) => setTimeout(r, 240)); // fin de l'animation du tiroir
       } else if (!etape.tiroir) {
         onDrawer(false);
       }
@@ -231,14 +235,14 @@ export function GuidedTour({
         const el = trouver(etape.cible);
         if (el) {
           el.scrollIntoView({ block: "center", behavior: "instant" as ScrollBehavior });
-          await new Promise((r) => setTimeout(r, 120));
+          await new Promise((r) => setTimeout(r, 40));
           if (annule) return;
           mesurer(el);
           setPrete(true);
           // Étape actionnable : le clic RÉEL de l'utilisateur sur la cible fait
           // avancer la visite (l'action native — navigation, ouverture — s'exécute).
           if (etape.action) {
-            const surClic = () => setTimeout(() => aller(1), 120);
+            const surClic = () => setTimeout(() => aller(1), 60);
             el.addEventListener("click", surClic, { once: true });
             retireClic.current = () => el.removeEventListener("click", surClic);
           }
@@ -254,7 +258,7 @@ export function GuidedTour({
           // écran (la barre latérale est déjà rendue) → saut rapide, pas d'attente.
           break;
         }
-        await new Promise((r) => setTimeout(r, 100));
+        await new Promise((r) => setTimeout(r, 60));
       }
       // Introuvable (rôle sans cet écran, page vide…) : sauter dans le sens du parcours.
       if (!annule) aller(direction.current);
@@ -328,7 +332,7 @@ export function GuidedTour({
         <>
           <div
             aria-hidden
-            className="absolute rounded-2xl ring-[3px] ring-lime transition-all duration-300 ease-out"
+            className="absolute rounded-2xl ring-[3px] ring-lime transition-all duration-200 ease-out"
             style={{
               top: zone.top,
               left: zone.left,

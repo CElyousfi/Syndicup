@@ -429,7 +429,7 @@ export function AppFrame({
       {/* Visite guidée interactive — premier lancement uniquement. Sur mobile, les étapes
           « menu » ouvrent la feuille de navigation à la place de l'ancien tiroir. */}
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
-      {dari ? <DariAssistant locale={locale} labels={dari.labels} prenom={dari.prenom} /> : null}
+      {dari ? <DariAssistant locale={locale} labels={dari.labels} prenom={dari.prenom} roleLabel={userRole} /> : null}
       <Toaster />
       <SuccessOverlay doneLabel={labels.done} labels={alive} locale={locale} />
       <SignatureOverlay labels={alive} locale={locale} />
