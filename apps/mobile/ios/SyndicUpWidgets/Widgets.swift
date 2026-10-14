@@ -38,8 +38,9 @@ struct ChargesView: View {
           Spacer(minLength: 0)
           HStack {
             Link(destination: widgetURL(c.route ?? "/payer")) { Pill(text: aJour ? (s.labels?.ouvrir ?? "Ouvrir") : (c.payer ?? "Payer")) }
-            Spacer()
+            Spacer(minLength: 4)
             if family != .systemSmall { Text(s.maj ?? "").font(.system(size: 10)).foregroundStyle(SU.faint) }
+            DariView(pose: c.dari, yeuxFermes: entry.masquer, size: family == .systemSmall ? 34 : 40).padding(.vertical, -4)
           }
         }
         .rtl(s.rtl ?? false).widgetURL(widgetURL(c.route_detail ?? "/lots")).widgetSurface()
@@ -99,8 +100,9 @@ struct AgView: View {
             Link(destination: widgetURL(a.route ?? "/ag")) {
               Pill(text: a.cta ?? (s.labels?.ouvrir ?? "Ouvrir"), background: enCours ? SU.danger : SU.cta, foreground: enCours ? .white : SU.onCta)
             }
-            Spacer()
+            Spacer(minLength: 4)
             if family != .systemSmall { Text(s.maj ?? "").font(.system(size: 10)).foregroundStyle(SU.faint) }
+            DariView(pose: a.dari, size: family == .systemSmall ? 34 : 40).padding(.vertical, -4)
           }
         }
         .rtl(s.rtl ?? false).widgetURL(widgetURL(a.route ?? "/ag")).widgetSurface()
@@ -135,8 +137,9 @@ struct ResidenceView: View {
           }
           HStack {
             Link(destination: widgetURL(r.route_encaisser ?? "/finances/appels-de-fonds")) { Pill(text: r.encaisser ?? "") }
-            Spacer()
+            Spacer(minLength: 4)
             Text(s.maj ?? "").font(.system(size: 10)).foregroundStyle(SU.faint)
+            DariView(pose: r.dari, yeuxFermes: entry.masquer, size: 40).padding(.vertical, -4)
           }
         }
       }
@@ -166,10 +169,14 @@ struct AffichageView: View {
         WidgetHeader(title: f.titre ?? "") {
           Text(f.non_lues_label ?? "").font(.system(size: 10, weight: .bold)).foregroundStyle((f.non_lues ?? 0) > 0 ? .white : SU.soft).lineLimit(1)
             .padding(.horizontal, 9).frame(height: 20).background((f.non_lues ?? 0) > 0 ? SU.brand : SU.tile, in: Capsule())
+          if family != .systemSmall && !annonces.isEmpty { DariView(pose: f.dari, size: 30).padding(.vertical, -5) }
         }
         if annonces.isEmpty {
           Spacer(minLength: 0)
-          Text(f.vide ?? "").font(.system(size: 13)).foregroundStyle(SU.soft)
+          HStack(spacing: 10) {
+            DariView(pose: f.dari ?? "laugh", size: family == .systemSmall ? 40 : 48)
+            Text(f.vide ?? "").font(.system(size: 13)).foregroundStyle(SU.soft)
+          }
           Spacer(minLength: 0)
         } else {
           ForEach(Array(annonces.enumerated()), id: \.offset) { _, a in
@@ -214,6 +221,8 @@ struct GardienView: View {
         HStack(spacing: 8) {
           Link(destination: widgetURL(g.route_enregistrer ?? "/visites?enregistrer=1")) { Pill(text: g.enregistrer ?? "") }
           if family != .systemSmall { Link(destination: widgetURL(g.route_signaler ?? "/incidents/nouveau")) { Pill(text: g.signaler ?? "", background: SU.tile, foreground: SU.ink) } }
+          Spacer(minLength: 0)
+          DariView(pose: g.dari, size: family == .systemSmall ? 34 : 40).padding(.vertical, -4)
         }
       }
       .rtl(s.rtl ?? false).widgetURL(widgetURL(g.route_visites ?? "/visites")).widgetSurface()

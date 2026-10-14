@@ -395,6 +395,9 @@ class PushService {
       category: AndroidNotificationCategory.progress,
       visibility: NotificationVisibility.public,
       color: const Color(0xFF1E7552),
+      // Dari en grande icône, dans la pose de l'état (il montre le reste à payer, rit quand c'est
+      // réglé) : la notification se met à jour sur place, Dari change de pose avec elle.
+      largeIcon: DrawableResourceAndroidBitmap('dari_n_${dariPoseActivite(type, etat)}'),
       subText: sousTitreActivite(type, etat, _d),
       styleInformation: BigTextStyleInformation(corps, contentTitle: titre),
       timeoutAfter: fin ? 15 * 60 * 1000 : null,
@@ -623,6 +626,19 @@ double? progressionActivite(String type, Map<String, String> etat) {
       return n > 0 ? (f / n).clamp(0, 1).toDouble() : null;
   }
   return null;
+}
+
+/// Pose de Dari pour une activité en direct — même règle que dariPose() côté iOS
+/// (ios/SyndicUpWidgets/LiveActivityViews.swift) : terminé → il rit ; séance d'AG → il note ;
+/// incident pris en charge → il travaille, sinon il réfléchit ; appel de fonds → il montre.
+String dariPoseActivite(String type, Map<String, String> etat) {
+  const fini = {'CLOTUREE', 'PAYE', 'RESOLU', 'FERME'};
+  if (fini.contains(etat['statut'])) return 'laugh';
+  return switch (type) {
+    'AG_SEANCE' => 'type',
+    'INCIDENT' => etat['statut'] == 'EN_COURS' ? 'type' : 'think',
+    _ => 'point',
+  };
 }
 
 /// Sous-titre court de la notification persistante (résolution n/N, reste à payer, étape).

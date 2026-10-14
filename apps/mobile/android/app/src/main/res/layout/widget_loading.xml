@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:background="@drawable/w_bg" android:gravity="center" android:orientation="vertical" android:padding="16dp">
-    <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/w_ic_building" android:contentDescription="@null"/>
+    <include layout="@layout/w_dari" android:layout_width="64dp" android:layout_height="64dp"/>
     <TextView android:id="@+id/w_loading_text" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:gravity="center" android:text="@string/w_sign_in" android:textColor="@color/w_soft" android:textSize="12sp"/>
 </LinearLayout>

@@ -50,6 +50,13 @@ void main() {
     expect(progressionActivite('INCIDENT', {'etape': '1', 'nb_etapes': '3'}), closeTo(1 / 3, 0.001));
     expect(progressionActivite('AG_SEANCE', {'nb_finalisees': '2', 'nb_resolutions': '4'}), 0.5);
     expect(progressionActivite('AG_SEANCE', {}), isNull);
+    // Dari suit l'état (icône dari_n_<pose> présente dans res/drawable-nodpi).
+    expect(dariPoseActivite('APPEL_DE_FONDS', {'statut': 'EMIS'}), 'point');
+    expect(dariPoseActivite('APPEL_DE_FONDS', {'statut': 'PAYE'}), 'laugh');
+    expect(dariPoseActivite('INCIDENT', {'statut': 'OUVERT'}), 'think');
+    expect(dariPoseActivite('INCIDENT', {'statut': 'EN_COURS'}), 'type');
+    expect(dariPoseActivite('AG_SEANCE', {'statut': 'EN_COURS'}), 'type');
+    expect(dariPoseActivite('AG_SEANCE', {'statut': 'CLOTUREE'}), 'laugh');
     expect(sousTitreActivite('APPEL_DE_FONDS', {'statut': 'PAYE'}, MobileDict.fr), 'Réglé');
     expect(sousTitreActivite('AG_SEANCE', {'ordre': '2', 'nb_resolutions': '5'}, MobileDict.fr), 'Résolution 2 / 5');
     expect(sousTitreActivite('INCIDENT', {'etape': '1'}, MobileDict.ar), 'المرحلة 2 / 3');

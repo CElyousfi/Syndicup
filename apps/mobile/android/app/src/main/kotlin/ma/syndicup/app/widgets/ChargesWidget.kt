@@ -10,6 +10,7 @@ import org.json.JSONObject
 class ChargesWidget : SyndicUpWidget() {
   override val bloc = "charges"
   override val layout = R.layout.widget_charges
+  override val montants = true
 
   override fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean) {
     val aJour = data.optBoolean("a_jour")

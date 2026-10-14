@@ -12,6 +12,7 @@ import org.json.JSONObject
 class ResidenceWidget : SyndicUpWidget() {
   override val bloc = "residence"
   override val layout = R.layout.widget_residence
+  override val montants = true
 
   override fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean) {
     views.texte(R.id.w_title, snapshot.optString("nom"))
