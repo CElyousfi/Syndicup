@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Les icônes Dari des activités en direct sont chargées par leur nom depuis Dart
+     (DrawableResourceAndroidBitmap('dari_n_<pose>')) : le réducteur de ressources ne peut pas
+     le deviner, on les garde explicitement. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/dari_n_*,@drawable/dari_w_*" />

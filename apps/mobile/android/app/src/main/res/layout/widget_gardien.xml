@@ -31,5 +31,6 @@
             android:background="@drawable/w_bg_cta" android:textColor="@color/w_on_cta" android:textSize="13sp" android:textStyle="bold"/>
         <TextView android:id="@+id/w_cta2" android:layout_width="0dp" android:layout_weight="1" android:layout_height="34dp" android:layout_marginStart="8dp" android:gravity="center" android:singleLine="true" android:ellipsize="end"
             android:background="@drawable/w_bg_tile" android:textColor="@color/w_ink" android:textSize="13sp" android:textStyle="bold"/>
+        <include layout="@layout/w_dari" android:layout_width="40dp" android:layout_height="40dp" android:layout_marginStart="6dp" android:layout_marginTop="-3dp" android:layout_marginBottom="-3dp"/>
     </LinearLayout>
 </LinearLayout>

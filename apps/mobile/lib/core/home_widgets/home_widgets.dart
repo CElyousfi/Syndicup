@@ -206,10 +206,12 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
     final aJour = solde == '0.00' || solde == '0';
     final echeance = c['prochaine_echeance']?.toString();
     String sousTitre;
+    var dari = aJour ? DariPose.laugh : DariPose.wave;
     if (aJour) {
       sousTitre = md.widgetAJour;
     } else if (echeance != null) {
       final jr = joursRestants(echeance);
+      if (jr <= 3) dari = DariPose.point; // échéance proche ou dépassée : Dari montre « Payer »
       sousTitre = jr < 0
           ? fill(md.widgetEnRetard, {'n': -jr})
           : jr == 0
@@ -225,6 +227,7 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
       'montant_brut': solde,
       'a_jour': aJour,
       'sous_titre': sousTitre,
+      'dari': dari,
       'taux': (c['taux_paye'] as num?)?.toDouble() ?? 1.0,
       'nb_lots': c['nb_lots'] ?? 0,
       'payer': md.quickPayer,
@@ -256,12 +259,13 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
                   ? md.widgetAgDemain
                   : fill(md.widgetAgDans, {'n': jr}),
       'jours': jr,
+      'dari': enCours ? DariPose.type : (jr <= 1 ? DariPose.point : DariPose.wave),
       'progression': enCours ? fill(md.widgetVotees, {'v': nbVot, 'n': nbRes}) : fill(md.widgetResolutions, {'n': nbRes}),
       'cta': enCours ? md.widgetVoter : md.widgetOuvrir,
       'route': enCours ? '/ag/$id/seance' : '/ag/$id',
     };
   } else {
-    out['ag'] = {'titre': md.widgetAg, 'etat': 'AUCUNE', 'compte': md.widgetAucuneAg, 'route': '/ag'};
+    out['ag'] = {'titre': md.widgetAg, 'etat': 'AUCUNE', 'compte': md.widgetAucuneAg, 'route': '/ag', 'dari': DariPose.wave};
   }
 
   // ── Résidence (syndic) ─────────────────────────────────────────────────────
@@ -281,6 +285,7 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
       'incidents_label': md.widgetIncidents,
       'sla': sla,
       'sla_label': sla > 0 ? fill(md.widgetSla, {'n': sla}) : '',
+      'dari': sla > 0 ? DariPose.point : (taux < 0.85 ? DariPose.think : DariPose.laugh),
       'reservations': r['reservations_a_valider'] ?? 0,
       'reservations_label': md.widgetAValider,
       'route': '/tableau-de-bord',
@@ -296,11 +301,13 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
   if (j['affichage'] is Map) {
     final f = asMap(j['affichage']);
     final nonLues = (f['non_lues'] as num?)?.toInt() ?? 0;
+    final urgentNonLue = (f['annonces'] as List? ?? const []).any((a) => asMap(a)['urgent'] == true && asMap(a)['lu'] != true);
     out['affichage'] = {
       'titre': md.widgetAffichage,
       'non_lues': nonLues,
       'non_lues_label': nonLues == 0 ? md.widgetToutLu : fill(md.widgetNonLues, {'n': nonLues}),
       'vide': md.widgetAucuneAnnonce,
+      'dari': urgentNonLue ? DariPose.point : (nonLues > 0 ? DariPose.wave : DariPose.laugh),
       'annonces': [
         for (final a in (f['annonces'] as List? ?? const []))
           {
@@ -319,9 +326,11 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
   // ── Gardien ────────────────────────────────────────────────────────────────
   if (j['gardien'] is Map) {
     final g = asMap(j['gardien']);
+    final visites = (g['visites_en_attente'] as num?)?.toInt() ?? 0;
     out['gardien'] = {
       'titre': md.widgetGardien,
-      'visites': g['visites_en_attente'] ?? 0,
+      'visites': visites,
+      'dari': visites > 0 ? DariPose.point : DariPose.wave,
       'visites_label': md.widgetVisiteurs,
       'arrivees': g['arrivees_lcd_aujourdhui'] ?? 0,
       'arrivees_label': md.widgetArrivees,
@@ -338,6 +347,18 @@ Map<String, dynamic> mettreEnForme(Map<String, dynamic> j, {required Locale loca
     };
   }
   return out;
+}
+
+/// Pose de Dari dans les widgets (images natives `dari_w_<pose>` Android, `dari-<pose>` iOS).
+/// L'humeur suit l'état : rassuré quand tout est à jour, il montre du doigt ce qui presse,
+/// réfléchit quand un indicateur se dégrade, tape pendant une séance d'AG.
+abstract final class DariPose {
+  static const wave = 'wave';
+  static const laugh = 'laugh';
+  static const point = 'point';
+  static const think = 'think';
+  static const type = 'type';
+  static const toutes = [wave, laugh, point, think, type];
 }
 
 String _relatif(String? iso, Locale locale, MobileDict md) {

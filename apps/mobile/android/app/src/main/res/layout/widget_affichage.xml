@@ -9,6 +9,7 @@
             android:layout_marginStart="6dp" android:singleLine="true" android:ellipsize="end" android:textColor="@color/w_soft" android:textSize="11sp" android:textStyle="bold" android:textAllCaps="true" android:letterSpacing="0.04"/>
         <TextView android:id="@+id/w_badge" android:layout_width="wrap_content" android:layout_height="22dp" android:paddingStart="10dp" android:paddingEnd="10dp" android:gravity="center"
             android:background="@drawable/w_bg_brand" android:textColor="#FFFFFFFF" android:textSize="10sp" android:textStyle="bold" android:singleLine="true"/>
+        <include layout="@layout/w_dari" android:layout_width="32dp" android:layout_height="32dp" android:layout_marginStart="6dp" android:layout_marginTop="-5dp" android:layout_marginBottom="-5dp"/>
     </LinearLayout>
     <TextView android:id="@+id/w_empty" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:textColor="@color/w_soft" android:textSize="13sp" android:visibility="gone"/>
     

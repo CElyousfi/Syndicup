@@ -25,6 +25,7 @@ void main() {
     expect(aJour['charges']['a_jour'], isTrue);
     expect(aJour['charges']['route'], '/lots/lot-1?onglet=finances');
     expect(aJour['charges']['sous_titre'], MobileDict.fr.widgetAJour);
+    expect(aJour['charges']['dari'], DariPose.laugh);
 
     final dans3j = DateTime.now().add(const Duration(days: 3)).toIso8601String().substring(0, 10);
     final du = forme({
@@ -35,12 +36,14 @@ void main() {
     expect(du['charges']['route_detail'], '/lots');
     expect(du['charges']['sous_titre'], contains('3'));
     expect(du['charges']['taux'], closeTo(0.4167, 0.0001));
+    expect(du['charges']['dari'], DariPose.point);
   });
 
   test('AG : trois états, séance en cours → « Voter » vers le pupitre', () {
     final aucune = forme({'ag': null});
     expect(aucune['ag']['etat'], 'AUCUNE');
     expect(aucune['ag']['route'], '/ag');
+    expect(aucune['ag']['dari'], DariPose.wave);
 
     final enCours = forme({
       'ag': {'id': 'ag-1', 'type': 'ORDINAIRE', 'date_ag': DateTime.now().toIso8601String(), 'statut': 'EN_COURS', 'nb_resolutions': 5, 'nb_votees': 2},
@@ -49,6 +52,7 @@ void main() {
     expect(enCours['ag']['route'], '/ag/ag-1/seance');
     expect(enCours['ag']['cta'], MobileDict.fr.widgetVoter);
     expect(enCours['ag']['progression'], '2/5 résolutions votées');
+    expect(enCours['ag']['dari'], DariPose.type);
 
     final demain = forme({
       'ag': {'id': 'ag-2', 'type': 'ORDINAIRE', 'date_ag': DateTime.now().add(const Duration(days: 1)).toIso8601String(), 'statut': 'CONVOQUEE', 'nb_resolutions': 3, 'nb_votees': 0},
@@ -77,6 +81,47 @@ void main() {
     expect(s['affichage']['annonces'][0]['quand'], 'il y a 2 h');
     expect(s['gardien']['visites'], 3);
     expect(s['gardien']['route_enregistrer'], '/visites?enregistrer=1');
+    // Dari : SLA dépassé → il montre ; annonce urgente non lue → il montre ; visites → il montre.
+    expect(s['residence']['dari'], DariPose.point);
+    expect(s['affichage']['dari'], DariPose.point);
+    expect(s['gardien']['dari'], DariPose.point);
+  });
+
+  test('Dari : humeur des widgets selon l\'état, toujours une pose connue des images natives', () {
+    final calme = forme({
+      'residence': {'taux_recouvrement': 0.97, 'impaye_total': '0.00', 'incidents_ouverts': 0, 'incidents_sla_depasse': 0, 'reservations_a_valider': 0, 'recouvrement_6': []},
+      'affichage': {'non_lues': 0, 'annonces': []},
+      'gardien': {'visites_en_attente': 0},
+    });
+    expect(calme['residence']['dari'], DariPose.laugh);
+    expect(calme['affichage']['dari'], DariPose.laugh);
+    expect(calme['gardien']['dari'], DariPose.wave);
+
+    final tendu = forme({
+      'residence': {'taux_recouvrement': 0.6, 'impaye_total': '90000.00', 'incidents_ouverts': 1, 'incidents_sla_depasse': 0, 'reservations_a_valider': 0, 'recouvrement_6': []},
+      'affichage': {
+        'non_lues': 1,
+        'annonces': [
+          {'id': 'a1', 'titre': 'AG', 'urgent': false, 'publie_le': DateTime.now().toIso8601String(), 'lu': false},
+        ],
+      },
+    });
+    expect(tendu['residence']['dari'], DariPose.think);
+    expect(tendu['affichage']['dari'], DariPose.wave);
+
+    final loin = DateTime.now().add(const Duration(days: 20)).toIso8601String().substring(0, 10);
+    final tranquille = forme({
+      'charges': {'solde_du': '750.00', 'nb_lots': 1, 'lot_id': 'l', 'prochaine_echeance': loin, 'taux_paye': 0.5},
+      'ag': {'id': 'ag', 'type': 'ORDINAIRE', 'date_ag': DateTime.now().add(const Duration(days: 12)).toIso8601String(), 'statut': 'CONVOQUEE', 'nb_resolutions': 2, 'nb_votees': 0},
+    });
+    expect(tranquille['charges']['dari'], DariPose.wave);
+    expect(tranquille['ag']['dari'], DariPose.wave);
+
+    for (final m in [calme, tendu, tranquille]) {
+      for (final bloc in ['charges', 'ag', 'residence', 'affichage', 'gardien']) {
+        if (m[bloc] is Map) expect(DariPose.toutes, contains(m[bloc]['dari']), reason: bloc);
+      }
+    }
   });
 
   test('templates temps réel qui rafraîchissent les widgets', () {

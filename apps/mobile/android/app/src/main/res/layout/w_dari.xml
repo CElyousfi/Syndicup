@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Dari, la mascotte, dans les widgets : RemoteViews ne joue pas d'animation libre, mais un
+  ViewFlipper qui défile tout seul, si. 16 images à 190 ms : 15 yeux ouverts puis 1 paupière
+  baissée → Dari cligne des yeux toutes les ~3 s, sans réveiller l'app ni le CPU.
+  La pose (et les yeux fermés quand les montants sont masqués) est posée par bindDari().
+-->
+<ViewFlipper xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/w_dari"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:autoStart="true" android:flipInterval="190" android:importantForAccessibility="noHideDescendants">
+    <ImageView android:id="@+id/w_dari_f0" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f1" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f2" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f3" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f4" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f5" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f6" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f7" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f8" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f9" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f10" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f11" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f12" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f13" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f14" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave" android:contentDescription="@null"/>
+    <ImageView android:id="@+id/w_dari_f15" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitCenter" android:src="@drawable/dari_w_wave_blink" android:contentDescription="@null"/>
+</ViewFlipper>

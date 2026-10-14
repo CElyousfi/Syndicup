@@ -10,7 +10,8 @@ sur le Mac, quand le compte développeur est actif :
      (`SyndicUpWidgets.swift`, `SyndicUpWidgetsBundle.swift`, `AppIntent.swift`, Assets si tu veux)
      et ajoute à la cible les fichiers de ce dossier : `Widgets.swift`, `Provider.swift`,
      `Snapshot.swift`, `Theme.swift`, `ToggleMasquerIntent.swift`, `fr.lproj`, `ar.lproj`,
-     `Info.plist` (remplace celui généré), `SyndicUpWidgets.entitlements`.
+     **`Assets.xcassets`** (Dari — remplace le catalogue généré), `Info.plist` (remplace celui
+     généré), `SyndicUpWidgets.entitlements`.
 2. Cible **SyndicUpWidgets** → Signing & Capabilities :
    - Bundle Identifier : `ma.syndicup.app.widgets`
    - Deployment target : **iOS 16.0** (écran verrouillé) — 17.0 si tu veux les boutons « œil ».
@@ -37,3 +38,21 @@ Runner compile déjà `Runner/LiveActivityBridge.swift` et `Runner/SyndicUpActiv
 rien à configurer de plus que la clé APNs déjà posée dans Firebase.
 
 Android n'a besoin de rien : tout est dans `android/app/src/main` (receivers, layouts, Kotlin).
+
+## Dari dans les widgets et les Live Activities
+
+`Assets.xcassets` contient Dari en cinq poses (`dari-wave`, `dari-laugh`, `dari-point`,
+`dari-think`, `dari-type`), chacune avec sa variante yeux fermés (`-blink`), et sa tête
+(`dari-head`, île dynamique). Les images doivent être **dans le catalogue de l'extension**
+(pas celui de Runner) : une Live Activity ne lit que le bundle de l'extension.
+
+- La pose de chaque widget est choisie par l'app (`dari` dans `w_snapshot`, voir
+  `DariPose` dans lib/core/home_widgets/home_widgets.dart) ; la Live Activity la déduit de
+  l'état poussé par APNs (`dariPose()` dans LiveActivityViews.swift, même règle que
+  `dariPoseActivite()` côté Dart).
+- WidgetKit n'autorise pas d'animation en boucle : sur iOS 17+, Dari s'anime **au changement
+  d'état** (transition d'entrée/sortie de la pose). Montants masqués → yeux fermés.
+- Android, lui, fait cligner Dari en continu (ViewFlipper, `res/layout/w_dari.xml`).
+
+Pour régénérer les images à partir de nouvelles planches : 1024 px PNG transparents par pose,
+exportés en 330 px de large (@3x) pour iOS et 256 px WebP pour Android (`res/drawable-nodpi`).

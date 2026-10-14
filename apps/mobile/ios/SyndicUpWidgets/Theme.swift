@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 /// Jetons SyndicUp (lib/core/theme/tokens.dart) — clair / sombre.
 enum SU {
@@ -114,11 +115,53 @@ extension View {
   @ViewBuilder func rtl(_ on: Bool) -> some View { self.environment(\.layoutDirection, on ? .rightToLeft : .leftToRight) }
 }
 
-/// État « non connecté » / pas encore de données.
+/// Dari, la mascotte (Assets.xcassets de l'extension : `dari-<pose>` et `dari-<pose>-blink`).
+///
+/// WidgetKit ne joue pas d'animation en boucle : ce qui bouge, c'est le passage d'un état à
+/// l'autre. Chaque pose porte sa propre identité (`.id`), donc quand l'app pousse un nouvel
+/// état (paiement reçu → Dari passe de « montre » à « rit »), iOS 17+ anime l'ancienne pose qui
+/// sort et la nouvelle qui entre, avec un petit rebond. Montants masqués → yeux fermés.
+struct DariView: View {
+  var pose: String?
+  var yeuxFermes = false
+  var size: CGFloat = 40
+
+  static let poses: Set<String> = ["wave", "laugh", "point", "think", "type"]
+
+  var body: some View {
+    let p = pose.flatMap { DariView.poses.contains($0) ? $0 : nil } ?? "wave"
+    let nom = yeuxFermes ? "dari-\(p)-blink" : "dari-\(p)"
+    image(nom)
+      .resizable()
+      .scaledToFit()
+      .frame(width: size, height: size)
+      .accessibilityHidden(true)
+      .id(nom)
+      .modifier(DariTransition())
+  }
+
+  /// Dans les modes teinté / accentué (iOS 18), Dari reste en couleurs.
+  private func image(_ nom: String) -> Image {
+    if #available(iOS 18.0, *) { return Image(nom).widgetAccentedRenderingMode(.fullColor) }
+    return Image(nom)
+  }
+}
+
+private struct DariTransition: ViewModifier {
+  func body(content: Content) -> some View {
+    if #available(iOS 17.0, *) {
+      content.transition(.asymmetric(insertion: .scale(scale: 0.6, anchor: .bottom).combined(with: .opacity), removal: .opacity))
+    } else {
+      content
+    }
+  }
+}
+
+/// État « non connecté » / pas encore de données : Dari salue et invite à se connecter.
 struct SignedOutView: View {
   var body: some View {
     VStack(spacing: 6) {
-      Image(systemName: "building.2.fill").font(.system(size: 22)).foregroundStyle(SU.brand)
+      DariView(pose: "wave", size: 52)
       Text(NSLocalizedString("w_sign_in", comment: "")).font(.system(size: 12)).foregroundStyle(SU.soft).multilineTextAlignment(.center)
     }.frame(maxWidth: .infinity, maxHeight: .infinity).widgetURL(widgetURL("/tableau-de-bord"))
   }

@@ -33,6 +33,9 @@ abstract class SyndicUpWidget : HomeWidgetProvider() {
 
   abstract fun bind(context: Context, views: RemoteViews, snapshot: JSONObject, data: JSONObject, masquer: Boolean)
 
+  /** Ce widget affiche des montants : Dari ferme les yeux quand on les masque (« je ne regarde pas »). */
+  open val montants: Boolean = false
+
   override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray, widgetData: SharedPreferences) {
     val snapshot = snapshot(widgetData)
     val data = snapshot?.optJSONObject(bloc)
@@ -47,6 +50,7 @@ abstract class SyndicUpWidget : HomeWidgetProvider() {
         // Direction : l'app décide (langue de l'app, pas du système).
         views.setInt(R.id.w_root, "setLayoutDirection", if (snapshot.optBoolean("rtl")) View.LAYOUT_DIRECTION_RTL else View.LAYOUT_DIRECTION_LTR)
         bind(context, views, snapshot, data, masquer)
+        views.dari(data.optString("dari"), yeuxFermes = montants && masquer)
       }
       appWidgetManager.updateAppWidget(id, views)
     }
@@ -66,6 +70,29 @@ abstract class SyndicUpWidget : HomeWidgetProvider() {
     /** Bascule « masquer les montants » sans ouvrir l'app (callback Dart en arrière-plan). */
     fun toggleMasquer(context: Context): PendingIntent =
         HomeWidgetBackgroundIntent.getBroadcast(context, Uri.parse("syndicup://masquer"))
+
+    /** Images du ViewFlipper de layout/w_dari.xml, dans l'ordre (la dernière = clignement). */
+    private val DARI_FRAMES = intArrayOf(
+        R.id.w_dari_f0, R.id.w_dari_f1, R.id.w_dari_f2, R.id.w_dari_f3, R.id.w_dari_f4, R.id.w_dari_f5, R.id.w_dari_f6, R.id.w_dari_f7,
+        R.id.w_dari_f8, R.id.w_dari_f9, R.id.w_dari_f10, R.id.w_dari_f11, R.id.w_dari_f12, R.id.w_dari_f13, R.id.w_dari_f14, R.id.w_dari_f15,
+    )
+
+    /** Pose de Dari choisie par l'app selon l'état du bloc (`wave`, `laugh`, `think`, `point`, `type`). */
+    private fun dariPose(pose: String?): Pair<Int, Int> = when (pose) {
+      "laugh" -> R.drawable.dari_w_laugh to R.drawable.dari_w_laugh_blink
+      "think" -> R.drawable.dari_w_think to R.drawable.dari_w_think_blink
+      "point" -> R.drawable.dari_w_point to R.drawable.dari_w_point_blink
+      "type" -> R.drawable.dari_w_type to R.drawable.dari_w_type_blink
+      else -> R.drawable.dari_w_wave to R.drawable.dari_w_wave_blink
+    }
+
+    /** Pose Dari dans le widget : 15 images yeux ouverts + 1 clignement, ou yeux fermés partout. */
+    fun RemoteViews.dari(pose: String?, yeuxFermes: Boolean = false) {
+      val (ouvert, cligne) = dariPose(pose)
+      DARI_FRAMES.forEachIndexed { i, id ->
+        setImageViewResource(id, if (yeuxFermes || i == DARI_FRAMES.lastIndex) cligne else ouvert)
+      }
+    }
 
     fun RemoteViews.texte(id: Int, s: String?) = setTextViewText(id, s ?: "")
     fun RemoteViews.visible(id: Int, v: Boolean) = setViewVisibility(id, if (v) View.VISIBLE else View.GONE)
