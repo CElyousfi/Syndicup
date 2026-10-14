@@ -1603,6 +1603,8 @@ export const fr = {
     nouvelle: "Nouvelle conversation",
     bonjour: "Bonjour {prenom} ! Je suis Dari.",
     intro: "Je connais votre résidence et l'application. Voici ce qui compte aujourd'hui :",
+    introMoi: "{role} · {residence} ({lots}). Je connais votre dossier et chaque écran de l'application — voici ce qui compte aujourd'hui :",
+    etatErreur: "Je n'arrive pas à lire votre dossier pour le moment.",
     rienAFaire: "Rien d'urgent pour le moment — tout est en ordre.",
     suggestionsTitre: "Vous pouvez me demander",
     placeholder: "Posez votre question…",

@@ -13,7 +13,6 @@ import { enforceRateLimit } from "../../../../lib/rate-limit/apply";
 import { RATE_LIMITS } from "../../../../lib/rate-limit";
 import { repondre, AssistantIndisponibleError, AssistantNonConfigureError } from "../../../../lib/assistant";
 import { assistantMessagesSchema } from "../../../../lib/assistant/schemas";
-import { PermissionRefuseeError } from "../../../../lib/users/widget";
 
 async function handlePOST(req: Request) {
   try {
@@ -27,7 +26,6 @@ async function handlePOST(req: Request) {
   } catch (e) {
     const mapped = mapAuthError(e);
     if (mapped) return mapped;
-    if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
     if (e instanceof AssistantNonConfigureError) return fail("NOT_IMPLEMENTED", "L'assistant n'est pas activé sur ce déploiement.");
     if (e instanceof AssistantIndisponibleError) return fail("SERVICE_UNAVAILABLE", "L'assistant est très sollicité — réessayez dans un instant.");
     throw e;

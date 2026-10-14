@@ -12,6 +12,8 @@
 import { jwtVerify, createRemoteJWKSet, type JWTPayload } from "jose";
 import type { Role } from "../auth/permissions";
 import { assertValidTenantContext, type TenantContext } from "./context";
+import { withActeur } from "./db";
+import { logger } from "../logging/logger";
 
 export class UnauthenticatedError extends Error {}
 export class ForbiddenTenantError extends Error {}
@@ -31,12 +33,44 @@ export async function resolveRoleClaims(
 ): Promise<{ utilisateurId: string; roles: RoleClaim[] }> {
   const payload = await verifyJwt(token);
   const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
-  const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];
   if (!utilisateurId) throw new UnauthenticatedError("JWT sans sub.");
+  const roles = await rolesDuJwt(payload, utilisateurId);
   // Authentifié mais sans aucun rôle de copropriété : 403 (pas 401 — un client ne doit pas
   // rafraîchir sa session en boucle ; compte en attente ou membre de cabinet seul, M25).
   if (roles.length === 0) throw new ForbiddenTenantError("JWT sans rôle de copropriété.");
   return { utilisateurId, roles };
+}
+
+const ROLES_CONNUS = new Set<string>([
+  "SUPER_ADMIN", "SYNDIC", "CONSEIL_SYNDICAL", "PROPRIETAIRE", "LOCATAIRE", "INDIVISAIRE",
+  "GARDIEN", "PRESTATAIRE", "PERSONNE_MORALE_REPRESENTANT", "GESTIONNAIRE_LCD", "SYNDIC_COMPTABLE",
+]);
+
+let hookAbsentSignale = false;
+
+/**
+ * Rôles de copropriété d'un JWT VÉRIFIÉ.
+ *
+ * Source normale : la claim `roles` posée par le hook Supabase `custom_access_token_hook`
+ * (Master Spec Partie 4.4). Si la claim est ABSENTE (hook non activé sur le projet Supabase
+ * hébergé — un réglage du tableau de bord, hors dépôt), les rôles sont lus dans
+ * `role_utilisateur` pour le `sub` vérifié : même source de vérité que le hook, signature
+ * du JWT toujours exigée, et le client ne choisit toujours pas sa copropriété — elle doit
+ * figurer parmi les rôles trouvés. Une claim présente mais vide (compte sans rôle) reste
+ * un 403 : ce repli ne s'applique qu'à l'absence de la claim.
+ */
+async function rolesDuJwt(payload: JWTPayload, utilisateurId: string): Promise<RoleClaim[]> {
+  if (Array.isArray(payload.roles)) {
+    return (payload.roles as RoleClaim[]).filter((r) => r && typeof r.copropriete_id === "string" && ROLES_CONNUS.has(r.role));
+  }
+  if (!hookAbsentSignale) {
+    hookAbsentSignale = true;
+    logger.warn("auth.claim_roles_absente", { detail: "custom_access_token_hook non actif : rôles lus en base pour chaque requête (activer le hook dans Supabase → Auth → Hooks)." });
+  }
+  const rows = await withActeur(utilisateurId, "CABINET", (db) =>
+    db.roleUtilisateur.findMany({ where: { utilisateurId, actif: true }, select: { coproprieteId: true, role: true } })
+  );
+  return rows.map((r) => ({ copropriete_id: r.coproprieteId, role: r.role as Role }));
 }
 
 function getJwtSecret(): Uint8Array | null {
@@ -105,9 +139,8 @@ export async function resolveTenantContext(
   const payload = await verifyJwt(token);
 
   const utilisateurId = typeof payload.sub === "string" ? payload.sub : "";
-  const roles = Array.isArray(payload.roles) ? (payload.roles as RoleClaim[]) : [];
-
   if (!utilisateurId) throw new UnauthenticatedError("JWT sans sub.");
+  const roles = await rolesDuJwt(payload, utilisateurId);
   if (roles.length === 0) throw new ForbiddenTenantError("JWT sans rôle de copropriété.");
 
   const superAdmin = roles.find((r) => r.role === "SUPER_ADMIN");

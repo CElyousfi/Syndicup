@@ -1594,6 +1594,8 @@ export const ar: DeepDict<typeof fr> = {
     nouvelle: "محادثة جديدة",
     bonjour: "مرحبًا {prenom}! أنا داري.",
     intro: "أعرف إقامتكم والتطبيق. إليكم ما يهم اليوم:",
+    introMoi: "{role} · {residence} ({lots}). أعرف ملفكم وكل شاشة في التطبيق — إليكم ما يهم اليوم:",
+    etatErreur: "لا أستطيع قراءة ملفكم في الوقت الحالي.",
     rienAFaire: "لا شيء مستعجل حاليًا — كل شيء على ما يرام.",
     suggestionsTitre: "يمكنكم أن تسألوني",
     placeholder: "اكتبوا سؤالكم…",

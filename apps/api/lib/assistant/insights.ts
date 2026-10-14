@@ -7,6 +7,7 @@
  */
 import type { Role } from "../auth/permissions";
 import type { WidgetSnapshot } from "../users/widget-compose";
+import type { Dossier } from "./dossier";
 import { lienEcran, type EcranLien, type Langue } from "./ecrans";
 import { money } from "../money";
 
@@ -35,6 +36,12 @@ export function formatDate(iso: string): string {
   return `${j}/${m}/${a}`;
 }
 
+/** « 15/11/2026 » → « 2026-11-15 » (les dates du dossier sont lisibles, celles du widget ISO). */
+function isoDepuisLisible(d: string): string {
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})/.exec(d);
+  return m ? `${m[3]}-${m[2]}-${m[1]}` : d;
+}
+
 function joursEntre(iso: string, maintenant: Date): number {
   const cible = Date.UTC(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)));
   const auj = Date.UTC(maintenant.getUTCFullYear(), maintenant.getUTCMonth(), maintenant.getUTCDate());
@@ -61,6 +68,22 @@ const T = {
     nonLues: (n: number) => `${n} annonce${n > 1 ? "s" : ""} non lue${n > 1 ? "s" : ""} sur le tableau d'affichage.`,
     visites: (n: number) => `${n} visiteur${n > 1 ? "s" : ""} en attente de réponse d'un résident.`,
     lcd: (a: number, d: number) => `Location courte durée aujourd'hui : ${a} arrivée${a > 1 ? "s" : ""}, ${d} départ${d > 1 ? "s" : ""}.`,
+    justifAttente: (m: string) => `Votre justificatif de ${m} est en attente de validation par le syndic.`,
+    justifRejete: (m: string) => `Votre justificatif de ${m} a été refusé — à redéposer avec une preuve lisible.`,
+    monIncidentRetard: (c: string) => `Votre signalement « ${c} » a dépassé son délai de traitement.`,
+    monIncident: (n: number) => `${n} de vos signalements ${n > 1 ? "sont" : "est"} en cours de traitement.`,
+    visiteAttente: (lot: string) => `Un visiteur attend votre réponse pour le lot ${lot}.`,
+    reservation: (e: string, d: string) => `Réservation « ${e} » le ${d}.`,
+    reservationAttente: (e: string) => `Votre réservation « ${e} » attend la validation du syndic.`,
+    justifsAValider: (n: number) => `${n} justificatif${n > 1 ? "s" : ""} de paiement à valider.`,
+    depensesAApprouver: (n: number) => `${n} dépense${n > 1 ? "s" : ""} en attente d'approbation.`,
+    contratFin: (l: string, d: string) => `Le contrat « ${l} » arrive à échéance le ${d}.`,
+    contratsBrouillon: (n: number) => `${n} contrat${n > 1 ? "s" : ""} encore en brouillon — à activer pour générer les échéances.`,
+    tachesRetard: (n: number) => `${n} tâche${n > 1 ? "s" : ""} en retard.`,
+    contestations: (n: number) => `${n} contestation${n > 1 ? "s" : ""} de charges à traiter.`,
+    budgetPropose: (ex: string) => `Le budget ${ex} est proposé : à faire voter en assemblée générale.`,
+    mesTaches: (n: number) => `${n} tâche${n > 1 ? "s" : ""} à faire aujourd'hui.`,
+    sejourAujourdhui: (lot: string) => `Arrivée de voyageurs aujourd'hui au lot ${lot}.`,
   },
   ar: {
     soldeRetard: (m: string, d: string) => `لديكم ${m} من الرسوم المتأخرة (انقضى أجل الأداء منذ ${d}).`,
@@ -79,11 +102,27 @@ const T = {
     nonLues: (n: number) => `${n} إعلان غير مقروء في لوحة الإعلانات.`,
     visites: (n: number) => `${n} زائر في انتظار رد أحد السكان.`,
     lcd: (a: number, d: number) => `الكراء القصير اليوم: ${a} وصول، ${d} مغادرة.`,
+    justifAttente: (m: string) => `وثيقة إثبات أدائكم بمبلغ ${m} في انتظار مصادقة السنديك.`,
+    justifRejete: (m: string) => `رُفضت وثيقة إثبات أدائكم بمبلغ ${m} — يرجى إعادة إيداعها بإثبات واضح.`,
+    monIncidentRetard: (c: string) => `تجاوز تبليغكم «${c}» أجل المعالجة.`,
+    monIncident: (n: number) => `${n} من تبليغاتكم قيد المعالجة.`,
+    visiteAttente: (lot: string) => `زائر ينتظر ردكم للوحدة ${lot}.`,
+    reservation: (e: string, d: string) => `حجز «${e}» يوم ${d}.`,
+    reservationAttente: (e: string) => `حجزكم «${e}» في انتظار مصادقة السنديك.`,
+    justifsAValider: (n: number) => `${n} وثيقة إثبات أداء في انتظار المصادقة.`,
+    depensesAApprouver: (n: number) => `${n} مصروف في انتظار الموافقة.`,
+    contratFin: (l: string, d: string) => `ينتهي العقد «${l}» بتاريخ ${d}.`,
+    contratsBrouillon: (n: number) => `${n} عقد ما زال مسودة — فعّلوه لإنشاء الاستحقاقات.`,
+    tachesRetard: (n: number) => `${n} مهمة متأخرة.`,
+    contestations: (n: number) => `${n} اعتراض على الرسوم في انتظار المعالجة.`,
+    budgetPropose: (ex: string) => `ميزانية ${ex} مقترحة: يجب التصويت عليها في الجمع العام.`,
+    mesTaches: (n: number) => `${n} مهمة لإنجازها اليوم.`,
+    sejourAujourdhui: (lot: string) => `وصول مسافرين اليوم إلى الوحدة ${lot}.`,
   },
 } as const;
 
 /** Ordonne : attention d'abord, puis info, puis succès ; au plus `max` lignes. */
-export function construireInsights(s: WidgetSnapshot, langue: Langue, maintenant = new Date(), max = 4): Insight[] {
+export function construireInsights(s: WidgetSnapshot & Partial<Dossier>, langue: Langue, maintenant = new Date(), max = 5): Insight[] {
   const t = T[langue];
   const role = s.role as Role;
   const lien = (cle: string) => lienEcran(cle, role, langue);
@@ -109,6 +148,18 @@ export function construireInsights(s: WidgetSnapshot, langue: Langue, maintenant
     }
   }
 
+  const justif = s.mes_justificatifs?.[0];
+  if (justif?.statut === "en attente") out.push({ cle: "justif_attente", niveau: "info", texte: t.justifAttente(formatMontant(justif.montant, langue)), ecran: lien("payer") });
+  else if (justif?.statut === "refusé") out.push({ cle: "justif_rejete", niveau: "attention", texte: t.justifRejete(formatMontant(justif.montant, langue)), ecran: lien("payer") });
+
+  // Mes signalements (résident / prestataire) — les rôles de gestion ont le bloc résidence.
+  if (s.incidents && !s.residence && role !== "GARDIEN") {
+    const miens = s.incidents.filter((i) => i.statut === "ouvert" || i.statut === "en cours");
+    const retard = miens.find((i) => i.en_retard);
+    if (retard) out.push({ cle: "mon_incident_retard", niveau: "attention", texte: t.monIncidentRetard(retard.categorie), ecran: lien("incidents") });
+    else if (miens.length) out.push({ cle: "mes_incidents", niveau: "info", texte: t.monIncident(miens.length), ecran: lien("incidents") });
+  }
+
   if (s.ag) {
     out.push(
       s.ag.statut === "EN_COURS"
@@ -132,6 +183,36 @@ export function construireInsights(s: WidgetSnapshot, langue: Langue, maintenant
       out.push({ cle: "recouvrement", niveau: "succes", texte: t.recouvrementBon(pct(r.taux_recouvrement)), ecran: lien("appels_de_fonds") });
     }
     if (r.reservations_a_valider > 0) out.push({ cle: "reservations", niveau: "info", texte: t.reservations(r.reservations_a_valider), ecran: lien("reservations") });
+    const g = s.gestion;
+    if (g) {
+      if (g.justificatifs_a_valider > 0) out.push({ cle: "justifs_a_valider", niveau: "attention", texte: t.justifsAValider(g.justificatifs_a_valider), ecran: lien("justificatifs") });
+      if (g.depenses_a_approuver.length) out.push({ cle: "depenses_a_approuver", niveau: "info", texte: t.depensesAApprouver(g.depenses_a_approuver.length), ecran: lien("depenses") });
+      if (g.contestations_ouvertes > 0) out.push({ cle: "contestations", niveau: "info", texte: t.contestations(g.contestations_ouvertes), ecran: lien("contestations") });
+      if (g.taches_en_retard.length) out.push({ cle: "taches_retard", niveau: "attention", texte: t.tachesRetard(g.taches_en_retard.length), ecran: lien("taches") });
+      const finProche = g.contrats_echeance.find((c) => c.statut === "actif" && c.date_fin && joursEntre(isoDepuisLisible(c.date_fin), maintenant) <= 60);
+      if (finProche) out.push({ cle: "contrat_fin", niveau: "info", texte: t.contratFin(finProche.libelle, finProche.date_fin!), ecran: lien("contrats") });
+      const brouillons = g.contrats_echeance.filter((c) => c.statut === "brouillon").length;
+      if (brouillons) out.push({ cle: "contrats_brouillon", niveau: "info", texte: t.contratsBrouillon(brouillons), ecran: lien("contrats") });
+      if (g.budget?.statut.startsWith("proposé")) out.push({ cle: "budget_propose", niveau: "info", texte: t.budgetPropose(g.budget.exercice), ecran: lien("budgets") });
+    }
+  }
+
+  // Résident : visiteurs en attente de ma réponse, réservations.
+  if (!s.gardien && s.visites?.some((v) => v.statut === "en attente")) {
+    const v = s.visites.find((x) => x.statut === "en attente")!;
+    out.push({ cle: "visite_attente", niveau: "attention", texte: t.visiteAttente(v.lot), ecran: lien("visites") });
+  }
+  const resa = s.mes_reservations?.[0];
+  if (resa) {
+    out.push(
+      resa.statut === "en attente"
+        ? { cle: "resa_attente", niveau: "info", texte: t.reservationAttente(resa.espace), ecran: lien("reservations") }
+        : { cle: "resa", niveau: "info", texte: t.reservation(resa.espace, resa.debut.slice(0, 10)), ecran: lien("reservations") }
+    );
+  }
+  if (!s.gardien && s.sejours_lcd?.length) {
+    const auj = s.sejours_lcd.find((x) => x.arrivee === formatDate(s.genere_le));
+    if (auj) out.push({ cle: "sejour_auj", niveau: "info", texte: t.sejourAujourdhui(auj.lot), ecran: lien("lcd") });
   }
 
   if (s.affichage && s.affichage.non_lues > 0) {
@@ -150,6 +231,7 @@ export function construireInsights(s: WidgetSnapshot, langue: Langue, maintenant
       out.push({ cle: "lcd", niveau: "info", texte: t.lcd(g.arrivees_lcd_aujourdhui, g.departs_lcd_aujourdhui), ecran: lien("lcd") });
     }
     if (g.incidents_ouverts > 0) out.push({ cle: "incidents_ouverts", niveau: "info", texte: t.incidents(g.incidents_ouverts), ecran: lien("incidents") });
+    if (s.mes_taches?.length) out.push({ cle: "mes_taches", niveau: "info", texte: t.mesTaches(s.mes_taches.length), ecran: lien("taches") });
   }
 
   const rang: Record<NiveauInsight, number> = { attention: 0, info: 1, succes: 2 };
@@ -182,7 +264,21 @@ const SUGGESTIONS: Record<Langue, Record<"resident" | "locataire" | "gestion" | 
   },
 };
 
-export function suggestionsPour(role: Role, langue: Langue): string[] {
+export function suggestionsPour(role: Role, langue: Langue, d?: Partial<Dossier>): string[] {
+  const base = suggestionsBase(role, langue);
+  if (!d) return base;
+  const ar = langue === "ar";
+  const extra: string[] = [];
+  if (d.charges && money(d.charges.solde_du).greaterThan(0)) extra.push(ar ? "لماذا عليّ هذا المبلغ؟" : "Pourquoi je dois ce montant ?");
+  if (d.ag) extra.push(ar ? "ما هي نقاط جدول أعمال الجمع العام؟" : "Que contient l'ordre du jour de l'AG ?");
+  if (d.incidents?.some((i) => i.statut !== "RESOLU" && i.statut !== "FERME")) extra.push(ar ? "أين وصل تبليغي؟" : "Où en est mon signalement ?");
+  if (d.gestion?.lots_impayes.length) extra.push(ar ? "من هم الأكثر تأخرًا في الأداء؟" : "Quels lots sont le plus en retard ?");
+  if (d.gestion?.contrats_echeance.some((c) => c.statut === "BROUILLON")) extra.push(ar ? "كيف أفعّل العقود؟" : "Comment activer les contrats en brouillon ?");
+  if (d.annonces_detail?.some((a) => !a.lu)) extra.push(ar ? "ما الجديد في لوحة الإعلانات؟" : "Quoi de neuf sur le tableau d'affichage ?");
+  return [...extra, ...base].slice(0, 5);
+}
+
+function suggestionsBase(role: Role, langue: Langue): string[] {
   const famille =
     role === "SUPER_ADMIN"
       ? "admin"

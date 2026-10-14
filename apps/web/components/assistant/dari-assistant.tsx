@@ -27,6 +27,7 @@ export const ASK_DARI = "su:ask-dari";
 const CLE_INTRO = "syndicup:dari:intro";
 const CLE_TOUR = "syndicup:onboarding:v2";
 const CLE_CONV = "syndicup:dari:conv";
+const CLE_ETAT = "syndicup:dari:etat";
 
 type Labels = Dict["dari"];
 
@@ -37,20 +38,30 @@ interface Message {
   erreur?: boolean;
 }
 
-/** **gras** et retours à la ligne — rien d'autre n'est interprété (pas de HTML). */
-function Texte({ texte }: { texte: string }) {
-  const morceaux = texte.split(/(\*\*[^*]+\*\*)/g);
+/** **gras**, retours à la ligne et liens d'écran [[cle|Libellé]] — rien d'autre n'est interprété (pas de HTML). */
+function Texte({ texte, onEcran }: { texte: string; onEcran: (e: AssistantEcran) => void }) {
+  const morceaux = texte.split(/(\*\*[^*]+\*\*|\[\[[a-z0-9_]+\|[^\]]+\]\])/g);
   return (
     <span className="whitespace-pre-line">
-      {morceaux.map((m, i) =>
-        m.startsWith("**") && m.endsWith("**") ? (
-          <strong key={i} className="font-semibold text-ink">
-            {m.slice(2, -2)}
-          </strong>
-        ) : (
-          <span key={i}>{m}</span>
-        )
-      )}
+      {morceaux.map((m, i) => {
+        if (m.startsWith("**") && m.endsWith("**")) {
+          return (
+            <strong key={i} className="font-semibold text-ink">
+              {m.slice(2, -2)}
+            </strong>
+          );
+        }
+        const lien = /^\[\[([a-z0-9_]+)\|([^\]|]+)\|([^\]|]*)\|([^\]|]*)\]\]$/.exec(m);
+        if (lien) {
+          return (
+            <Pressable key={i} onClick={() => onEcran({ cle: lien[1]!, libelle: lien[2]!, web: lien[3]!, mobile: lien[4] || null })} className="mx-0.5 inline-flex items-center gap-1 rounded-full bg-action-tint px-2 py-0.5 align-baseline text-[13px] font-semibold text-brand-deep hover:bg-sage">
+              {lien[2]}
+              <span className="inline-block text-[11px] rtl:-scale-x-100" aria-hidden>→</span>
+            </Pressable>
+          );
+        }
+        return <span key={i}>{m}</span>;
+      })}
     </span>
   );
 }
@@ -61,7 +72,7 @@ const TON: Record<AssistantInsight["niveau"], string> = {
   succes: "bg-ok",
 };
 
-export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar"; labels: Labels; prenom: string }) {
+export function DariAssistant({ locale, labels, prenom, roleLabel }: { locale: "fr" | "ar"; labels: Labels; prenom: string; roleLabel: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ouvert, setOuvert] = useState(false);
@@ -96,12 +107,28 @@ export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar";
     }
   }, [messages]);
 
+  // Dernier état connu (onglet) : l'ouverture est instantanée, le réseau rafraîchit derrière.
+  useEffect(() => {
+    try {
+      const brut = window.sessionStorage.getItem(`${CLE_ETAT}:${locale}`);
+      if (brut) setEtat(JSON.parse(brut) as AssistantEtat);
+    } catch {
+      // stockage indisponible : on attend le réseau
+    }
+  }, [locale]);
+
   const chargerEtat = useCallback(async () => {
     setEtatErreur(false);
     try {
       const res = await fetch(`/api/assistant?langue=${locale}`, { cache: "no-store" });
       if (!res.ok) throw new Error(String(res.status));
-      setEtat((await res.json()) as AssistantEtat);
+      const data = (await res.json()) as AssistantEtat;
+      setEtat(data);
+      try {
+        window.sessionStorage.setItem(`${CLE_ETAT}:${locale}`, JSON.stringify(data));
+      } catch {
+        // stockage plein / bloqué : l'état reste en mémoire
+      }
     } catch {
       setEtatErreur(true);
     }
@@ -109,7 +136,7 @@ export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar";
 
   // Repères chargés peu après l'arrivée (pastille du lanceur), puis à chaque ouverture.
   useEffect(() => {
-    const t = window.setTimeout(() => void chargerEtat(), 1800);
+    const t = window.setTimeout(() => void chargerEtat(), 600);
     return () => window.clearTimeout(t);
   }, [chargerEtat]);
 
@@ -218,6 +245,7 @@ export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar";
   };
 
   const attention = etat?.insights.filter((i) => i.niveau === "attention").length ?? 0;
+  const nom = etat?.moi?.prenom ?? prenom;
   const conversation = messages.length > 0;
 
   return (
@@ -300,12 +328,19 @@ export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar";
               <DariAvatar size={30} />
               <div className="min-w-0 flex-1 space-y-3">
                 <div className="rounded-[20px] rounded-ss-md bg-surface px-4 py-3 text-[14.5px] leading-relaxed text-body shadow-[0_1px_0_rgb(18_18_18/0.04)]">
-                  <p className="font-semibold text-ink">{prenom ? fill(labels.bonjour, { prenom }) : labels.bonjour.replace(/ ?\{prenom\}/, "")}</p>
-                  <p className="mt-0.5">{labels.intro}</p>
+                  <p className="font-semibold text-ink">{nom ? fill(labels.bonjour, { prenom: nom }) : labels.bonjour.replace(/ ?\{prenom\}/, "")}</p>
+                  <p className="mt-0.5">{etat?.moi ? fill(labels.introMoi, { role: roleLabel, residence: etat.moi.residence ?? "", lots: etat.moi.lots.join(", ") }).replace(/\s*\(\s*\)/g, "").replace(/ {2,}/g, " ") : labels.intro}</p>
                 </div>
 
                 {/* Repères du moment */}
-                {etat === null && !etatErreur ? (
+                {etatErreur && etat === null ? (
+                  <div className="rounded-[18px] bg-warn-tint px-4 py-3 text-[14px] text-warn">
+                    <p>{labels.etatErreur}</p>
+                    <Pressable onClick={() => void chargerEtat()} className="mt-2 rounded-full bg-surface px-3.5 py-1.5 text-[13px] font-semibold text-link">
+                      {labels.reessayer}
+                    </Pressable>
+                  </div>
+                ) : etat === null ? (
                   <div className="space-y-2" aria-label={labels.chargement}>
                     {[0, 1].map((i) => (
                       <div key={i} className="skeleton h-[58px] rounded-[18px]" />
@@ -369,7 +404,7 @@ export function DariAssistant({ locale, labels, prenom }: { locale: "fr" | "ar";
                     <DariAvatar size={30} />
                     <div className="min-w-0 max-w-[88%] space-y-2">
                       <div className={`rounded-[20px] rounded-ss-md px-4 py-3 text-[14.5px] leading-relaxed ${m.erreur ? "bg-warn-tint text-warn" : "bg-surface text-body"}`}>
-                        <Texte texte={m.contenu} />
+                        <Texte texte={m.contenu} onEcran={allerA} />
                       </div>
                       {m.erreur && i === messages.length - 1 ? (
                         <Pressable

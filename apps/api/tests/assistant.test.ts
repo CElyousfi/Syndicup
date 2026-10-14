@@ -9,11 +9,12 @@ import { construirePrompt, donneesPourModele, lireSortie } from "../lib/assistan
 import { AssistantIndisponibleError, AssistantNonConfigureError, completerChat } from "../lib/assistant/groq";
 import { assistantMessagesSchema } from "../lib/assistant/schemas";
 import type { WidgetSnapshot } from "../lib/users/widget-compose";
+import type { Dossier } from "../lib/assistant/dossier";
 
 // Logique pure : le chargement de l'instantané (Prisma) est couvert par les tests du widget.
-vi.mock("../lib/users/widget", () => ({ instantaneWidget: vi.fn(), PermissionRefuseeError: class extends Error {} }));
+vi.mock("../lib/assistant/dossier", async (importOriginal) => ({ ...(await importOriginal<typeof import("../lib/assistant/dossier")>()), chargerDossier: vi.fn() }));
 
-const vide = (role: string): WidgetSnapshot => ({
+const vide = (role: string): Dossier => ({
   genere_le: "2026-10-13T09:00:00.000Z",
   role,
   copropriete: { id: "0198aaaa-bbbb-7ccc-8ddd-eeeeffff0000", nom: "Résidence Les Palmiers" },
@@ -22,7 +23,23 @@ const vide = (role: string): WidgetSnapshot => ({
   residence: null,
   affichage: null,
   gardien: null,
+  moi: { prenom: "Amina", langue: "FR", lots: [{ libelle: "B-12 (étage 3)", tantiemes: "120.00", occupation: "proprietaire" }], cabinet: null },
+  residenceInfo: { nom: "Résidence Les Palmiers", ville: "Marrakech", type: "RESIDENCE_FERMEE", nb_lots: 120, total_tantiemes: null },
+  mes_appels: null,
+  mes_paiements: null,
+  mes_justificatifs: null,
+  mes_contestations: null,
+  incidents: null,
+  ag_detail: null,
+  mes_reservations: null,
+  visites: null,
+  annonces_detail: null,
+  documents: null,
+  gestion: null,
+  mes_taches: null,
+  sejours_lcd: null,
 });
+void (null as unknown as WidgetSnapshot);
 const NOW = new Date("2026-10-13T09:00:00.000Z");
 
 describe("carte des écrans", () => {
@@ -82,8 +99,10 @@ describe("repères (insights)", () => {
   it("syndic : SLA dépassé et recouvrement faible ; jamais d'écran hors rôle", () => {
     const s = vide("SYNDIC");
     s.residence = { taux_recouvrement: 0.62, impaye_total: "48000.00", incidents_ouverts: 5, incidents_sla_depasse: 2, reservations_a_valider: 1, recouvrement_6: [] };
-    const out = construireInsights(s, "fr", NOW);
-    expect(out.slice(0, 2).map((i) => i.cle)).toEqual(["incidents_sla", "recouvrement"]);
+    s.gestion = { justificatifs_a_valider: 2, depenses_a_approuver: [], contrats_echeance: [{ libelle: "Ascenseurs", type: "ascenseur", date_fin: null, statut: "brouillon" }], taches_en_retard: [], lots_impayes: [], budget: { exercice: "2027", montant: "1172240.00", statut: "proposé (à voter en AG)" }, personnel_actif: 25, contestations_ouvertes: 0, reservations_a_valider: [] };
+    const out = construireInsights(s, "fr", NOW, 10);
+    expect(out.slice(0, 3).map((i) => i.cle)).toEqual(["incidents_sla", "recouvrement", "justifs_a_valider"]);
+    expect(out.map((i) => i.cle)).toEqual(expect.arrayContaining(["contrats_brouillon", "budget_propose"]));
     expect(out[1]!.texte).toContain("62 %");
     const g = vide("GARDIEN");
     g.gardien = { visites_en_attente: 1, arrivees_lcd_aujourdhui: 0, departs_lcd_aujourdhui: 0, incidents_ouverts: 0 };
@@ -102,16 +121,27 @@ describe("prompt et sortie du modèle", () => {
     s.ag = { id: "0198bbbb-bbbb-7ccc-8ddd-eeeeffff0000", type: "ORDINAIRE", date_ag: "2026-11-20T18:00:00.000Z", statut: "CONVOQUEE", nb_resolutions: 6, nb_votees: 0 };
     const json = JSON.stringify(donneesPourModele(s));
     expect(json).not.toMatch(/0198/);
-    expect(json).not.toContain("Palmiers");
     const prompt = construirePrompt("PROPRIETAIRE", "fr", s, "/fr/finances/payer");
-    expect(prompt).toContain("ÉCRAN OUVERT : payer");
-    expect(prompt).not.toContain("appels_de_fonds —"); // écran hors rôle absent de la carte
+    expect(prompt).toContain("Tu parles à Amina, copropriétaire");
+    expect(prompt).toContain("20/11/2026"); // dates lisibles, jamais ISO
+    expect(prompt).not.toContain("2026-11-20");
+    expect(prompt).not.toContain("Faire voter un budget"); // parcours du syndic absents pour un propriétaire
+    expect(construirePrompt("SYNDIC", "fr", vide("SYNDIC"))).toContain("Faire voter un budget");
+    expect(prompt).toContain("[[payer]] « Payer mes charges »");
+    expect(prompt).not.toContain("[[appels_de_fonds]]"); // écran hors rôle absent de la carte
   });
 
   it("JSON valide : écrans revalidés par rôle, dédoublonnés, 3 au plus", () => {
     const out = lireSortie('{"reponse":"Allez sur Payer.","ecrans":["payer","payer","appels_de_fonds","incidents","documents","ag"]}', "LOCATAIRE", "fr");
     expect(out.reponse).toBe("Allez sur Payer.");
     expect(out.ecrans.map((e) => e.cle)).toEqual(["payer", "incidents", "documents"]);
+  });
+
+  it("liens [[cle]] dans le texte : libellé ajouté si autorisé, retirés sinon, ajoutés aux écrans", () => {
+    const sortie = JSON.stringify({ reponse: "1. Ouvrez [[payer]]\n2. Jamais [[appels_de_fonds]] ni [[inconnu]]", ecrans: [] });
+    const out = lireSortie(sortie, "LOCATAIRE", "ar");
+    expect(out.reponse).toBe("1. Ouvrez [[payer|أداء رسومي|/finances/payer|/payer]]\n2. Jamais ni");
+    expect(out.ecrans.map((e) => e.cle)).toEqual(["payer"]);
   });
 
   it("sortie non JSON : repli sur le texte, aucun écran", () => {
