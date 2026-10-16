@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../abonnement/abonnement_gate.dart';
 import '../api/api_client.dart';
 import '../api/models.dart';
 import '../api/swr.dart';
@@ -123,5 +124,8 @@ class SessionController extends Notifier<Session?> implements TokenSource {
 final sessionProvider = NotifierProvider<SessionController, Session?>(SessionController.new);
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref.read(sessionProvider.notifier));
+  final client = ApiClient(ref.read(sessionProvider.notifier));
+  // M29 — 402 en cours de session : relire l'état d'abonnement (écran de suspension).
+  client.onAbonnementSuspendu = () => ref.invalidate(abonnementProvider);
+  return client;
 });
