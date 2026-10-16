@@ -88,7 +88,13 @@ export type ErrorCode =
   | "CABINET_STATUT_INVALIDE"
   | "MANDAT_EXISTANT"
   | "MANDAT_STATUT_INVALIDE"
-  | "CONFLIT_SYNDIC";
+  | "CONFLIT_SYNDIC"
+  // M29 — abonnements SyndicUp.
+  | "ABONNEMENT_SUSPENDU"
+  | "ABONNEMENT_EXISTANT"
+  | "ABONNEMENT_STATUT_INVALIDE"
+  | "FACTURE_STATUT_INVALIDE"
+  | "PAIEMENT_SUPERIEUR_RESTE_DU";
 
 const STATUS: Record<ErrorCode, number> = {
   VALIDATION_ERROR: 400,
@@ -155,6 +161,12 @@ const STATUS: Record<ErrorCode, number> = {
   MANDAT_EXISTANT: 409,
   MANDAT_STATUT_INVALIDE: 422,
   CONFLIT_SYNDIC: 409,
+  // 402 : la requête est valide mais l'abonnement de la résidence ne permet plus l'accès.
+  ABONNEMENT_SUSPENDU: 402,
+  ABONNEMENT_EXISTANT: 409,
+  ABONNEMENT_STATUT_INVALIDE: 422,
+  FACTURE_STATUT_INVALIDE: 422,
+  PAIEMENT_SUPERIEUR_RESTE_DU: 422,
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {

@@ -13,6 +13,7 @@ import {
 import type { TenantContext } from "../tenant/context";
 import { fail } from "./respond";
 import { setRequestIdentity } from "./request-context-storage";
+import { AbonnementBloqueError, verifierAccesAbonnement } from "../abonnements/acces";
 
 export { UnauthenticatedError, ForbiddenTenantError };
 
@@ -28,6 +29,8 @@ export async function tenantFromRequest(req: Request): Promise<TenantContext> {
   const requested = req.headers.get("x-copropriete-id") ?? undefined;
   const ctx = await resolveTenantContext(token, requested);
   setRequestIdentity(ctx.utilisateurId, ctx.coproprieteId);
+  // M29 — résidence dont l'abonnement est suspendu / impayé au-delà du délai de grâce : 402.
+  await verifierAccesAbonnement(ctx, req);
   return ctx;
 }
 
@@ -61,5 +64,6 @@ export async function identiteFromRequest(
 export function mapAuthError(e: unknown): Response | null {
   if (e instanceof UnauthenticatedError) return fail("UNAUTHENTICATED", e.message);
   if (e instanceof ForbiddenTenantError) return fail("FORBIDDEN", e.message);
+  if (e instanceof AbonnementBloqueError) return fail("ABONNEMENT_SUSPENDU", e.message);
   return null;
 }

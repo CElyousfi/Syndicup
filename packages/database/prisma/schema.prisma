@@ -285,7 +285,7 @@ model Copropriete {
   creeLe                           DateTime                  @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe                        DateTime                  @updatedAt @map("modifie_le") @db.Timestamptz
 
-  activitesEnDirect           ActiviteEnDirect[]
+  activitesEnDirect       ActiviteEnDirect[]
   rolesUtilisateur        RoleUtilisateur[]
   importJobs              ImportJob[]
   importJobLogs           ImportJobLog[]
@@ -333,6 +333,7 @@ model Copropriete {
   attributionsEmplacement AttributionEmplacement[]
   vehicules               Vehicule[]
   badges                  Badge[]
+  abonnements             AbonnementCopropriete[]
 
   @@map("copropriete")
 }
@@ -3032,12 +3033,13 @@ model Cabinet {
   creeLe          DateTime      @default(now()) @map("cree_le") @db.Timestamptz
   modifieLe       DateTime      @updatedAt @map("modifie_le") @db.Timestamptz
 
-  membres      CabinetMembre[]
-  coproprietes Copropriete[]
-  mandats      CabinetCopropriete[]
-  logs         CabinetLog[]
-  prestataires CabinetPrestataire[]
-  rolesPoses   RoleUtilisateur[]
+  membres            CabinetMembre[]
+  coproprietes       Copropriete[]
+  mandats            CabinetCopropriete[]
+  logs               CabinetLog[]
+  prestataires       CabinetPrestataire[]
+  rolesPoses         RoleUtilisateur[]
+  clientsFacturation ClientFacturation[]
 
   @@map("cabinet")
 }
@@ -3122,4 +3124,221 @@ model CabinetPrestataire {
 
   @@index([cabinetId])
   @@map("cabinet_prestataire")
+}
+
+// ============================================================================
+// M29 — Abonnements SyndicUp (facturation plateforme, gérée par l'opérateur — pas de paiement
+// in-app). L'état d'accès est CALCULÉ (apps/api/lib/abonnements/etat.ts), jamais stocké.
+// Enums ajoutés (absents du Master Spec / Doc A — domaine commercial de SyndicUp, signalés en PR).
+// ============================================================================
+
+enum TypeClientFacturation {
+  SYNDICAT
+  CABINET
+}
+
+enum FormuleAbonnement {
+  ESSENTIEL
+  STANDARD
+  PRESTIGE
+  CABINET
+}
+
+enum PeriodiciteAbonnement {
+  ANNUELLE
+  MENSUELLE
+}
+
+enum StatutAbonnement {
+  ESSAI
+  ACTIF
+  SUSPENDU
+  RESILIE
+}
+
+enum BasePrixAbonnement {
+  TTC
+  HT
+}
+
+enum StatutFactureAbonnement {
+  EMISE
+  PAYEE
+  ANNULEE
+}
+
+enum ModePaiementAbonnement {
+  VIREMENT
+  CHEQUE
+  ESPECES
+  CARTE
+  AUTRE
+}
+
+enum TypeEvenementAbonnement {
+  CREE
+  MODIFIE
+  ESSAI_PROLONGE
+  DELAI_ACCORDE
+  FACTURE_EMISE
+  FACTURE_ANNULEE
+  PAIEMENT_ENREGISTRE
+  ACTIVE
+  SUSPENDU
+  REACTIVE
+  RESILIE
+  COPROPRIETE_RATTACHEE
+  COPROPRIETE_RETIREE
+  RAPPEL_ENVOYE
+  LOTS_DEPASSES
+}
+
+/// Qui paie : le syndicat d'une résidence (TTC, ne récupère pas la TVA) ou un cabinet (HT).
+model ClientFacturation {
+  id                String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  type              TypeClientFacturation
+  nom               String
+  raisonSociale     String?               @map("raison_sociale")
+  ice               String?
+  rc                String?
+  identifiantFiscal String?               @map("identifiant_fiscal")
+  adresse           String?
+  ville             String?
+  contactNom        String?               @map("contact_nom")
+  contactEmail      String?               @map("contact_email")
+  contactTelephone  String?               @map("contact_telephone")
+  cabinetId         String?               @map("cabinet_id") @db.Uuid
+  cabinet           Cabinet?              @relation(fields: [cabinetId], references: [id])
+  notes             String?
+  creeLe            DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe         DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
+
+  abonnements Abonnement[]
+  factures    FactureAbonnement[]
+
+  @@index([cabinetId])
+  @@map("client_facturation")
+}
+
+model Abonnement {
+  id                   String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clientId             String                @map("client_id") @db.Uuid
+  client               ClientFacturation     @relation(fields: [clientId], references: [id])
+  formule              FormuleAbonnement
+  periodicite          PeriodiciteAbonnement @default(ANNUELLE)
+  statut               StatutAbonnement      @default(ESSAI)
+  basePrix             BasePrixAbonnement    @map("base_prix")
+  prixLot              Decimal               @map("prix_lot") @db.Decimal(10, 2)
+  tauxTva              Decimal               @default(20) @map("taux_tva") @db.Decimal(5, 2)
+  minimumMensuel       Decimal?              @map("minimum_mensuel") @db.Decimal(14, 2)
+  lotsContractes       Int                   @map("lots_contractes")
+  tarifFondateur       Boolean               @default(false) @map("tarif_fondateur")
+  prixGarantiJusquAu   DateTime?             @map("prix_garanti_jusqu_au") @db.Date
+  forfaitAccompagne    Decimal?              @map("forfait_accompagne") @db.Decimal(14, 2)
+  dateDebut            DateTime              @map("date_debut") @db.Date
+  finEssai             DateTime?             @map("fin_essai") @db.Date
+  /// Dernier jour couvert par un paiement (fin de la période payée).
+  finPeriode           DateTime?             @map("fin_periode") @db.Date
+  delaiGraceJours      Int                   @default(15) @map("delai_grace_jours")
+  /// Dérogation opérateur (ex. attente du vote en AG) : l'accès reste ouvert jusqu'à cette date.
+  accesProlongeJusquAu DateTime?             @map("acces_prolonge_jusqu_au") @db.Date
+  motifProlongation    String?               @map("motif_prolongation")
+  suspenduLe           DateTime?             @map("suspendu_le") @db.Timestamptz
+  motifSuspension      String?               @map("motif_suspension")
+  resilieLe            DateTime?             @map("resilie_le") @db.Timestamptz
+  motifResiliation     String?               @map("motif_resiliation")
+  notes                String?
+  creeLe               DateTime              @default(now()) @map("cree_le") @db.Timestamptz
+  modifieLe            DateTime              @updatedAt @map("modifie_le") @db.Timestamptz
+
+  coproprietes AbonnementCopropriete[]
+  factures     FactureAbonnement[]
+  evenements   AbonnementEvenement[]
+
+  @@index([clientId])
+  @@index([statut])
+  @@map("abonnement")
+}
+
+model AbonnementCopropriete {
+  id            String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  abonnementId  String      @map("abonnement_id") @db.Uuid
+  abonnement    Abonnement  @relation(fields: [abonnementId], references: [id])
+  coproprieteId String      @map("copropriete_id") @db.Uuid
+  copropriete   Copropriete @relation(fields: [coproprieteId], references: [id])
+  actif         Boolean     @default(true)
+  rattacheLe    DateTime    @default(now()) @map("rattache_le") @db.Timestamptz
+  retireLe      DateTime?   @map("retire_le") @db.Timestamptz
+
+  @@index([abonnementId])
+  @@map("abonnement_copropriete")
+}
+
+model CompteurFactureAbonnement {
+  annee   Int @id
+  dernier Int @default(0)
+
+  @@map("compteur_facture_abonnement")
+}
+
+model FactureAbonnement {
+  id              String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  numero          String                  @unique
+  abonnementId    String                  @map("abonnement_id") @db.Uuid
+  abonnement      Abonnement              @relation(fields: [abonnementId], references: [id])
+  clientId        String                  @map("client_id") @db.Uuid
+  client          ClientFacturation       @relation(fields: [clientId], references: [id])
+  periodeDebut    DateTime                @map("periode_debut") @db.Date
+  periodeFin      DateTime                @map("periode_fin") @db.Date
+  lots            Int
+  lignesJson      Json                    @map("lignes_json")
+  montantHt       Decimal                 @map("montant_ht") @db.Decimal(14, 2)
+  montantTva      Decimal                 @map("montant_tva") @db.Decimal(14, 2)
+  montantTtc      Decimal                 @map("montant_ttc") @db.Decimal(14, 2)
+  statut          StatutFactureAbonnement @default(EMISE)
+  emiseLe         DateTime                @map("emise_le") @db.Date
+  echeance        DateTime                @db.Date
+  payeeLe         DateTime?               @map("payee_le") @db.Date
+  annuleeLe       DateTime?               @map("annulee_le") @db.Timestamptz
+  motifAnnulation String?                 @map("motif_annulation")
+  creePar         String?                 @map("cree_par") @db.Uuid
+  creeLe          DateTime                @default(now()) @map("cree_le") @db.Timestamptz
+
+  paiements PaiementAbonnement[]
+
+  @@index([abonnementId])
+  @@index([statut, echeance])
+  @@map("facture_abonnement")
+}
+
+/// APPEND-ONLY (CLAUDE.md §1.2) — aucune mise à jour ni suppression.
+model PaiementAbonnement {
+  id        String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  factureId String                 @map("facture_id") @db.Uuid
+  facture   FactureAbonnement      @relation(fields: [factureId], references: [id])
+  montant   Decimal                @db.Decimal(14, 2)
+  mode      ModePaiementAbonnement
+  reference String?
+  recuLe    DateTime               @map("recu_le") @db.Date
+  saisiPar  String                 @map("saisi_par") @db.Uuid
+  creeLe    DateTime               @default(now()) @map("cree_le") @db.Timestamptz
+
+  @@index([factureId])
+  @@map("paiement_abonnement")
+}
+
+/// APPEND-ONLY — journal de l'abonnement ; `cle` rend les rappels idempotents.
+model AbonnementEvenement {
+  id           String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  abonnementId String                  @map("abonnement_id") @db.Uuid
+  abonnement   Abonnement              @relation(fields: [abonnementId], references: [id])
+  type         TypeEvenementAbonnement
+  detailsJson  Json?                   @map("details_json")
+  acteurId     String?                 @map("acteur_id") @db.Uuid
+  cle          String?                 @unique
+  horodatage   DateTime                @default(now()) @db.Timestamptz
+
+  @@index([abonnementId, horodatage])
+  @@index([horodatage])
+  @@map("abonnement_evenement")
 }
