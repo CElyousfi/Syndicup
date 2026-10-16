@@ -546,3 +546,23 @@ button, a, [role="button"], [role="link"] { transition-duration: 0.18s; }
 @media (prefers-reduced-motion: reduce) {
   .dari-swap, .dari-bubble, .dari-panel, .dari-dots > span { animation: none; }
 }
+
+/* M29 — impression (facture d'abonnement) : seul le contenu de la page s'imprime, sans la coque. */
+@media print {
+  aside,
+  .app-topbar,
+  .app-tabbar,
+  header.sticky,
+  [data-print-hide] {
+    display: none !important;
+  }
+  .lg\:ps-\[272px\] {
+    padding-inline-start: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  @page {
+    margin: 14mm;
+  }
+}

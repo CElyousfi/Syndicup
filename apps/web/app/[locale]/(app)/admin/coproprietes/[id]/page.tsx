@@ -27,6 +27,9 @@ import {
 } from "../../../../../../components/ui/color-icons";
 import { coproVariant, agVariant, invitationVariant } from "../../../../../../lib/status";
 import { InviterSyndicModal } from "./inviter-syndic-modal";
+import type { ResidenceAdmin } from "../../../../../../lib/api/console-types";
+import { ButtonLink } from "../../../../../../components/ui/button";
+import { Echeance, EtatBadge } from "../../console-common";
 
 export async function generateMetadata({
   params,
@@ -48,12 +51,15 @@ export default async function FicheClientPage({
   const { dict } = ctx;
   const ad = dict.admin;
 
-  const [coprosRes, syntheseRes, invitationsRes] = await Promise.all([
+  const [coprosRes, syntheseRes, invitationsRes, residencesRes] = await Promise.all([
     apiFetch<Copropriete[]>("/coproprietes"),
     apiFetch<AdminSynthese>(`/coproprietes/${id}/synthese-admin`),
     // Visibilité opérateur : qui a (ou n'a pas encore) accès — invitations de la copropriété.
     apiFetch<Invitation[]>("/invitations", { coproprieteId: id, searchParams: { limit: 50 } }),
+    // M29 — abonnement de la résidence (console).
+    apiFetch<ResidenceAdmin[]>("/admin/coproprietes"),
   ]);
+  const abo = residencesRes.ok ? residencesRes.data.find((r) => r.id === id)?.abonnement ?? null : null;
   const copro = coprosRes.ok ? coprosRes.data.find((c) => c.id === id) : undefined;
   if (!copro || !syntheseRes.ok) notFound();
   const s = syntheseRes.data;
@@ -66,7 +72,7 @@ export default async function FicheClientPage({
   return (
     <div className="page-root">
       <PageHeader
-        back={<BackLink href={`/${locale}/admin`} label={ad.titre} />}
+        back={<BackLink href={`/${locale}/admin/coproprietes`} label={ad.titre} />}
         title={copro.nom}
         badge={
           <Badge variant={coproVariant[copro.statut]}>
@@ -83,6 +89,30 @@ export default async function FicheClientPage({
           />
         }
       />
+
+      {/* M29 — abonnement SyndicUp de la résidence */}
+      <Card className="mb-4 flex flex-wrap items-center gap-3">
+        <span className="text-[15px] font-bold text-ink">{dict.console.abonnement}</span>
+        {abo ? (
+          <>
+            <EtatBadge etat={abo.etat} dict={dict} />
+            <span className="text-[13px] text-soft">
+              {dict.console.formules[abo.formule]} · {abo.client}
+            </span>
+            <Echeance etat={abo.etat} dict={dict} />
+            <ButtonLink size="sm" variant="secondary" className="ms-auto" href={`/${locale}/admin/abonnements/${abo.id}`}>
+              {dict.console.voirAbonnement}
+            </ButtonLink>
+          </>
+        ) : (
+          <>
+            <span className="text-[13px] text-soft">{dict.console.sansAbo}</span>
+            <ButtonLink size="sm" className="ms-auto" href={`/${locale}/admin/abonnements/nouveau?copropriete=${id}`}>
+              {dict.console.ouvrirAbonnement}
+            </ButtonLink>
+          </>
+        )}
+      </Card>
 
       {/* Santé en un coup d'œil */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

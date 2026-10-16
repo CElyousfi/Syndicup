@@ -8,6 +8,7 @@ import { apiFetch } from "./api/client";
 import { readSession } from "./session";
 import { getDict, isLocale, type Dict, type Locale } from "./i18n";
 import type { Cabinet, Copropriete, Profil, RoleType } from "./api/types";
+import type { AbonnementResidence } from "./api/console-types";
 
 /**
  * Rôle applicatif : un rôle de copropriété, ou `MEMBRE_CABINET` (M25) pour un membre d'un cabinet
@@ -28,6 +29,8 @@ export interface AppContext {
   coproprieteId: string | null;
   /** M25 — cabinets dont l'utilisateur est membre (vide pour la plupart des comptes). */
   cabinets: Cabinet[];
+  /** M29 — état de l'abonnement SyndicUp de la résidence active (null : opérateur, cabinet seul, ou indisponible). */
+  abonnement: AbonnementResidence | null;
 }
 
 const PRIORITE: RoleType[] = [
@@ -73,7 +76,7 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
   if (rolesActifs.length === 0) {
     // M25 — membre d'un cabinet sans rôle de copropriété : espace cabinet seul.
     if (cabinets.length > 0) {
-      return { locale, dict, profil: me.data, role: "MEMBRE_CABINET", roles: [], copropriete: null, coproprietes: [], coproprieteId: null, cabinets };
+      return { locale, dict, profil: me.data, role: "MEMBRE_CABINET", roles: [], copropriete: null, coproprietes: [], coproprieteId: null, cabinets, abonnement: null };
     }
     redirect(
       me.data.statut_compte === "EN_VALIDATION"
@@ -97,6 +100,15 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
   if (estSuperAdmin && !rolesIci.includes("SUPER_ADMIN")) rolesIci.push("SUPER_ADMIN");
   const role = PRIORITE.find((r) => rolesIci.includes(r)) ?? rolesIci[0] ?? "LOCATAIRE";
 
+  // M29 — résidence fermée (abonnement suspendu / impayé au-delà du délai de grâce) : écran
+  // dédié. Une erreur de lecture n'empêche jamais l'accès (l'API reste la vraie barrière : 402).
+  let abonnement: AbonnementResidence | null = null;
+  if (role !== "SUPER_ADMIN") {
+    const abo = await apiFetch<AbonnementResidence>("/abonnement", { coproprieteId });
+    abonnement = abo.ok ? abo.data : null;
+    if (abonnement?.niveau === "BLOQUE") redirect(`/${locale}/compte/abonnement-suspendu`);
+  }
+
   return {
     locale,
     dict,
@@ -107,6 +119,7 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
     coproprietes,
     coproprieteId,
     cabinets,
+    abonnement,
   };
 });
 

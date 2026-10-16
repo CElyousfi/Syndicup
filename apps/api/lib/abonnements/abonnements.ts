@@ -221,8 +221,12 @@ export async function obtenirAbonnement(ctx: TenantContext, id: string) {
       db.clientFacturation.findUniqueOrThrow({ where: { id: a.clientId } }),
     ]);
     const acteurs = await nomsActeurs(db, evenements.map((e) => e.acteurId));
+    const duTtc = factures
+      .filter((f) => f.statut === "EMISE")
+      .reduce((acc, f) => add(acc, subtract(f.montantTtc.toString(), sommePaiements(f.paiements))), money(0));
     return {
       ...serialiser(a, lots),
+      du_ttc: toApiString(duTtc),
       client_fiche: serialiserClient(client),
       prochaine_periode: prochainePeriode(a),
       factures: factures.map((f) => ({ ...serialiserFactureCourte(f), paiements: f.paiements.map(serialiserPaiement), paye: toApiString(sommePaiements(f.paiements)) })),

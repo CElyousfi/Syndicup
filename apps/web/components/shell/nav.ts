@@ -124,24 +124,30 @@ export function buildNav(role: RoleApp, dict: Dict, locale: Locale): NavSection[
   const s = d.sections;
 
   switch (role) {
-    case "SUPER_ADMIN":
-      // Opérateur plateforme : crée les copropriétés et invite leur premier syndic —
-      // le syndic gère ensuite tout le reste (lots, résidents, finances…). Aucun accès
-      // à l'application « résidence » : la console est son application (voir middleware).
+    case "SUPER_ADMIN": {
+      // Opérateur plateforme : sa console EST son application (voir middleware) — résidences,
+      // abonnements et facturation SyndicUp (M29), comptes, journal. Le syndic invité gère le reste.
+      const k = dict.console.nav;
       return [
+        { label: null, items: [{ href: p("/admin"), label: k.vueEnsemble, icon: "grid", exact: true }] },
         {
           label: s.plateforme,
           items: [
-            { href: p("/admin"), label: d.coproprietes, icon: "shield", exact: true },
-            {
-              href: p("/admin/coproprietes/nouvelle"),
-              label: dict.admin.creer,
-              icon: "building",
-              exact: true,
-            },
+            { href: p("/admin/coproprietes"), label: k.residences, icon: "building" },
+            { href: p("/admin/utilisateurs"), label: k.utilisateurs, icon: "users" },
+          ],
+        },
+        {
+          label: k.abonnements,
+          items: [
+            { href: p("/admin/abonnements"), label: k.abonnements, icon: "briefcase" },
+            { href: p("/admin/factures"), label: k.factures, icon: "receipt" },
+            { href: p("/admin/clients"), label: k.clients, icon: "handshake" },
+            { href: p("/admin/journal"), label: k.journal, icon: "file", exact: true },
           ],
         },
       ];
+    }
     case "SYNDIC":
       return [
         { label: null, items: [dashboard] },
@@ -221,7 +227,7 @@ export function buildNav(role: RoleApp, dict: Dict, locale: Locale): NavSection[
  * construite — mêmes libellés, mêmes liens, aucune duplication de règles.
  */
 const TABS_PAR_ROLE: Record<RoleApp, IconKey[]> = {
-  SUPER_ADMIN: ["shield", "building"],
+  SUPER_ADMIN: ["grid", "briefcase", "receipt", "building"],
   SYNDIC: ["grid", "coins", "wrench", "building"],
   CONSEIL_SYNDICAL: ["grid", "coins", "wrench", "building"],
   PROPRIETAIRE: ["grid", "chart", "wrench", "home"],
