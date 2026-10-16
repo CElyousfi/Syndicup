@@ -98,6 +98,14 @@ services:
         value: https://play.google.com/store/apps/details?id=ma.syndicup.app
       - key: APP_STORE_URL_IOS
         sync: false
+      # M29 — abonnements : coordonnées SyndicUp montrées au syndic (rappel, écran de suspension)
+      # et destinataires opérateur des rappels quotidiens (séparés par des virgules).
+      - key: ABONNEMENTS_CONTACT_EMAIL
+        sync: false
+      - key: ABONNEMENTS_CONTACT_WHATSAPP
+        sync: false
+      - key: ABONNEMENTS_OPERATEUR_EMAIL
+        sync: false
       # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
       # depuis le tableau de bord sans redéploiement.
       - key: RATE_LIMIT_PASSWORD_RESET_MAX
@@ -141,6 +149,21 @@ services:
       - key: API_BASE_URL
         sync: false
       - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      # M29 — en-tête des factures d'abonnement (console opérateur), lu côté serveur.
+      - key: SYNDICUP_FACTURE_RAISON_SOCIALE
+        sync: false
+      - key: SYNDICUP_FACTURE_ADRESSE
+        sync: false
+      - key: SYNDICUP_FACTURE_ICE
+        sync: false
+      - key: SYNDICUP_FACTURE_RC
+        sync: false
+      - key: SYNDICUP_FACTURE_IF
+        sync: false
+      - key: SYNDICUP_FACTURE_RIB
+        sync: false
+      - key: SYNDICUP_FACTURE_EMAIL
         sync: false
 
   # ── Production (branche main) ──────────────────────────────────────────────
@@ -231,6 +254,14 @@ services:
         value: https://play.google.com/store/apps/details?id=ma.syndicup.app
       - key: APP_STORE_URL_IOS
         sync: false
+      # M29 — abonnements : coordonnées SyndicUp montrées au syndic (rappel, écran de suspension)
+      # et destinataires opérateur des rappels quotidiens (séparés par des virgules).
+      - key: ABONNEMENTS_CONTACT_EMAIL
+        sync: false
+      - key: ABONNEMENTS_CONTACT_WHATSAPP
+        sync: false
+      - key: ABONNEMENTS_OPERATEUR_EMAIL
+        sync: false
       # Plafonds techniques de rate limiting (lib/rate-limit) — défauts applicatifs, ajustables
       # depuis le tableau de bord sans redéploiement.
       - key: RATE_LIMIT_PASSWORD_RESET_MAX
@@ -274,4 +305,19 @@ services:
       - key: API_BASE_URL
         sync: false
       - key: NEXT_PUBLIC_APP_URL
+        sync: false
+      # M29 — en-tête des factures d'abonnement (console opérateur), lu côté serveur.
+      - key: SYNDICUP_FACTURE_RAISON_SOCIALE
+        sync: false
+      - key: SYNDICUP_FACTURE_ADRESSE
+        sync: false
+      - key: SYNDICUP_FACTURE_ICE
+        sync: false
+      - key: SYNDICUP_FACTURE_RC
+        sync: false
+      - key: SYNDICUP_FACTURE_IF
+        sync: false
+      - key: SYNDICUP_FACTURE_RIB
+        sync: false
+      - key: SYNDICUP_FACTURE_EMAIL
         sync: false

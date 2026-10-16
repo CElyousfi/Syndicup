@@ -18,7 +18,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 
 /**
  * M29 — facture d'abonnement, mise en page pour l'impression (« Imprimer » → PDF du navigateur).
- * Coordonnées de l'émetteur : variables NEXT_PUBLIC_SYNDICUP_* (raison sociale, ICE, RC, IF, adresse, RIB).
+ * Coordonnées de l'émetteur : variables serveur SYNDICUP_FACTURE_* (raison sociale, adresse, ICE, RC, IF, RIB, e-mail).
  */
 export default async function FacturePage({ params }: { params: Promise<{ locale: string; id: string }> }) {
   const { locale, id } = await params;
@@ -31,13 +31,13 @@ export default async function FacturePage({ params }: { params: Promise<{ locale
   if (!res.ok) notFound();
   const f = res.data;
   const emetteur = {
-    nom: process.env.NEXT_PUBLIC_SYNDICUP_RAISON_SOCIALE ?? "SyndicUp",
-    adresse: process.env.NEXT_PUBLIC_SYNDICUP_ADRESSE ?? null,
-    ice: process.env.NEXT_PUBLIC_SYNDICUP_ICE ?? null,
-    rc: process.env.NEXT_PUBLIC_SYNDICUP_RC ?? null,
-    idf: process.env.NEXT_PUBLIC_SYNDICUP_IF ?? null,
-    rib: process.env.NEXT_PUBLIC_SYNDICUP_RIB ?? null,
-    email: process.env.NEXT_PUBLIC_SYNDICUP_EMAIL_FACTURATION ?? null,
+    nom: process.env.SYNDICUP_FACTURE_RAISON_SOCIALE ?? "SyndicUp",
+    adresse: process.env.SYNDICUP_FACTURE_ADRESSE ?? null,
+    ice: process.env.SYNDICUP_FACTURE_ICE ?? null,
+    rc: process.env.SYNDICUP_FACTURE_RC ?? null,
+    idf: process.env.SYNDICUP_FACTURE_IF ?? null,
+    rib: process.env.SYNDICUP_FACTURE_RIB ?? null,
+    email: process.env.SYNDICUP_FACTURE_EMAIL ?? null,
   };
 
   return (
