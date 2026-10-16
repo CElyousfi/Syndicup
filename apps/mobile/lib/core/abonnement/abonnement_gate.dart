@@ -52,7 +52,7 @@ class AbonnementResidence {
   }
 }
 
-final abonnementProvider = FutureProvider<AbonnementResidence?>((ref) async {
+final FutureProvider<AbonnementResidence?> abonnementProvider = FutureProvider<AbonnementResidence?>((ref) async {
   final app = ref.watch(appStateProvider).valueOrNull;
   if (app is! AppReady) return null;
   if (app.ctx.isSuperAdmin || app.ctx.isMembreCabinetSeul) return null;

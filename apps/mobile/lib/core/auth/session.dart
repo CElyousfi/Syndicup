@@ -123,7 +123,7 @@ class SessionController extends Notifier<Session?> implements TokenSource {
 
 final sessionProvider = NotifierProvider<SessionController, Session?>(SessionController.new);
 
-final apiClientProvider = Provider<ApiClient>((ref) {
+final Provider<ApiClient> apiClientProvider = Provider<ApiClient>((ref) {
   final client = ApiClient(ref.read(sessionProvider.notifier));
   // M29 — 402 en cours de session : relire l'état d'abonnement (écran de suspension).
   client.onAbonnementSuspendu = () => ref.invalidate(abonnementProvider);
