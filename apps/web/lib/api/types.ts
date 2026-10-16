@@ -24,7 +24,9 @@ export type ApiErrorCode =
   | "CONFLICT"
   | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  // M29 — résidence dont l'abonnement est suspendu (402).
+  | "ABONNEMENT_SUSPENDU";
 
 export interface ApiError {
   code: ApiErrorCode;

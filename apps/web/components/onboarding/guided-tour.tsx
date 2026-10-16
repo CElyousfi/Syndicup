@@ -128,7 +128,7 @@ export function GuidedTour({
     // Opérateur plateforme (super admin) — ces deux étapes n'existent que pour lui ;
     // pour les autres rôles la cible est absente et l'étape est sautée instantanément.
     { cible: "nav-shield", tiroir: true, action: true, titre: labels.adminNavTitle, corps: labels.adminNavBody },
-    { cible: "admin-new", route: "/admin", requiert: "nav-shield", action: true, titre: labels.adminNewTitle, corps: labels.adminNewBody },
+    { cible: "admin-new", route: "/admin/coproprietes", requiert: "nav-building", action: true, titre: labels.adminNewTitle, corps: labels.adminNewBody },
     { cible: "nav-grid", tiroir: true, route: "/tableau-de-bord", action: true, titre: labels.navDashTitle, corps: labels.navDashBody },
     { cible: "dash-stats", route: "/tableau-de-bord", titre: labels.statsTitle, corps: labels.statsBody },
     { cible: "nav-coins", tiroir: true, action: true, titre: labels.navFinancesTitle, corps: labels.navFinancesBody },

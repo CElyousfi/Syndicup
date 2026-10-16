@@ -80,3 +80,39 @@ export function isEqual(a: MoneyInput, b: MoneyInput): boolean {
 export function isGreaterThan(a: MoneyInput, b: MoneyInput): boolean {
   return money(a).greaterThan(money(b));
 }
+
+/** Montant × quantité (ex. prix par lot × nombre de lots × mois) — arrondi à 2 décimales. */
+export function multiply(a: MoneyInput, quantite: number | string | Decimal): Decimal {
+  return money(a).times(new Decimal(quantite)).toDecimalPlaces(2);
+}
+
+/** Applique un coefficient (ex. 1,15 pour la majoration mensuelle, 0,85 pour −15 %). */
+export function applyRate(a: MoneyInput, coefficient: number | string | Decimal): Decimal {
+  return money(a).times(new Decimal(coefficient)).toDecimalPlaces(2);
+}
+
+/** Le plus grand de deux montants (ex. minimum de facturation). */
+export function maxOf(a: MoneyInput, b: MoneyInput): Decimal {
+  return Decimal.max(money(a), money(b));
+}
+
+/**
+ * Décompose un montant TTC en HT + TVA : HT = TTC / (1 + taux/100) arrondi, TVA = TTC − HT
+ * (la somme retombe exactement sur le TTC, au centime).
+ */
+export function splitTtc(ttc: MoneyInput, tauxTva: MoneyInput): { ht: Decimal; tva: Decimal; ttc: Decimal } {
+  const total = money(ttc);
+  const ht = total.dividedBy(new Decimal(1).plus(new Decimal(tauxTva).dividedBy(100))).toDecimalPlaces(2);
+  return { ht, tva: total.minus(ht).toDecimalPlaces(2), ttc: total };
+}
+
+/** Ajoute la TVA à un montant HT : TVA = HT × taux/100 arrondie, TTC = HT + TVA. */
+export function addTva(ht: MoneyInput, tauxTva: MoneyInput): { ht: Decimal; tva: Decimal; ttc: Decimal } {
+  const base = money(ht);
+  const tva = base.times(new Decimal(tauxTva).dividedBy(100)).toDecimalPlaces(2);
+  return { ht: base, tva, ttc: base.plus(tva).toDecimalPlaces(2) };
+}
+
+export function isZeroOrLess(a: MoneyInput): boolean {
+  return money(a).lessThanOrEqualTo(0);
+}

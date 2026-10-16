@@ -46,6 +46,8 @@ tags:
     description: "Suivi des décisions (résolutions d'AG adoptées), échéances de contrats, incidents résolus à régler, rapports à soumettre, obligations récurrentes et tâches manuelles (M22, Doc A §6, §8)."
   - name: Cabinet
     description: "Cabinet de syndic professionnel : équipe (admin, gestionnaires, comptables), mandats sur les copropriétés (proposés puis confirmés par le syndic en place, ou créées directement), portefeuille (KPI par copropriété, vue matérialisée rafraîchie toutes les 15 min), agenda et alertes transverses, annuaire de prestataires, marque sur les PDF. L'accès à une copropriété passe UNIQUEMENT par role_utilisateur (SYNDIC / SYNDIC_COMPTABLE) posé par cabinet_appliquer_acces (M25, Doc A §8 — ⚠️ module absent du Master Spec, signalé ROADMAP M25)."
+  - name: Abonnements
+    description: "Abonnements SyndicUp (M29 — ⚠️ domaine commercial absent du Master Spec / Doc A, signalé en PR) : les clients ne paient pas dans l'application ; l'opérateur (SUPER_ADMIN) ouvre l'abonnement (essai gratuit 30 jours), émet les factures (SU-AAAA-NNNN), enregistre les paiements reçus et pilote l'accès. L'état d'accès est calculé depuis les dates : OK, RAPPEL (fenêtre douce au syndic), GRACE (échéance dépassée, coupure annoncée), BLOQUE (toute requête de la résidence répond 402 ABONNEMENT_SUSPENDU, sauf /abonnement, /users/me, /app/version, /auth)."
   - name: Import
     description: "Import Excel / csv et onboarding d'une résidence en une heure (Doc A §11) : lots + propriétaires (invitations pré-remplies, jamais envoyées seules), soldes d'ouverture (première ligne du relevé), prestataires, contrats, véhicules / badges, personnel ; checklist de démarrage ; résidence de démonstration (M24 — ⚠️ module absent du Master Spec, signalé ROADMAP M24)."
   - name: Parkings
@@ -89,6 +91,129 @@ components:
       schema: { type: string, format: uuid }
 
   schemas:
+    EtatAccesAbonnement:
+      type: object
+      description: État d'accès calculé à partir des dates de l'abonnement (jours calendaires à Casablanca).
+      properties:
+        etat: { type: string, enum: [SANS_ABONNEMENT, EN_ESSAI, A_JOUR, RENOUVELLEMENT_PROCHE, ESSAI_EXPIRE, EN_RETARD, ACCES_PROLONGE, BLOQUE_IMPAYE, SUSPENDU, RESILIE] }
+        niveau: { type: string, enum: [OK, RAPPEL, GRACE, BLOQUE] }
+        echeance: { type: string, format: date, nullable: true }
+        jours_avant_echeance: { type: integer, nullable: true }
+        date_blocage: { type: string, format: date, nullable: true, description: "Dernier jour d'accès avant la coupure automatique." }
+        jours_avant_blocage: { type: integer, nullable: true }
+    AbonnementResidence:
+      type: object
+      description: Vue « résidence » — les gestionnaires (SYNDIC, CONSEIL_SYNDICAL, SYNDIC_COMPTABLE) voient le détail ; les autres rôles seulement le niveau.
+      properties:
+        niveau: { type: string, enum: [OK, RAPPEL, GRACE, BLOQUE] }
+        etat: { type: string }
+        gestionnaire: { type: boolean }
+        date_blocage: { type: string, format: date, nullable: true }
+        jours_avant_blocage: { type: integer, nullable: true }
+        echeance: { type: string, format: date, nullable: true }
+        jours_avant_echeance: { type: integer, nullable: true }
+        abonnement: { type: object, nullable: true, properties: { statut: { type: string, enum: [ESSAI, ACTIF, SUSPENDU, RESILIE] }, formule: { type: string }, periodicite: { type: string } } }
+        contact: { type: object, properties: { email: { type: string, nullable: true }, whatsapp: { type: string, nullable: true } } }
+    ClientFacturation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [SYNDICAT, CABINET] }
+        nom: { type: string }
+        raison_sociale: { type: string, nullable: true }
+        ice: { type: string, nullable: true }
+        rc: { type: string, nullable: true }
+        identifiant_fiscal: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        ville: { type: string, nullable: true }
+        contact_nom: { type: string, nullable: true }
+        contact_email: { type: string, nullable: true }
+        contact_telephone: { type: string, nullable: true }
+        cabinet_id: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+    ClientFacturationCreate:
+      type: object
+      required: [type, nom]
+      properties:
+        type: { type: string, enum: [SYNDICAT, CABINET] }
+        nom: { type: string }
+        raison_sociale: { type: string, nullable: true }
+        ice: { type: string, nullable: true, pattern: "^[0-9]{15}$" }
+        rc: { type: string, nullable: true }
+        identifiant_fiscal: { type: string, nullable: true }
+        adresse: { type: string, nullable: true }
+        ville: { type: string, nullable: true }
+        contact_nom: { type: string, nullable: true }
+        contact_email: { type: string, format: email, nullable: true }
+        contact_telephone: { type: string, nullable: true }
+        cabinet_id: { type: string, format: uuid, nullable: true }
+        notes: { type: string, nullable: true }
+    Abonnement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        client: { type: object, properties: { id: { type: string, format: uuid }, nom: { type: string }, type: { type: string } } }
+        formule: { type: string, enum: [ESSENTIEL, STANDARD, PRESTIGE, CABINET] }
+        periodicite: { type: string, enum: [ANNUELLE, MENSUELLE] }
+        statut: { type: string, enum: [ESSAI, ACTIF, SUSPENDU, RESILIE] }
+        base_prix: { type: string, enum: [TTC, HT] }
+        prix_lot: { $ref: "#/components/schemas/Money" }
+        taux_tva: { type: string }
+        minimum_mensuel: { type: string, nullable: true }
+        forfait_accompagne: { type: string, nullable: true }
+        lots_contractes: { type: integer }
+        lots_reels: { type: integer }
+        depassement_lots: { type: boolean, description: "Lots créés > lots contractés + 5 %." }
+        tarif_fondateur: { type: boolean }
+        prix_garanti_jusqu_au: { type: string, format: date, nullable: true }
+        date_debut: { type: string, format: date }
+        fin_essai: { type: string, format: date, nullable: true }
+        fin_periode: { type: string, format: date, nullable: true, description: Dernier jour couvert par un paiement. }
+        delai_grace_jours: { type: integer }
+        acces_prolonge_jusqu_au: { type: string, format: date, nullable: true }
+        mensuel_ht: { type: string, description: Équivalent mensuel HT (revenu récurrent). }
+        etat: { $ref: "#/components/schemas/EtatAccesAbonnement" }
+        coproprietes: { type: array, items: { type: object, properties: { id: { type: string, format: uuid }, nom: { type: string }, ville: { type: string }, lots_reels: { type: integer } } } }
+    AbonnementCreate:
+      type: object
+      required: [copropriete_ids, formule, lots_contractes, date_debut]
+      description: Indiquer soit `client_id`, soit `nouveau_client`. Prix absents = grille en vigueur. `essai` (défaut true) = 30 jours gratuits.
+      properties:
+        client_id: { type: string, format: uuid }
+        nouveau_client: { $ref: "#/components/schemas/ClientFacturationCreate" }
+        copropriete_ids: { type: array, minItems: 1, items: { type: string, format: uuid } }
+        formule: { type: string, enum: [ESSENTIEL, STANDARD, PRESTIGE, CABINET] }
+        periodicite: { type: string, enum: [ANNUELLE, MENSUELLE], default: ANNUELLE }
+        lots_contractes: { type: integer, minimum: 1 }
+        prix_lot: { type: string }
+        minimum_mensuel: { type: string, nullable: true }
+        taux_tva: { type: string }
+        tarif_fondateur: { type: boolean, default: false }
+        forfait_accompagne: { type: string, nullable: true }
+        date_debut: { type: string, format: date }
+        essai: { type: boolean, default: true }
+        fin_essai: { type: string, format: date }
+        fin_periode: { type: string, format: date }
+        delai_grace_jours: { type: integer, minimum: 0, maximum: 90 }
+        notes: { type: string, nullable: true }
+    FactureAbonnement:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        numero: { type: string, example: SU-2026-0001 }
+        abonnement_id: { type: string, format: uuid }
+        client_id: { type: string, format: uuid }
+        periode_debut: { type: string, format: date }
+        periode_fin: { type: string, format: date }
+        lots: { type: integer }
+        montant_ht: { $ref: "#/components/schemas/Money" }
+        montant_tva: { $ref: "#/components/schemas/Money" }
+        montant_ttc: { $ref: "#/components/schemas/Money" }
+        statut: { type: string, enum: [EMISE, PAYEE, ANNULEE] }
+        emise_le: { type: string, format: date }
+        echeance: { type: string, format: date }
+        payee_le: { type: string, format: date, nullable: true }
+        en_retard: { type: boolean }
     # ── Enveloppe standard (Master Spec Partie 3.1) ──────────────────────────
     Meta:
       type: object
@@ -112,7 +237,7 @@ components:
           properties:
             code:
               type: string
-              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_ERROR]
+              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_ERROR, ABONNEMENT_SUSPENDU]
             message: { type: string }
             fields:
               type: object
@@ -2878,6 +3003,11 @@ components:
         creeLe: { type: string, format: date-time }
 
   responses:
+    AbonnementSuspendu:
+      description: "402 — l'abonnement SyndicUp de la résidence est suspendu, résilié ou impayé au-delà du délai de grâce (code ABONNEMENT_SUSPENDU)."
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
     ValidationError:
       description: Payload invalide.
       content:
@@ -8265,3 +8395,201 @@ paths:
       responses:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
+  /abonnement:
+    get:
+      tags: [Abonnements]
+      summary: "État de l'abonnement SyndicUp de la copropriété courante — toujours joignable (même résidence bloquée) pour afficher la fenêtre de rappel ou l'écran de suspension."
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/AbonnementResidence" } } } } } }
+  /admin/vue-ensemble:
+    get:
+      tags: [Abonnements]
+      summary: "Console opérateur (SUPER_ADMIN) : revenu récurrent HT, encaissements 30 j, abonnements par état, factures ouvertes / en retard, résidences sans abonnement, liste « à traiter », activité récente."
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/tarifs:
+    get:
+      tags: [Abonnements]
+      summary: Prix proposé par la grille en vigueur (SUPER_ADMIN).
+      parameters:
+        - { name: formule, in: query, required: true, schema: { type: string, enum: [ESSENTIEL, STANDARD, PRESTIGE, CABINET] } }
+        - { name: lots, in: query, required: true, schema: { type: integer, minimum: 1 } }
+        - { name: periodicite, in: query, schema: { type: string, enum: [ANNUELLE, MENSUELLE] } }
+        - { name: fondateur, in: query, schema: { type: string, enum: ["true", "false"] } }
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/journal:
+    get:
+      tags: [Abonnements]
+      summary: Journal des abonnements (append-only), le plus récent d'abord (SUPER_ADMIN).
+      parameters: [{ name: limite, in: query, schema: { type: integer, minimum: 1, maximum: 500 } }]
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/coproprietes:
+    get:
+      tags: [Abonnements]
+      summary: Toutes les résidences avec leur abonnement, leurs lots réels et leurs comptes actifs (SUPER_ADMIN).
+      parameters: [{ name: q, in: query, schema: { type: string } }]
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/utilisateurs:
+    get:
+      tags: [Abonnements]
+      summary: Recherche des comptes de la plateforme, 50 par page (SUPER_ADMIN).
+      parameters: [{ name: q, in: query, schema: { type: string } }, { $ref: "#/components/parameters/Page" }]
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/utilisateurs/{id}:
+    patch:
+      tags: [Abonnements]
+      summary: Suspendre / réactiver un compte (SUPER_ADMIN) — tracé dans l'audit_log de chaque résidence du compte.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [statut_compte], properties: { statut_compte: { type: string, enum: [ACTIF, SUSPENDU] }, motif: { type: string } } } } } }
+      responses:
+        "200": { description: "OK" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/clients:
+    get:
+      tags: [Abonnements]
+      summary: Clients facturés (SUPER_ADMIN).
+      parameters: [{ name: q, in: query, schema: { type: string } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/ClientFacturation" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Abonnements]
+      summary: Créer un client (SUPER_ADMIN).
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ClientFacturationCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/ClientFacturation" } } } } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/clients/{id}:
+    get:
+      tags: [Abonnements]
+      summary: Fiche client avec abonnements et factures (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Abonnements]
+      summary: Modifier un client (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/ClientFacturationCreate" } } } }
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/abonnements:
+    get:
+      tags: [Abonnements]
+      summary: Abonnements (SUPER_ADMIN), filtrables par état calculé et recherche (client, résidence).
+      parameters:
+        - { name: etat, in: query, schema: { type: string, enum: [SANS_ABONNEMENT, EN_ESSAI, A_JOUR, RENOUVELLEMENT_PROCHE, ESSAI_EXPIRE, EN_RETARD, ACCES_PROLONGE, BLOQUE_IMPAYE, SUSPENDU, RESILIE] } }
+        - { name: q, in: query, schema: { type: string } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/Abonnement" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      tags: [Abonnements]
+      summary: "Ouvrir un abonnement (SUPER_ADMIN) : essai gratuit de 30 jours par défaut, prix figé depuis la grille (fondateur : garanti 24 mois). Une résidence n'a qu'un abonnement actif (409 ABONNEMENT_EXISTANT)."
+      requestBody: { required: true, content: { application/json: { schema: { $ref: "#/components/schemas/AbonnementCreate" } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Abonnement" } } } } } }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/abonnements/{id}:
+    get:
+      tags: [Abonnements]
+      summary: Fiche abonnement — résidences, factures et paiements, journal, prochaine période facturable (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      tags: [Abonnements]
+      summary: Modifier formule, périodicité, lots contractés, prix, minimum, TVA, délai de grâce, notes (SUPER_ADMIN) — avant/après journalisés.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object } } } }
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { description: "Abonnement résilié." }
+  /admin/abonnements/{id}/actions:
+    post:
+      tags: [Abonnements]
+      summary: "Cycle de vie (SUPER_ADMIN) : PROLONGER_ESSAI {fin_essai}, ACCORDER_DELAI {jusqu_au, motif} (ex. vote en AG), RETIRER_DELAI, ACTIVER {fin_periode}, SUSPENDRE {motif}, REACTIVER, RESILIER {motif}."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [action], properties: { action: { type: string, enum: [PROLONGER_ESSAI, ACCORDER_DELAI, RETIRER_DELAI, ACTIVER, SUSPENDRE, REACTIVER, RESILIER] }, fin_essai: { type: string, format: date }, jusqu_au: { type: string, format: date }, fin_periode: { type: string, format: date }, motif: { type: string } } } } } }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/Abonnement" } } } } } }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { description: "Action incompatible avec le statut (ABONNEMENT_STATUT_INVALIDE)." }
+  /admin/abonnements/{id}/coproprietes:
+    post:
+      tags: [Abonnements]
+      summary: Rattacher une résidence à l'abonnement (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [copropriete_id], properties: { copropriete_id: { type: string, format: uuid } } } } } }
+      responses:
+        "201": { description: "Créé" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/abonnements/{id}/coproprietes/{coproprieteId}:
+    delete:
+      tags: [Abonnements]
+      summary: Retirer une résidence de l'abonnement (historique conservé) (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { name: coproprieteId, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/abonnements/{id}/factures:
+    post:
+      tags: [Abonnements]
+      summary: "Émettre la facture de la période suivante (SUPER_ADMIN) — numérotation sans trou SU-AAAA-NNNN ; lots facturés = max(contractés, créés) sauf saisie ; refus si une facture non annulée couvre déjà la période."
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { periode_debut: { type: string, format: date }, lots: { type: integer }, echeance_jours: { type: integer, default: 15 }, lignes_supplementaires: { type: array, items: { type: object, properties: { libelle: { type: string }, montant: { type: string } } } } } } } } }
+      responses:
+        "201": { description: Créé, content: { application/json: { schema: { type: object, properties: { data: { $ref: "#/components/schemas/FactureAbonnement" } } } } } }
+        "422": { description: "Période déjà facturée / abonnement résilié (FACTURE_STATUT_INVALIDE, ABONNEMENT_STATUT_INVALIDE)." }
+  /admin/factures:
+    get:
+      tags: [Abonnements]
+      summary: Factures d'abonnement (SUPER_ADMIN).
+      parameters: [{ name: statut, in: query, schema: { type: string, enum: [EMISE, PAYEE, ANNULEE] } }, { name: en_retard, in: query, schema: { type: string, enum: ["true", "false"] } }]
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { type: object, properties: { data: { type: array, items: { $ref: "#/components/schemas/FactureAbonnement" } } } } } } }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/factures/{id}:
+    get:
+      tags: [Abonnements]
+      summary: Facture complète (lignes, client, paiements, reste dû) (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/factures/{id}/paiements:
+    post:
+      tags: [Abonnements]
+      summary: "Enregistrer un paiement reçu (SUPER_ADMIN) — append-only ; facture soldée → période payée avancée, abonnement ACTIF, accès rouvert. Montant > reste dû : 422 PAIEMENT_SUPERIEUR_RESTE_DU."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKey" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [montant, mode, recu_le], properties: { montant: { $ref: "#/components/schemas/Money" }, mode: { type: string, enum: [VIREMENT, CHEQUE, ESPECES, CARTE, AUTRE] }, reference: { type: string, nullable: true }, recu_le: { type: string, format: date } } } } } }
+      responses:
+        "201": { description: "Créé" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { description: "Facture soldée / annulée, ou montant supérieur au reste dû." }
+  /admin/factures/{id}/annuler:
+    post:
+      tags: [Abonnements]
+      summary: Annuler une facture émise sans paiement (numéro conservé, motif tracé) (SUPER_ADMIN).
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [motif], properties: { motif: { type: string } } } } } }
+      responses:
+        "200": { description: "OK" }
+        "422": { description: "Facture non annulable (FACTURE_STATUT_INVALIDE)." }

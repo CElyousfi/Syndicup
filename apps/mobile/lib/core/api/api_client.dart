@@ -44,6 +44,10 @@ class ApiClient {
 
   final Dio _dio;
   final TokenSource _tokens;
+
+  /// M29 — appelé quand l'API répond 402 ABONNEMENT_SUSPENDU (résidence fermée en cours de
+  /// session) : l'app relit l'état d'abonnement et affiche l'écran de suspension.
+  void Function()? onAbonnementSuspendu;
   static const _uuid = Uuid();
 
   String get baseUrl => _dio.options.baseUrl;
@@ -123,6 +127,7 @@ class ApiClient {
       final err = payload['error'] is Map<String, dynamic>
           ? ApiError.fromJson(payload['error'] as Map<String, dynamic>)
           : ApiError(code: status == 0 ? 'NETWORK' : 'INTERNAL_ERROR', message: 'Réponse inattendue ($status).');
+      if (status == 402 && err.code == 'ABONNEMENT_SUSPENDU') onAbonnementSuspendu?.call();
       final retryAfter = int.tryParse(res.headers.value('retry-after') ?? '');
       final requestId = (payload['meta'] as Map?)?['request_id'] as String? ?? res.headers.value('x-request-id');
       return ApiFail<T>(err, status, requestId: requestId, retryAfter: retryAfter);

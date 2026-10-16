@@ -15,7 +15,7 @@ export default async function NouvelleCoproPage({
     <div className="page-root">
       <PageHeader
         title={ctx.dict.admin.creer}
-        back={<BackLink href={`/${locale}/admin`} label={ctx.dict.admin.titre} />}
+        back={<BackLink href={`/${locale}/admin/coproprietes`} label={ctx.dict.admin.titre} />}
       />
       <CoproForm dict={ctx.dict} locale={ctx.locale} />
     </div>

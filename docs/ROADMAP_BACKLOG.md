@@ -984,6 +984,29 @@ pas encore sur les convocations d'AG ni en logo.
   gestion (membres, mandats) depuis le mobile (web-first, voir parité) ; désignation du syndic
   suivant à la fin d'un mandat.
 
+## M29 — Abonnements SyndicUp et console opérateur
+
+*Domaine commercial de SyndicUp (hors Doc A). Guide : `docs/ABONNEMENTS.md`. Branche
+`feature/abonnements-console-admin`.*
+
+⚠️ **Ajouts signalés au-delà du Master Spec** : enums `TypeClientFacturation`, `FormuleAbonnement`,
+`PeriodiciteAbonnement`, `StatutAbonnement`, `BasePrixAbonnement`, `StatutFactureAbonnement`,
+`ModePaiementAbonnement`, `TypeEvenementAbonnement` ; tables `client_facturation`, `abonnement`,
+`abonnement_copropriete`, `compteur_facture_abonnement`, `facture_abonnement`,
+`paiement_abonnement` (append-only), `abonnement_evenement` (append-only) ; code HTTP **402
+`ABONNEMENT_SUSPENDU`** sur toute requête tenant d'une résidence bloquée (routes libres :
+`/abonnement`, `/users/me`, `/app/version`, `/auth`) ; codes `ABONNEMENT_EXISTANT`,
+`ABONNEMENT_STATUT_INVALIDE`, `FACTURE_STATUT_INVALIDE`, `PAIEMENT_SUPERIEUR_RESTE_DU` ; job Inngest
+`abonnements-rappels-quotidien`. Aucune policy existante modifiée.
+
+- [x] Essai 30 j, grille figée sur l'abonnement, tarif fondateur garanti 24 mois
+- [x] État d'accès calculé depuis les dates (OK / RAPPEL / GRACE / BLOQUE) + délai de grâce réglable
+- [x] Factures sans trou, paiements partiels, idempotence, annulation sans paiement
+- [x] Console : vue d'ensemble, résidences, abonnements, factures imprimables, clients, utilisateurs, journal
+- [x] Fenêtre de rappel syndic + écran de suspension (web et mobile, FR/AR)
+- [ ] Avoirs (facture annulée après paiement) — à faire si le cas se présente
+- [ ] Paiement en ligne (CMI / Payzone) pour la formule mensuelle
+
 ## M14 — Avant ouverture publique
 
 *Réf. Master Spec Partie 16.3, 13.6, 11.6.*

@@ -3,6 +3,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/abonnement/abonnement_gate.dart';
 import 'core/auth/app_state.dart';
 import 'core/auth/biometric_lock.dart';
 import 'core/auth/session.dart';
@@ -12,6 +13,7 @@ import 'core/router/router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/update/update_gate.dart';
 import 'core/home_widgets/home_widgets.dart';
+import 'features/abonnement/abonnement_screens.dart';
 import 'features/auth/lock_screen.dart';
 import 'features/auth/welcome_screen.dart';
 import 'features/update/update_screens.dart';
@@ -31,6 +33,8 @@ class _SyndicUpAppState extends ConsumerState<SyndicUpApp> {
       Feel.onResume();
       ref.read(lockedProvider.notifier).onResumed();
       ref.invalidate(updateVerdictProvider);
+      // M29 — l'état d'abonnement peut avoir changé (paiement enregistré, échéance passée).
+      ref.invalidate(abonnementProvider);
       // Widgets d'écran d'accueil : relus au retour (si une session est ouverte et le contexte prêt).
       if (ref.read(sessionProvider) != null && ref.read(appStateProvider).valueOrNull is AppReady) HomeWidgets.instance.refresh(ref);
     },
@@ -97,6 +101,9 @@ class _Gates extends ConsumerWidget {
     if (verdict.statut == UpdateStatut.bloquer) return UpdateRequiredScreen(verdict: verdict);
 
     final locked = ref.watch(lockedProvider) && ref.watch(sessionProvider) != null;
+    // M29 — résidence fermée : écran de suspension (après le verrou biométrique, qui reste devant).
+    final abo = ref.watch(sessionProvider) != null ? ref.watch(abonnementProvider).valueOrNull : null;
+    if (abo != null && abo.bloque && !locked) return AbonnementSuspenduScreen(abonnement: abo);
     final body = verdict.statut == UpdateStatut.proposer
         ? Column(children: [UpdateBanner(verdict: verdict), Expanded(child: child)])
         : child;
@@ -104,6 +111,7 @@ class _Gates extends ConsumerWidget {
       fit: StackFit.expand,
       children: [
         body,
+        if (abo != null && abo.rappelVisible) AbonnementRappelOverlay(abonnement: abo),
         if (locked) const LockScreen(),
       ],
     );

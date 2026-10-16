@@ -4,6 +4,7 @@ import { buildNav, buildMobileTabs, buildQuickActions } from "../../../component
 import { AppFrame } from "../../../components/shell/app-frame";
 import { nomComplet } from "../../../lib/format";
 import type { Notification } from "../../../lib/api/types";
+import { RappelAbonnement } from "../../../components/abonnement/rappel-abonnement";
 
 export default async function AppLayout({
   children,
@@ -65,6 +66,16 @@ export default async function AppLayout({
       tour={dict.onboarding}
       dari={ctx.role === "MEMBRE_CABINET" ? null : { labels: dict.dari, prenom: ctx.profil.prenom ?? "" }}
     >
+      {ctx.abonnement && ctx.coproprieteId && ctx.copropriete ? (
+        <RappelAbonnement
+          abonnement={ctx.abonnement}
+          coproprieteId={ctx.coproprieteId}
+          residence={ctx.copropriete.nom}
+          labels={dict.abonnementResidence}
+          closeLabel={dict.common.close}
+          locale={ctx.locale}
+        />
+      ) : null}
       {children}
     </AppFrame>
   );

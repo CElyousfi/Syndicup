@@ -2,151 +2,205 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAppContext, exigerRole } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
-import type { Copropriete } from "../../../../lib/api/types";
-import { getDict, isLocale } from "../../../../lib/i18n";
+import type { VueEnsemble } from "../../../../lib/api/console-types";
+import { getDict, isLocale, fill } from "../../../../lib/i18n";
+import { formatDateCourte, formatDateHeure, formatMontant } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
-import { Badge } from "../../../../components/ui/badge";
-import { ButtonLink } from "../../../../components/ui/button";
-import { DemoModal } from "../import/import-client";
-import { EmptyState } from "../../../../components/ui/empty-state";
-import { Input } from "../../../../components/ui/field";
-import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
-import { coproVariant } from "../../../../lib/status";
-import { IconChevronEnd, IconPlus, IconSearch } from "../../../../components/ui/icons";
+import { Card, SectionHeader } from "../../../../components/ui/card";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { IconCircle, CBuilding, CFile, CShield } from "../../../../components/ui/color-icons";
-import { LiveList } from "../../../../components/ui/live-list";
+import { Badge } from "../../../../components/ui/badge";
+import { Banner } from "../../../../components/ui/banner";
+import { ButtonLink } from "../../../../components/ui/button";
+import { Amount } from "../../../../components/ui/amount";
+import { EmptyState } from "../../../../components/ui/empty-state";
+import { IconPlus, IconChevronEnd } from "../../../../components/ui/icons";
+import { CChart, CCoins, CWallet, CBuilding } from "../../../../components/ui/color-icons";
+import { Echeance, EtatBadge } from "./console-common";
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
-  return { title: getDict(isLocale(locale) ? locale : "fr").admin.titre };
+  return { title: getDict(isLocale(locale) ? locale : "fr").console.vueTitre };
 }
 
-/** B6 — tableau de bord plateforme (super admin). */
-export default async function AdminPage({
-  params,
-  searchParams,
-}: {
-  params: Promise<{ locale: string }>;
-  searchParams: Promise<{ q?: string }>;
-}) {
+const toneATraiter = { BLOQUE: "danger", GRACE: "warn", FIN_ESSAI: "info", RENOUVELLEMENT: "neutral", DEPASSEMENT_LOTS: "outline" } as const;
+
+/** M29 — vue d'ensemble de l'opérateur : revenus, abonnements, ce qui demande une action aujourd'hui. */
+export default async function VueEnsemblePage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
-  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   exigerRole(ctx, ["SUPER_ADMIN"]);
   const { dict } = ctx;
-  const ad = dict.admin;
+  const c = dict.console;
+  const p = (path: string) => `/${ctx.locale}${path}`;
 
-  const res = await apiFetch<Copropriete[]>("/coproprietes");
-  const toutes = res.ok ? res.data : [];
-  const actives = toutes.filter((c) => c.statut === "ACTIVE");
-  const archivees = toutes.filter((c) => c.statut === "ARCHIVEE");
-  const q = (sp.q ?? "").toLowerCase();
-  const copros = toutes.filter(
-    (c) => !q || c.nom.toLowerCase().includes(q) || c.ville.toLowerCase().includes(q)
-  );
+  const res = await apiFetch<VueEnsemble>("/admin/vue-ensemble");
+  if (!res.ok) {
+    return (
+      <div className="page-root">
+        <PageHeader title={c.vueTitre} subtitle={c.vueSousTitre} />
+        <Banner variant="danger" title={res.error.message} />
+      </div>
+    );
+  }
+  const v = res.data;
 
   return (
     <div className="page-root">
       <PageHeader
-        title={ad.titre}
-        subtitle={ad.subtitle}
+        title={c.vueTitre}
+        subtitle={c.vueSousTitre}
         actions={
-          <div className="flex flex-wrap gap-2">
-            {ctx.coproprieteId ? <DemoModal dict={dict} locale={ctx.locale} coproprieteId={ctx.coproprieteId} /> : null}
-            <ButtonLink href={`/${locale}/admin/coproprietes/nouvelle`} data-tour="admin-new">
-              <IconPlus width={16} height={16} />
-              {ad.creer}
-            </ButtonLink>
-          </div>
+          <ButtonLink href={p("/admin/abonnements/nouveau")}>
+            <IconPlus width={16} height={16} />
+            {c.ouvrirAbonnement}
+          </ButtonLink>
         }
       />
 
-      <div className="mb-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <StatCard icon={<CBuilding />} tone="sage" label={ad.titre} value={toutes.length} />
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          icon={<CShield />}
-          tone="ok"
-          label={dict.enums.statutCopropriete.ACTIVE}
-          value={actives.length}
+          icon={<CChart />}
+          tone="sage"
+          label={c.mrr}
+          value={<Amount value={v.mrr_ht} locale={ctx.locale} />}
+          hint={fill(c.arr, { montant: formatMontant(v.arr_ht) })}
+        />
+        <StatCard icon={<CWallet />} tone="ok" label={c.encaisse30} value={<Amount value={v.encaisse_30j} locale={ctx.locale} />} />
+        <StatCard
+          icon={<CCoins />}
+          tone="sand"
+          label={c.facturesOuvertes}
+          value={<Amount value={v.factures_ouvertes.montant_ttc} locale={ctx.locale} />}
+          hint={fill(c.facturesOuvertesNb, { n: v.factures_ouvertes.nombre })}
+          href={p("/admin/factures?statut=EMISE")}
         />
         <StatCard
-          icon={<CFile />}
+          icon={<CBuilding />}
           tone="lilac"
-          label={dict.enums.statutCopropriete.ARCHIVEE}
-          value={archivees.length}
+          label={c.actifs}
+          value={v.abonnements_actifs}
+          hint={`${fill(c.lotsFactures, { n: v.lots_factures })} · ${c.essais} : ${v.essais_en_cours}`}
+          href={p("/admin/abonnements")}
         />
       </div>
 
-      <form className="mb-4" method="GET">
-        <div className="relative w-72 max-w-full">
-          <IconSearch
-            width={16}
-            height={16}
-            className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-faint"
-          />
-          <Input name="q" defaultValue={sp.q ?? ""} placeholder={dict.common.search} className="h-10 ps-9" />
-        </div>
-      </form>
+      {v.pipeline_essais_mensuel_ht !== "0.00" ? (
+        <p className="-mt-3 mb-6 text-[13px] text-soft">
+          {c.essais} — {fill(c.pipeline, { montant: formatMontant(v.pipeline_essais_mensuel_ht) })}
+        </p>
+      ) : null}
 
-      {copros.length === 0 ? (
-        <EmptyState title={dict.common.emptyDefault} illustration={q ? "empty-search" : undefined} />
-      ) : (
-        <TableCard>
-          <Table>
-            <THead>
-              <TH>{dict.parametres.nom}</TH>
-              <TH>{dict.parametres.ville}</TH>
-              <TH>{dict.parametres.typeResidence}</TH>
-              <TH align="center">{dict.parametres.nbLots}</TH>
-              <TH>{dict.lots.statut}</TH>
-              <TH align="end" />
-            </THead>
-            <LiveList as="tbody">
-              {copros.map((c) => (
-                <TR key={c.id}>
-                  <TD className="font-semibold text-ink">
-                    <Link
-                      href={`/${locale}/admin/coproprietes/${c.id}`}
-                      className="flex items-center gap-3 text-[15px] font-bold transition-colors hover:text-link"
-                    >
-                      <IconCircle tone="sage" size={40}>
-                        <CBuilding width={20} height={20} />
-                      </IconCircle>
-                      <span className="min-w-0 truncate">{c.nom}</span>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+        <div className="space-y-6">
+          <Card>
+            <SectionHeader title={c.aTraiter} className="mb-4" />
+            {v.a_traiter.length === 0 ? (
+              <p className="text-[14px] text-soft">{c.rienATraiter}</p>
+            ) : (
+              <ul className="divide-y divide-hairline">
+                {v.a_traiter.map((t) => (
+                  <li key={`${t.type}-${t.abonnement_id}`}>
+                    <Link href={p(`/admin/abonnements/${t.abonnement_id}`)} className="su-press flex items-center gap-3 py-3 transition-colors hover:bg-wash/60">
+                      <Badge variant={toneATraiter[t.type]}>{c.typesATraiter[t.type]}</Badge>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[15px] font-semibold text-ink">{t.client}</p>
+                        <p className="truncate text-[13px] text-soft">
+                          {t.type === "DEPASSEMENT_LOTS" ? fill(c.lotsEcart, { reels: t.lots_reels, contractes: t.lots_contractes }) : t.coproprietes.join(", ")}
+                        </p>
+                      </div>
+                      <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
+                        <EtatBadge etat={t.etat} dict={dict} />
+                        <Echeance etat={t.etat} dict={dict} />
+                      </div>
+                      <IconChevronEnd width={16} height={16} className="icon-flip shrink-0 text-faint" />
                     </Link>
-                  </TD>
-                  <TD className="text-body">{c.ville}</TD>
-                  <TD className="text-[13px] text-body">
-                    {dict.enums.typeResidence[c.typeResidence]}
-                  </TD>
-                  <TD align="center" className="tnum text-body">
-                    {c.nbLots}
-                  </TD>
-                  <TD>
-                    <Badge variant={coproVariant[c.statut]}>
-                      {dict.enums.statutCopropriete[c.statut]}
-                    </Badge>
-                  </TD>
-                  <TD align="end">
-                    <Link
-                      href={`/${locale}/admin/coproprietes/${c.id}`}
-                      className="inline-flex items-center gap-1 text-[14px] font-semibold text-link hover:text-brand-deep"
-                    >
-                      {ad.ficheClient}
-                      <IconChevronEnd width={16} height={16} className="icon-flip" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          {v.coproprietes.sans_abonnement.length > 0 ? (
+            <Card>
+              <SectionHeader title={`${c.sansAbonnement} (${v.coproprietes.sans_abonnement.length})`} subtitle={c.sansAbonnementAide} className="mb-4" />
+              <ul className="divide-y divide-hairline">
+                {v.coproprietes.sans_abonnement.map((r) => (
+                  <li key={r.id} className="flex items-center gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <Link href={p(`/admin/coproprietes/${r.id}`)} className="truncate text-[15px] font-semibold text-ink hover:text-link">
+                        {r.nom}
+                      </Link>
+                      <p className="text-[13px] text-soft">
+                        {r.ville} · {r.nb_lots} lots · {formatDateCourte(r.creee_le, ctx.locale)}
+                      </p>
+                    </div>
+                    <ButtonLink size="sm" variant="secondary" href={p(`/admin/abonnements/nouveau?copropriete=${r.id}`)}>
+                      {c.ouvrirAbonnement}
+                    </ButtonLink>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+        </div>
+
+        <div className="space-y-6">
+          {v.factures_en_retard.length > 0 ? (
+            <Card>
+              <SectionHeader
+                title={c.facturesEnRetard}
+                action={<Link className="text-[14px] font-semibold text-link" href={p("/admin/factures?en_retard=true")}>{c.voirTout}</Link>}
+                className="mb-3"
+              />
+              <ul className="divide-y divide-hairline">
+                {v.factures_en_retard.map((f) => (
+                  <li key={f.id}>
+                    <Link href={p(`/admin/factures/${f.id}`)} className="flex items-center justify-between gap-3 py-2.5 hover:text-link">
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px] font-semibold text-ink">{f.client_nom}</span>
+                        <span className="text-[12px] text-danger">{f.numero} · {formatDateCourte(f.echeance, ctx.locale)}</span>
+                      </span>
+                      <Amount value={f.montant_ttc} locale={ctx.locale} className="text-[14px] font-semibold" />
                     </Link>
-                  </TD>
-                </TR>
-              ))}
-            </LiveList>
-          </Table>
-        </TableCard>
-      )}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          ) : null}
+
+          <Card>
+            <SectionHeader
+              title={c.activite}
+              action={<Link className="text-[14px] font-semibold text-link" href={p("/admin/journal")}>{c.voirTout}</Link>}
+              className="mb-3"
+            />
+            {v.activite_recente.length === 0 ? (
+              <EmptyState title={dict.common.emptyDefault} />
+            ) : (
+              <ol className="space-y-3">
+                {v.activite_recente.map((e) => (
+                  <li key={e.id} className="flex gap-3">
+                    <span className="mt-1.5 size-2 shrink-0 rounded-full bg-link" aria-hidden />
+                    <Link href={p(`/admin/abonnements/${e.abonnement_id}`)} className="min-w-0 hover:text-link">
+                      <span className="block text-[14px] font-semibold text-ink">{c.evenements[e.type]}</span>
+                      <span className="block truncate text-[12px] text-soft">
+                        {e.client} · {formatDateHeure(e.horodatage, ctx.locale)}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Card>
+
+          {(v.par_etat.BLOQUE_IMPAYE ?? 0) + (v.par_etat.SUSPENDU ?? 0) > 0 ? (
+            <Banner variant="danger" title={`${c.typesATraiter.BLOQUE} : ${(v.par_etat.BLOQUE_IMPAYE ?? 0) + (v.par_etat.SUSPENDU ?? 0)}`}>
+              <Link href={p("/admin/abonnements?etat=BLOQUE_IMPAYE")} className="font-semibold text-link">{c.voirTout}</Link>
+            </Banner>
+          ) : null}
+          <p className="text-[12px] text-faint">{formatDateHeure(v.calcule_le, ctx.locale)}</p>
+        </div>
+      </div>
     </div>
   );
 }
