@@ -26,7 +26,8 @@ en panne ne bloque ni ne débloque personne. Le job quotidien (09:00 Casablanca)
   le syndicat attend le vote en AG. Motif obligatoire, visible dans le journal.
 - **Activer sans facture** — geste commercial ou règlement reçu hors facture : payé jusqu'au …
 - **Suspendre l'accès** — fermeture immédiate (motif obligatoire). **Réactiver** la rouvre.
-- **Résilier** — fin définitive, les résidences sont détachées.
+- **Résilier** — fin définitive : les résidences restent fermées jusqu'à l'ouverture d'un nouvel abonnement.
+- **Réactiver** est refusé si la période est déjà échue (la résidence resterait fermée) : enregistrez d'abord le paiement, activez sans facture ou accordez un délai.
 
 Résidence **sans abonnement** : elle fonctionne normalement (clients historiques, démos) et apparaît
 dans la vue d'ensemble « Résidences sans abonnement » jusqu'à ce qu'on lui en ouvre un.
@@ -42,6 +43,16 @@ dans la vue d'ensemble « Résidences sans abonnement » jusqu'à ce qu'on lui e
   `/v1/users/me`, `/v1/app/version`, `/v1/auth` (de quoi afficher l'écran). L'opérateur n'est jamais bloqué.
 - Montants : `lib/money` uniquement. Syndicats en TTC (TVA décomposée), cabinets en HT (TVA ajoutée).
 - Paiement : `Idempotency-Key` obligatoire (le formulaire en génère une par ouverture).
+
+## Limites connues
+
+- Le contrôle d'accès porte sur les routes de la résidence. L'**espace cabinet** (`/v1/cabinets/**`,
+  portefeuille, alertes, agenda) et les **jobs automatiques** (appels de fonds, relances, rappels d'AG)
+  continuent pour une résidence fermée. À trancher : filtrer les résidences fermées du portefeuille
+  et suspendre leurs jobs.
+- Le cache d'état (60 s) vit en mémoire de chaque instance API : avec plusieurs instances, un
+  paiement ou une suspension peut mettre jusqu'à une minute à s'appliquer partout.
+- Un e-mail de rappel en échec n'est pas renvoyé (la clé est réservée avant l'envoi).
 
 ## Variables d'environnement
 

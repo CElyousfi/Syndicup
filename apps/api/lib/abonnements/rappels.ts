@@ -38,7 +38,7 @@ export function rappelsDus(params: {
   const out: RappelDu[] = [];
 
   if (etat.etat === "EN_ESSAI") {
-    for (const palier of [7, 1]) {
+    for (const palier of [1, 7]) {
       if (j <= palier) {
         out.push({
           cle: `rappel:${id}:essai:${ech}:j${palier}`,

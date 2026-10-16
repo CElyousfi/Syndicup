@@ -245,10 +245,16 @@ async function nomsActeurs(db: TenantDb, ids: (string | null)[]) {
 async function verifierCoproprietesLibres(db: TenantDb, coproIds: string[], saufAbonnementId?: string) {
   const copros = await db.copropriete.findMany({ where: { id: { in: coproIds } }, select: { id: true, nom: true } });
   if (copros.length !== new Set(coproIds).size) throw new IntrouvableError("Résidence introuvable.");
-  const prises = await db.abonnementCopropriete.findMany({
+  const liens = await db.abonnementCopropriete.findMany({
     where: { coproprieteId: { in: coproIds }, actif: true, ...(saufAbonnementId ? { abonnementId: { not: saufAbonnementId } } : {}) },
-    include: { copropriete: { select: { nom: true } } },
+    include: { copropriete: { select: { nom: true } }, abonnement: { select: { statut: true } } },
   });
+  // Un abonnement résilié garde ses résidences (bloquées) : la nouvelle ouverture les libère.
+  const resilies = liens.filter((l) => l.abonnement.statut === "RESILIE");
+  if (resilies.length > 0) {
+    await db.abonnementCopropriete.updateMany({ where: { id: { in: resilies.map((l) => l.id) } }, data: { actif: false, retireLe: new Date() } });
+  }
+  const prises = liens.filter((l) => l.abonnement.statut !== "RESILIE");
   if (prises.length > 0) {
     throw new AbonnementError("ABONNEMENT_EXISTANT", `Déjà couverte par un abonnement actif : ${prises.map((p) => p.copropriete.nom).join(", ")}.`);
   }
@@ -379,13 +385,21 @@ export async function actionAbonnement(ctx: TenantContext, id: string, input: Ab
         if (a.statut !== "SUSPENDU") throw new AbonnementError("ABONNEMENT_STATUT_INVALIDE", "Seul un abonnement suspendu peut être réactivé.");
         // Retour à l'essai si aucune période n'a jamais été payée et que l'essai court encore.
         const retourEssai = !a.finPeriode && a.finEssai !== null;
+        const apresReactivation = etatAcces({ ...a, statut: retourEssai ? "ESSAI" : "ACTIF" });
+        if (apresReactivation.niveau === "BLOQUE") {
+          throw new AbonnementError(
+            "ABONNEMENT_STATUT_INVALIDE",
+            "La période est échue : la résidence resterait fermée. Enregistrez le paiement, activez sans facture ou accordez d'abord un délai."
+          );
+        }
         data = { statut: retourEssai ? "ESSAI" : "ACTIF", suspenduLe: null, motifSuspension: null };
         await journaliser(db, id, "REACTIVE", acteur, { motif: input.motif ?? null, statut: retourEssai ? "ESSAI" : "ACTIF" });
         break;
       }
       case "RESILIER":
+        // Les résidences RESTENT rattachées : statut RESILIE ⇒ accès bloqué. Elles ne sont libérées
+        // que par l'ouverture d'un nouvel abonnement (verifierCoproprietesLibres).
         data = { statut: "RESILIE", resilieLe: new Date(), motifResiliation: input.motif };
-        await db.abonnementCopropriete.updateMany({ where: { abonnementId: id, actif: true }, data: { actif: false, retireLe: new Date() } });
         await journaliser(db, id, "RESILIE", acteur, { motif: input.motif, statut_precedent: a.statut });
         break;
     }
@@ -458,6 +472,9 @@ async function prochainNumero(db: TenantDb, annee: number): Promise<string> {
 
 export async function emettreFacture(ctx: TenantContext, abonnementId: string, input: FactureCreateInput) {
   return enOperateur(ctx, async (db) => {
+    // Verrou de l'abonnement : deux émissions simultanées (double clic) ne passent pas toutes deux
+    // le contrôle de chevauchement.
+    await db.$queryRaw`SELECT id FROM "abonnement" WHERE id = ${abonnementId}::uuid FOR UPDATE`;
     const a = await db.abonnement.findUnique({ where: { id: abonnementId }, include: INCLUDE_ABO });
     if (!a) throw new IntrouvableError("Abonnement introuvable.");
     if (a.statut === "RESILIE") throw new AbonnementError("ABONNEMENT_STATUT_INVALIDE", "Abonnement résilié : plus de facturation.");
@@ -557,6 +574,7 @@ export async function enregistrerPaiement(ctx: TenantContext, factureId: string,
 
 export async function annulerFacture(ctx: TenantContext, factureId: string, motif: string) {
   return enOperateur(ctx, async (db) => {
+    await db.$queryRaw`SELECT id FROM "facture_abonnement" WHERE id = ${factureId}::uuid FOR UPDATE`;
     const f = await db.factureAbonnement.findUnique({ where: { id: factureId }, include: { paiements: { select: { id: true } } } });
     if (!f) throw new IntrouvableError("Facture introuvable.");
     if (f.statut !== "EMISE") throw new AbonnementError("FACTURE_STATUT_INVALIDE", "Seule une facture émise non soldée peut être annulée.");

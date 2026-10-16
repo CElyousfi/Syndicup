@@ -181,6 +181,27 @@ describe("M29 — abonnements", () => {
     expect(copros.find((c) => c.id === coproB)?.abonnement).toBeNull();
   });
 
+  it("réactiver vers une période échue est refusé (la résidence resterait fermée)", async () => {
+    const b = await creerAbonnement(op(), { nouveau_client: { type: "SYNDICAT", nom: "Syndicat Abo B" }, copropriete_ids: [coproB], formule: "ESSENTIEL", periodicite: "ANNUELLE", lots_contractes: 2, tarif_fondateur: false, date_debut: "2026-01-01", essai: true, delai_grace_jours: 0 });
+    await actionAbonnement(op(), b.id, { action: "SUSPENDRE", motif: "Test" });
+    await expect(actionAbonnement(op(), b.id, { action: "REACTIVER" })).rejects.toMatchObject({ code: "ABONNEMENT_STATUT_INVALIDE" });
+  });
+
+  it("résiliation : la résidence reste fermée ; un nouvel abonnement la libère", async () => {
+    const b = (await listerAbonnements(op(), { q: "Syndicat Abo B" }))[0]!;
+    await actionAbonnement(op(), b.id, { action: "RESILIER", motif: "Fin de contrat" });
+    invaliderCacheAcces();
+    const syndic = ctx(syndicB, "SYNDIC", coproB);
+    expect((await etatPourLaResidence(syndic)).etat).toBe("RESILIE");
+    await expect(verifierAccesAbonnement(syndic, req("/v1/lots"))).rejects.toBeInstanceOf(AbonnementBloqueError);
+    const n = await creerAbonnement(op(), { nouveau_client: { type: "SYNDICAT", nom: "Syndicat Abo B bis" }, copropriete_ids: [coproB], formule: "ESSENTIEL", periodicite: "ANNUELLE", lots_contractes: 2, tarif_fondateur: false, date_debut: aujourdHui, essai: true });
+    expect(n.statut).toBe("ESSAI");
+    await expect(verifierAccesAbonnement(syndic, req("/v1/lots"))).resolves.toBeUndefined();
+    // Pour la vue d'ensemble ci-dessous : B redevient « sans abonnement ».
+    await actionAbonnement(op(), n.id, { action: "RESILIER", motif: "Nettoyage" });
+    await admin.abonnementCopropriete.updateMany({ where: { coproprieteId: coproB }, data: { actif: false } });
+  });
+
   it("vue d'ensemble : revenu récurrent, résidences sans abonnement", async () => {
     const v = await vueEnsemble(op());
     expect(Number(v.mrr_ht)).toBeGreaterThan(0);

@@ -111,6 +111,11 @@ describe("rappelsDus", () => {
     expect(r[0]!.cle).toBe(`rappel:${id}:essai:2026-10-20:j7`);
     expect(r[0]!.corps).toMatch(/Les Jasmins/);
   });
+  it("essai à J-1 : le rappel de la veille part (et prévient l'opérateur), pas celui de J-7", () => {
+    const r = rappelsDus({ abonnementId: id, statut: "ESSAI", etat: etatAcces(abo({ finEssai: "2026-10-16" }), MAINTENANT), residences: [] });
+    expect(r.map((x) => x.palier)).toEqual(["ESSAI_J1"]);
+    expect(r[0]!.operateur).toBe(true);
+  });
   it("grâce et blocage annoncés avec leur date ; rien pour un abonnement suspendu", () => {
     const grace = rappelsDus({ abonnementId: id, statut: "ACTIF", etat: etatAcces(abo({ statut: "ACTIF", finPeriode: "2026-10-10" }), MAINTENANT), residences: [] });
     expect(grace.map((x) => x.palier)).toEqual(["GRACE"]);
@@ -125,6 +130,13 @@ describe("routes libres d'une résidence bloquée", () => {
     expect(routeLibre("/v1/abonnement")).toBe(true);
     expect(routeLibre("/v1/users/me")).toBe(true);
     expect(routeLibre("/v1/users/me/appareils")).toBe(true);
+    expect(routeLibre("/v1/users/me/appareils/jeton-fcm")).toBe(true);
+    expect(routeLibre("/v1/users/me/export")).toBe(true);
+    // Rien qui lise les données de la résidence :
+    expect(routeLibre("/v1/users/me/widget")).toBe(false);
+    expect(routeLibre("/v1/users/me/appareils/activite")).toBe(false);
+    expect(routeLibre("/v1/users/me/appareils/activite/0192")).toBe(false);
+    expect(routeLibre("/v1/users/me/preferences-notification")).toBe(false);
     expect(routeLibre("/v1/app/version")).toBe(true);
     expect(routeLibre("/v1/lots")).toBe(false);
     expect(routeLibre("/v1/abonnements-pirate")).toBe(false);

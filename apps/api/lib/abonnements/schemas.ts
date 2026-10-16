@@ -2,8 +2,18 @@
 import { z } from "zod";
 
 const uuid = z.string().uuid();
-const dateIso = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format YYYY-MM-DD.");
+const dateIso = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date attendue au format YYYY-MM-DD.")
+  .refine((v) => {
+    const d = new Date(`${v}T00:00:00Z`);
+    return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === v;
+  }, "Date inexistante.");
 const montant = z.string().regex(/^\d{1,12}(\.\d{1,2})?$/, 'Montant décimal invalide (ex. "9.90").');
+/** prix_lot est numeric(10,2) : 8 chiffres avant la virgule au plus. */
+const prixLot = z.string().regex(/^\d{1,8}(\.\d{1,2})?$/, 'Prix invalide (ex. "9.90").');
+/** taux_tva numeric(5,2) : de 0 à 100 %. */
+const tauxTva = z.string().regex(/^(100(\.0{1,2})?|\d{1,2}(\.\d{1,2})?)$/, "Taux de TVA invalide (0 à 100).");
 const telephone = z.string().regex(/^\+?[0-9 .\-()]{8,20}$/, "Téléphone invalide.");
 const texte = (max: number) => z.string().trim().max(max);
 
@@ -47,9 +57,9 @@ export const abonnementCreateSchema = z
     periodicite: z.enum(PERIODICITES).default("ANNUELLE"),
     lots_contractes: z.number().int().min(1).max(100000),
     /** Absents = prix de la grille (tarifs.ts). */
-    prix_lot: montant.optional(),
+    prix_lot: prixLot.optional(),
     minimum_mensuel: montant.nullish(),
-    taux_tva: montant.optional(),
+    taux_tva: tauxTva.optional(),
     tarif_fondateur: z.boolean().default(false),
     forfait_accompagne: montant.nullish(),
     date_debut: dateIso,
@@ -69,9 +79,9 @@ export const abonnementUpdateSchema = z
     formule: z.enum(FORMULES).optional(),
     periodicite: z.enum(PERIODICITES).optional(),
     lots_contractes: z.number().int().min(1).max(100000).optional(),
-    prix_lot: montant.optional(),
+    prix_lot: prixLot.optional(),
     minimum_mensuel: montant.nullable().optional(),
-    taux_tva: montant.optional(),
+    taux_tva: tauxTva.optional(),
     tarif_fondateur: z.boolean().optional(),
     prix_garanti_jusqu_au: dateIso.nullable().optional(),
     forfait_accompagne: montant.nullable().optional(),
