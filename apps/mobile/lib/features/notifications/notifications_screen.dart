@@ -49,7 +49,9 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive || state == AppLifecycleState.hidden || state == AppLifecycleState.detached) {
+    // Pas `inactive` (centre de contrôle, appel entrant, sélecteur d'apps) : l'utilisateur est
+    // encore là et peut toucher « Annuler ».
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden || state == AppLifecycleState.detached) {
       _differe.vider();
     }
   }
@@ -106,7 +108,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
     final ux = context.mdict.ux;
     final n = ids.length;
     showDone(context, n == 1 ? ux.notifLue : fill(ux.notifsLues, {'n': n}), undoLabel: ux.undo, onUndo: () {
-      if (_differe.annuler(lot) != null && mounted) setState(() {});
+      if (!mounted) return;
+      if (_differe.annuler(lot) != null) {
+        setState(() {});
+      } else {
+        // Le lot est déjà parti (expiration / arrière-plan) : rien à annuler, on le dit.
+        showToast(context, context.mdict.ux.dejaEnregistre);
+      }
     });
   }
 

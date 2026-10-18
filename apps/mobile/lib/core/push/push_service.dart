@@ -657,8 +657,9 @@ class PushService {
       var (st, rid) = await appel(
         Uri.parse('$base/visites/$visiteId/statut'),
         body: {'statut': statutVoulu},
-        // Clé envoyée pour la corrélation des journaux ; cet endpoint ne la rejoue pas — la
-        // transition unique EN_ATTENTE → décision (422 ensuite) protège seule du doublon.
+        // Clé déterministe (uuid v5 visite + action) : l'endpoint la rejoue (withTenantIdempotent) —
+        // un retry de la même décision renvoie la réponse stockée au lieu d'un 422 ; la relecture
+        // `dejaDecidee` reste le filet pour un retry sans clé ou une décision prise ailleurs.
         idempotencyKey: uuid.v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8', 'syndicup:porte:$visiteId:$action'),
       );
       if ((st == 0 || st >= 500 || st == 422) && await dejaDecidee(visiteId, statutVoulu)) st = 200;
