@@ -103,7 +103,7 @@ class AppTheme {
       // Retour / fermeture Wise partout (y compris les AppBar natives) : disque greige, glyphe
       // vert profond ; la flèche suit le sens de lecture.
       actionIconTheme: ActionIconThemeData(
-        backButtonIconBuilder: (context) => const _RoundGlyph(Icons.arrow_back_rounded, mirror: true),
+        backButtonIconBuilder: (context) => const _RoundGlyph(Icons.arrow_back_rounded),
         closeButtonIconBuilder: (context) => const _RoundGlyph(Icons.close_rounded),
       ),
       dividerTheme: const DividerThemeData(color: SuColors.hairline, thickness: 1, space: 1),
@@ -254,7 +254,8 @@ class _RoundGlyph extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget g = Icon(icon, size: 22, color: SuColors.link);
-    if (mirror && Directionality.of(context) == TextDirection.rtl) g = Transform.flip(flipX: true, child: g);
+    // Une icône `matchTextDirection` (arrow_back_rounded) se retourne déjà seule en RTL.
+    if (mirror && !icon.matchTextDirection && Directionality.of(context) == TextDirection.rtl) g = Transform.flip(flipX: true, child: g);
     return Container(width: 42, height: 42, decoration: const BoxDecoration(color: SuColors.tile, shape: BoxShape.circle), alignment: Alignment.center, child: g);
   }
 }

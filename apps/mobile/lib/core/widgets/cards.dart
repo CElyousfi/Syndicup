@@ -130,14 +130,15 @@ class CircleIconButton extends StatelessWidget {
   final double size;
   final Color? color;
   final Color? iconColor;
-  /// Retourner le glyphe en RTL (flèches).
+  /// Retourner le glyphe en RTL (flèches). Sans effet sur une icône qui se retourne déjà seule
+  /// (`matchTextDirection` : arrow_back, chevron_left/right…) — sinon elle pointerait à l'envers.
   final bool mirror;
 
   @override
   Widget build(BuildContext context) {
     final rtl = Directionality.of(context) == TextDirection.rtl;
     Widget glyph = Icon(icon, size: size * 0.5, color: iconColor ?? SuColors.link);
-    if (mirror && rtl) glyph = Transform.flip(flipX: true, child: glyph);
+    if (mirror && rtl && !icon.matchTextDirection) glyph = Transform.flip(flipX: true, child: glyph);
     final btn = SuPressable(
       scale: 0.9,
       child: Material(

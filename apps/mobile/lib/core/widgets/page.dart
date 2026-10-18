@@ -90,7 +90,7 @@ class _SuPageState extends State<SuPage> {
                 padding: const EdgeInsetsDirectional.only(start: 16),
                 child: Align(
                   alignment: AlignmentDirectional.centerStart,
-                  child: CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()),
+                  child: CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()),
                 ),
               )
             : null);

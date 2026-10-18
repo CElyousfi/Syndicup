@@ -590,9 +590,9 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
-              CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
+              CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
               Expanded(child: SuFadeSwitch(value: _periode, alignment: Alignment.center, child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: t.headlineSmall))),
-              CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
+              CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
             ]),
           ),
           const SizedBox(height: 12),
@@ -666,9 +666,9 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
       children: [
         // Navigation de semaine Wise : boutons ronds (miroir RTL) de part et d'autre du lien « Aujourd'hui ».
         Row(children: [
-          CircleIconButton(tooltip: d.personnel.semainePrecedente, icon: Icons.chevron_left_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7))),
+          CircleIconButton(tooltip: d.personnel.semainePrecedente, icon: Icons.chevron_left_rounded, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7))),
           Expanded(child: Center(child: LinkButton(d.common.today, onTap: () => setState(() => _semaine = null)))),
-          CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
+          CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
         ]),
         const SizedBox(height: 4),
         SuFadeSwitch(value: _semaine, child: AsyncView(planning, onRetry: () => ref.invalidate(planningProvider(_semaine)), data: (x) {

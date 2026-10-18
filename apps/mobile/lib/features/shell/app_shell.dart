@@ -690,7 +690,7 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 8, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

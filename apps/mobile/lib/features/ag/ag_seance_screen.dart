@@ -93,9 +93,9 @@ class _Salle extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final i = index.clamp(0, resolutions.length - 1);
     final r = resolutions[i];
+    // chevron_left/right se retournent seuls en RTL (matchTextDirection) : pas de `mirror`.
     Widget nav(IconData icon, String tip, VoidCallback? onTap) => CircleIconButton(
           icon: icon,
-          mirror: true,
           tooltip: tip,
           onTap: onTap,
           color: Colors.white.withValues(alpha: onTap == null ? 0.05 : 0.14),

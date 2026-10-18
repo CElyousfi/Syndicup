@@ -419,7 +419,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
             ? null
             : Padding(
                 padding: const EdgeInsetsDirectional.only(start: 16),
-                child: Align(alignment: AlignmentDirectional.centerStart, child: CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: _etape > 0 ? d.common.previous : MaterialLocalizations.of(context).backButtonTooltip, onTap: _precedent)),
+                child: Align(alignment: AlignmentDirectional.centerStart, child: CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: _etape > 0 ? d.common.previous : MaterialLocalizations.of(context).backButtonTooltip, onTap: _precedent)),
               ),
         children: [
           if (_edition && existing!.isLoading && !_prefilled)
