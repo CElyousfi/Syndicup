@@ -16,7 +16,7 @@ import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { disconnectTenantDb, withTenant } from "../lib/tenant/db";
 import type { TenantContext } from "../lib/tenant/context";
-import { archiverAnnonce, commenterAnnonce, creerAnnonce, creerContact, desarchiverAnnonce, lecturesAnnonce, listerAnnonces, marquerLue, masquerCommentaire, obtenirAnnonce, publierAnnonce, definirPreferencesNotification, CommunicationError, IntrouvableError, PermissionRefuseeError } from "../lib/communication/communication";
+import { archiverAnnonce, commenterAnnonce, creerAnnonce, creerContact, desarchiverAnnonce, lecturesAnnonce, listerAnnonces, marquerLue, masquerCommentaire, obtenirAnnonce, publierAnnonce, supprimerAnnonce, definirPreferencesNotification, CommunicationError, IntrouvableError, PermissionRefuseeError } from "../lib/communication/communication";
 import { PREFERENCES_DEFAUT } from "../lib/communication/schemas";
 import { cloreSondage, creerSondage, listerSondages, obtenirSondage, ouvrirSondage, repondreSondage, resultatsSondage } from "../lib/communication/sondages";
 import { executerDigest, executerProgrammees } from "../lib/communication/jobs";
@@ -189,10 +189,14 @@ describe("M21 — annonces, audiences, lectures, commentaires", () => {
     const encore = await desarchiverAnnonce(S(), e.id);
     expect(encore.statut).toBe("PUBLIEE");
     expect(await admin.auditLog.count({ where: { coproprieteId: copro, entiteId: e.id, action: "ANNONCE_DESARCHIVEE" } })).toBe(1);
-    // Un brouillon archivé redevient brouillon — jamais publié par ce biais.
-    const b = await creerAnnonce(S(), { titre: "Brouillon", contenu: "x", categorie: "INFORMATION", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });
+    // Un brouillon programmé archivé redevient brouillon (le job le publiera) — jamais publié
+    // par ce biais. (Un brouillon sans `publie_le` ne s'archive pas : contrainte annonce_publiee_check.)
+    const b = await creerAnnonce(S(), { titre: "Brouillon programmé", contenu: "x", categorie: "INFORMATION", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });
+    await publierAnnonce(S(), b.id, { publie_le: new Date(Date.now() + 2 * 3600_000).toISOString() }, randomUUID());
     await archiverAnnonce(S(), b.id);
     expect((await desarchiverAnnonce(S(), b.id)).statut).toBe("BROUILLON");
+    // Nettoyage : sinon le job horaire du test suivant le publierait aussi.
+    await supprimerAnnonce(S(), b.id);
   });
   it("publication programmée : reste brouillon (invisible) puis publiée par le job horaire, une seule fois", async () => {
     const p = await creerAnnonce(S(), { titre: "AG du 15", contenu: "Convocation à venir.", categorie: "AG", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });
