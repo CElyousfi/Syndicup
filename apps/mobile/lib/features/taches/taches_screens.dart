@@ -101,6 +101,16 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
   final _commentaire = TextEditingController();
   bool _envoi = false;
 
+  /// Photo du changement de statut, gardée ICI (pas dans la feuille) : si l'enregistrement du
+  /// statut échoue, la feuille rouverte la montre déjà envoyée — ni nouveau choix, ni nouvel envoi.
+  late final UploadQueue _photoStatut = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.taches, max: 1);
+
+  @override
+  void dispose() {
+    _photoStatut.dispose();
+    super.dispose();
+  }
+
   Future<void> _cocher(Tache x, ChecklistItem it, bool fait) async {
     await runAction<dynamic>(
       context,
@@ -116,7 +126,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
   Future<void> _changerStatut(Tache x, bool syndic) async {
     final d = context.dict;
     // La photo éventuelle est envoyée DANS la feuille (progression, renvoi) : on reçoit son chemin.
-    final res = await showFormSheet<({String statut, String? commentaire, UploadOk? piece})>(context, title: d.taches.changerStatut, builder: (_) => _StatutSheet(tache: x, syndic: syndic));
+    final res = await showFormSheet<({String statut, String? commentaire, UploadOk? piece})>(context, title: d.taches.changerStatut, builder: (_) => _StatutSheet(tache: x, syndic: syndic, queue: _photoStatut));
     if (res == null || !mounted) return;
     final api = ref.read(apiClientProvider);
     final piece = res.piece;
@@ -129,6 +139,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
       IdemKeys.settle(intention, r);
       if (!mounted) return;
       if (r is ApiFail<Tache>) { showApiError(context, r); return; }
+      _photoStatut.clear();
       showToast(context, d.taches.statutChange);
     } else {
       final r = await ref.read(tachesSyncProvider.notifier).changerStatut(tacheId: x.id, statut: res.statut, commentaire: res.commentaire, libelle: x.titre);
@@ -301,9 +312,12 @@ Map<String, dynamic> _asMap(dynamic v) => v is Map ? v.cast<String, dynamic>() :
 /// Feuille « changer le statut » — statut cible, commentaire, photo optionnelle envoyée ici
 /// avec progression (renvoi possible) ; la feuille se ferme une fois la photo au stockage.
 class _StatutSheet extends ConsumerStatefulWidget {
-  const _StatutSheet({required this.tache, required this.syndic});
+  const _StatutSheet({required this.tache, required this.syndic, required this.queue});
   final Tache tache;
   final bool syndic;
+
+  /// File de la photo, possédée par la fiche (survit à la fermeture de la feuille).
+  final UploadQueue queue;
   @override
   ConsumerState<_StatutSheet> createState() => _StatutSheetState();
 }
@@ -311,7 +325,7 @@ class _StatutSheet extends ConsumerStatefulWidget {
 class _StatutSheetState extends ConsumerState<_StatutSheet> {
   late String _statut;
   final _commentaire = TextEditingController();
-  late final UploadQueue _piece = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.taches, max: 1);
+  UploadQueue get _piece => widget.queue;
   bool _envoi = false;
   ApiFail? _fail;
   @override
@@ -323,7 +337,6 @@ class _StatutSheetState extends ConsumerState<_StatutSheet> {
 
   @override
   void dispose() {
-    _piece.dispose();
     _commentaire.dispose();
     super.dispose();
   }

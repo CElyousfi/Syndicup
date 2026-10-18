@@ -888,6 +888,10 @@ class PiecesJointesSection extends ConsumerStatefulWidget {
 class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
   bool _busy = false;
 
+  /// Fichier arrivé au stockage mais rattachement au séjour refusé / interrompu : « Réessayer »
+  /// relance le rattachement (sans renvoyer le fichier).
+  bool _rattachementEchoue = false;
+
   /// Pièce en cours d'ajout : progression visible, « Renvoyer » en cas d'échec (le fichier déjà
   /// arrivé au stockage n'est pas renvoyé si seul le rattachement a échoué).
   late final UploadQueue _envoi = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.lcd, max: 1);
@@ -911,7 +915,10 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
 
   Future<void> _envoyer() async {
     if (_busy) return;
-    setState(() => _busy = true);
+    setState(() {
+      _busy = true;
+      _rattachementEchoue = false;
+    });
     final echec = await _envoi.sendAll();
     if (!mounted) return;
     if (echec != null) {
@@ -921,7 +928,10 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
     }
     final r = await ref.read(apiClientProvider).post<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemins': _envoi.paths});
     if (!mounted) return;
-    setState(() => _busy = false);
+    setState(() {
+      _busy = false;
+      _rattachementEchoue = r is ApiFail;
+    });
     if (r is ApiFail) {
       showApiError(context, r);
       return;
@@ -958,6 +968,8 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
       children: [
         SectionHeader(d.lcd.piecesJointes, subtitle: d.lcd.piecesJointesAide, actionLabel: widget.peutJoindre && liste.length < 10 ? d.lcd.ajouterPieces : null, onAction: widget.peutJoindre && liste.length < 10 && !_busy ? _ajouter : null),
         SuUploadList(queue: _envoi, enabled: !_busy, onRetry: (_) => _envoyer()),
+        if (_rattachementEchoue && _envoi.isNotEmpty)
+          Align(alignment: AlignmentDirectional.centerStart, child: SuButton(label: context.mdict.ux.actRetry, icon: Icons.refresh_rounded, variant: SuButtonVariant.secondary, size: SuButtonSize.sm, loading: _busy, onPressed: _envoyer)),
         liste.isEmpty
             ? Text(pieces.isLoading ? context.mdict.loading : d.lcd.aucunePiece, style: t.bodyMedium?.copyWith(color: SuColors.soft))
             : GridView.count(

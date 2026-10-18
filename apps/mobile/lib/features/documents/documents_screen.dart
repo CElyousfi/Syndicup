@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -201,6 +202,9 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
     final res = await api.post<dynamic>('/documents', body: {'type': _type.text.trim(), 'nom': _nom.text.trim().isEmpty ? nomFichier : _nom.text.trim(), 'visibilite': _visibilite, 'storage_path': _file.paths.first});
     if (!mounted) return;
     if (res is ApiFail) {
+      // POST /documents n'a pas de clé d'idempotence : après un échec ambigu, le document existe
+      // peut-être déjà — le prochain essai envoie un fichier neuf au lieu de rattacher le même.
+      if (IdemKey.isAmbiguous(res.status, res.error.code)) _file.forgetUploads();
       setState(() {
         _loading = false;
         _fail = res;

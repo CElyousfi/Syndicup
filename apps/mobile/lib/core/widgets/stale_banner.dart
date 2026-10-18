@@ -6,6 +6,7 @@ import '../format/format.dart';
 import '../i18n/i18n.dart';
 import '../i18n/mobile_dict.dart';
 import '../theme/tokens.dart';
+import '../../offline/sync_queue/visites_sync.dart' show connectivityProvider;
 import 'cards.dart';
 
 /// Bandeau fin « Données du 14:02 — serveur injoignable · Réessayer » : la liste affichée vient
@@ -20,6 +21,8 @@ class StaleBanner extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Hors ligne, le bandeau de la coque parle déjà : un seul message à la fois.
+    if (!(ref.watch(connectivityProvider).valueOrNull ?? true)) return const SizedBox.shrink();
     DateTime? since;
     for (final p in paths) {
       final s = ref.watch(staleProvider(p));

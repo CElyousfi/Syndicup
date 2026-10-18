@@ -381,6 +381,21 @@ class UploadQueue extends ChangeNotifier {
     _notify();
   }
 
+  /// L'écriture finale a échoué de façon AMBIGUË (réseau, délai, 5xx, 409 — IdemKey.isAmbiguous)
+  /// sur un endpoint sans clé d'idempotence : le serveur a peut-être déjà créé une ligne avec ces
+  /// chemins. Le prochain essai renvoie donc des fichiers neufs (nouveaux chemins) plutôt que de
+  /// rattacher deux fois le même fichier. Après un refus certain (4xx), on garde les chemins.
+  void forgetUploads() {
+    for (final s in _slots) {
+      s
+        ..storagePath = null
+        ..status = UploadStatus.waiting
+        ..progress = 0
+        ..failure = null;
+    }
+    _notify();
+  }
+
   void clear() {
     for (final s in _slots) {
       s.cancel();

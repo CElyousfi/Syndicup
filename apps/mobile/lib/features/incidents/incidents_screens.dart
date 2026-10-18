@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -329,6 +330,10 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         context.pushReplacement('/incidents/${data.id}');
         if (racine.mounted) showSuccess(racine, title: titre, body: corps, illustration: 'ok-incident');
       case ApiFail<Incident>():
+        // POST /incidents n'a pas de clé d'idempotence : après un échec ambigu, le signalement
+        // existe peut-être déjà — le prochain essai envoie des photos neuves (jamais deux lignes
+        // sur les mêmes fichiers). Après un refus certain (4xx), les photos envoyées sont gardées.
+        if (IdemKey.isAmbiguous(r.status, r.error.code)) _photos.forgetUploads();
         setState(() {
           _loading = false;
           _fail = r;
