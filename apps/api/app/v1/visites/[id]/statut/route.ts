@@ -12,6 +12,7 @@ import {
 } from "../../../../../lib/personnel/personnel";
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../../../lib/http/respond";
+import { readIdempotencyKeyOptionnelle } from "../../../../../lib/http/idempotency";
 
 async function handlePATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,7 +21,8 @@ async function handlePATCH(req: Request, { params }: { params: Promise<{ id: str
     const body = await req.json().catch(() => null);
     const parsed = visiteChangerStatutSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const visite = await changerStatutVisite(ctx, id, parsed.data);
+    // Idempotency-Key optionnelle : les anciennes builds mobiles ne l'envoient pas.
+    const visite = await changerStatutVisite(ctx, id, parsed.data, readIdempotencyKeyOptionnelle(req));
     return ok(visite);
   } catch (e) {
     const mapped = mapAuthError(e);

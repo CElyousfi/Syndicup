@@ -2,7 +2,7 @@
 import { withApiHandler } from "../../../../lib/http/handler";
 import { tenantFromRequest } from "../../../../lib/http/request-context";
 import { ok, failZod } from "../../../../lib/http/respond";
-import { readIdempotencyKey } from "../../../../lib/http/idempotency";
+import { readIdempotencyKeyOptionnelle } from "../../../../lib/http/idempotency";
 import { mapErreurRh } from "../../../../lib/personnel/http";
 import { obtenirPersonnel, modifierPersonnelRh } from "../../../../lib/personnel/rh";
 import { personnelRhUpdateSchema } from "../../../../lib/personnel/schemas";
@@ -16,9 +16,8 @@ async function handlePATCH(req: Request, { params }: P) {
     const ctx = await tenantFromRequest(req); const { id } = await params;
     const parsed = personnelRhUpdateSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return failZod(parsed.error);
-    return ok(await modifierPersonnelRh(ctx, id, parsed.data));
+    return ok(await modifierPersonnelRh(ctx, id, parsed.data, readIdempotencyKeyOptionnelle(req)));
   } catch (e) { const m = mapErreurRh(e); if (m) return m; throw e; }
 }
-void readIdempotencyKey;
 export const GET = withApiHandler(handleGET);
 export const PATCH = withApiHandler(handlePATCH);

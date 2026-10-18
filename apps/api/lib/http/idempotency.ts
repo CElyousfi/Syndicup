@@ -40,6 +40,17 @@ export function readIdempotencyKey(req: Request): string {
   return cle.toLowerCase();
 }
 
+/**
+ * Variante OPTIONNELLE : header absent → undefined (exécution sans protection, comme un appel
+ * interne) ; header présent mais invalide → rejet explicite (400), jamais ignoré en silence.
+ * Réservée aux routes dont des clients en production n'envoient pas encore la clé (anciennes
+ * builds mobiles, Server Actions web) — documentée `IdempotencyKeyOptionnelle` dans openapi.
+ */
+export function readIdempotencyKeyOptionnelle(req: Request): string | undefined {
+  if (!req.headers.has("idempotency-key")) return undefined;
+  return readIdempotencyKey(req);
+}
+
 function hashPayload(payload: unknown): string {
   return createHash("sha256").update(JSON.stringify(payload ?? null)).digest("hex");
 }

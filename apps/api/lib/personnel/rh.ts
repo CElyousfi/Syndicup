@@ -130,9 +130,9 @@ export async function preparerUploadPersonnel(ctx: TenantContext, input: Personn
   return preparerUploadModule(ctx, "personnel", input.nom_fichier);
 }
 
-export async function modifierPersonnelRh(ctx: TenantContext, id: string, input: PersonnelRhUpdateInput) {
+export async function modifierPersonnelRh(ctx: TenantContext, id: string, input: PersonnelRhUpdateInput, cle?: string) {
   if (can("personnel.rh.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic gère le dossier RH.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `PATCH /personnel/${id}`, payload: { id, ...input } }, async (db) => {
     const avant = await chargerPersonnel(db, ctx, id);
     if (input.logement_lot_id) {
       const lot = await db.lot.findUnique({ where: { id: input.logement_lot_id }, select: { typeLot: true, coproprieteId: true } });
@@ -219,10 +219,10 @@ export async function lireCnss(ctx: TenantContext, id: string) {
 
 // ── Paramètres de paie ─────────────────────────────────────────────────────────
 
-export async function definirParametresPaie(ctx: TenantContext, coproprieteId: string, parametres: ParametresPaie | null) {
+export async function definirParametresPaie(ctx: TenantContext, coproprieteId: string, parametres: ParametresPaie | null, cle?: string) {
   if (can("personnel.rh.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic configure la paie.");
   if (coproprieteId !== ctx.coproprieteId) throw new PermissionRefuseeError("Copropriété hors périmètre.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `PATCH /coproprietes/${coproprieteId}/parametres-paie`, payload: { coproprieteId, parametres } }, async (db) => {
     const avant = await db.copropriete.findUnique({ where: { id: coproprieteId }, select: { parametresPaieJson: true } });
     await db.copropriete.update({ where: { id: coproprieteId }, data: { parametresPaieJson: (parametres ?? Prisma.DbNull) as Prisma.InputJsonValue } });
     await audit(db, ctx, "PAIE_PARAMETRES_MODIFIES", "copropriete", coproprieteId, { configures: avant?.parametresPaieJson !== null }, { configures: parametres !== null, source: parametres?.source ?? null });
@@ -271,9 +271,9 @@ export async function calculerFicheDb(db: TenantDb, coproprieteId: string, perso
   return { params, resultat: r, brut, primes: input.primes ?? null, retenues: input.retenues ?? null, joursAbs, data: { brut: r.brut, primes: input.primes ? r.primes : null, retenues: input.retenues ? r.retenues : null, cotisationsSalarialesJson: r.cotisations_salariales as Prisma.InputJsonValue, cotisationsPatronalesJson: r.cotisations_patronales as Prisma.InputJsonValue, net: r.net, coutTotalEmployeur: r.cout_total_employeur, detailsJson: r as unknown as Prisma.InputJsonValue } };
 }
 
-export async function creerFichePaie(ctx: TenantContext, personnelId: string, input: FichePaieCreateInput) {
+export async function creerFichePaie(ctx: TenantContext, personnelId: string, input: FichePaieCreateInput, cle?: string) {
   if (can("personnel.rh.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic prépare les fiches de paie.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `POST /personnel/${personnelId}/fiches-paie`, payload: { personnelId, ...input } }, async (db) => {
     const p = await chargerPersonnel(db, ctx, personnelId);
     const existante = await db.fichePaie.findUnique({ where: { personnelId_periode: { personnelId, periode: input.periode } } });
     if (existante && existante.statut !== "BROUILLON") throw new RhError("PAIE_STATUT_INVALIDE", `Une fiche ${existante.statut} existe déjà pour ${input.periode}.`);
@@ -286,9 +286,9 @@ export async function creerFichePaie(ctx: TenantContext, personnelId: string, in
   });
 }
 
-export async function modifierFichePaie(ctx: TenantContext, personnelId: string, ficheId: string, input: FichePaieUpdateInput) {
+export async function modifierFichePaie(ctx: TenantContext, personnelId: string, ficheId: string, input: FichePaieUpdateInput, cle?: string) {
   if (can("personnel.rh.gerer", ctx.role) !== true) throw new PermissionRefuseeError("Seul le syndic modifie une fiche de paie.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `PATCH /personnel/${personnelId}/fiches-paie/${ficheId}`, payload: { personnelId, ficheId, ...input } }, async (db) => {
     const p = await chargerPersonnel(db, ctx, personnelId);
     const f = await db.fichePaie.findUnique({ where: { id: ficheId } });
     if (!f || f.personnelId !== personnelId) throw new IntrouvableError("Fiche de paie introuvable.");
@@ -499,8 +499,8 @@ export async function deciderConge(ctx: TenantContext, congeId: string, decision
   });
 }
 
-export async function annulerConge(ctx: TenantContext, congeId: string) {
-  return withTenant(ctx, async (db) => {
+export async function annulerConge(ctx: TenantContext, congeId: string, cle?: string) {
+  return withTenantIdempotent(ctx, { cle, endpoint: `POST /personnel/conges/${congeId}/annuler`, payload: { congeId } }, async (db) => {
     const c = await db.conge.findUnique({ where: { id: congeId }, include: congeInclude });
     if (!c || c.coproprieteId !== ctx.coproprieteId) throw new IntrouvableError("Congé introuvable.");
     const syndic = can("personnel.conges.approuver", ctx.role) === true;
@@ -562,10 +562,10 @@ export async function exporterConges(ctx: TenantContext, filtres: { statut?: str
 
 // ── Présences ──────────────────────────────────────────────────────────────────
 
-export async function saisirPresences(ctx: TenantContext, personnelId: string, input: PresencesUpsertInput) {
+export async function saisirPresences(ctx: TenantContext, personnelId: string, input: PresencesUpsertInput, cle?: string) {
   const permission = can("personnel.presence.saisir", ctx.role);
   if (permission === false) throw new PermissionRefuseeError("Rôle non autorisé à saisir les présences.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `POST /personnel/${personnelId}/presences`, payload: { personnelId, ...input } }, async (db) => {
     const p = await chargerPersonnel(db, ctx, personnelId);
     if (permission === "scoped" && p.utilisateurId !== ctx.utilisateurId) throw new PermissionRefuseeError("Vous ne pouvez pointer que pour vous-même.");
     const rows = [];
@@ -599,9 +599,9 @@ export async function listerPresences(ctx: TenantContext, personnelId: string, f
 
 // ── Évaluations ────────────────────────────────────────────────────────────────
 
-export async function evaluer(ctx: TenantContext, personnelId: string, input: EvaluationCreateInput) {
+export async function evaluer(ctx: TenantContext, personnelId: string, input: EvaluationCreateInput, cle?: string) {
   if (can("personnel.evaluer", ctx.role) !== true) throw new PermissionRefuseeError("Seuls le syndic et le conseil syndical évaluent le personnel.");
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle, endpoint: `POST /personnel/${personnelId}/evaluations`, payload: { personnelId, ...input } }, async (db) => {
     await chargerPersonnel(db, ctx, personnelId);
     const e = await db.evaluationPersonnel.upsert({
       where: { personnelId_periode_evaluateurId: { personnelId, periode: input.periode, evaluateurId: ctx.utilisateurId } },

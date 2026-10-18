@@ -251,6 +251,12 @@ describe("M20 — congés, présences, évaluations, planning, jobs", () => {
     const ev = await evaluer(C(), ficheRachid, { periode: "2026-S2", note: 4, commentaire: "Sérieux et ponctuel." });
     expect(ev.note).toBe(4);
     await evaluer(S(), ficheRachid, { periode: "2026-S2", note: 5 });
+    // Idempotency-Key optionnelle : même clé + même payload → rejoué ; payload différent → 409.
+    const cleEv = randomUUID();
+    const ev1 = await evaluer(S(), ficheRachid, { periode: "2026-S2", note: 5 }, cleEv);
+    const ev2 = await evaluer(S(), ficheRachid, { periode: "2026-S2", note: 5 }, cleEv);
+    expect(ev2.id).toBe(ev1.id);
+    await expect(evaluer(S(), ficheRachid, { periode: "2026-S2", note: 3 }, cleEv)).rejects.toThrow(/Idempotency-Key/);
     expect((await listerEvaluations(S(), ficheRachid)).moyenne).toBe(4.5);
     await expect(listerEvaluations(R(), ficheRachid)).rejects.toBeInstanceOf(PermissionRefuseeError);
     expect(await withTenant(R(), (db) => db.evaluationPersonnel.count({ where: { coproprieteId: copro } }))).toBe(0);

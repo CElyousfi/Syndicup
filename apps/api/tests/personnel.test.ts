@@ -4,7 +4,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { disconnectTenantDb } from "../lib/tenant/db";
+import { IdempotencyConflitError } from "../lib/http/idempotency";
 import type { TenantContext } from "../lib/tenant/context";
 import {
   creerPersonnel,
@@ -85,6 +87,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await admin.idempotencyKey.deleteMany({ where: { coproprieteId: coproA } });
   await admin.notification.deleteMany({ where: { coproprieteId: coproA } });
   await admin.visite.deleteMany({ where: { coproprieteId: coproA } });
   await admin.personnelLog.deleteMany({ where: { coproprieteId: coproA } });
@@ -195,6 +198,22 @@ describe("Visites — workflow Doc A §9.2", () => {
     await expect(
       changerStatutVisite(ctxSyndicA(), visite.id, { statut: "AUTORISE" })
     ).rejects.toBeInstanceOf(PermissionRefuseeError);
+  });
+
+  it("Idempotency-Key (optionnelle) : même clé + même payload → réponse rejouée, une seule notification ; payload différent → 409", async () => {
+    const visite = await creerVisite(ctxGardienA(), { lot_id: lotAlice, visiteur_nom: "Retry réseau" });
+    const cle = randomUUID();
+    const r1 = await changerStatutVisite(ctxAlice(), visite.id, { statut: "AUTORISE" }, cle);
+    // Retry (réponse perdue côté mobile) : pas de 422 « déjà répondu », même réponse.
+    const r2 = await changerStatutVisite(ctxAlice(), visite.id, { statut: "AUTORISE" }, cle);
+    expect(r2.statut).toBe("AUTORISE");
+    expect(r2.id).toBe(r1.id);
+    expect(
+      await admin.notification.count({ where: { utilisateurId: gardienA, templateCode: "VISITE_REPONSE", contenuJson: { path: ["visite_id"], equals: visite.id } } })
+    ).toBe(1);
+    await expect(changerStatutVisite(ctxAlice(), visite.id, { statut: "REFUSE" }, cle)).rejects.toBeInstanceOf(IdempotencyConflitError);
+    // Sans clé (anciennes builds) : comportement inchangé — la double réponse reste refusée.
+    await expect(changerStatutVisite(ctxAlice(), visite.id, { statut: "AUTORISE" })).rejects.toBeInstanceOf(ContrainteMetierError);
   });
 
   it("le gardien peut clôturer en REFUSE sa propre visite enregistrée (relai)", async () => {

@@ -221,13 +221,20 @@ export async function listerVisites(ctx: TenantContext, lotId?: string) {
 export async function changerStatutVisite(
   ctx: TenantContext,
   visiteId: string,
-  input: VisiteChangerStatutInput
+  input: VisiteChangerStatutInput,
+  idempotencyKey?: string
 ) {
   const permission = can("personnel.autoriser_visiteur", ctx.role);
   if (permission === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à répondre à une visite.");
   }
-  return withTenant(ctx, async (db) => {
+  // Réponse à la porte = action probante (notifie le gardien) : Idempotency-Key acceptée
+  // (optionnelle — les anciennes builds mobiles ne l'envoient pas) ; même clé + même payload →
+  // réponse rejouée, jamais un 422 « déjà répondu » sur un retry réseau.
+  return withTenantIdempotent(
+    ctx,
+    { cle: idempotencyKey, endpoint: `PATCH /visites/${visiteId}/statut`, payload: { visiteId, ...input } },
+    async (db) => {
     const visite = await db.visite.findUnique({ where: { id: visiteId } });
     if (!visite) throw new IntrouvableError("Visite introuvable.");
     if (visite.statut !== "EN_ATTENTE") {
