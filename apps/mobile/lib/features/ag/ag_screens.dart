@@ -297,7 +297,7 @@ class AgDetailScreen extends ConsumerWidget {
     final r = await ref.read(apiClientProvider).post<dynamic>('/ag/$id/procurations/${p.id}/revoquer');
     if (!context.mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
     } else {
       ref.invalidate(agProcurationsProvider(id));
       showToast(context, d.ag.procurationRevoquee);
@@ -457,7 +457,7 @@ class ResultatsWidget extends ConsumerWidget {
     final fg = dark ? Colors.white : SuColors.ink;
     return res.when(
       loading: () => const Padding(padding: EdgeInsets.symmetric(vertical: 18), child: Center(child: LoadingOrb(size: 9))),
-      error: (e, _) => ErrorState(error: e),
+      error: (e, _) => ErrorState(error: e, onRetry: () => ref.invalidate(agResultatsProvider((agId: agId, resolutionId: resolution.id)))),
       data: (lignes) {
         BigInt tant(String v) => BigInt.tryParse((lignes.where((x) => x.valeur == v).firstOrNull?.tantiemesTotal ?? '0').split('.').first) ?? BigInt.zero;
         int nb(String v) => lignes.where((x) => x.valeur == v).firstOrNull?.nbVotants ?? 0;

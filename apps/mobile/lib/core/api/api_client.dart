@@ -25,7 +25,10 @@ typedef Parse<T> = T Function(dynamic json);
 /// `{error, meta}`, `Authorization: Bearer`, `X-Copropriete-Id` (choix explicite de la
 /// copropriété active, revérifié côté serveur contre les claims du JWT), `X-Request-Id`
 /// (corrélation client ↔ logs), `Idempotency-Key` (uuid) sur les écritures financières /
-/// probantes — « Réessayer » est donc toujours sûr.
+/// probantes. Les formulaires gardent LEUR clé (`idempotencyKey:`) d'un essai à l'autre et ne la
+/// renouvellent qu'après un succès : « Réessayer » ne crée jamais de doublon. Les erreurs ne
+/// portent que des codes (NETWORK, TIMEOUT, PARSE_ERROR, BAD_RESPONSE…) : le texte affiché vient
+/// de errorText() (error_text.dart), dans la langue de l'utilisateur.
 class ApiClient {
   ApiClient(this._tokens, {Dio? dio})
       : _dio = dio ??
@@ -46,6 +49,17 @@ class ApiClient {
   final TokenSource _tokens;
   static const _uuid = Uuid();
 
+  /// Rafraîchissement en cours, partagé : dix lectures parallèles qui reçoivent un 401 attendent
+  /// la MÊME rotation de jetons (un refresh token Supabase ne sert qu'une fois).
+  Future<bool>? _refreshing;
+
+  /// La session vient d'expirer définitivement (refresh token refusé) — la coque affiche le toast
+  /// et renvoie à la connexion en gardant le chemin de retour.
+  void Function()? onSessionExpired;
+
+  /// 402 : l'accès de la résidence est suspendu (abonnement). Branché par la coque.
+  void Function()? onPaymentRequired;
+
   String get baseUrl => _dio.options.baseUrl;
 
   Future<ApiResult<T>> get<T>(String path, {Map<String, Object?>? query, Parse<T>? parse, String? coproprieteId, bool auth = true}) =>
@@ -54,8 +68,8 @@ class ApiClient {
   Future<ApiResult<T>> post<T>(String path, {Object? body, bool idempotent = false, String? idempotencyKey, Parse<T>? parse, bool auth = true, String? coproprieteId, String? accessToken}) =>
       request<T>('POST', path, body: body, idempotent: idempotent, idempotencyKey: idempotencyKey, parse: parse, auth: auth, coproprieteId: coproprieteId, accessToken: accessToken);
 
-  Future<ApiResult<T>> patch<T>(String path, {Object? body, Parse<T>? parse, String? coproprieteId}) =>
-      request<T>('PATCH', path, body: body, parse: parse, coproprieteId: coproprieteId);
+  Future<ApiResult<T>> patch<T>(String path, {Object? body, String? idempotencyKey, Parse<T>? parse, String? coproprieteId}) =>
+      request<T>('PATCH', path, body: body, idempotencyKey: idempotencyKey, parse: parse, coproprieteId: coproprieteId);
 
   Future<ApiResult<T>> delete<T>(String path, {Object? body, Parse<T>? parse}) => request<T>('DELETE', path, body: body, parse: parse);
 
@@ -79,7 +93,7 @@ class ApiClient {
     if (auth) {
       final token = accessToken ?? _tokens.accessToken;
       if (token == null) {
-        return ApiFail<T>(const ApiError(code: 'UNAUTHENTICATED', message: 'Session absente.'), 401);
+        return ApiFail<T>(const ApiError(code: 'UNAUTHENTICATED', message: ''), 401);
       }
       headers['Authorization'] = 'Bearer $token';
       final copro = coproprieteId ?? _tokens.coproprieteId;
@@ -99,12 +113,11 @@ class ApiClient {
         options: Options(method: method, headers: headers),
       );
     } on DioException catch (e) {
-      final msg = e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout
-          ? 'Délai dépassé — vérifiez votre connexion.'
-          : 'API injoignable.';
-      return ApiFail<T>(ApiError.network(msg), 0);
+      // Codes seulement : le texte affiché vient de errorText(), dans la langue de l'utilisateur.
+      final timeout = e.type == DioExceptionType.connectionTimeout || e.type == DioExceptionType.receiveTimeout || e.type == DioExceptionType.sendTimeout;
+      return ApiFail<T>(timeout ? const ApiError(code: 'TIMEOUT', message: '') : const ApiError.network(), 0, requestId: headers['X-Request-Id']);
     } on SocketException {
-      return ApiFail<T>(const ApiError.network(), 0);
+      return ApiFail<T>(const ApiError.network(), 0, requestId: headers['X-Request-Id']);
     }
 
     final payload = res.data is Map<String, dynamic> ? res.data as Map<String, dynamic> : <String, dynamic>{};
@@ -122,9 +135,11 @@ class ApiClient {
       }
       final err = payload['error'] is Map<String, dynamic>
           ? ApiError.fromJson(payload['error'] as Map<String, dynamic>)
-          : ApiError(code: status == 0 ? 'NETWORK' : 'INTERNAL_ERROR', message: 'Réponse inattendue ($status).');
+          : ApiError(code: status == 0 ? 'NETWORK' : (status == 402 ? 'PAYMENT_REQUIRED' : 'BAD_RESPONSE'), message: '');
       final retryAfter = int.tryParse(res.headers.value('retry-after') ?? '');
-      final requestId = (payload['meta'] as Map?)?['request_id'] as String? ?? res.headers.value('x-request-id');
+      final metaId = (payload['meta'] as Map?)?['request_id'];
+      final requestId = (metaId is String ? metaId : null) ?? res.headers.value('x-request-id') ?? headers['X-Request-Id'];
+      if (status == 402 && auth) onPaymentRequired?.call();
       return ApiFail<T>(err, status, requestId: requestId, retryAfter: retryAfter);
     }
 
@@ -133,13 +148,26 @@ class ApiClient {
     try {
       final parsed = parse != null ? parse(data) : data as T;
       return ApiOk<T>(parsed, meta, status);
-    } catch (e) {
-      return ApiFail<T>(ApiError(code: 'INTERNAL_ERROR', message: 'Réponse illisible : $e'), status, requestId: meta.requestId);
+    } catch (_) {
+      return ApiFail<T>(const ApiError(code: 'PARSE_ERROR', message: ''), status, requestId: meta.requestId.isEmpty ? headers['X-Request-Id'] : meta.requestId);
     }
   }
 
   /// POST /auth/refresh — rotation des jetons. `false` si le refresh token est mort.
-  Future<bool> refreshSession() async {
+  /// Vol unique : les appels concurrents partagent le même Future (voir [_refreshing]).
+  Future<bool> refreshSession() {
+    final enCours = _refreshing;
+    if (enCours != null) return enCours;
+    final f = _doRefresh();
+    _refreshing = f;
+    // Libéré une fois résolu : le prochain 401 (jeton expiré plus tard) relance une rotation.
+    f.whenComplete(() {
+      if (identical(_refreshing, f)) _refreshing = null;
+    });
+    return f;
+  }
+
+  Future<bool> _doRefresh() async {
     final rt = _tokens.refreshToken;
     if (rt == null) return false;
     final res = await post<Map<String, dynamic>>(
@@ -152,7 +180,9 @@ class ApiClient {
       await _tokens.onTokensRefreshed(res.data);
       return true;
     }
-    if (res is ApiFail<Map<String, dynamic>> && res.status == 401) {
+    if (res is ApiFail<Map<String, dynamic>> && (res.status == 401 || res.status == 400)) {
+      // Fin de session définitive : prévenir AVANT de vider la session (la coque lit encore le chemin).
+      onSessionExpired?.call();
       await _tokens.onSessionExpired();
     }
     return false;

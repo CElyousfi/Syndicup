@@ -270,7 +270,7 @@ class DepenseDetailScreen extends ConsumerWidget {
         _refresh(ref);
         showToast(context, d.depenses.soumise);
       case ApiFail<Depense>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 
@@ -285,7 +285,7 @@ class DepenseDetailScreen extends ConsumerWidget {
         _refresh(ref);
         showToast(context, d.depenses.annulee);
       case ApiFail<Depense>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 

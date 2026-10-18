@@ -39,7 +39,11 @@ Future<void> ouvrirFichierApi(BuildContext context, WidgetRef ref, {required Str
   if (!context.mounted) return;
   final url = r.dataOrNull?['url'] as String?;
   if (url == null) {
-    showToast(context, messageErreur ?? (r is ApiFail<Map<String, dynamic>> ? r.error.message : context.mdict.viewerError), error: true);
+    if (messageErreur == null && r is ApiFail<Map<String, dynamic>>) {
+      showApiError(context, r);
+    } else {
+      showToast(context, messageErreur ?? context.mdict.viewerError, error: true);
+    }
     return;
   }
   await ouvrirVisionneuse(context, titre: titre, url: url);

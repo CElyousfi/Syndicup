@@ -109,7 +109,7 @@ class LitigesScreen extends ConsumerWidget {
           final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()});
           if (!sheet.mounted) return;
           if (r is ApiFail) {
-            showToast(sheet, r.error.message, error: true);
+            showApiError(sheet, r);
           } else {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
@@ -137,7 +137,7 @@ class LitigesScreen extends ConsumerWidget {
           final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()});
           if (!sheet.mounted) return;
           if (r is ApiFail) {
-            showToast(sheet, r.error.message, error: true);
+            showApiError(sheet, r);
           } else {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);

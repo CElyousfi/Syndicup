@@ -351,7 +351,7 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     final d = context.dict;
@@ -541,7 +541,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     if (!mounted) return;
     setState(() => _pointage = false);
     if (r.refus != null) {
-      showToast(context, r.refus!.error.message, error: true);
+      showApiError(context, r.refus!);
       return;
     }
     showToast(context, r.enFile ? context.mdict.pendingSend : d.personnel.pointe);

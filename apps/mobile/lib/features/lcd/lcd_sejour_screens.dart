@@ -100,7 +100,7 @@ Future<void> confirmerSejour(BuildContext context, WidgetRef ref, LcdSejour s, S
   final r = await ref.read(lcdSyncProvider.notifier).confirmer(sejourId: s.id, action: action, payload: payload, libelle: libelleSejour(s));
   if (!context.mounted) return;
   if (r.refus != null) {
-    showToast(context, r.refus!.error.message, error: true);
+    showApiError(context, r.refus!);
   } else if (r.enFile) {
     showToast(context, md.pendingSend);
   } else {
@@ -603,8 +603,8 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
         ref.invalidate(lcdDuJourProvider);
         ref.invalidate(lcdDeclarationProvider(s.declarationLcdId));
         showToast(context, d.lcd.annule);
-      case ApiFail<LcdSejour>(:final error):
-        showToast(context, error.message, error: true);
+      case ApiFail<LcdSejour>():
+        showApiError(context, r);
     }
   }
 
@@ -947,7 +947,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
@@ -962,7 +962,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
     final r = await ref.read(apiClientProvider).delete<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemin': pj.path});
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));

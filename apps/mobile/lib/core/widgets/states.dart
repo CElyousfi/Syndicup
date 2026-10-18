@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../api/api_result.dart';
+import '../api/error_text.dart';
 import '../i18n/i18n.dart';
 import '../i18n/mobile_dict.dart';
 import '../theme/motion.dart';
@@ -135,41 +137,90 @@ class _MotifPainter extends CustomPainter {
   bool shouldRepaint(covariant _MotifPainter old) => old.t != t;
 }
 
-/// Erreur avec référence pour le support (request_id) et bouton Réessayer.
+/// Chemins dont les lectures sont financières (jamais gardées sur le téléphone) : hors ligne, on
+/// le dit au lieu d'un « pas de connexion » qui laisse croire à une copie manquante.
+const _cheminsFinanciers = ['/finances', '/payer', '/justificatifs', '/especes', '/depenses', '/rapports', '/contrats'];
+
+/// Erreur dans la langue de l'utilisateur, variante choisie d'après l'erreur (errorText) :
+///  - 403 « Accès réservé » sans Réessayer ;
+///  - 404 « Cet élément n'existe plus » + retour à la liste ;
+///  - réseau sans copie locale → illustration hors ligne (finances : « pas conservées hors ligne ») ;
+///  - 5xx → référence courte pour le support.
 class ErrorState extends StatelessWidget {
-  const ErrorState({super.key, required this.error, this.onRetry});
+  const ErrorState({super.key, required this.error, this.onRetry, this.finance});
   final Object error;
   final VoidCallback? onRetry;
+
+  /// Lecture financière (null = déduit de l'écran courant).
+  final bool? finance;
+
+  bool _estFinance(BuildContext context) {
+    if (finance != null) return finance!;
+    try {
+      final path = GoRouterState.of(context).uri.path;
+      return _cheminsFinanciers.any((p) => path == p || path.startsWith('$p/'));
+    } catch (_) {
+      return false; // hors du routeur (tests, feuilles)
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
+    final ux = context.mdict.ux;
     final t = Theme.of(context).textTheme;
     final e = error;
-    final String message;
-    final String? ref;
+    String title = d.common.errorTitle;
+    String message = e is String && e.isNotEmpty ? e : d.common.errorBody;
+    String? ref;
+    var action = ErrorAction.retry;
+    var offline = false;
     if (e is ApiException) {
-      message = e.error.code == 'NETWORK'
-          ? (e.error.message.contains('Délai') ? context.mdict.timeoutError : context.mdict.networkError)
-          : (e.status >= 500 ? d.common.errorBody : e.error.message);
-      ref = e.requestId;
-    } else {
-      message = d.common.errorBody;
-      ref = null;
+      final x = e.text(context);
+      title = x.title;
+      message = x.body;
+      ref = x.reference;
+      action = x.action;
+      offline = e.error.code == 'NETWORK' || e.error.code == 'TIMEOUT';
+      if (e.error.code == 'NETWORK') {
+        if (_estFinance(context)) {
+          title = ux.financeOfflineTitle;
+          message = ux.financeOfflineBody;
+        } else {
+          title = ux.offlineTitle;
+          message = ux.offlineBody;
+        }
+      }
     }
+    final Widget? bouton = switch (action) {
+      ErrorAction.retry || ErrorAction.refresh => onRetry == null ? null : SuButton(label: action == ErrorAction.refresh ? ux.actRefresh : d.common.retry, variant: SuButtonVariant.secondary, onPressed: onRetry),
+      ErrorAction.backToList => SuButton(
+          label: ux.actBackToList,
+          variant: SuButtonVariant.secondary,
+          onPressed: () {
+            final nav = Navigator.maybeOf(context);
+            if (nav != null && nav.canPop()) {
+              nav.pop();
+            } else {
+              GoRouter.maybeOf(context)?.go('/');
+            }
+          },
+        ),
+      ErrorAction.reconnect || ErrorAction.none => null,
+    };
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         children: [
-          e is ApiException && e.error.code == 'NETWORK'
+          offline
               ? const SuIllustration('offline', size: 150, fallback: IconCircle(Icons.wifi_off_rounded, tone: Tone.warn, size: 64))
-              : const IconCircle(Icons.priority_high_rounded, tone: Tone.warn, size: 64),
+              : IconCircle(action == ErrorAction.none && e is ApiException && e.status == 403 ? Icons.lock_rounded : (action == ErrorAction.backToList ? Icons.search_off_rounded : Icons.priority_high_rounded), tone: Tone.warn, size: 64),
           const SizedBox(height: 16),
-          Text(d.common.errorTitle, style: t.headlineSmall, textAlign: TextAlign.center),
+          Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: 6),
           Text(message, style: t.bodySmall?.copyWith(height: 1.55), textAlign: TextAlign.center),
-          if (ref != null && ref.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 8), child: Text(fill(d.common.errorReference, {'id': ref}), style: t.labelSmall?.copyWith(fontFamily: 'GeistMono'), textAlign: TextAlign.center)),
-          if (onRetry != null) Padding(padding: const EdgeInsets.only(top: 18), child: SuButton(label: d.common.retry, variant: SuButtonVariant.secondary, onPressed: onRetry)),
+          if (ref != null) Padding(padding: const EdgeInsets.only(top: 8), child: Text(ref, style: t.labelSmall?.copyWith(fontFamily: 'GeistMono'), textAlign: TextAlign.center)),
+          if (bouton != null) Padding(padding: const EdgeInsets.only(top: 18), child: bouton),
         ],
       ),
     );
@@ -352,4 +403,17 @@ class LegalGateBanner extends StatelessWidget {
 void showToast(BuildContext context, String message, {bool error = false}) {
   if (error) Haptics.error();
   SuToaster.show(context, message, error: error);
+}
+
+/// Toast d'erreur d'API dans la langue de l'utilisateur (errorText) — jamais `r.error.message` brut.
+/// La référence de requête (8 caractères) suit le message pour les erreurs serveur.
+void showApiError(BuildContext context, ApiFail<dynamic> fail) {
+  if (!context.mounted) return;
+  showToast(context, fail.text(context).line, error: true);
+}
+
+/// Toast de réussite, avec « Annuler » quand l'action a un inverse côté API.
+void showDone(BuildContext context, String message, {String? undoLabel, VoidCallback? onUndo}) {
+  if (!context.mounted) return;
+  SuToaster.show(context, message, actionLabel: onUndo == null ? null : (undoLabel ?? context.mdict.ux.undo), onAction: onUndo, duration: onUndo == null ? const Duration(milliseconds: 4200) : const Duration(seconds: 6));
 }

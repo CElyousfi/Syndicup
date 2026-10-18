@@ -449,7 +449,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
         _refresh(ref);
         showToast(context, d.justificatifs.annule);
       case ApiFail<Justificatif>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 }

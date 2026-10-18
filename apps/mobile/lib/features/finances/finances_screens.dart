@@ -157,7 +157,7 @@ class BudgetsScreen extends ConsumerWidget {
     final r = await ref.read(apiClientProvider).post<dynamic>('/finances/budgets/${b.id}/activer', idempotent: true);
     if (!context.mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
     } else {
       ref.invalidate(budgetsProvider);
       showToast(context, d.common.updated);

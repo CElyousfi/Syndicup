@@ -289,7 +289,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
     if (!mounted) return;
     if (cache == null) {
       setState(() => _recherche = false);
-      showToast(context, (r as ApiFail).error.message, error: true);
+      showApiError(context, (r as ApiFail));
       return;
     }
     final cle = _normaliser(brut).replaceAll('-', '');
@@ -329,7 +329,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
     if (!ok || !mounted) return;
     final r = await ref.read(apiClientProvider).delete<dynamic>('/vehicules/${v.id}');
     if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+    if (r is ApiFail) { showApiError(context, r); return; }
     showToast(context, d.parkings.vehiculeRetire);
     ref.invalidate(vehiculesProvider);
   }
@@ -470,7 +470,7 @@ class _BadgesTab extends ConsumerWidget {
     if (!ok || !context.mounted) return;
     final r = await ref.read(apiClientProvider).post<dynamic>('/badges/${b.id}/perdu', body: {'creer_tache': true});
     if (!context.mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+    if (r is ApiFail) { showApiError(context, r); return; }
     showToast(context, d.parkings.badgePerdu);
     ref.invalidate(badgesProvider);
   }
@@ -633,7 +633,7 @@ Future<void> notifierVehiculeGenant(BuildContext context, WidgetRef ref, Inciden
   if (!ok || !context.mounted) return;
   final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/incidents/${i.id}/notifier-vehicule', body: const {}, parse: asMap);
   if (!context.mounted) return;
-  if (r is ApiFail<Map<String, dynamic>>) { showToast(context, r.error.message, error: true); return; }
+  if (r is ApiFail<Map<String, dynamic>>) { showApiError(context, r); return; }
   final data = (r as ApiOk<Map<String, dynamic>>).data;
   showToast(context, fill(d.incidents.vehiculeNotifie, {'lot': data['lot'] ?? '—', 'n': data['notifies'] ?? 0}));
   ref.invalidate(incidentProvider(i.id));

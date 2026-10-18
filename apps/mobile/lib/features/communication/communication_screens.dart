@@ -208,7 +208,7 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     final r = await ref.read(apiClientProvider).post<dynamic>(path, body: body, idempotent: idempotent);
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     if (succes != null) {
@@ -454,7 +454,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
   Future<void> _transition(String action, String succes) async {
     final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${widget.id}/$action', body: const {}, idempotent: true);
     if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+    if (r is ApiFail) { showApiError(context, r); return; }
     showToast(context, succes);
     ref.invalidate(sondageProvider(widget.id));
     _rafraichirAffichage(ref);
@@ -527,7 +527,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                   final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${s.id}/repondre', body: {'choix': _choix.toList()}, idempotent: true);
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
-                  if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+                  if (r is ApiFail) { showApiError(context, r); return; }
                   ref.invalidate(sondageProvider(widget.id));
                   ref.invalidate(sondagesProvider);
                   // Réponse délibérée et unique : succès plein écran.

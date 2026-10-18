@@ -546,8 +546,8 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
       case ApiOk<LcdDeclaration>():
         _refresh(x);
         showToast(context, d.lcd.cloturee);
-      case ApiFail<LcdDeclaration>(:final error):
-        showToast(context, error.message, error: true);
+      case ApiFail<LcdDeclaration>():
+        showApiError(context, r);
     }
   }
 

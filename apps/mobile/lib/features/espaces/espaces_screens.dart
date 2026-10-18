@@ -227,7 +227,7 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
         const SizedBox(height: 10),
         Text(md.conflictNote, style: t.bodySmall?.copyWith(color: SuColors.soft)),
         const SizedBox(height: 18),
-        if (_fail != null) (_fail!.status == 409 || _fail!.status == 422) ? SuBanner(tone: BannerTone.warn, title: d.espaces.creneauPris, body: _fail!.error.message) : FormError(_fail),
+        if (_fail != null) (_fail!.status == 409 || _fail!.status == 422) ? SuBanner(tone: BannerTone.warn, title: d.espaces.creneauPris, body: _fail!.text(context).body) : FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
           label: '${d.common.confirm} ${hm(_debut)} – ${hm(_fin)}',
@@ -418,7 +418,7 @@ class ReservationsScreen extends ConsumerWidget {
   Future<void> _valider(BuildContext context, WidgetRef ref, Reservation r) async {
     final res = await ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/valider');
     if (!context.mounted) return;
-    if (res is ApiFail) showToast(context, res.error.message, error: true); else {
+    if (res is ApiFail) showApiError(context, res); else {
       ref.invalidate(reservationsProvider);
       showToast(context, context.dict.espaces.reservationValidee);
     }
@@ -435,7 +435,7 @@ class ReservationsScreen extends ConsumerWidget {
         SubmitButton(label: d.espaces.rejeter, danger: true, onPressed: () async {
           final res = await ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/rejeter', body: {'motif': ctrl.text.trim()});
           if (!sheet.mounted) return;
-          if (res is ApiFail) showToast(sheet, res.error.message, error: true); else {
+          if (res is ApiFail) showApiError(sheet, res); else {
             ref.invalidate(reservationsProvider);
             Navigator.pop(sheet);
             showToast(context, d.espaces.reservationRejetee);
@@ -451,7 +451,7 @@ class ReservationsScreen extends ConsumerWidget {
     if (!ok) return;
     final res = await ref.read(apiClientProvider).patch<dynamic>('/reservations/${r.id}', body: {'statut': 'ANNULEE'});
     if (!context.mounted) return;
-    if (res is ApiFail) showToast(context, res.error.message, error: true); else {
+    if (res is ApiFail) showApiError(context, res); else {
       ref.invalidate(reservationsProvider);
       showToast(context, d.espaces.reservationAnnulee);
     }

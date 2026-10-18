@@ -105,7 +105,7 @@ class DocumentRow extends ConsumerWidget {
                 final r = await ref.read(apiClientProvider).delete<dynamic>('/documents/${doc.id}');
                 if (!context.mounted) return;
                 if (r is ApiFail) {
-                  showToast(context, r.error.message, error: true);
+                  showApiError(context, r);
                 } else {
                   ref.invalidate(documentsProvider);
                   showToast(context, d.gestion.supprime);

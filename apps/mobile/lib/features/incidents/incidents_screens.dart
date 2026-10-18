@@ -634,7 +634,7 @@ class IncidentDetailScreen extends ConsumerWidget {
     final r = await ref.read(apiClientProvider).post<dynamic>('/incidents/${i.id}/assign', body: {'prestataire_id': picked.id});
     if (!context.mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
     } else {
       ref.invalidate(incidentProvider(i.id));
       ref.invalidate(incidentsProvider);
@@ -782,7 +782,7 @@ class PrestatairesScreen extends ConsumerWidget {
                   if (ctx.isGestion) SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () async {
                     final r = await ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif});
                     if (!context.mounted) return;
-                    if (r is ApiFail) showToast(context, r.error.message, error: true); else ref.invalidate(prestatairesProvider);
+                    if (r is ApiFail) showApiError(context, r); else ref.invalidate(prestatairesProvider);
                   }),
                 ]),
               ),

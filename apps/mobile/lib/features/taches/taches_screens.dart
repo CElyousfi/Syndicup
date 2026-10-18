@@ -106,7 +106,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
   Future<void> _cocher(Tache x, ChecklistItem it, bool fait) async {
     final r = await ref.read(apiClientProvider).request<dynamic>('PATCH', '/taches/${x.id}/checklist', body: {'item_id': it.id, 'fait': fait});
     if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+    if (r is ApiFail) { showApiError(context, r); return; }
     ref.invalidate(tacheProvider(widget.id));
     ref.invalidate(mesTachesProvider);
   }
@@ -119,17 +119,17 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
     if (res.piece != null) {
       // Une photo ne se met pas en file : envoi direct (réseau requis).
       final prep = await api.post<Map<String, dynamic>>('/taches/upload-url', body: {'nom_fichier': res.piece!.nom, 'content_type': res.piece!.contentType}, parse: asMap);
-      if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showToast(context, (prep as ApiFail).error.message, error: true); return; }
+      if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showApiError(context, (prep as ApiFail)); return; }
       final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(res.piece!.chemin).readAsBytes(), res.piece!.contentType);
       if (!ok) { if (mounted) showToast(context, d.common.errorTitle, error: true); return; }
       final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotent: true, parse: (j) => Tache.fromJson(asMap(j)));
       if (!mounted) return;
-      if (r is ApiFail<Tache>) { showToast(context, r.error.message, error: true); return; }
+      if (r is ApiFail<Tache>) { showApiError(context, r); return; }
       showToast(context, d.taches.statutChange);
     } else {
       final r = await ref.read(tachesSyncProvider.notifier).changerStatut(tacheId: x.id, statut: res.statut, commentaire: res.commentaire, libelle: x.titre);
       if (!mounted) return;
-      if (r.refus != null) { showToast(context, r.refus!.error.message, error: true); return; }
+      if (r.refus != null) { showApiError(context, r.refus!); return; }
       showToast(context, r.enFile ? context.mdict.pendingSend : (r.tache?.suivanteId != null ? '${d.taches.statutChange} ${d.taches.suivanteCreee}' : d.taches.statutChange));
     }
     ref.invalidate(tacheProvider(widget.id));
@@ -234,7 +234,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   final r = await ref.read(apiClientProvider).post<dynamic>('/taches/${x.id}/commentaires', body: {'contenu': _commentaire.text.trim()});
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
-                  if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+                  if (r is ApiFail) { showApiError(context, r); return; }
                   _commentaire.clear();
                   showToast(context, t.commentaireEnvoye);
                   ref.invalidate(tacheProvider(widget.id));

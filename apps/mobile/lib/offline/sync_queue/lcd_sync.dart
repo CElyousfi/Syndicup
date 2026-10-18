@@ -111,7 +111,7 @@ class LcdSync extends Notifier<SyncStatus> {
         final r = await _send(q.id, q.sejourId, q.action, payload, q.coproprieteId.isEmpty ? null : q.coproprieteId);
         if (r.sejour == null) {
           final again = await _db.pendingLcd();
-          if (again.any((x) => x.id == q.id && (x.derniereErreur?.startsWith('NETWORK') ?? false))) break;
+          if (again.any((x) => x.id == q.id && (x.derniereErreur?.startsWith('NETWORK') ?? false) || (x.derniereErreur?.startsWith('TIMEOUT') ?? false))) break;
         }
       }
     } finally {

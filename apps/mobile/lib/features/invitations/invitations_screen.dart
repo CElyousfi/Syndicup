@@ -91,7 +91,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
                 onPressed: () async {
                   final r = await ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j)));
                   if (!sheet.mounted) return;
-                  if (r is ApiFail) showToast(sheet, (r as ApiFail).error.message, error: true); else {
+                  if (r is ApiFail) showApiError(sheet, (r as ApiFail)); else {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.invitations.regeneree);
@@ -109,7 +109,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
                   if (!ok) return;
                   final r = await ref.read(apiClientProvider).delete<dynamic>('/invitations/${i.id}');
                   if (!sheet.mounted) return;
-                  if (r is ApiFail) showToast(sheet, r.error.message, error: true); else {
+                  if (r is ApiFail) showApiError(sheet, r); else {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.gestion.invitationAnnulee);

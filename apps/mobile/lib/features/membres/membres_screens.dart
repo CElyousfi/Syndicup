@@ -150,7 +150,7 @@ class MembreDetailScreen extends ConsumerWidget {
                                 if (!ok2 || !context.mounted) return;
                                 final r = await ref.read(apiClientProvider).post<dynamic>('/users/$id/anonymize', idempotent: true);
                                 if (!context.mounted) return;
-                                if (r is ApiFail) showToast(context, r.error.message, error: true); else {
+                                if (r is ApiFail) showApiError(context, r); else {
                                   ref.invalidate(membreProvider(id));
                                   ref.invalidate(membresProvider);
                                   showToast(context, d.membres.anonymise);

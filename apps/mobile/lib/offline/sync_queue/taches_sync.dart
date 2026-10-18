@@ -97,7 +97,7 @@ class TachesSync extends Notifier<SyncStatus> {
         final r = await _send(q.id, q.tacheId, q.statut, q.commentaire, q.coproprieteId.isEmpty ? null : q.coproprieteId);
         if (r.tache == null) {
           final again = await _db.pendingTaches();
-          if (again.any((x) => x.id == q.id && (x.derniereErreur?.startsWith('NETWORK') ?? false))) break;
+          if (again.any((x) => x.id == q.id && (x.derniereErreur?.startsWith('NETWORK') ?? false) || (x.derniereErreur?.startsWith('TIMEOUT') ?? false))) break;
         }
       }
     } finally {

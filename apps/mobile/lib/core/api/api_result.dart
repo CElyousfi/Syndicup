@@ -28,7 +28,8 @@ class ApiError {
         fields: (j['fields'] as Map?)?.map((k, v) => MapEntry(k.toString(), v.toString())) ?? const {},
       );
 
-  const ApiError.network([this.message = 'API injoignable.'])
+  /// Réseau injoignable — code seulement : le texte vient de errorText() (FR / AR).
+  const ApiError.network([this.message = ''])
       : code = 'NETWORK',
         fields = const {};
 

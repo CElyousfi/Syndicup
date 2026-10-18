@@ -183,7 +183,7 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
     final r = await api.patch<dynamic>('/coproprietes/${widget.copro.id}', body: {'photos_json': photos.isEmpty ? null : photos});
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(coproPhotosProvider(widget.copro.id));
@@ -201,7 +201,7 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
     if (!mounted) return;
     if (prep is ApiFail<Map<String, dynamic>>) {
       setState(() => _enCours = null);
-      showToast(context, prep.error.message, error: true);
+      showApiError(context, prep);
       return;
     }
     final pr = (prep as ApiOk<Map<String, dynamic>>).data;

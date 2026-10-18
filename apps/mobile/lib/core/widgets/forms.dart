@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../api/api_result.dart';
+import '../api/error_text.dart';
 import '../feel/feel.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
@@ -560,8 +561,9 @@ class SuSwitchRow extends StatelessWidget {
   }
 }
 
-/// Erreur de formulaire renvoyée par l'API : 422 métier affiché tel quel, état gaté légal en
-/// bannière, VALIDATION_ERROR sous chaque champ (via `fieldError`).
+/// Erreur de formulaire renvoyée par l'API, dans la langue de l'utilisateur (errorText) : état
+/// gaté légal en bannière, VALIDATION_ERROR sous chaque champ (via `fieldError`), référence de
+/// requête pour les erreurs serveur.
 class FormError extends StatelessWidget {
   const FormError(this.fail, {super.key, this.onSettings});
   final ApiFail? fail;
@@ -570,21 +572,10 @@ class FormError extends StatelessWidget {
   Widget build(BuildContext context) {
     final f = fail;
     if (f == null) return const SizedBox.shrink();
-    final d = context.dict;
-    if (f.error.isLegalGate) return LegalGateBanner(message: f.error.message, onSettings: onSettings);
-    final String msg;
-    if (f.error.code == 'NETWORK') {
-      msg = f.error.message;
-    } else if (f.error.code == 'RATE_LIMITED') {
-      msg = f.retryAfter != null ? fill(d.auth.rateLimited, {'s': f.retryAfter!}) : d.auth.rateLimitedGeneric;
-    } else if (f.error.code == 'FORBIDDEN') {
-      msg = d.common.forbidden;
-    } else if (f.status >= 500) {
-      msg = d.common.errorBody;
-    } else {
-      msg = f.error.message;
-    }
-    return SuBanner(tone: f.error.code == 'CONFLICT' ? BannerTone.warn : BannerTone.danger, body: msg);
+    if (f.error.isLegalGate) return LegalGateBanner(message: context.isRtl ? null : stripSpecRefs(f.error.message), onSettings: onSettings);
+    final x = f.text(context);
+    final warn = x.action == ErrorAction.refresh || f.error.code == 'RATE_LIMITED' || f.error.code == 'NETWORK' || f.error.code == 'TIMEOUT';
+    return SuBanner(tone: warn ? BannerTone.warn : BannerTone.danger, title: x.title, body: x.reference == null ? x.body : '${x.body}\n${x.reference}');
   }
 }
 
