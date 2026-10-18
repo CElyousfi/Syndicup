@@ -325,13 +325,14 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
 
   Future<void> _retirer(Vehicule v) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.parkings.retirerVehicule, body: d.parkings.retirerVehiculeCorps, confirmLabel: d.parkings.retirerVehicule, danger: true);
-    if (!ok || !mounted) return;
-    final r = await ref.read(apiClientProvider).delete<dynamic>('/vehicules/${v.id}');
-    if (!mounted) return;
-    if (r is ApiFail) { showApiError(context, r); return; }
-    showToast(context, d.parkings.vehiculeRetire);
-    ref.invalidate(vehiculesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).delete<dynamic>('/vehicules/${v.id}'),
+      busyKey: 'vehicule-retirer:${v.id}',
+      confirm: ActionConfirm(title: d.parkings.retirerVehicule, body: d.parkings.retirerVehiculeCorps, confirmLabel: d.parkings.retirerVehicule, danger: true),
+      successMsg: d.parkings.vehiculeRetire,
+      onSuccess: (_) => ref.invalidate(vehiculesProvider),
+    );
   }
 
   @override
@@ -466,13 +467,14 @@ class _BadgesTab extends ConsumerWidget {
 
   Future<void> _perdu(BuildContext context, WidgetRef ref, BadgeAcces b) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.parkings.declarerPerdu, body: d.parkings.declarerPerduCorps, confirmLabel: d.parkings.declarerPerdu, danger: true, irreversible: true);
-    if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<dynamic>('/badges/${b.id}/perdu', body: {'creer_tache': true});
-    if (!context.mounted) return;
-    if (r is ApiFail) { showApiError(context, r); return; }
-    showToast(context, d.parkings.badgePerdu);
-    ref.invalidate(badgesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).post<dynamic>('/badges/${b.id}/perdu', body: {'creer_tache': true}),
+      busyKey: 'badge-perdu:${b.id}',
+      confirm: ActionConfirm(title: d.parkings.declarerPerdu, body: d.parkings.declarerPerduCorps, confirmLabel: d.parkings.declarerPerdu, danger: true, irreversible: true),
+      successMsg: d.parkings.badgePerdu,
+      onSuccess: (_) => ref.invalidate(badgesProvider),
+    );
   }
 
   @override
@@ -497,7 +499,7 @@ class _BadgesTab extends ConsumerWidget {
                     title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}',
                     subtitle: '${t.lot} ${b.lotNumero ?? '—'} · ${t.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${t.caution} ${formatMAD(b.cautionMontant, l)}' : ''}${b.restitueLe != null ? ' · ${t.restitueLe} ${formatJourAnnee(b.restitueLe, l)}' : ''}',
                     trailing: b.statut == 'ACTIF' && peutSignaler
-                        ? LinkButton(t.declarerPerdu, color: SuColors.danger, onTap: () => _perdu(context, ref, b))
+                        ? BusyBuilder('badge-perdu:${b.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(t.declarerPerdu, color: SuColors.danger, onTap: () => _perdu(context, ref, b)))
                         : StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true),
                   ),
               ])),
@@ -629,12 +631,14 @@ class _PlaceVisiteurSheetState extends ConsumerState<PlaceVisiteurSheet> {
 /// « Véhicule sur ma place » — le gardien / syndic prévient le lot propriétaire de la plaque signalée.
 Future<void> notifierVehiculeGenant(BuildContext context, WidgetRef ref, Incident i) async {
   final d = context.dict;
-  final ok = await confirmDialog(context, title: d.incidents.notifierVehicule, body: '${i.immatriculationSignalee ?? ''}\n${d.incidents.notifierVehiculeAide}', confirmLabel: d.incidents.notifierVehicule);
-  if (!ok || !context.mounted) return;
-  final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/incidents/${i.id}/notifier-vehicule', body: const {}, parse: asMap);
-  if (!context.mounted) return;
-  if (r is ApiFail<Map<String, dynamic>>) { showApiError(context, r); return; }
-  final data = (r as ApiOk<Map<String, dynamic>>).data;
-  showToast(context, fill(d.incidents.vehiculeNotifie, {'lot': data['lot'] ?? '—', 'n': data['notifies'] ?? 0}));
-  ref.invalidate(incidentProvider(i.id));
+  await runAction<Map<String, dynamic>>(
+    context,
+    () => ref.read(apiClientProvider).post<Map<String, dynamic>>('/incidents/${i.id}/notifier-vehicule', body: const {}, parse: asMap),
+    busyKey: 'incident-notifier-vehicule:${i.id}',
+    confirm: ActionConfirm(title: d.incidents.notifierVehicule, body: '${i.immatriculationSignalee ?? ''}\n${d.incidents.notifierVehiculeAide}', confirmLabel: d.incidents.notifierVehicule),
+    onSuccess: (data) {
+      showToast(context, fill(d.incidents.vehiculeNotifie, {'lot': data['lot'] ?? '—', 'n': data['notifies'] ?? 0}));
+      ref.invalidate(incidentProvider(i.id));
+    },
+  );
 }

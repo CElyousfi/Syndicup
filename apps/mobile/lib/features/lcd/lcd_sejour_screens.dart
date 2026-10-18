@@ -1011,7 +1011,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
                             PositionedDirectional(
                               end: 4,
                               top: 4,
-                              child: CircleIconButton(onTap: () => _retirer(pj), icon: Icons.close_rounded, size: 30, color: SuColors.surface, iconColor: SuColors.ink, tooltip: d.lcd.retirerPiece),
+                              child: BusyBuilder('sejour-piece-retirer:${pj.path}', builder: (_, busy) => CircleIconButton(onTap: busy ? null : () => guardAction('sejour-piece-retirer:${pj.path}', () => _retirer(pj)), icon: busy ? Icons.hourglass_top_rounded : Icons.close_rounded, size: 30, color: SuColors.surface, iconColor: SuColors.ink, tooltip: d.lcd.retirerPiece)),
                             ),
                         ],
                       ),

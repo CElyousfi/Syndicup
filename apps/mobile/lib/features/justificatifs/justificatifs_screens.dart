@@ -413,7 +413,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
             ],
             if (y.enAttente && y.declareParId == ctx.profil.id && !ctx.isGestion) ...[
               const SizedBox(height: 8),
-              Center(child: LinkButton(j.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, y))),
+              Center(child: BusyBuilder('justificatif-annuler:${y.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(j.annuler, color: SuColors.danger, onTap: () => guardAction('justificatif-annuler:${y.id}', () => _annuler(context, ref, y))))),
             ],
             SectionHeader(j.lignesOuvertes),
             if (y.lignesOuvertes.isEmpty)

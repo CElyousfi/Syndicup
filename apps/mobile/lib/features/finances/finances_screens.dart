@@ -137,7 +137,7 @@ class BudgetsScreen extends ConsumerWidget {
                             spacing: 14,
                             children: [
                               if (b.statut == 'PROPOSE') LinkButton(d.common.modify, onTap: () => _form(context, ref, b)),
-                              LinkButton(d.finances.activerBudget, onTap: () => _activer(context, ref, b)),
+                              BusyBuilder('budget-activer:${b.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.finances.activerBudget, onTap: () => guardAction('budget-activer:${b.id}', () => _activer(context, ref, b)))),
                             ],
                           ),
                         ),

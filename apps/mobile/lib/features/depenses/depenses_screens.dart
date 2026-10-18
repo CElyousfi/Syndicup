@@ -190,7 +190,7 @@ class DepenseDetailScreen extends ConsumerWidget {
               // Actions
               if (peutDecider || peutPayer || peutSoumettre || peutAnnuler) ...[
                 const SizedBox(height: 14),
-                if (peutSoumettre) SubmitButton(label: d.depenses.soumettre, icon: Icons.send_rounded, onPressed: () => _soumettre(context, ref, x)),
+                if (peutSoumettre) BusyBuilder('depense-soumettre:${x.id}', builder: (_, busy) => SubmitButton(label: d.depenses.soumettre, icon: Icons.send_rounded, loading: busy, onPressed: () => guardAction('depense-soumettre:${x.id}', () => _soumettre(context, ref, x)))),
                 if (peutDecider) ...[
                   SubmitButton(label: d.depenses.approuver, icon: Icons.check_circle_rounded, onPressed: () => _decider(context, ref, x, approuver: true)),
                   const SizedBox(height: 8),
@@ -199,7 +199,7 @@ class DepenseDetailScreen extends ConsumerWidget {
                 if (peutPayer) SubmitButton(label: d.depenses.payer, icon: Icons.photo_camera_rounded, onPressed: () => _payer(context, ref, x)),
                 if (peutAnnuler) ...[
                   const SizedBox(height: 8),
-                  Center(child: LinkButton(d.depenses.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, x))),
+                  Center(child: BusyBuilder('depense-annuler:${x.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.depenses.annuler, color: SuColors.danger, onTap: () => guardAction('depense-annuler:${x.id}', () => _annuler(context, ref, x))))),
                 ],
               ],
               // Paiement

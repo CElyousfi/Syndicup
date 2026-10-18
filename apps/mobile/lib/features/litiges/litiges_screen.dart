@@ -103,19 +103,17 @@ class LitigesScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         SuField(label: d.litiges.escaladeMotif, controller: ctrl, maxLines: 3, required: true),
         const SizedBox(height: 16),
-        SubmitButton(label: d.litiges.escalader, danger: true, onPressed: () async {
-          final ok = await confirmDialog(sheet, title: d.litiges.escalader, body: fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''}), danger: true, irreversible: true);
-          if (!ok) return;
-          final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()});
-          if (!sheet.mounted) return;
-          if (r is ApiFail) {
-            showApiError(sheet, r);
-          } else {
+        BusyBuilder('litige-escalader:${x.id}', builder: (_, busy) => SubmitButton(label: d.litiges.escalader, danger: true, loading: busy, onPressed: () => runAction<dynamic>(
+          sheet,
+          () => ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()}),
+          busyKey: 'litige-escalader:${x.id}',
+          confirm: ActionConfirm(title: d.litiges.escalader, body: fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''}), danger: true, irreversible: true),
+          onSuccess: (_) {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.escalade);
-          }
-        }),
+          },
+        ))),
       ],
     ));
   }
@@ -133,17 +131,16 @@ class LitigesScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         SuField(label: d.litiges.cloturerMotif, controller: ctrl, maxLines: 3, required: true),
         const SizedBox(height: 16),
-        SubmitButton(label: d.litiges.cloturer, onPressed: () async {
-          final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()});
-          if (!sheet.mounted) return;
-          if (r is ApiFail) {
-            showApiError(sheet, r);
-          } else {
+        BusyBuilder('litige-cloturer:${x.id}', builder: (_, busy) => SubmitButton(label: d.litiges.cloturer, loading: busy, onPressed: () => runAction<dynamic>(
+          sheet,
+          () => ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()}),
+          busyKey: 'litige-cloturer:${x.id}',
+          onSuccess: (_) {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.cloture);
-          }
-        }),
+          },
+        ))),
       ],
     )));
   }

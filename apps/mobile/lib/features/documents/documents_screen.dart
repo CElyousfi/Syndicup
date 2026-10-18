@@ -96,21 +96,22 @@ class DocumentRow extends ConsumerWidget {
       title: doc.nom,
       subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
       trailing: canDelete
-          ? SuIconButton(
-              icon: Icons.delete_outline_rounded,
-              color: SuColors.faint,
-              onPressed: () async {
-                final ok = await confirmDialog(context, title: d.gestion.supprimer, body: d.gestion.documentSupprimerAide, danger: true, irreversible: true);
-                if (!ok) return;
-                final r = await ref.read(apiClientProvider).delete<dynamic>('/documents/${doc.id}');
-                if (!context.mounted) return;
-                if (r is ApiFail) {
-                  showApiError(context, r);
-                } else {
-                  ref.invalidate(documentsProvider);
-                  showToast(context, d.gestion.supprime);
-                }
-              },
+          ? BusyBuilder(
+              'document-supprimer:${doc.id}',
+              builder: (_, busy) => busy
+                  ? const Padding(padding: EdgeInsets.all(12), child: LoadingOrb(size: 9))
+                  : SuIconButton(
+                      icon: Icons.delete_outline_rounded,
+                      color: SuColors.faint,
+                      onPressed: () => runAction<dynamic>(
+                        context,
+                        () => ref.read(apiClientProvider).delete<dynamic>('/documents/${doc.id}'),
+                        busyKey: 'document-supprimer:${doc.id}',
+                        confirm: ActionConfirm(title: d.gestion.supprimer, body: d.gestion.documentSupprimerAide, danger: true, irreversible: true),
+                        successMsg: d.gestion.supprime,
+                        onSuccess: (_) => ref.invalidate(documentsProvider),
+                      ),
+                    ),
             )
           : null,
       onTap: () => ouvrirDocument(context, ref, doc.id, titre: doc.nom),

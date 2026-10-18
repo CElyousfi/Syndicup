@@ -243,7 +243,7 @@ class AgDetailScreen extends ConsumerWidget {
                         leading: const IconCircle(Icons.assignment_ind_rounded, tone: Tone.lilac),
                         title: '${d.ag.mandataire} :${membres.where((m) => m.id == p.mandataireId).map((m) => m.nom).firstOrNull ?? p.mandataireId.substring(0, 8)}',
                         subtitle: '${d.invitations.lot} ${lots.where((x) => x.id == p.lotId).map((x) => x.numero).firstOrNull ?? ''} · ${formatDateCourte(p.creeLe, l)}',
-                        trailing: a.statut != 'EN_COURS' ? LinkButton(d.ag.revoquer, color: SuColors.danger, onTap: () => _revoquer(context, ref, p)) : null,
+                        trailing: a.statut != 'EN_COURS' ? BusyBuilder('procuration-revoquer:${p.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.ag.revoquer, color: SuColors.danger, onTap: () => _revoquer(context, ref, p))) : null,
                       ),
                   ]),
                 if (mesProcs.isEmpty && mesLots.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 4), child: SuButton(onPressed: () => _donnerProcuration(context, ref, a, mesLots, membres, ctx), icon: Icons.assignment_ind_rounded, label: d.ag.donnerProcuration)),
@@ -292,16 +292,14 @@ class AgDetailScreen extends ConsumerWidget {
 
   Future<void> _revoquer(BuildContext context, WidgetRef ref, AgProcuration p) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.ag.revoquer, body: d.ag.procurationsAide, danger: true);
-    if (!ok) return;
-    final r = await ref.read(apiClientProvider).post<dynamic>('/ag/$id/procurations/${p.id}/revoquer');
-    if (!context.mounted) return;
-    if (r is ApiFail) {
-      showApiError(context, r);
-    } else {
-      ref.invalidate(agProcurationsProvider(id));
-      showToast(context, d.ag.procurationRevoquee);
-    }
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).post<dynamic>('/ag/$id/procurations/${p.id}/revoquer'),
+      busyKey: 'procuration-revoquer:${p.id}',
+      confirm: ActionConfirm(title: d.ag.revoquer, body: d.ag.procurationsAide, danger: true),
+      successMsg: d.ag.procurationRevoquee,
+      onSuccess: (_) => ref.invalidate(agProcurationsProvider(id)),
+    );
   }
 
   Future<void> _donnerProcuration(BuildContext context, WidgetRef ref, AssembleeGenerale a, List<Lot> mesLots, List<MembreOption> membres, AppContext ctx) async {

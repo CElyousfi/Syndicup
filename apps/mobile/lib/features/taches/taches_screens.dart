@@ -105,11 +105,15 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
   bool _envoi = false;
 
   Future<void> _cocher(Tache x, ChecklistItem it, bool fait) async {
-    final r = await ref.read(apiClientProvider).request<dynamic>('PATCH', '/taches/${x.id}/checklist', body: {'item_id': it.id, 'fait': fait});
-    if (!mounted) return;
-    if (r is ApiFail) { showApiError(context, r); return; }
-    ref.invalidate(tacheProvider(widget.id));
-    ref.invalidate(mesTachesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).request<dynamic>('PATCH', '/taches/${x.id}/checklist', body: {'item_id': it.id, 'fait': fait}),
+      busyKey: 'tache-checklist:${x.id}:${it.id}',
+      onSuccess: (_) {
+        ref.invalidate(tacheProvider(widget.id));
+        ref.invalidate(mesTachesProvider);
+      },
+    );
   }
 
   Future<void> _changerStatut(Tache x, bool syndic) async {

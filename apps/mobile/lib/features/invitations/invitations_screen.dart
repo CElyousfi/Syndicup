@@ -86,38 +86,41 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
             CodeCard(invitation: i),
             const SizedBox(height: 16),
             if (i.statut == 'EXPIREE' || i.statut == 'EN_ATTENTE')
-              SuButton(
+              BusyBuilder('invitation-regenerer:${i.id}', builder: (_, busy) => SuButton(
                 variant: SuButtonVariant.secondary,
-                onPressed: () async {
-                  final r = await ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j)));
-                  if (!sheet.mounted) return;
-                  if (r is ApiFail) showApiError(sheet, (r as ApiFail)); else {
+                loading: busy,
+                onPressed: () => runAction<Invitation>(
+                  sheet,
+                  () => ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j))),
+                  busyKey: 'invitation-regenerer:${i.id}',
+                  onSuccess: (_) {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.invitations.regeneree);
-                  }
-                },
+                  },
+                ),
                 icon: Icons.refresh_rounded,
                 label: d.invitations.regenerer,
-              ),
+              )),
             if (i.statut == 'EN_ATTENTE') const SizedBox(height: 8),
             if (i.statut == 'EN_ATTENTE')
-              SuButton(
+              BusyBuilder('invitation-annuler:${i.id}', builder: (_, busy) => SuButton(
                 variant: SuButtonVariant.ghost,
-                onPressed: () async {
-                  final ok = await confirmDialog(sheet, title: d.gestion.invitationAnnuler, body: d.gestion.invitationAnnulerAide, danger: true);
-                  if (!ok) return;
-                  final r = await ref.read(apiClientProvider).delete<dynamic>('/invitations/${i.id}');
-                  if (!sheet.mounted) return;
-                  if (r is ApiFail) showApiError(sheet, r); else {
+                loading: busy,
+                onPressed: () => runAction<dynamic>(
+                  sheet,
+                  () => ref.read(apiClientProvider).delete<dynamic>('/invitations/${i.id}'),
+                  busyKey: 'invitation-annuler:${i.id}',
+                  confirm: ActionConfirm(title: d.gestion.invitationAnnuler, body: d.gestion.invitationAnnulerAide, danger: true),
+                  onSuccess: (_) {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.gestion.invitationAnnulee);
-                  }
-                },
+                  },
+                ),
                 style: TextButton.styleFrom(foregroundColor: SuColors.danger),
                 label: d.gestion.invitationAnnuler,
-              ),
+              )),
           ],
         ),
       ),

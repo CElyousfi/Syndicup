@@ -557,7 +557,7 @@ class IncidentDetailScreen extends ConsumerWidget {
                         d.parkings.titre,
                         valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? Align(alignment: AlignmentDirectional.centerEnd, child: LinkButton(d.parkings.titre, onTap: () => context.push('/parkings/${i.emplacementId}'))) : null,
                       ),
-                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: SuButton(label: d.incidents.notifierVehicule, icon: Icons.campaign_rounded, variant: SuButtonVariant.secondary, onPressed: () => notifierVehiculeGenant(context, ref, i))),
+                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: BusyBuilder('incident-notifier-vehicule:${i.id}', builder: (_, busy) => SuButton(label: d.incidents.notifierVehicule, icon: Icons.campaign_rounded, variant: SuButtonVariant.secondary, loading: busy, onPressed: () => notifierVehiculeGenant(context, ref, i)))),
                   ]),
                 ),
               ],
@@ -779,11 +779,15 @@ class PrestatairesScreen extends ConsumerWidget {
                 subtitle: '${p.specialite} · ${p.contact}',
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   StatusBadge(p.actif ? d.incidents.actif : d.incidents.inactif, variant: p.actif ? BadgeVariant.ok : BadgeVariant.outline, small: true),
-                  if (ctx.isGestion) SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () async {
-                    final r = await ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif});
-                    if (!context.mounted) return;
-                    if (r is ApiFail) showApiError(context, r); else ref.invalidate(prestatairesProvider);
-                  }),
+                  if (ctx.isGestion)
+                    BusyBuilder('prestataire-actif:${p.id}', builder: (_, busy) => busy
+                        ? const Padding(padding: EdgeInsets.all(12), child: LoadingOrb(size: 9))
+                        : SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () => runAction<dynamic>(
+                              context,
+                              () => ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif}),
+                              busyKey: 'prestataire-actif:${p.id}',
+                              onSuccess: (_) => ref.invalidate(prestatairesProvider),
+                            ))),
                 ]),
               ),
           ]);

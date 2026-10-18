@@ -347,6 +347,7 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
   bool _busy = false;
 
   Future<void> _decider(String action, {String? motif}) async {
+    if (_busy) return;
     setState(() => _busy = true);
     final body = motif == null ? <String, Object?>{} : <String, Object?>{'motif_refus': motif};
     final intent = 'conge-$action:${widget.conge.id}';
