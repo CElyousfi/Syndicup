@@ -7,6 +7,7 @@ import { TOAST_EVENT, type ToastInput } from "../../lib/toast";
 import { haptic } from "../../lib/feel/haptics";
 import { marquerLueEnFond } from "../../lib/notifications-link";
 import { IconBell, IconCheck, IconAlert, IconX } from "../ui/icons";
+import { Button } from "../ui/button";
 
 interface ToastItem extends ToastInput {
   id: number;
@@ -109,6 +110,29 @@ export function Toaster() {
                 </span>
               ) : null}
             </span>
+            {t.action ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="primary"
+                className="shrink-0 self-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (glisse.current) return;
+                  const action = t.action;
+                  fermer(t.id);
+                  // L'appelant gère ses erreurs métier (toast d'échec) ; une exception
+                  // imprévue est remontée, jamais avalée.
+                  if (action) {
+                    void Promise.resolve(action.onClick()).catch((err: unknown) => {
+                      console.error("toast action", err);
+                    });
+                  }
+                }}
+              >
+                {t.action.label}
+              </Button>
+            ) : null}
             <button
               type="button"
               onClick={(e) => {

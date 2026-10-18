@@ -93,6 +93,16 @@ export async function archiverAnnonce(_prev: FormState, fd: FormData): Promise<F
   return success();
 }
 
+/** « Annuler » d'un archivage (toast) — restaure l'état d'avant ; idempotent côté API. */
+export async function desarchiverAnnonce(_prev: FormState, fd: FormData): Promise<FormState> {
+  const locale = champ(fd, "locale");
+  const id = champ(fd, "annonce_id");
+  const res = await apiFetch<AnnonceDetail>(`/annonces/${id}/desarchiver`, { method: "POST", body: {} });
+  if (!res.ok) return fromApiError(res);
+  revalider(locale, `${BASE}/${id}`);
+  return success();
+}
+
 export async function supprimerAnnonce(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const id = champ(fd, "annonce_id");

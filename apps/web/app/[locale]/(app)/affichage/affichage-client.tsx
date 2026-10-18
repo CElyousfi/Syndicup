@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Modal } from "../../../../components/ui/modal";
 import { IrreversibleNotice } from "../../../../components/ui/irreversible-notice";
 import { Field, Input, Select, Textarea } from "../../../../components/ui/field";
@@ -12,12 +12,13 @@ import { Banner } from "../../../../components/ui/banner";
 import { IconCircle } from "../../../../components/ui/color-icons";
 import { ProgressBar } from "../../../../components/ui/progress";
 import { Figure } from "../../../../components/ui/amount";
-import { IDLE, fieldError } from "../../../../lib/forms";
+import { IDLE, fieldError, type FormState } from "../../../../lib/forms";
+import { toast } from "../../../../lib/toast";
 import { celebrate } from "../../../../lib/success";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { AnnonceDetail, AudienceCommunication, CategorieAnnonce, ContactUtile, PreferencesNotification, Sondage } from "../../../../lib/api/types";
 import { IconPlus } from "../../../../components/ui/icons";
-import { archiverAnnonce, cloreSondage, commenter, creerAnnonce, creerSondage, enregistrerContact, enregistrerPreferences, marquerLue, masquerCommentaire, modifierAnnonce, ouvrirSondage, publierAnnonce, repondreSondage, supprimerAnnonce, supprimerContact, supprimerSondage } from "./actions";
+import { archiverAnnonce, cloreSondage, commenter, creerAnnonce, desarchiverAnnonce, creerSondage, enregistrerContact, enregistrerPreferences, marquerLue, masquerCommentaire, modifierAnnonce, ouvrirSondage, publierAnnonce, repondreSondage, supprimerAnnonce, supprimerContact, supprimerSondage } from "./actions";
 
 const CATEGORIES: CategorieAnnonce[] = ["INFORMATION", "TRAVAUX", "COUPURE", "SECURITE", "URGENCE", "AG", "CONVIVIALITE", "REGLEMENT"];
 const AUDIENCES: AudienceCommunication[] = ["TOUS", "PROPRIETAIRES", "OCCUPANTS", "CONSEIL", "BATIMENT"];
@@ -127,25 +128,42 @@ export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Lo
   );
 }
 
+/**
+ * Archiver = action réversible : pas de modale, archivage immédiat puis toast « Annuler » (~6 s)
+ * qui appelle POST /annonces/{id}/desarchiver (état d'avant restauré, aucune nouvelle diffusion).
+ */
 export function ArchiverModal({ dict, locale, annonce }: { dict: Dict; locale: Locale; annonce: AnnonceDetail }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(archiverAnnonce, IDLE);
+  const [pending, startTransition] = useTransition();
   const c = dict.communication;
-  return (
-    <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>{c.archiver}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={c.archiver} subtitle={annonce.titre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={c.archivee} onClose={() => setOpen(false)} /> : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} /><input type="hidden" name="annonce_id" value={annonce.id} />
-            <IrreversibleNotice>{c.archiverCorps}</IrreversibleNotice>
-            <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={c.archiver} danger />
-          </form>
-        )}
-      </Modal>
-    </>
-  );
+  const formulaire = () => {
+    const fd = new FormData();
+    fd.set("locale", locale);
+    fd.set("annonce_id", annonce.id);
+    return fd;
+  };
+  const echec = (s: FormState) => {
+    if (s.status === "error") toast({ titre: s.title ?? s.message, corps: s.title ? s.message : undefined, tone: "danger" });
+  };
+  const archiver = () =>
+    startTransition(async () => {
+      const s = await archiverAnnonce(IDLE, formulaire());
+      if (s.status !== "success") return echec(s);
+      toast({
+        titre: c.archivee,
+        corps: annonce.titre,
+        tone: "ok",
+        duree: 6000,
+        action: {
+          label: dict.common.undo,
+          onClick: async () => {
+            const r = await desarchiverAnnonce(IDLE, formulaire());
+            if (r.status === "success") toast({ titre: c.desarchivee, tone: "ok", duree: 3500 });
+            else echec(r);
+          },
+        },
+      });
+    });
+  return <Button variant="secondary" onClick={archiver} disabled={pending} aria-busy={pending}>{c.archiver}</Button>;
 }
 
 export function SupprimerBouton({ dict, locale, id, sondage }: { dict: Dict; locale: Locale; id: string; sondage?: boolean }) {

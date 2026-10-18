@@ -10,6 +10,8 @@ export const fr = {
   },
 
   common: {
+    /** Bouton « Annuler » d'un toast après une action réversible (≠ cancel d'une modale). */
+    undo: "Annuler",
     save: "Enregistrer",
     actions: "Actions",
     cancel: "Annuler",
@@ -2250,6 +2252,7 @@ export const fr = {
     archiver: "Archiver",
     archiverCorps: "L'annonce quitte le tableau d'affichage ; l'historique et les lectures sont conservés.",
     archivee: "Annonce archivée.",
+    desarchivee: "Archivage annulé : l'annonce est de retour sur le tableau.",
     supprimer: "Supprimer le brouillon",
     supprimee: "Brouillon supprimé.",
     enregistree: "Annonce enregistrée.",

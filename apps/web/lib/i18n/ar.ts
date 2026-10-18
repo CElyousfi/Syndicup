@@ -13,6 +13,8 @@ export const ar: DeepDict<typeof fr> = {
   },
 
   common: {
+    /** Bouton « Annuler » d'un toast après une action réversible (≠ cancel d'une modale). */
+    undo: "تراجع",
     save: "حفظ",
     actions: "إجراءات",
     cancel: "إلغاء",
@@ -2236,6 +2238,7 @@ export const ar: DeepDict<typeof fr> = {
     archiver: "أرشفة",
     archiverCorps: "يغادر الإعلان لوحة الإعلانات؛ يُحتفظ بالسجل والقراءات.",
     archivee: "تمت أرشفة الإعلان.",
+    desarchivee: "تم التراجع عن الأرشفة: عاد الإعلان إلى لوحة الإعلانات.",
     supprimer: "حذف المسودة",
     supprimee: "حُذفت المسودة.",
     enregistree: "تم حفظ الإعلان.",
