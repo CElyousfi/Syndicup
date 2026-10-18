@@ -69,6 +69,18 @@ components:
       schema:
         type: string
         format: uuid
+    IdempotencyKeyOptionnelle:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Acceptée mais OPTIONNELLE : des clients en production (anciennes builds mobiles, Server
+        Actions web) ne l'envoient pas encore. Présente → même clé + même payload = réponse rejouée
+        (meta.rejouee), même clé + payload différent = 409 CONFLICT ; présente mais invalide (non
+        UUID) = 400 VALIDATION_ERROR. Absente → exécution sans protection de transport.
+      schema:
+        type: string
+        format: uuid
     Page:
       name: page
       in: query
@@ -5301,7 +5313,9 @@ paths:
         AUTORISE|REFUSE) ; le gardien peut clôturer en relai ses propres enregistrements. Le
         gardien reçoit la réponse en notification (VISITE_REPONSE). 404 (et non 403) si la
         visite appartient à un autre lot — la RLS cache la ligne (anti-énumération).
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+        Idempotency-Key optionnelle (anciennes builds mobiles) : un retry réseau avec la même clé
+        rejoue la réponse au lieu d'un 422.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -5513,8 +5527,14 @@ paths:
     post:
       tags: [Documents]
       summary: Rôle autorisé — syndic.
+      description: >
+        `storage_path` doit être le chemin renvoyé par POST /documents/upload-url : il commence
+        par `<copropriete_id>/documents/` (tenant de l'appelant), sans segment vide, `.` ni `..` —
+        sinon 400 VALIDATION_ERROR et aucune ligne n'est créée.
       responses:
         "201": { description: Créé. }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /documents/upload-url:
     post:
@@ -7119,8 +7139,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Personnel RH]
-      summary: "Modifie le dossier RH (syndic) : poste, contrat, dates, salaire, CNSS, contact d'urgence, horaires, notes, statut (PARTI libère la loge), logement, contrat de travail signé. Audit sans PII sensible."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Modifie le dossier RH (syndic) : poste, contrat, dates, salaire, CNSS, contact d'urgence, horaires, notes, statut (PARTI libère la loge), logement, contrat de travail signé. Audit sans PII sensible. Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7201,8 +7221,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: "Prépare (ou recalcule) la fiche BROUILLON d'une période (syndic) : calcul depuis les paramètres de paie s'ils existent, sinon brouillon « brut seul » (non validable)."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Prépare (ou recalcule) la fiche BROUILLON d'une période (syndic) : calcul depuis les paramètres de paie s'ils existent, sinon brouillon « brut seul » (non validable). Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7216,10 +7236,11 @@ paths:
   /personnel/{id}/fiches-paie/{fid}:
     patch:
       tags: [Personnel RH]
-      summary: Recalcule un brouillon (brut, primes, retenues, jours d'absence).
+      summary: Recalcule un brouillon (brut, primes, retenues, jours d'absence). Idempotency-Key optionnelle.
       parameters:
         - $ref: "#/components/parameters/LotId"
         - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKeyOptionnelle"
       requestBody:
         required: true
         content:
@@ -7370,8 +7391,8 @@ paths:
   /personnel/conges/{cid}/annuler:
     post:
       tags: [Personnel RH]
-      summary: Annule — l'employé sa demande en attente ; le syndic une demande ou un congé approuvé futur (présences retirées).
-      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }]
+      summary: Annule — l'employé sa demande en attente ; le syndic une demande ou un congé approuvé futur (présences retirées). Idempotency-Key optionnelle (envoyée par le mobile, pas encore par le web).
+      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -7396,8 +7417,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: "Saisie / correction en masse par date (upsert personnel + date) — syndic pour tous, l'employé pour lui-même."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Saisie / correction en masse par date (upsert personnel + date) — syndic pour tous, l'employé pour lui-même. Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7448,8 +7469,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: Évalue (note 1–5, période) — une évaluation par évaluateur et période (upsert).
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: Évalue (note 1–5, période) — une évaluation par évaluateur et période (upsert). Idempotency-Key optionnelle.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7474,8 +7495,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     patch:
       tags: [Personnel RH]
-      summary: "Remplace les paramètres de paie (syndic, audité PAIE_PARAMETRES_MODIFIES) — `parametres_paie: null` = non configurés (les validations de paie sont alors refusées)."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Remplace les paramètres de paie (syndic, audité PAIE_PARAMETRES_MODIFIES) — `parametres_paie: null` = non configurés (les validations de paie sont alors refusées). Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7571,6 +7592,21 @@ paths:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/{id}/desarchiver:
+    post:
+      tags: [Communication]
+      summary: "Annuler un archivage (toast « Annuler ») — mêmes droits que l'archivage (syndic / conseil)."
+      description: |
+        ⚠️ Transition ARCHIVEE → statut précédent ajoutée et signalée (domain-reference 18.1).
+        Restaure PUBLIEE si l'annonce avait été publiée (`publie_le` passé), sinon BROUILLON ; l'épingle
+        est restaurée depuis le dernier audit ANNONCE_ARCHIVEE. Aucune notification n'est renvoyée.
+        Idempotent naturellement : une annonce non archivée est renvoyée telle quelle (200, sans audit).
+        Audit ANNONCE_DESARCHIVEE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK — l'annonce dans son état restauré (même forme que GET /annonces/{id})." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /annonces/{id}/lu:
     post:
       tags: [Communication]
