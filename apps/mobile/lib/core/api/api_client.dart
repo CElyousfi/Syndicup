@@ -126,7 +126,10 @@ class ApiClient {
     if (status >= 400 || payload.containsKey('error')) {
       // Jeton expiré : un seul rafraîchissement silencieux puis rejeu de l'appel.
       if (status == 401 && auth && accessToken == null && !retried && _tokens.refreshToken != null) {
-        final refreshed = await refreshSession();
+        // Jeton déjà renouvelé par un appel parallèle depuis l'envoi de celui-ci : rejouer suffit.
+        final courant = _tokens.accessToken;
+        final dejaRenouvele = courant != null && headers['Authorization'] != 'Bearer $courant';
+        final refreshed = dejaRenouvele || await refreshSession();
         if (refreshed) {
           return request<T>(method, path,
               body: body, query: query, idempotent: idempotent, idempotencyKey: headers['Idempotency-Key'],
@@ -180,7 +183,7 @@ class ApiClient {
       await _tokens.onTokensRefreshed(res.data);
       return true;
     }
-    if (res is ApiFail<Map<String, dynamic>> && (res.status == 401 || res.status == 400)) {
+    if (res is ApiFail<Map<String, dynamic>> && res.status == 401) {
       // Fin de session définitive : prévenir AVANT de vider la session (la coque lit encore le chemin).
       onSessionExpired?.call();
       await _tokens.onSessionExpired();

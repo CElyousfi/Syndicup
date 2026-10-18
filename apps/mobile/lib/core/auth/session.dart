@@ -5,6 +5,7 @@ import '../api/api_client.dart';
 import '../api/models.dart';
 import '../api/swr.dart';
 import '../home_widgets/home_widgets.dart';
+import 'session_events.dart';
 
 /// Session locale : jetons Supabase (rotatifs) + copropriété active. Stockés dans le trousseau
 /// (Keychain / EncryptedSharedPreferences), jamais en clair.
@@ -123,5 +124,9 @@ class SessionController extends Notifier<Session?> implements TokenSource {
 final sessionProvider = NotifierProvider<SessionController, Session?>(SessionController.new);
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref.read(sessionProvider.notifier));
+  return ApiClient(ref.read(sessionProvider.notifier))
+    // Fin de session : le routeur renvoie à la connexion en gardant l'écran en cours (router.dart).
+    ..onSessionExpired = SessionEvents.instance.markExpired
+    // 402 : accès de la résidence suspendu — toast dans la coque (app_shell.dart).
+    ..onPaymentRequired = SessionEvents.instance.paymentRequired;
 });

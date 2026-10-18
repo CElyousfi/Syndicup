@@ -7,6 +7,7 @@ import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/auth/biometric_lock.dart';
 import '../../core/auth/session.dart';
+import '../../core/auth/session_events.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
@@ -17,8 +18,11 @@ import 'welcome_screen.dart';
 /// Après la première connexion réussie, propose d'activer Face ID / l'empreinte.
 /// `next` : chemin de retour (ex. /invitation/{code}).
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({super.key, this.next});
+  const LoginScreen({super.key, this.next, this.expired = false});
   final String? next;
+
+  /// Arrivée après une fin de session : on le dit (toast) au lieu d'un retour muet à la connexion.
+  final bool expired;
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
@@ -30,6 +34,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _showPwd = false;
   ApiFail? _fail;
 
+  String? _emailError;
+  String? _pwdError;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.expired) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) showToast(context, context.mdict.ux.sessionExpired);
+      });
+    }
+  }
+
   @override
   void dispose() {
     _email.dispose();
@@ -38,8 +55,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    if (_email.text.trim().isEmpty || _pwd.text.length < 8) return;
+    if (_loading) return;
+    final ux = context.mdict.ux;
+    final email = _email.text.trim();
+    // Saisie incomplète : on le dit sous le champ (secousse + warning()), jamais un bouton muet.
+    final emailError = email.isEmpty ? ux.emailRequired : (emailValide(email) ? null : ux.emailInvalid);
+    final pwdError = _pwd.text.length < 8 ? ux.passwordShort : null;
+    if (emailError != null || pwdError != null) {
+      setState(() {
+        _emailError = emailError;
+        _pwdError = pwdError;
+      });
+      return;
+    }
     setState(() {
+      _emailError = null;
+      _pwdError = null;
       _loading = true;
       _fail = null;
     });
@@ -52,6 +83,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (!mounted) return;
     switch (res) {
       case ApiOk<SessionTokens>(:final data):
+        // Chemin de retour posé AVANT la session : le routeur y va dès que le contexte est prêt.
+        final next = widget.next;
+        if (next != null && next.startsWith('/') && !next.startsWith('//')) SessionEvents.instance.rememberReturn(next);
         await ref.read(sessionProvider.notifier).signIn(data);
         if (!mounted) return;
         await _proposeBiometrics();
@@ -101,7 +135,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 autofocus: true,
                 textInputAction: TextInputAction.next,
                 autofillHints: const [AutofillHints.email],
-                error: fieldError(_fail, 'email'),
+                error: _emailError ?? fieldError(_fail, 'email'),
+                onChanged: (_) {
+                  if (_emailError != null) setState(() => _emailError = null);
+                },
               ),
               const SizedBox(height: 16),
               SuField(
@@ -112,7 +149,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _login(),
                 autofillHints: const [AutofillHints.password],
-                error: invalid ? d.auth.invalidCredentials : fieldError(_fail, 'mot_de_passe'),
+                error: _pwdError ?? (invalid ? d.auth.invalidCredentials : fieldError(_fail, 'mot_de_passe')),
+                onChanged: (_) {
+                  if (_pwdError != null) setState(() => _pwdError = null);
+                },
                 suffix: SuIconButton(
                   icon: _showPwd ? Icons.visibility_off_rounded : Icons.visibility_rounded,
                   iconSize: 20,
@@ -172,10 +212,19 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     super.dispose();
   }
 
+  String? _emailError;
+
   Future<void> _send() async {
+    if (_loading) return;
     final email = _email.text.trim().toLowerCase();
-    if (!email.contains('@')) return;
+    final ux = context.mdict.ux;
+    final err = email.isEmpty ? ux.emailRequired : (emailValide(email) ? null : ux.emailInvalid);
+    if (err != null) {
+      setState(() => _emailError = err);
+      return;
+    }
     setState(() {
+      _emailError = null;
       _loading = true;
       _fail = null;
     });
@@ -227,7 +276,10 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => _send(),
           autofillHints: const [AutofillHints.email],
-          error: fieldError(_fail, 'email'),
+          error: _emailError ?? fieldError(_fail, 'email'),
+          onChanged: (_) {
+            if (_emailError != null) setState(() => _emailError = null);
+          },
         ),
         const SizedBox(height: 16),
         FormError(_fail),
@@ -237,3 +289,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     );
   }
 }
+
+/// Adresse e-mail plausible (contrôle de forme seulement — le serveur reste juge).
+bool emailValide(String email) => RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]{2,}$').hasMatch(email.trim());
