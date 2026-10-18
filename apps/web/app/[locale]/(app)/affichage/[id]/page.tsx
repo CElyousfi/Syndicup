@@ -1,7 +1,6 @@
 /** Détail d'une annonce (M21) — contenu, pièces jointes, commentaires modérables, accusé de lecture ; gestion : publier / archiver / lectures. */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { AnnonceDetail, LecturesAnnonce } from "../../../../../lib/api/types";
@@ -20,6 +19,7 @@ import { annonceVariant, categorieAnnonceVariant } from "../../../../../lib/stat
 import { Markdown } from "../markdown";
 import { ArchiverModal, CommentaireForm, MarquerLu, MasquerBouton, PublierModal, SupprimerBouton } from "../affichage-client";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -36,7 +36,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
   const gestion = ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"].some((r) => ctx.roles.includes(r as never));
   const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<AnnonceDetail>(`/annonces/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const a = res.data;
   const lectures = gestion && a.statut !== "BROUILLON" ? await apiFetch<LecturesAnnonce>(`/annonces/${id}/lectures`) : null;
   const p = (path: string) => `/${locale}${path}`;

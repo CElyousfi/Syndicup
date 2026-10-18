@@ -17,6 +17,8 @@ import { budgetVariant } from "../../../../../lib/status";
 import { CreerBudgetModal, ModifierBudgetModal, ActiverBudgetModal } from "./budget-modals";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -85,7 +87,7 @@ export default async function BudgetsPage({
         </Banner>
       ) : null}
 
-      {budgets.length === 0 ? (
+      {!budgetsRes.ok ? <LoadError error={failureOf(budgetsRes)} locale={ctx.locale} /> : budgets.length === 0 ? (
         <EmptyState
           title={f.aucunBudget}
           illustration="empty-appels"

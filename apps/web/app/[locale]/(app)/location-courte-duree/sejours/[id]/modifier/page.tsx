@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../../lib/api/client";
 import type { LcdSejour } from "../../../../../../../lib/api/types";
@@ -7,6 +7,7 @@ import { getDict, isLocale } from "../../../../../../../lib/i18n";
 import { vueLcd } from "../../../../../../../lib/lcd";
 import { PageHeader, BackLink } from "../../../../../../../components/page-header";
 import { SejourForm } from "../../sejour-form";
+import { failWith } from "../../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({
   params,
@@ -32,7 +33,7 @@ export default async function ModifierSejourPage({
   const { dict } = ctx;
 
   const sejourRes = await apiFetch<LcdSejour>(`/lcd/sejours/${id}`);
-  if (!sejourRes.ok) notFound();
+  if (!sejourRes.ok) return failWith(sejourRes, ctx.locale);
   if (sejourRes.data.statut !== "PREVU") redirect(`/${locale}/location-courte-duree/sejours/${id}`);
 
   return (

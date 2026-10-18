@@ -1,6 +1,5 @@
 /** Sondage consultatif (M21) — répondre, résultats agrégés (jamais un répondant), ouverture / clôture (gestion). */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Sondage } from "../../../../../../lib/api/types";
@@ -13,6 +12,7 @@ import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { sondageVariant } from "../../../../../../lib/status";
 import { Markdown } from "../../markdown";
 import { RepondreForm, ResultatsSondage, SondageTransitionModal, SupprimerBouton } from "../../affichage-client";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -28,7 +28,7 @@ export default async function SondagePage({ params, searchParams }: { params: Pr
   const e = dict.enumsCommunication;
   const gestion = ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<Sondage>(`/sondages/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const s = res.data;
   const p = (path: string) => `/${locale}${path}`;
   const ouvertEncore = s.statut === "OUVERT" && new Date(s.dateFin).getTime() > Date.now();

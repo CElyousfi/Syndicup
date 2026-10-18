@@ -15,6 +15,8 @@ import { visiteVariant } from "../../../../lib/status";
 import { EnregistrerVisiteModal, RepondreVisiteForm } from "./visite-actions";
 import { PlaceVisiteurModal } from "../parkings/parkings-client";
 import type { Emplacement } from "../../../../lib/api/types";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -145,7 +147,7 @@ export default async function VisitesPage({
         </div>
       ) : null}
 
-      {visites.length === 0 ? (
+      {!visitesRes.ok ? <LoadError error={failureOf(visitesRes)} locale={ctx.locale} /> : visites.length === 0 ? (
         <EmptyState
           title={v.aucuneVisite}
           hint={gardien || gestion ? v.aucuneVisiteAide : undefined}

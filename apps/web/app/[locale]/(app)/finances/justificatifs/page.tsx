@@ -17,6 +17,7 @@ import { DeclarerForm } from "./declarer-form";
 import { comptesBancaires, justificatifs, lotsEtLignesOuvertes } from "./data";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
 
 const ONGLETS = ["EN_ATTENTE", "VALIDE", "REJETE", "TOUS"] as const;
 
@@ -38,11 +39,13 @@ export default async function JustificatifsPage({ params, searchParams }: { para
   const statut = (ONGLETS as readonly string[]).includes(sp.statut ?? "") && sp.statut !== "TOUS" ? sp.statut : sp.statut === "TOUS" ? undefined : "EN_ATTENTE";
   const p = (path: string) => `/${locale}${path}`;
   const coproId = ctx.coproprieteId ?? "";
-  const [{ rows, parStatut }, comptes, refs] = await Promise.all([justificatifs(statut), comptesBancaires(ctx.coproprieteId), gestion ? lotsEtLignesOuvertes() : Promise.resolve(null)]);
+  const [{ rows, parStatut, erreur }, comptesRes, refs] = await Promise.all([justificatifs(statut), comptesBancaires(ctx.coproprieteId), gestion ? lotsEtLignesOuvertes() : Promise.resolve(null)]);
+  const comptes = comptesRes.ok ? comptesRes.data : [];
 
   return (
     <div className="page-root">
       <PageHeader title={j.titre} subtitle={j.subtitle} actions={gestion && coproId ? <ComptesModal dict={dict} locale={ctx.locale} coproprieteId={coproId} comptes={comptes} /> : undefined} />
+      {erreur ? <LoadError error={erreur} locale={ctx.locale} /> : <>
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
         <StatCard icon={<CAlert />} tone={(parStatut.EN_ATTENTE?.nb ?? 0) > 0 ? "warn" : "sage"} label={e.statutJustificatif.EN_ATTENTE} value={String(parStatut.EN_ATTENTE?.nb ?? 0)} hint={parStatut.EN_ATTENTE ? formatMAD(parStatut.EN_ATTENTE.montant, ctx.locale) : undefined} />
         <StatCard icon={<CMoneyBag />} tone="sage" label={e.statutJustificatif.VALIDE} value={String(parStatut.VALIDE?.nb ?? 0)} hint={parStatut.VALIDE ? formatMAD(parStatut.VALIDE.montant, ctx.locale) : undefined} />
@@ -69,11 +72,12 @@ export default async function JustificatifsPage({ params, searchParams }: { para
           </Table>
         </TableCard>
       )}
+      </>}
       {gestion && coproId ? (
         <div className="mt-10 grid gap-6 lg:grid-cols-2">
           <Card>
             <SectionHeader title={j.comptesEnregistres} subtitle={dict.depenses.ribAfficherAide} />
-            {comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompteAide}</p> : (
+            {!comptesRes.ok ? <LoadError error={comptesRes.error} locale={ctx.locale} variant="inline" className="mt-4" /> : comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompteAide}</p> : (
               <ul className="mt-4 space-y-2">
                 {comptes.map((c) => (
                   <li key={c.index} className="flex flex-wrap items-center justify-between gap-2 rounded-[20px] bg-surface px-4 py-3">
@@ -84,7 +88,7 @@ export default async function JustificatifsPage({ params, searchParams }: { para
               </ul>
             )}
           </Card>
-          {refs ? <DeclarerForm dict={dict} locale={ctx.locale} lots={refs.lots} lignes={refs.lignes} comptes={comptes} mode="declarer" auNom /> : null}
+          {refs?.erreur ? <LoadError error={refs.erreur} locale={ctx.locale} variant="inline" /> : refs ? <DeclarerForm dict={dict} locale={ctx.locale} lots={refs.lots} lignes={refs.lignes} comptes={comptes} mode="declarer" auNom /> : null}
         </div>
       ) : null}
     </div>

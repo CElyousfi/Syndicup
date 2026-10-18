@@ -1,7 +1,6 @@
 /** Détail d'un contrat (M19) — cycle de vie, échéancier + actions, documents (visionneuse), police d'assurance, dépenses liées, journal. */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { ContratDetail } from "../../../../../lib/api/types";
@@ -18,6 +17,7 @@ import { contratVariant, depenseVariant, echeanceVariant } from "../../../../../
 import { ActiverModal, SuspendreModal, ResilierModal, RegenererBouton, AjouterEcheanceModal, EcheanceActions } from "../contrat-actions";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { Amount } from "../../../../../components/ui/amount";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -34,7 +34,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
   const e = dict.enumsContrats;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<ContratDetail>(`/contrats/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const p = (path: string) => `/${locale}${path}`;
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };

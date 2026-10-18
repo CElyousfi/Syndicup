@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { ContratDetail } from "../../../../../../lib/api/types";
@@ -7,6 +6,7 @@ import { getDict, isLocale } from "../../../../../../lib/i18n";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { ContratForm } from "../../contrat-form";
 import { referencesContrat } from "../../references";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -19,7 +19,7 @@ export default async function ModifierContratPage({ params }: { params: Promise<
   exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN"]);
   const { dict } = ctx;
   const [res, refs] = await Promise.all([apiFetch<ContratDetail>(`/contrats/${id}`), referencesContrat(dict, ctx.locale, ctx.coproprieteId)]);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   return (
     <div className="page-root mx-auto max-w-3xl">
       <PageHeader back={<BackLink href={`/${locale}/contrats/${id}`} label={res.data.libelle} />} title={dict.contrats.modifier} />

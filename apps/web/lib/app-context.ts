@@ -6,6 +6,8 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 import { apiFetch } from "./api/client";
 import { readSession } from "./session";
+import { loginPath } from "./api/or-fail";
+import { currentPathWithoutLocale } from "./request-info";
 import { getDict, isLocale, type Dict, type Locale } from "./i18n";
 import type { Cabinet, Copropriete, Profil, RoleType } from "./api/types";
 
@@ -63,7 +65,8 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
     // PERDRE LA SESSION à quelqu'un qui est pourtant bien connecté — jamais une conséquence de
     // notre panne. Toute autre erreur remonte à app/[locale]/error.tsx (page « Réessayer »
     // générique), qui ne touche ni aux cookies ni à la session.
-    if (me.error.code === "UNAUTHENTICATED") redirect(`/${locale}/connexion`);
+    // Retour exact sur la page demandée après reconnexion (`?next=`).
+    if (me.error.code === "UNAUTHENTICATED") redirect(loginPath(locale, await currentPathWithoutLocale()));
     throw new Error(`Profil indisponible (${me.error.code} ${me.status}) : ${me.error.message}`);
   }
   if (me.data.statut_compte === "SUSPENDU") redirect(`/${locale}/compte/suspendu`);
@@ -110,9 +113,13 @@ export const getAppContext = cache(async (localeRaw: string): Promise<AppContext
   };
 });
 
-/** Garde de page : 403 visuel si le rôle n'est pas dans la liste (le serveur API re-vérifie). */
+/**
+ * Garde de page : rôle hors liste → tableau de bord, avec `?refus=1` pour que la coque dise
+ * POURQUOI (« Vous n'avez pas accès à cette page ») au lieu d'un retour silencieux. Le serveur
+ * API re-vérifie de toute façon chaque appel.
+ */
 export function exigerRole(ctx: AppContext, autorises: RoleType[]): void {
   if (!autorises.some((r) => ctx.roles.includes(r))) {
-    redirect(`/${ctx.locale}/tableau-de-bord`);
+    redirect(`/${ctx.locale}/tableau-de-bord?refus=1`);
   }
 }

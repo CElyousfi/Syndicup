@@ -332,9 +332,7 @@ export function RevoquerForm({
       <SubmitButton variant="dangerGhost" size="sm">
         {dict.ag.revoquer}
       </SubmitButton>
-      {state.status === "error" ? (
-        <p className="text-[12px] text-danger">{state.message}</p>
-      ) : null}
+      <FormAlert state={state} compact />
     </form>
   );
 }

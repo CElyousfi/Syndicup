@@ -19,6 +19,8 @@ import { PosterCard } from "../../../../components/ui/poster-card";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { LiveList } from "../../../../components/ui/live-list";
 import { annonceVariant, categorieAnnonceVariant, sondageVariant } from "../../../../lib/status";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 const CATEGORIES: CategorieAnnonce[] = ["INFORMATION", "TRAVAUX", "COUPURE", "SECURITE", "URGENCE", "AG", "CONVIVIALITE", "REGLEMENT"];
 
@@ -94,7 +96,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
               <Puce href={qs({ categorie, statut: "ARCHIVEE" })} actif={statut === "ARCHIVEE"} petite>{c.archivees}</Puce>
             </div>
           ) : null}
-          {annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
+          {!annRes.ok ? <LoadError error={failureOf(annRes)} locale={ctx.locale} /> : annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
             <LiveList as="ul" className="-mx-2 space-y-1 sm:-mx-3">
               {annonces.map((a) => {
                 const nonLue = !a.lu && a.statut === "PUBLIEE";
@@ -134,7 +136,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
         <div className="min-w-0 space-y-4">
           <Card>
             <SectionHeader title={c.sondages} className="mb-3" />
-            {sondages.length === 0 ? <p className="text-[13px] text-soft">{c.aucunSondage}</p> : (
+            {!sondRes.ok ? <LoadError error={failureOf(sondRes)} locale={ctx.locale} variant="inline" /> : sondages.length === 0 ? <p className="text-[13px] text-soft">{c.aucunSondage}</p> : (
               <LiveList as="ul" className="-mx-2 space-y-1">
                 {sondages.slice(0, 6).map((s) => (
                   <li key={s.id}>
@@ -153,7 +155,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
           </Card>
           <Card>
             <SectionHeader title={c.contacts} className="mb-3" action={ctx.roles.includes("SYNDIC" as never) || ctx.roles.includes("SUPER_ADMIN" as never) ? <Link href={p("/affichage/contacts")} className="link text-[13px]">{dict.common.modify}</Link> : undefined} />
-            {contacts.length === 0 ? <p className="text-[13px] text-soft">{c.aucunContact}</p> : (
+            {!contactsRes.ok ? <LoadError error={failureOf(contactsRes)} locale={ctx.locale} variant="inline" /> : contacts.length === 0 ? <p className="text-[13px] text-soft">{c.aucunContact}</p> : (
               <ul className="space-y-2">
                 {contacts.map((x) => (
                   <li key={x.id} className="flex items-center justify-between gap-3 rounded-2xl bg-surface px-3.5 py-3">

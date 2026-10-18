@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
@@ -12,6 +11,7 @@ import { IconCircle, CBuilding } from "../../../../../components/ui/color-icons"
 import { IconChevronEnd } from "../../../../../components/ui/icons";
 import { compteVariant } from "../../../../../lib/status";
 import { AnonymiserModal } from "./anonymiser-modal";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 /** J3 — fiche membre (syndic) : profil, rattachements aux lots, zone sensible CNDP. */
 export default async function MembrePage({
@@ -29,7 +29,7 @@ export default async function MembrePage({
     apiFetch<Profil>(`/users/${id}`),
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
   ]);
-  if (!profilRes.ok) notFound();
+  if (!profilRes.ok) return failWith(profilRes, ctx.locale);
   const profil = profilRes.data;
   const lots = lotsRes.ok ? lotsRes.data : [];
 

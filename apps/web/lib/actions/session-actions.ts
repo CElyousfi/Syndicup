@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { apiFetch, apiPublic } from "../api/client";
 import { clearSession, readInvitationJeton, readSession, writeCoproprieteId, writeTokens } from "../session";
-import { fromApiError, type FormState } from "../forms";
+import { type FormState } from "../forms";
+import { fromApiError } from "../forms-server";
 import { isLocale } from "../i18n";
 import type {
   InviteAcceptResult,

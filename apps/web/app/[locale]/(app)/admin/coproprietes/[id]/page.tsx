@@ -27,6 +27,7 @@ import {
 } from "../../../../../../components/ui/color-icons";
 import { coproVariant, agVariant, invitationVariant } from "../../../../../../lib/status";
 import { InviterSyndicModal } from "./inviter-syndic-modal";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({
   params,
@@ -54,8 +55,10 @@ export default async function FicheClientPage({
     // Visibilité opérateur : qui a (ou n'a pas encore) accès — invitations de la copropriété.
     apiFetch<Invitation[]>("/invitations", { coproprieteId: id, searchParams: { limit: 50 } }),
   ]);
-  const copro = coprosRes.ok ? coprosRes.data.find((c) => c.id === id) : undefined;
-  if (!copro || !syntheseRes.ok) notFound();
+  if (!coprosRes.ok) return failWith(coprosRes, ctx.locale);
+  if (!syntheseRes.ok) return failWith(syntheseRes, ctx.locale);
+  const copro = coprosRes.data.find((c) => c.id === id);
+  if (!copro) notFound();
   const s = syntheseRes.data;
   const invitations = invitationsRes.ok ? invitationsRes.data : [];
 

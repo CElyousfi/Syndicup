@@ -45,6 +45,22 @@ export function ConnectivityBanner({ offline, online }: { offline: string; onlin
   );
 }
 
+/** N'affiche son contenu qu'en ligne (hors ligne, <ConnectivityBanner> parle seul). */
+export function OnlineOnly({ children }: { children: React.ReactNode }) {
+  const [enLigne, setEnLigne] = useState(true);
+  useEffect(() => {
+    const maj = () => setEnLigne(navigator.onLine);
+    maj();
+    window.addEventListener("online", maj);
+    window.addEventListener("offline", maj);
+    return () => {
+      window.removeEventListener("online", maj);
+      window.removeEventListener("offline", maj);
+    };
+  }, []);
+  return enLigne ? <>{children}</> : null;
+}
+
 /**
  * Révélation au défilement : les blocs de `.page-root` situés sous la ligne de flottaison glissent
  * et apparaissent la PREMIÈRE fois qu'ils approchent de l'écran — jamais rejoué. Web Animations

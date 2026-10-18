@@ -4,7 +4,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError } from "../../../../lib/forms-server";
 import type { BadgeAcces, Emplacement, EmplacementDetail, RechercheVehicule, Vehicule } from "../../../../lib/api/types";
 
 const BASE = "/parkings";

@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { apiFetch } from "../../../../lib/api/client";
 import {
-  getLots,
+  getLotsResult,
   getSynthese,
+  SYNTHESE_VIDE,
   impayesParNiveau,
   totauxGlobaux,
   totauxParAppel,
@@ -44,6 +45,8 @@ import { chargerOnboarding } from "../import/onboarding-card";
 import { IconCalendar, IconScale, IconVote, IconWrench } from "../../../../components/ui/icons";
 import { AgPoster, ChecklistTile, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
 import { Amount } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf, isRefused } from "../../../../lib/api/unwrap";
 
 export async function DashboardSyndic({
   ctx,
@@ -55,13 +58,13 @@ export async function DashboardSyndic({
   const { dict, locale } = ctx;
   const p = (path: string) => `/${locale}${path}`;
 
-  const [synthese, incidentsRes, agsRes, reservationsRes, lots, litigesRes, documentsRes] =
+  const [syntheseRes, incidentsRes, agsRes, reservationsRes, lotsRes, litigesRes, documentsRes] =
     await Promise.all([
       getSynthese(),
       apiFetch<Incident[]>("/incidents", { searchParams: { limit: 100 } }),
       apiFetch<AssembleeGenerale[]>("/ag", { searchParams: { limit: 10 } }),
       apiFetch<Reservation[]>("/reservations"),
-      getLots(),
+      getLotsResult(),
       apiFetch<Litige[]>("/litiges"),
       apiFetch<DocumentCopro[]>("/documents"),
     ]);
@@ -73,6 +76,10 @@ export async function DashboardSyndic({
   const tachesMeta = tachesRes.ok ? (tachesRes.meta as { total?: number; retard?: number }) : {};
   const tachesRetard = tachesMeta.retard ?? 0;
 
+  // Synthèse en échec : impayés et taux INDISPONIBLES — jamais « 0 MAD d'impayés, 100 % ».
+  const finErreur = syntheseRes.ok ? null : syntheseRes.error;
+  const synthese = syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE;
+  const lots = lotsRes.ok ? lotsRes.data : [];
   const appels = synthese.appels;
   const totaux = totauxParAppel(synthese);
   const { paye, impaye, taux: tauxRecouvrement } = totauxGlobaux(synthese);
@@ -98,6 +105,19 @@ export async function DashboardSyndic({
     (l) => l.statut === "OUVERT"
   );
   const totalLots = lots.length;
+  const indispo = dict.common.none;
+  // Refus PAR CONCEPTION (403, apps/api/lib/auth/permissions.ts) : la section ne concerne pas ce
+  // rôle et disparaît (SYNDIC_COMPTABLE n'a ni ag.lire, ni incidents.voir_tous_copropriete, ni
+  // litiges.lire, ni espaces_communs.lire). Seule une vraie panne affiche « indisponible ».
+  const refuse403 = (l: { ok: boolean; error?: { status: number } }) => !l.ok && l.error?.status === 403;
+  const voitFinances = !refuse403(syntheseRes);
+  const voitIncidents = !isRefused(incidentsRes);
+  const voitAg = !isRefused(agsRes);
+  const voitReservations = !isRefused(reservationsRes);
+  const voitLitiges = !isRefused(litigesRes);
+  const voitLots = !refuse403(lotsRes);
+  const voitTuileBas = lectureSeule ? voitLitiges : voitReservations;
+  const nbTuiles = [voitFinances, voitFinances, voitIncidents, voitLots].filter(Boolean).length;
 
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
@@ -130,8 +150,8 @@ export async function DashboardSyndic({
       <PageHeader
         title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />}
         subtitle={
-          lectureSeule
-            ? dict.dash.controleTitle
+          lectureSeule || !lotsRes.ok
+            ? lectureSeule ? dict.dash.controleTitle : (ctx.copropriete?.nom ?? undefined)
             : `${ctx.copropriete?.nom ?? ""} · ${fill(dict.lots.subtitle, {
                 count: totalLots,
                 tantiemes: ctx.copropriete?.totalTantiemes ?? "—",
@@ -161,50 +181,56 @@ export async function DashboardSyndic({
       ) : null}
 
       {/* Moment signature 6 : toute la résidence à jour (aucun impayé). */}
-      {impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
+      {!finErreur && impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
 
       {/* Soldes Wise : tuiles chiffres clés */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
-        <StatCard
+      <div className={`grid gap-4 sm:grid-cols-2 ${nbTuiles >= 4 ? "xl:grid-cols-4" : nbTuiles === 3 ? "xl:grid-cols-3" : ""}`} data-tour="dash-stats">
+        {voitFinances ? <StatCard
           icon={<CCoins />}
           tone="sand"
           label={dict.dash.impayes}
-          value={formatMAD(versChaine(impaye), locale)}
+          value={finErreur ? indispo : formatMAD(versChaine(impaye), locale)}
+          trend={finErreur ? dict.errors.load.solde : undefined}
+          trendTone="neutral"
           href={p("/finances/appels-de-fonds")}
-        />
-        <StatCard
+        /> : null}
+        {voitFinances ? <StatCard
           icon={<CMoneyBag />}
           tone="sage"
           label={dict.finances.tauxPaiement}
-          value={`${Math.round(tauxRecouvrement * 100)}%`}
+          value={finErreur ? indispo : `${Math.round(tauxRecouvrement * 100)}%`}
           trendTone={tauxRecouvrement >= 0.85 ? "ok" : tauxRecouvrement >= 0.6 ? "warn" : "danger"}
-          trend={<TrendArrow up={tauxRecouvrement >= 0.6} />}
+          trend={finErreur ? undefined : <TrendArrow up={tauxRecouvrement >= 0.6} />}
           href={p("/finances/appels-de-fonds")}
-        />
-        <StatCard
+        /> : null}
+        {voitIncidents ? <StatCard
           icon={<CWrench />}
           tone="tosca"
           label={dict.dash.incidentsOuverts}
-          value={incidents.length}
+          value={incidentsRes.ok ? incidents.length : indispo}
           trend={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
           trendTone="danger"
           href={p("/incidents")}
-        />
-        <StatCard
+        /> : null}
+        {voitLots ? <StatCard
           icon={<CBuilding />}
           tone="lilac"
           label={dict.nav.lots}
-          value={totalLots}
+          value={lotsRes.ok ? totalLots : indispo}
           href={p("/lots")}
-        />
+        /> : null}
       </div>
 
       {/* Actions rondes — mêmes entrées et mêmes droits que le bouton « Actions ». */}
       {lectureSeule ? null : <RoundActions ctx={ctx} />}
 
-      {/* Prochaine AG : LE fait marquant, en carte-affiche. */}
-      <div className="mt-10">
-        {prochaineAg ? (
+      {/* Prochaine AG : LE fait marquant, en carte-affiche (absente pour un rôle sans ag.lire). */}
+      {voitAg ? <div className="mt-10">
+        {!agsRes.ok ? (
+          <Section title={dict.dash.prochaineAg}>
+            <LoadError error={failureOf(agsRes)} locale={locale} variant="inline" />
+          </Section>
+        ) : prochaineAg ? (
           <AgPoster
             ag={prochaineAg}
             dict={dict}
@@ -227,11 +253,11 @@ export async function DashboardSyndic({
             />
           </Section>
         )}
-      </div>
+      </div> : null}
 
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-3">
         {/* Encaissement par appel — barres */}
-        <Card className="lg:col-span-2">
+        {voitFinances ? <Card className="lg:col-span-2">
           <SectionHeader
             title={dict.dash.recouvrement}
             subtitle={dict.dash.recouvrementHint}
@@ -241,7 +267,9 @@ export async function DashboardSyndic({
               </Link>
             }
           />
-          {barres.length === 0 ? (
+          {finErreur ? (
+            <LoadError error={finErreur} locale={locale} className="mt-2" />
+          ) : barres.length === 0 ? (
             <EmptyState
               title={dict.finances.aucunAppel}
               hint={dict.finances.aucunAppelAide}
@@ -266,15 +294,17 @@ export async function DashboardSyndic({
               legendTotal={dict.finances.montantTotal}
             />
           )}
-        </Card>
+        </Card> : null}
 
         {/* Impayés — anneau : par niveau de relance si l'info existe, sinon encaissé/impayé. */}
-        <Card>
+        {voitFinances ? <Card>
           <SectionHeader
             title={parNiveau.length > 0 ? dict.dash.impayesParNiveau : dict.dash.impayes}
           />
           <div className="mt-6">
-            {parNiveau.length === 0 ? (
+            {finErreur ? (
+              <LoadError error={finErreur} locale={locale} title={dict.errors.load.solde} variant="inline" />
+            ) : parNiveau.length === 0 ? (
               <Donut
                 size={168}
                 centerLabel={<Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />}
@@ -307,17 +337,19 @@ export async function DashboardSyndic({
               />
             )}
           </div>
-        </Card>
+        </Card> : null}
 
-        {/* Incidents ouverts — liste à plat */}
-        <Section
+        {/* Incidents ouverts — liste à plat (absente pour un rôle sans incidents.voir_tous_copropriete) */}
+        {voitIncidents ? <Section
           className="lg:col-span-2"
           title={dict.dash.incidentsOuverts}
           subtitle={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
           href={p("/incidents")}
           linkLabel={dict.common.seeAll}
         >
-          {incidents.length === 0 ? (
+          {!incidentsRes.ok ? (
+            <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" />
+          ) : incidents.length === 0 ? (
             <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />
           ) : (
             <FlatList>
@@ -348,16 +380,18 @@ export async function DashboardSyndic({
               })}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
-        {/* Réservations à valider (syndic) / litiges ouverts (conseil) */}
-        <Section
+        {/* Réservations à valider (syndic) / litiges ouverts (conseil) — absente si le rôle n'y a pas droit */}
+        {voitTuileBas ? <Section
           title={lectureSeule ? dict.dash.litigesOuverts : dict.dash.reservationsAValider}
           href={p(lectureSeule ? "/litiges" : "/reservations")}
           linkLabel={dict.common.seeAll}
         >
           {lectureSeule ? (
-            litigesOuverts.length === 0 ? (
+            !litigesRes.ok ? (
+              <LoadError error={failureOf(litigesRes)} locale={locale} variant="inline" />
+            ) : litigesOuverts.length === 0 ? (
               <EmptyLine text={dict.litiges.aucun} icon={<IconScale width={20} height={20} />} />
             ) : (
               <FlatList>
@@ -375,6 +409,8 @@ export async function DashboardSyndic({
                 ))}
               </FlatList>
             )
+          ) : !reservationsRes.ok ? (
+            <LoadError error={failureOf(reservationsRes)} locale={locale} variant="inline" />
           ) : reservationsEnAttente.length === 0 ? (
             <EmptyLine text={dict.espaces.aucuneReservation} icon={<IconCalendar width={20} height={20} />} />
           ) : (
@@ -398,7 +434,7 @@ export async function DashboardSyndic({
               ))}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
         {/* Appels de fonds — liste à plat, jauge d'encaissement */}
         {appels.length > 0 ? (

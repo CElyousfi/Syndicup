@@ -18,7 +18,8 @@ import { seDeconnecter } from "../../lib/actions/session-actions";
 import { DUR, EASE_IN, EASE_OUT, SPRING_LAYOUT } from "../../lib/motion";
 import { armSounds, useSensations } from "../../lib/feel";
 import { useBadgePop } from "./badge-pop";
-import { ConnectivityBanner, useScrollReveal } from "./ambient";
+import { ConnectivityBanner, OnlineOnly, useScrollReveal } from "./ambient";
+import { StaleIndicator, type StaleLabels } from "../ui/stale-indicator";
 import { SignatureOverlay } from "./signature-overlay";
 import type { Dict } from "../../lib/i18n";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
@@ -120,6 +121,7 @@ export function AppFrame({
   tour,
   quick = [],
   dari = null,
+  staleLabels,
   children,
 }: {
   locale: "fr" | "ar";
@@ -143,12 +145,14 @@ export function AppFrame({
   quick?: QuickAction[];
   /** Dari, l'assistant (absent pour les comptes sans copropriété, ex. membre de cabinet seul). */
   dari?: { labels: Dict["dari"]; prenom: string } | null;
+  /** Pastille « Connexion perdue — dernière mise à jour il y a … » (dict.errors.stale). */
+  staleLabels: StaleLabels;
   children: React.ReactNode;
 }) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const pathname = usePathname();
-  const unread = useLive(unreadCount, locale);
+  const { unread, stale } = useLive(unreadCount, locale);
   // Couche Alive : réglage « Animations réduites » (en plus de la préférence système) et sons
   // préchargés au premier geste.
   const sensations = useSensations();
@@ -434,6 +438,11 @@ export function AppFrame({
       <SuccessOverlay doneLabel={labels.done} labels={alive} locale={locale} />
       <SignatureOverlay labels={alive} locale={locale} />
       <ConnectivityBanner offline={alive.horsLigne} online={alive.enLigne} />
+      {/* En ligne mais le direct ne répond plus (API, proxy) : même ton, une seule pastille —
+          hors ligne, c'est le bandeau de connexion qui parle. */}
+      <OnlineOnly>
+        <StaleIndicator failing={stale.failing} lastUpdated={stale.lastUpdated} labels={staleLabels} onRetry={stale.retry} floating />
+      </OnlineOnly>
     </div>
     </MotionConfig>
     </LazyMotion>

@@ -8,7 +8,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../../lib/forms";
+import { success, type FormState } from "../../../../../lib/forms";
+import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../../lib/forms-server";
 import type { Depense, DepenseDetail, Facture, BudgetPoste } from "../../../../../lib/api/types";
 
 const BASE = "/finances/depenses";
@@ -30,21 +31,21 @@ async function televerserPiece(fd: FormData, name: string): Promise<{ storage_pa
   const f = fd.get(name);
   if (!(f instanceof File) || f.size === 0) return null;
   if (f.size > 15 * 1024 * 1024) {
-    return { erreur: { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (15 Mo max).", fields: { [name]: "15 Mo max." } } };
+    return { erreur: await fileTooLarge(name, 15) };
   }
   const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/depenses/upload-url", {
     method: "POST",
     body: { nom_fichier: f.name || "piece.jpg", content_type: contentType },
   });
-  if (!prep.ok) return { erreur: fromApiError(prep) };
+  if (!prep.ok) return { erreur: await fromApiError(prep) };
   const upload = await fetch(prep.data.upload_url, {
     method: "PUT",
     headers: { "Content-Type": contentType, "x-upsert": "true" },
     body: await f.arrayBuffer(),
   });
   if (!upload.ok) {
-    return { erreur: { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` } };
+    return { erreur: await uploadRefused(upload.status) };
   }
   return { storage_path: prep.data.storage_path, nom: f.name || "piece.jpg" };
 }
@@ -147,7 +148,7 @@ export async function ajouterFacture(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const id = champ(fd, "depense_id");
   const piece = await televerserPiece(fd, "fichier");
-  if (!piece) return { status: "error", code: "VALIDATION_ERROR", message: "Le fichier de la facture est obligatoire.", fields: { fichier: "Fichier obligatoire." } };
+  if (!piece) return await localError("VALIDATION_ERROR", (l) => l.factureObligatoire, { field: "fichier" });
   if ("erreur" in piece) return piece.erreur;
   const res = await apiFetch<Facture>(`/depenses/${id}/factures`, {
     method: "POST",

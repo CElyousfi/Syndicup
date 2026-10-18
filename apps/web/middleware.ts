@@ -70,6 +70,12 @@ export async function middleware(req: NextRequest) {
   const locale = seg;
   const rest = pathname.slice(locale.length + 1) || "/";
 
+  // Chemin courant transmis à l'app (lib/request-info.ts) : langue des messages d'erreur loin
+  // de l'écran (client API, Server Actions) et retour exact après une reconnexion.
+  const avecChemin = new Headers(req.headers);
+  avecChemin.set("x-su-path", pathname + req.nextUrl.search);
+  const suivant = () => NextResponse.next({ request: { headers: avecChemin } });
+
   const isPublic = PUBLIC_PREFIXES.some((p) => rest === p || rest.startsWith(`${p}/`));
 
   const access = req.cookies.get(COOKIE_ACCESS)?.value ?? null;
@@ -81,7 +87,7 @@ export async function middleware(req: NextRequest) {
   };
 
   if (isPublic) {
-    const res = memoLocale(NextResponse.next());
+    const res = memoLocale(suivant());
     // Invitation à usage unique (M17) : chaque appareil porte un jeton secret, posé au premier
     // passage sur /invitation ; le premier scan lie le code à ce jeton, les autres sont refusés.
     if (rest.startsWith("/invitation") && !req.cookies.get(COOKIE_INVITATION)?.value) {
@@ -96,6 +102,8 @@ export async function middleware(req: NextRequest) {
   // 2. Garde d'authentification
   const loginUrl = req.nextUrl.clone();
   loginUrl.pathname = `/${locale}/connexion`;
+  // Retour exact après reconnexion (session expirée en cours de route).
+  loginUrl.search = rest !== "/" ? `?next=${encodeURIComponent(rest + req.nextUrl.search)}` : "";
   if (!access && !refresh) return memoLocale(NextResponse.redirect(loginUrl));
 
   // 2b. Opérateur plateforme : toujours ramené dans sa console.
@@ -124,7 +132,7 @@ export async function middleware(req: NextRequest) {
         const { data } = (await r.json()) as {
           data: { access_token: string; refresh_token: string; expires_in: number };
         };
-        const res = memoLocale(NextResponse.next());
+        const res = memoLocale(suivant());
         const secure = process.env.NODE_ENV === "production";
         res.cookies.set(COOKIE_ACCESS, data.access_token, {
           httpOnly: true,
@@ -153,7 +161,7 @@ export async function middleware(req: NextRequest) {
                 : c
           )
           .join("; ");
-        const headers = new Headers(req.headers);
+        const headers = new Headers(avecChemin);
         headers.set("cookie", cookieHeader);
         const withHeaders = NextResponse.next({ request: { headers } });
         res.cookies.getAll().forEach((c) => withHeaders.cookies.set(c));
@@ -165,7 +173,7 @@ export async function middleware(req: NextRequest) {
     if (!access) return memoLocale(NextResponse.redirect(loginUrl));
   }
 
-  return memoLocale(NextResponse.next());
+  return memoLocale(suivant());
 }
 
 export const config = {

@@ -30,7 +30,7 @@ export function AcceptForm({
     state.status === "error"
       ? state.code === "NOT_FOUND"
         ? dict.auth.inviteExpired
-        : state.code === "CONFLICT" && /inscrit|utilis/i.test(state.message)
+        : state.code === "CONFLICT" && /inscrit|utilis/i.test(state.serverMessage ?? state.message)
           ? dict.auth.inviteAlreadyUsed
           : state.message
       : null;

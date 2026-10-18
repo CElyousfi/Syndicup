@@ -16,6 +16,8 @@ import { IconCircle, CUsers, CHome, CKey, CShield } from "../../../../components
 import { IconChevronEnd, IconSearch } from "../../../../components/ui/icons";
 import { compteVariant } from "../../../../lib/status";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -94,12 +96,12 @@ export default async function MembresPage({
         }
       />
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {res.ok ? <div className="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<CUsers />} tone="sage" label={dict.nav.membres} value={tous.length} />
         <StatCard icon={<CHome />} tone="sand" label={dict.roles.PROPRIETAIRE + " · " + dict.roles.LOCATAIRE} value={residents} />
         <StatCard icon={<CShield />} tone="lilac" label={dict.enums.statutCompte.ACTIF} value={actifs} trend={tous.length ? `${Math.round((actifs / tous.length) * 100)}%` : undefined} trendTone="neutral" />
         <StatCard icon={<CKey />} tone="tosca" label={dict.enums.statutCompte.INVITE} value={tous.filter((u) => u.statut_compte === "INVITE" || u.statut_compte === "EN_VALIDATION").length} />
-      </div>
+      </div> : null}
 
       <form className="filters mb-4 flex flex-wrap items-center gap-2" method="GET">
         <div className="relative">
@@ -119,7 +121,7 @@ export default async function MembresPage({
         </Button>
       </form>
 
-      {membres.length === 0 ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : membres.length === 0 ? (
         <EmptyState
           title={m.aucun}
           hint={tous.length === 0 ? m.aucunAide : undefined}

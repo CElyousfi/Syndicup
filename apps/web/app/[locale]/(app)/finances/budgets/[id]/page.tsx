@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { BudgetAg, BudgetPoste, BudgetVsRealise } from "../../../../../../lib/api/types";
@@ -21,6 +20,7 @@ import { ActiverBudgetModal } from "../budget-modals";
 import { AjouterPosteModal, ModifierPosteModal, SupprimerPosteBouton } from "./postes-modals";
 import { Amount } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -39,7 +39,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
   const p = (path: string) => `/${locale}${path}`;
 
   const postesRes = await apiFetch<{ budget: BudgetAg; postes: BudgetPoste[] }>(`/finances/budgets/${id}/postes`);
-  if (!postesRes.ok) notFound();
+  if (!postesRes.ok) return failWith(postesRes, ctx.locale);
   const { budget, postes } = postesRes.data;
   const rapportRes = voitRealise && budget.statut === "ACTIF" ? await apiFetch<BudgetVsRealise>("/finances/budget-vs-realise", { searchParams: { exercice: budget.exercice } }) : null;
   const rapport = rapportRes?.ok && rapportRes.data.budget?.id === budget.id ? rapportRes.data : null;

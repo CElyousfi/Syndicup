@@ -223,7 +223,7 @@ export function ConfirmerDepartForm({
           {l.confirmerDepart}
         </SubmitButton>
       </form>
-      {state.status === "error" ? <p className="text-[12px] text-danger">{state.message}</p> : null}
+      <FormAlert state={state} compact />
     </div>
   );
 }

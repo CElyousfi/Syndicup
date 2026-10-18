@@ -19,6 +19,8 @@ import { CAlert, CCalendar, CWrench } from "../../../../components/ui/color-icon
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { prioriteVariant, tacheVariant } from "../../../../lib/status";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 const STATUTS: StatutTache[] = ["A_FAIRE", "EN_COURS", "BLOQUEE", "TERMINEE", "ANNULEE"];
 const COLONNES: StatutTache[] = ["A_FAIRE", "EN_COURS", "BLOQUEE", "TERMINEE"];
@@ -74,8 +76,8 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
         </div>}
       />
       {sp.cree === "1" ? <Banner variant="ok" className="mb-4">{t.creee}</Banner> : null}
-      {!res.ok ? <Banner variant="danger" className="mb-4">{t.chargementImpossible}</Banner> : null}
-      {!gardien ? (
+      {/* Liste en échec : <LoadError> plus bas, et aucun compteur à zéro. */}
+      {!gardien && res.ok ? (
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
           <StatCard icon={<CWrench />} tone="sage" label={t.ouvertes} value={String(ouverts)} href={qs({ statut: undefined, retard: undefined })} />
           <StatCard icon={<CAlert />} tone={nbRetard > 0 ? "warn" : "sage"} label={t.enRetard} value={String(nbRetard)} href={qs({ retard: "1", statut: undefined })} />
@@ -90,7 +92,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
           </div>
         </div>
       ) : null}
-      {rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} illustration={statut || retard || origine ? "empty-search" : "empty-taches"} action={gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} illustration={statut || retard || origine ? "empty-search" : "empty-taches"} action={gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {COLONNES.map((col) => {
             const items = rows.filter((x) => x.statut === col);

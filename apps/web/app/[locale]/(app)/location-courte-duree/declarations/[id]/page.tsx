@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { LcdDeclaration, LcdSejour, Lot } from "../../../../../../lib/api/types";
@@ -23,6 +23,7 @@ import {
   DesignerGestionnaireModal,
   ModifierContactsModal,
 } from "./declaration-actions";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 type DeclarationDetail = LcdDeclaration & { sejours?: LcdSejour[] };
 
@@ -59,7 +60,7 @@ export default async function DeclarationLcdPage({
   const p = (path: string) => `/${locale}${path}`;
 
   const declRes = await apiFetch<DeclarationDetail>(`/lcd/declarations/${id}`);
-  if (!declRes.ok) notFound();
+  if (!declRes.ok) return failWith(declRes, ctx.locale);
   const d = declRes.data;
 
   const [lotRes, nomMembre] = await Promise.all([

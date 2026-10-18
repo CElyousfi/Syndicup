@@ -24,6 +24,8 @@ import { CopierPrestataireModal, MandatModal, MembreModal, ParametresCabinetForm
 import { ouvrirCopropriete } from "./actions";
 import { Amount, Figure } from "../../../../components/ui/amount";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 type Onglet = "portefeuille" | "alertes" | "agenda" | "membres" | "prestataires" | "parametres";
 const ONGLETS: Onglet[] = ["portefeuille", "alertes", "agenda", "membres", "prestataires", "parametres"];
@@ -45,7 +47,8 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
   const onglet: Onglet = ONGLETS.includes(sp.onglet as Onglet) ? (sp.onglet as Onglet) : "portefeuille";
   const href = (o: Onglet, q: Record<string, string | undefined> = {}) => { const u = new URLSearchParams({ onglet: o, ...(cabinet ? { cabinet: cabinet.id } : {}) }); for (const [k, v] of Object.entries(q)) if (v) u.set(k, v); return `${p("/cabinet")}?${u.toString()}`; };
   if (!cabinet) {
-    return <div className="page-root"><PageHeader title={t.titre} subtitle={t.subtitle} /><EmptyState title={t.aucunCabinet} hint={t.aucunCabinetAide} /></div>;
+    // Échec de lecture ≠ « aucun cabinet » : on dit la vérité.
+    return <div className="page-root"><PageHeader title={t.titre} subtitle={t.subtitle} />{cabinetsRes.ok ? <EmptyState title={t.aucunCabinet} hint={t.aucunCabinetAide} /> : <LoadError error={failureOf(cabinetsRes)} locale={ctx.locale} />}</div>;
   }
   const admin = cabinet.monRole === "CABINET_ADMIN" || cabinet.monRole === "SUPER_ADMIN";
   const gestion = admin || cabinet.monRole === "CABINET_GESTIONNAIRE";
@@ -105,7 +108,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
             <Link href={href("portefeuille", { alerte: "1" })} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${sp.alerte === "1" ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{t.seulementAlertes}</Link>
             {meta.calcule_le ? <span className="ms-auto text-[12px] text-faint">{fill(t.calculeLe, { date: formatDateHeure(meta.calcule_le, ctx.locale) })}</span> : null}
           </div>
-          {lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} /> : (
+          {!portRes.ok ? <LoadError error={failureOf(portRes)} locale={ctx.locale} /> : lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} /> : (
             <TableCard><Table>
               <THead>
                 <TH><Link href={href("portefeuille", { sort: sp.sort === "nom:asc" ? "nom:desc" : "nom:asc", alerte: sp.alerte })}>{t.coproprietes}</Link></TH>
@@ -149,7 +152,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
       ) : null}
 
       {onglet === "alertes" ? (
-        alertes.length === 0 ? <EmptyState title={t.aucuneAlerte} /> : (
+        alertesRes?.ok === false ? <LoadError error={failureOf(alertesRes)} locale={ctx.locale} /> : alertes.length === 0 ? <EmptyState title={t.aucuneAlerte} /> : (
           <ul className="stagger-grid -mx-3">{alertes.map((a, i) => (
             <li key={`${a.code}-${a.copropriete_id}-${i}`} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
               <IconCircle tone={a.niveau === "danger" ? "danger" : "warn"} size={44}><CAlert width={20} height={20} /></IconCircle>
@@ -164,7 +167,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
       {onglet === "agenda" && agendaRes ? (
         <div className="space-y-3">
           <p className="text-[13px] text-soft">{t.agendaAide} · {agendaRes.ok ? fill(t.jours, { n: 60 }) : ""}</p>
-          {!agendaRes.ok || agendaRes.data.evenements.length === 0 ? <EmptyState title={t.aucunEvenement} /> : (
+          {!agendaRes.ok ? <LoadError error={failureOf(agendaRes)} locale={ctx.locale} /> : agendaRes.data.evenements.length === 0 ? <EmptyState title={t.aucunEvenement} /> : (
             <ul className="stagger-grid -mx-3">{agendaRes.data.evenements.map((e) => (
               <li key={`${e.type}-${e.id}`} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                 <IconCircle tone={e.retard ? "danger" : e.type === "AG" ? "lilac" : "sand"} size={44}><CCalendar width={20} height={20} /></IconCircle>
@@ -181,6 +184,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
         <div className="grid gap-8 lg:grid-cols-2">
           <section className="min-w-0">
             <SectionHeader title={t.membres} subtitle={t.ajouterMembreAide} />
+            {membresRes?.ok === false ? <LoadError error={failureOf(membresRes)} locale={ctx.locale} variant="inline" className="mt-3" /> : null}
             <LiveList as="ul" className="-mx-3 mt-3">{membres.map((m) => (
               <li key={m.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                 <Avatar nom={`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId} size={44} />
@@ -192,7 +196,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
           </section>
           <section className="min-w-0">
             <SectionHeader title={t.mandats} subtitle={t.proposerMandatAide} />
-            {mandats.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunMandat}</p> : (
+            {mandatsRes?.ok === false ? <LoadError error={failureOf(mandatsRes)} locale={ctx.locale} variant="inline" className="mt-3" /> : mandats.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunMandat}</p> : (
               <LiveList as="ul" className="-mx-3 mt-3">{mandats.map((m) => (
                 <li key={m.id} className="flex items-start gap-3.5 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                   <IconCircle tone="sage" size={44}><CBuilding width={20} height={20} /></IconCircle>
@@ -211,7 +215,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
       ) : null}
 
       {onglet === "prestataires" ? (
-        (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} /> : (
+        prestaRes?.ok === false ? <LoadError error={failureOf(prestaRes)} locale={ctx.locale} /> : (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} /> : (
           <TableCard><Table>
             <THead><TH>{t.nom}</TH><TH>{t.specialite}</TH><TH>{t.telephone}</TH><TH>{t.email}</TH><TH align="end" /></THead>
             <LiveList as="tbody">{(prestaRes?.ok ? prestaRes.data : []).map((x) => (

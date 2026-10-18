@@ -8,11 +8,12 @@ import { getDict, isLocale } from "../../../../../lib/i18n";
 import { formatPeriode } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
-import { Banner } from "../../../../../components/ui/banner";
 import { ButtonLink } from "../../../../../components/ui/button";
 import { Card } from "../../../../../components/ui/card";
 import { echeanceVariant } from "../../../../../lib/status";
 import { Amount } from "../../../../../components/ui/amount";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -50,7 +51,7 @@ export default async function CalendrierPage({ params, searchParams }: { params:
   return (
     <div className="page-root">
       <PageHeader back={<BackLink href={p("/contrats")} label={c.titre} />} title={c.calendrier} subtitle={c.calendrierSubtitle} actions={<div className="flex items-center gap-2"><ButtonLink href={p(`/contrats/calendrier?mois=${decal(-1)}`)} variant="secondary" size="sm">{c.moisPrecedent}</ButtonLink><span className="tnum px-2 text-[15px] font-bold text-ink">{formatPeriode(mois, ctx.locale)}</span><ButtonLink href={p(`/contrats/calendrier?mois=${decal(1)}`)} variant="secondary" size="sm">{c.moisSuivant}</ButtonLink></div>} />
-      {!res.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} variant="inline" className="mb-4" /> : null}
       {/* Grille du mois : défilement interne sur mobile (jamais la page). */}
       <Card padded={false} className="overflow-hidden">
         <div className="overflow-x-auto scroll-thin">

@@ -19,6 +19,8 @@ import { incidentVariant, urgenceVariant } from "../../../../lib/status";
 import { IconChevronEnd, IconPlus } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -152,7 +154,7 @@ export default async function IncidentsPage({
         </Button>
       </form>
 
-      {incidents.length === 0 ? (
+      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 ? (
         <EmptyState
           title={i.aucunIncident}
           hint={gestion ? i.aucunIncidentAide : undefined}

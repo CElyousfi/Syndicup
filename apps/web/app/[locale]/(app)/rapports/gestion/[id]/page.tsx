@@ -1,7 +1,6 @@
 /** Détail d'un rapport de gestion (M18) — synthèse, PDF FR/AR (publique / complète), soumission à l'AG, instantané. */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { AssembleeGenerale, RapportGestion } from "../../../../../../lib/api/types";
@@ -17,6 +16,7 @@ import { CAlert, CChart, CMoneyBag, CWallet } from "../../../../../../components
 import { rapportVariant, resolutionVariant, trancheVariant } from "../../../../../../lib/status";
 import { PdfRapportButtons, SoumettreModal } from "../../rapport-modals";
 import { Amount } from "../../../../../../components/ui/amount";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -31,7 +31,7 @@ export default async function RapportGestionDetailPage({ params }: { params: Pro
   const r = dict.rapports;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((x) => ctx.roles.includes(x as never));
   const [res, agsRes] = await Promise.all([apiFetch<RapportGestion>(`/rapports/gestion/${id}`), gestion ? apiFetch<AssembleeGenerale[]>("/ag", { searchParams: { limit: 50 } }) : Promise.resolve(null)]);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const d = x.donnees!;
   const p = (path: string) => `/${locale}${path}`;

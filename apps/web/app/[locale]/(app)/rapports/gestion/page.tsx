@@ -8,7 +8,6 @@ import { getDict, isLocale, fill } from "../../../../../lib/i18n";
 import { formatDate, nomComplet } from "../../../../../lib/format";
 import { PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
-import { Banner } from "../../../../../components/ui/banner";
 import { EmptyState } from "../../../../../components/ui/empty-state";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../../components/ui/table";
 import { rapportVariant } from "../../../../../lib/status";
@@ -16,6 +15,8 @@ import { RapportsTabs } from "../onglets";
 import { GenererModal } from "../rapport-modals";
 import { Amount, Figure } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -36,7 +37,7 @@ export default async function RapportsGestionPage({ params }: { params: Promise<
     <div className="page-root">
       <PageHeader title={r.gestionTitre} subtitle={r.gestionSubtitle} actions={gestion ? <GenererModal dict={dict} locale={ctx.locale} budgets={budgetsRes?.ok ? budgetsRes.data : []} exerciceDefaut={String(new Date().getFullYear() - 1)} /> : undefined} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="gestion" />
-      {!res.ok ? <Banner variant="warn">{r.chargementImpossible}</Banner> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} illustration="empty-documents" /> : (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} illustration="empty-documents" /> : (
         <TableCard>
           <Table>
             <THead><TH>{r.exercice}</TH><TH>{r.statut}</TH><TH align="end">{r.compteCourant}</TH><TH align="end">{r.recouvrement}</TH><TH align="end">{r.impayes}</TH><TH align="end">{r.depenses}</TH><TH>{r.generePar}</TH></THead>

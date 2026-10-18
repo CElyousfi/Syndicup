@@ -7,22 +7,34 @@ import { cache } from "react";
 import { apiFetch } from "./api/client";
 import type { AppelDeFonds, AppelDeFondsLigne, Lot } from "./api/types";
 import { ratio, sommeCentimes, versCentimes, versChaine } from "./centimes";
+import { dataOr, unwrap, type Loaded } from "./api/unwrap";
 
 export interface SyntheseFinanciere {
   appels: AppelDeFonds[];
   lignes: AppelDeFondsLigne[];
 }
 
-export const getSynthese = cache(async (): Promise<SyntheseFinanciere> => {
-  const res = await apiFetch<SyntheseFinanciere>("/finances/synthese");
-  return res.ok ? res.data : { appels: [], lignes: [] };
+/**
+ * Synthèse financière OU échec explicite. Jamais `{ appels: [], lignes: [] }` en cas de panne :
+ * une synthèse vide affiche « 0 MAD — Payé », ce qui est FAUX quand l'API n'a pas répondu.
+ */
+export const getSynthese = cache(async (): Promise<Loaded<SyntheseFinanciere>> => {
+  return unwrap(await apiFetch<SyntheseFinanciere>("/finances/synthese"));
 });
 
+export const SYNTHESE_VIDE: SyntheseFinanciere = { appels: [], lignes: [] };
+
 /** Lots (limite 100) mutualisés par requête — évite les doubles fetchs page + annuaire. */
-export const getLots = cache(async (): Promise<Lot[]> => {
-  const res = await apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } });
-  return res.ok ? res.data : [];
+export const getLotsResult = cache(async (): Promise<Loaded<Lot[]>> => {
+  return unwrap(await apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }));
 });
+
+/**
+ * Lots en simple référentiel (libellés, numéros, listes de choix) : vide en cas d'échec — à NE
+ * PAS utiliser pour une liste affichée comme telle ni pour décider d'un droit ; préférer alors
+ * `getLotsResult()` et afficher <LoadError>.
+ */
+export const getLots = cache(async (): Promise<Lot[]> => dataOr(await getLotsResult(), []));
 
 // ── Dérivations d'affichage ────────────────────────────────────────────────
 

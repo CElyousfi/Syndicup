@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
@@ -15,6 +14,7 @@ import { appelVariant, escaladeVariant, ligneAppelVariant } from "../../../../..
 import { PaiementModal } from "../../../../../../components/finances/paiement-modal";
 import { Amount } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export default async function AppelDetailPage({
   params,
@@ -31,7 +31,7 @@ export default async function AppelDetailPage({
     apiFetch<AppelDeFonds>(`/finances/appels-de-fonds/${id}`),
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
   ]);
-  if (!appelRes.ok) notFound();
+  if (!appelRes.ok) return failWith(appelRes, ctx.locale);
   const appel = appelRes.data;
   const lignes = appel.lignes ?? [];
   const lotParId = new Map((lotsRes.ok ? lotsRes.data : []).map((l) => [l.id, l]));

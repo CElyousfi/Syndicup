@@ -23,6 +23,15 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
         ? fill(dict.auth.rateLimited, { s: state.retryAfter })
         : dict.auth.rateLimitedGeneric
       : null;
+  // 400 du serveur (e-mail mal formé, mot de passe trop court) : affiché SOUS le champ concerné,
+  // dans la langue de l'écran — jamais masqué (les messages Zod du serveur sont en anglais).
+  const invalide = state.status === "error" && state.code === "VALIDATION_ERROR" ? state.fields ?? {} : {};
+  const erreurEmail = "email" in invalide ? dict.errors.local.emailInvalide : undefined;
+  const erreurMdp = "mot_de_passe" in invalide ? dict.auth.passwordTooShort : undefined;
+  const erreurGlobale =
+    state.status === "error" && state.code === "VALIDATION_ERROR" && !erreurEmail && !erreurMdp
+      ? dict.errors.codes.VALIDATION_ERROR.body
+      : undefined;
 
   return (
     <div>
@@ -32,7 +41,7 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
       <form action={action} className="mt-7 space-y-5" suppressHydrationWarning>
         <input type="hidden" name="locale" value={locale} />
         {next ? <input type="hidden" name="next" value={next} /> : null}
-        <Field label={dict.auth.emailLabel} htmlFor="email" required>
+        <Field label={dict.auth.emailLabel} htmlFor="email" required error={erreurEmail ?? erreurGlobale}>
           <Input
             id="email"
             name="email"
@@ -51,7 +60,7 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
         <Field
           label={dict.auth.passwordLabel}
           htmlFor="mot_de_passe"
-          error={state.status === "error" && state.code === "UNAUTHENTICATED" ? dict.auth.invalidCredentials : rateLimited}
+          error={state.status === "error" && state.code === "UNAUTHENTICATED" ? dict.auth.invalidCredentials : rateLimited ?? erreurMdp}
           required
         >
           <Input

@@ -1,7 +1,6 @@
 /** Détail d'une tâche (M22) — liens vers l'objet source, checklist cochable, pièces jointes, commentaires, journal ; statut / assignation / annulation. */
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { TacheDetail } from "../../../../../lib/api/types";
@@ -19,6 +18,7 @@ import { prioriteVariant, tacheVariant } from "../../../../../lib/status";
 import { AnnulerModal, AssignerModal, Checklist, CommentaireForm, StatutModal } from "../taches-client";
 import { assigneesPossibles } from "../references";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -35,7 +35,7 @@ export default async function TachePage({ params, searchParams }: { params: Prom
   const e = dict.enumsTaches;
   const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<TacheDetail>(`/taches/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const assignees = syndic ? await assigneesPossibles() : [];
   const p = (path: string) => `/${locale}${path}`;

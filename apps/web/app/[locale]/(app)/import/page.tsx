@@ -21,6 +21,8 @@ import { importVariant } from "../../../../lib/status";
 import { OnboardingCard, chargerOnboarding } from "./onboarding-card";
 import { InvitationsMasseModal } from "./import-client";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 type Onglet = "demarrer" | "imports" | "invitations";
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
@@ -94,7 +96,7 @@ export default async function ImportPage({ params, searchParams }: { params: Pro
       {onglet === "invitations" && gestion ? (
         <section>
           <SectionHeader title={t.invitationsEnAttente} subtitle={t.invitationsMasseAide} action={<InvitationsMasseModal dict={dict} locale={ctx.locale} nb={nonEnvoyees.length} />} />
-          {preRemplies.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneInvitationMasse}</p> : (
+          {invitationsRes?.ok === false ? <LoadError error={failureOf(invitationsRes)} locale={ctx.locale} variant="inline" /> : preRemplies.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneInvitationMasse}</p> : (
             <LiveList as="ul" className="stagger-grid -mx-3 mt-3">
               {preRemplies.map((i) => {
                 const nom = `${i.preRempliJson?.prenom ?? ""} ${i.preRempliJson?.nom ?? ""}`.trim();

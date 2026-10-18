@@ -12,6 +12,8 @@ import { photoSrc } from "../../../../lib/photos";
 import { CreerEspaceModal, ModifierEspaceModal, ReserverModal } from "./espace-modals";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { supprimerEspace } from "./actions";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -57,7 +59,7 @@ export default async function EspacesPage({
         actions={gestion ? <CreerEspaceModal dict={dict} locale={ctx.locale} /> : undefined}
       />
 
-      {espaces.length === 0 ? (
+      {!espacesRes.ok ? <LoadError error={failureOf(espacesRes)} locale={ctx.locale} /> : espaces.length === 0 ? (
         <EmptyState
           title={e.aucunEspace}
           hint={gestion ? e.aucunEspaceAide : undefined}

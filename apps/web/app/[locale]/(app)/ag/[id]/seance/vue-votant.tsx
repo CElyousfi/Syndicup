@@ -15,6 +15,7 @@ import { voter } from "../../actions";
 import { IconCheck, IconX } from "../../../../../../components/ui/icons";
 import { celebrate } from "../../../../../../lib/success";
 import { SalleSeance } from "./salle";
+import { StaleIndicator, useStale } from "../../../../../../components/ui/stale-indicator";
 
 interface ProcurationVotant {
   id: string;
@@ -59,24 +60,36 @@ export function VueVotant({
 
   const resolution = statuts[index];
 
-  // Suivi léger de la séance : résolutions finalisées / clôture.
+  // Suivi léger de la séance : résolutions finalisées / clôture. Un échec est SIGNALÉ (pastille
+  // « Connexion perdue — dernière mise à jour il y a … ») et s'efface au prochain succès.
+  const stale = useStale();
+  const { ok: staleOk, fail: staleFail } = stale;
+  const [essai, setEssai] = useState(0);
   useEffect(() => {
-    const timer = setInterval(async () => {
+    const charger = async () => {
       try {
         const r = await fetch(`/api/ag-resultats?ag=${agId}`, { cache: "no-store" });
-        if (!r.ok) return;
+        if (!r.ok) {
+          staleFail();
+          return;
+        }
         const data = (await r.json()) as { statut: string; resolutions: AgResolution[] };
+        staleOk();
         if (data.statut === "CLOTUREE") {
           router.push(`/${locale}/ag/${agId}`);
           return;
         }
         setStatuts(data.resolutions);
-      } catch {
-        // hors-ligne passager : on retentera au tick suivant
+      } catch (e) {
+        // Hors-ligne passager : signalé à l'écran, nouvel essai au tick suivant.
+        staleFail();
+        console.warn(JSON.stringify({ niveau: "warn", message: "seance : suivi indisponible", erreur: String(e) }));
       }
-    }, 5000);
+    };
+    if (essai > 0) void charger();
+    const timer = setInterval(charger, 5000);
     return () => clearInterval(timer);
-  }, [agId, locale, router]);
+  }, [agId, locale, router, essai, staleOk, staleFail]);
 
   const cleVote = resolution ? `${resolution.id}|${identite}` : "";
   const voteExistant = votes[cleVote];
@@ -115,9 +128,12 @@ export function VueVotant({
     return <Banner variant="info">{a.aucuneResolution}</Banner>;
   }
 
+  // Décision sur le CODE (le message est localisé et peut être en arabe) ; repli texte sur le
+  // message brut du serveur tant que l'API répond « déjà voté » en 422 générique.
   const dejaVoteErreur =
     state.status === "error" &&
-    (state.code === "CONFLICT" || /déjà voté/i.test(state.message));
+    (state.code === "CONFLICT" ||
+      (state.code === "UNPROCESSABLE_ENTITY" && /déjà voté/i.test(state.serverMessage ?? "")));
 
   const changer = (i: number) => {
     setIndex(Math.max(0, Math.min(statuts.length - 1, i)));
@@ -140,6 +156,7 @@ export function VueVotant({
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
+      <StaleIndicator failing={stale.failing} lastUpdated={stale.lastUpdated} labels={dict.errors.stale} onRetry={() => setEssai((n) => n + 1)} />
       {/* Salle verte : résolution active en affiche + navigation. */}
       <SalleSeance
         dict={dict}

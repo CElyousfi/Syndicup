@@ -13,6 +13,8 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { CAlert, CWrench } from "../../../../components/ui/color-icons";
 import { FlatList, Row, RowIcon, Section } from "./parts";
 import { incidentVariant, urgenceVariant } from "../../../../lib/status";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 /** Vue minimale : le prestataire ne voit QUE ses tickets assignés (Doc A §12.3). */
 export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
@@ -27,7 +29,7 @@ export async function DashboardPrestataire({ ctx }: { ctx: AppContext }) {
       <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} subtitle={dict.roles[ctx.role]} className="mb-6 shadow-none!" />
       <PageHeader title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />} subtitle={dict.dash.mesTickets} />
 
-      {tickets.length === 0 ? (
+      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={locale} /> : tickets.length === 0 ? (
         <EmptyState
           title={dict.incidents.aucunIncident}
           hint={dict.incidents.aucunIncidentAide}

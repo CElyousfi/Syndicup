@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../../lib/api/client";
 import type { DepenseDetail } from "../../../../../../../lib/api/types";
@@ -7,6 +7,7 @@ import { getDict, isLocale } from "../../../../../../../lib/i18n";
 import { PageHeader, BackLink } from "../../../../../../../components/page-header";
 import { DepenseForm } from "../../depense-form";
 import { referencesDepense } from "../../references";
+import { failWith } from "../../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -20,7 +21,7 @@ export default async function ModifierDepensePage({ params }: { params: Promise<
   const { dict } = ctx;
   const d = dict.depenses;
   const res = await apiFetch<DepenseDetail>(`/depenses/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const depense = res.data;
   if (depense.statut !== "BROUILLON" && depense.statut !== "REJETEE") redirect(`/${locale}/finances/depenses/${id}`);
   const refs = await referencesDepense(dict, ctx.locale, ctx.coproprieteId, depense.dateDepense.slice(0, 4));

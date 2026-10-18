@@ -13,6 +13,8 @@ import { PrestataireModal, ModifierPrestataireModal } from "./prestataire-modal"
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { supprimerPrestataire } from "./actions";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -46,7 +48,7 @@ export default async function PrestatairesPage({
         actions={gestion ? <PrestataireModal dict={dict} locale={ctx.locale} /> : undefined}
       />
 
-      {prestataires.length === 0 ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : prestataires.length === 0 ? (
         <EmptyState
           title={i.aucunPrestataire}
           hint={gestion ? i.aucunPrestataireAide : undefined}

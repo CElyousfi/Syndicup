@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type {
@@ -26,6 +26,9 @@ import { ConfirmerArriveeForm, ConfirmerDepartForm } from "../../lcd-modals";
 import { AnnulerSejourModal, PiecesJointesCard } from "./sejour-actions";
 import type { LcdPieceJointe } from "../../../../../../lib/api/types";
 import { LiveList } from "../../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../../lib/api/unwrap";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 type SejourDetail = LcdSejour & { evenements?: LcdSejourEvenement[] };
 
@@ -75,7 +78,7 @@ export default async function SejourDetailPage({
   const p = (path: string) => `/${locale}${path}`;
 
   const sejourRes = await apiFetch<SejourDetail>(`/lcd/sejours/${id}`);
-  if (!sejourRes.ok) notFound();
+  if (!sejourRes.ok) return failWith(sejourRes, ctx.locale);
   const s = sejourRes.data;
 
   const [declRes, incidentsRes, nomMembre] = await Promise.all([
@@ -318,7 +321,9 @@ export default async function SejourDetailPage({
           {incidentsRes ? (
             <Card>
               <SectionHeader title={l.incidentsLies} />
-              {incidents.length === 0 ? (
+              {!incidentsRes.ok ? (
+                <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} variant="inline" className="mt-3" />
+              ) : incidents.length === 0 ? (
                 <p className="mt-3 text-sm text-soft">{dict.common.none}</p>
               ) : (
                 <Lignes className="mt-2">

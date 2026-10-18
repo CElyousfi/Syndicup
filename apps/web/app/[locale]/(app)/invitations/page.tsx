@@ -18,6 +18,8 @@ import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { annulerInvitation } from "./actions";
 import { InvitationsMasseModal } from "../import/import-client";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -75,7 +77,7 @@ export default async function InvitationsPage({
         {inv.envoiManuel} {inv.usageUniqueAide}
       </Banner>
 
-      {invitations.length === 0 ? (
+      {!invitationsRes.ok ? <LoadError error={failureOf(invitationsRes)} locale={ctx.locale} /> : invitations.length === 0 ? (
         <EmptyState
           title={inv.aucune}
           hint={inv.aucuneAide}

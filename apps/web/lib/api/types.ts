@@ -16,7 +16,10 @@ export interface ApiMeta {
   has_more?: boolean;
 }
 
-export type ApiErrorCode =
+/** Codes connus (apps/api/lib/http/respond.ts) — les codes métier (LCD_*, *_STATUT_INVALIDE…)
+ *  passent aussi : `string & {}` garde l'autocomplétion sans refuser un code plus récent que le web.
+ *  `NETWORK` : API injoignable (status 0), produit par lib/api/client.ts. */
+export type KnownApiErrorCode =
   | "VALIDATION_ERROR"
   | "UNAUTHENTICATED"
   | "FORBIDDEN"
@@ -24,7 +27,11 @@ export type ApiErrorCode =
   | "CONFLICT"
   | "UNPROCESSABLE_ENTITY"
   | "RATE_LIMITED"
-  | "INTERNAL_ERROR";
+  | "INTERNAL_ERROR"
+  | "NOT_IMPLEMENTED"
+  | "SERVICE_UNAVAILABLE"
+  | "NETWORK";
+export type ApiErrorCode = KnownApiErrorCode | (string & {});
 
 export interface ApiError {
   code: ApiErrorCode;

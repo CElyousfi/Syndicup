@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, uploadRefused } from "../../../../lib/forms-server";
 import type { Incident, IncidentLog, Prestataire } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -32,7 +33,7 @@ async function televerserPhotos(fd: FormData): Promise<string[] | { erreur: Form
         },
       }
     );
-    if (!prep.ok) return { erreur: fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep) };
     const upload = await fetch(prep.data.upload_url, {
       method: "PUT",
       headers: {
@@ -43,11 +44,7 @@ async function televerserPhotos(fd: FormData): Promise<string[] | { erreur: Form
     });
     if (!upload.ok) {
       return {
-        erreur: {
-          status: "error",
-          code: "INTERNAL_ERROR",
-          message: `Téléversement refusé par le stockage (${upload.status}).`,
-        },
+        erreur: await uploadRefused(upload.status),
       };
     }
     chemins.push(prep.data.storage_path);

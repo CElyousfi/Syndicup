@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import { readSession } from "../session";
 import type { ApiMeta, ApiError, ApiResult } from "./types";
+import { requestDict } from "../request-info";
 
 import { API_BASE_URL as API_BASE } from "../config/env";
 
@@ -38,10 +39,11 @@ async function run<T>(path: string, opts: FetchOptions, auth: boolean): Promise<
     const session = await readSession();
     const token = opts.accessToken ?? session.accessToken;
     if (!token) {
+      const e = (await requestDict()).errors.codes.UNAUTHENTICATED;
       return {
         ok: false,
         status: 401,
-        error: { code: "UNAUTHENTICATED", message: "Session absente." },
+        error: { code: "UNAUTHENTICATED", message: e.title },
       };
     }
     headers.Authorization = `Bearer ${token}`;
@@ -60,11 +62,15 @@ async function run<T>(path: string, opts: FetchOptions, auth: boolean): Promise<
       body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
       cache: "no-store",
     });
-  } catch {
+  } catch (err) {
+    // API injoignable (réseau, DNS, déploiement en cours) : code dédié — l'écran propose
+    // « Réessayer », jamais « erreur interne ». Journalisé : jamais de catch silencieux.
+    console.warn(JSON.stringify({ niveau: "warn", message: "api injoignable", chemin: path, erreur: String(err) }));
+    const e = (await requestDict()).errors.codes.NETWORK;
     return {
       ok: false,
       status: 0,
-      error: { code: "INTERNAL_ERROR", message: "API injoignable." },
+      error: { code: "NETWORK", message: e.title },
     };
   }
 
@@ -77,12 +83,17 @@ async function run<T>(path: string, opts: FetchOptions, auth: boolean): Promise<
 
   if (!res.ok || payload.error) {
     const retryAfter = Number(res.headers.get("Retry-After") ?? "") || undefined;
+    // Corps sans enveloppe d'erreur (proxy, page HTML d'un hébergeur…) : message localisé.
+    const inattendue: ApiError | null = payload.error
+      ? null
+      : {
+          code: res.status >= 500 ? "INTERNAL_ERROR" : "UNEXPECTED",
+          message: (await requestDict()).errors.codes.UNEXPECTED.title,
+        };
     return {
       ok: false,
       status: res.status,
-      error:
-        payload.error ??
-        ({ code: "INTERNAL_ERROR", message: `Réponse inattendue (${res.status}).` } as ApiError),
+      error: payload.error ?? inattendue!,
       requestId: payload.meta?.request_id ?? res.headers.get("X-Request-Id") ?? undefined,
       retryAfter,
     };

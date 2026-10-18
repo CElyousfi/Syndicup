@@ -1,6 +1,5 @@
 /** Dossier RH d'un employé (M20) — onglets fiche / paie / congés / présences / évaluations selon le rôle. */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { Conge, EvaluationPersonnel, FichePaie, Lot, PersonnelDetail, PresencePersonnel, StatutPresence } from "../../../../../lib/api/types";
@@ -21,6 +20,7 @@ import { DossierModal, CnssButton, PreparerFicheModal, ValiderFicheModal, PayerF
 import type { ReactNode } from "react";
 import { Amount, Figure } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -51,8 +51,9 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
   const conseil = !gestion && ctx.roles.includes("CONSEIL_SYNDICAL" as never);
   const res = await apiFetch<PersonnelDetail>(`/personnel/${id}`);
   if (!res.ok) {
-    if (res.status === 404) notFound();
-    return <div className="page-root space-y-4"><BackLink href={`/${locale}/personnel`} label={dict.common.back} /><Banner variant="danger">{pe.interdit}</Banner></div>;
+    // 403 : message propre au module (fiche d'un collègue) ; 404/401/autres : issue standard.
+    if (res.status === 403) return <div className="page-root space-y-4"><BackLink href={`/${locale}/personnel`} label={dict.common.back} /><Banner variant="warn">{pe.interdit}</Banner></div>;
+    return failWith(res, ctx.locale);
   }
   const x = res.data;
   const soi = x.utilisateurId === ctx.profil.id;

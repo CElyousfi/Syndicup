@@ -1,61 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
-import { Button } from "../../components/ui/button";
-import { IconCircle, CAlert } from "../../components/ui/color-icons";
-import { Illustration } from "../../components/ui/illustration";
+import dynamic from "next/dynamic";
+import { useParams } from "next/navigation";
 
-/** Erreur serveur générique (A5) — request_id discret pour le support. */
-export default function ErrorPage({
-  error,
-  reset,
-}: {
-  error: Error & { digest?: string };
-  reset: () => void;
-}) {
-  // Après un déploiement, un onglet resté ouvert porte encore l'ancien JavaScript : ses
-  // identifiants d'actions serveur et ses chunks n'existent plus → on recharge une fois,
-  // silencieusement, au lieu d'afficher une erreur qui n'est pas la faute de l'utilisateur.
-  useEffect(() => {
-    const m = `${error?.name ?? ""} ${error?.message ?? ""}`;
-    const perime =
-      /UnrecognizedActionError|Server Action .* was not found|ChunkLoadError|Loading chunk .* failed|Failed to fetch dynamically imported module/i.test(m);
-    if (!perime) return;
-    const cle = "syndicup:reload-perime";
-    const dernier = Number(sessionStorage.getItem(cle) ?? 0);
-    if (Date.now() - dernier < 30_000) return; // jamais de boucle de rechargement
-    sessionStorage.setItem(cle, String(Date.now()));
-    window.location.reload();
-  }, [error]);
+/**
+ * Erreur hors de l'espace connecté (pages publiques, sélection de copropriété, coque qui n'a pas
+ * pu se construire) — plein écran, localisée d'après l'URL, référence (digest) discrète.
+ * L'écran est chargé À LA DEMANDE : cette frontière enveloppe les pages de connexion, dont le
+ * poids JS ne doit pas grossir (décision D5) — rien n'est téléchargé tant que rien n'échoue.
+ */
+const ErrorScreen = dynamic(() => import("../../components/ui/error-screen").then((m) => m.ErrorScreen), {
+  ssr: false,
+  loading: () => <div className="min-h-screen bg-surface" />,
+});
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-surface px-4">
-      <div className="w-full max-w-md animate-in-up py-12 text-center">
-        <Illustration
-          name="offline"
-          size={180}
-          className="mx-auto"
-          fallback={
-            <IconCircle tone="danger" size={72}>
-              <CAlert width={32} height={32} />
-            </IconCircle>
-          }
-        />
-        <h1 className="mt-6 text-[28px] font-bold leading-[1.15] tracking-[-0.02em] text-ink">
-          Une erreur est survenue
-        </h1>
-        <p className="mx-auto mt-2 max-w-sm text-[15px] leading-relaxed text-soft">
-          Le problème vient de chez nous, pas de chez vous. Réessayez dans un instant.
-        </p>
-        {error.digest ? (
-          <p className="mt-3 font-mono text-[11px] text-faint" dir="ltr">
-            {error.digest}
-          </p>
-        ) : null}
-        <Button onClick={reset} size="lg" className="mt-8">
-          Réessayer
-        </Button>
-      </div>
-    </div>
-  );
+export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+  const params = useParams<{ locale?: string }>();
+  return <ErrorScreen error={error} reset={reset} locale={params?.locale === "ar" ? "ar" : "fr"} fullScreen />;
 }

@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { getAppContext } from "../../../lib/app-context";
+import { RefusNotice } from "../../../components/shell/refus-notice";
 import { apiFetch } from "../../../lib/api/client";
 import { buildNav, buildMobileTabs, buildQuickActions } from "../../../components/shell/nav";
 import { AppFrame } from "../../../components/shell/app-frame";
@@ -61,10 +63,14 @@ export default async function AppLayout({
         done: dict.common.done,
       }}
       alive={dict.alive}
+      staleLabels={dict.errors.stale}
       quick={buildQuickActions(nav, ctx.role, ctx.roles, dict, ctx.locale)}
       tour={dict.onboarding}
       dari={ctx.role === "MEMBRE_CABINET" ? null : { labels: dict.dari, prenom: ctx.profil.prenom ?? "" }}
     >
+      <Suspense fallback={null}>
+        <RefusNotice message={dict.errors.forbidden.toast} />
+      </Suspense>
       {children}
     </AppFrame>
   );

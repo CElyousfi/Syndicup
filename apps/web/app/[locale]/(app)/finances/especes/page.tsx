@@ -13,6 +13,7 @@ import { DeclarerForm } from "../justificatifs/declarer-form";
 import { justificatifs, lotsEtLignesOuvertes } from "../justificatifs/data";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -27,16 +28,16 @@ export default async function EspecesPage({ params }: { params: Promise<{ locale
   const { dict } = ctx;
   const j = dict.justificatifs;
   const e = dict.enumsJustificatifs;
-  const [{ lots, lignes }, mes] = await Promise.all([lotsEtLignesOuvertes(), justificatifs()]);
+  const [{ lots, lignes, erreur: erreurRefs }, mes] = await Promise.all([lotsEtLignesOuvertes(), justificatifs()]);
   return (
     <div className="page-root">
       <PageHeader title={j.especesTitre} subtitle={j.especesSubtitle} />
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="min-w-0 lg:col-span-2"><DeclarerForm dict={dict} locale={ctx.locale} lots={lots} lignes={lignes} comptes={[]} mode="especes" auNom /></div>
+        <div className="min-w-0 lg:col-span-2">{erreurRefs ? <LoadError error={erreurRefs} locale={ctx.locale} /> : <DeclarerForm dict={dict} locale={ctx.locale} lots={lots} lignes={lignes} comptes={[]} mode="especes" auNom />}</div>
         {/* Historique à plat (Wise) : pastille, lot en gras, date, montant + statut, chevron. */}
         <section className="min-w-0">
           <SectionHeader title={j.mesSaisies} className="mb-2" />
-          {mes.rows.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucuneDeclaration}</p> : (
+          {mes.erreur ? <LoadError error={mes.erreur} locale={ctx.locale} variant="inline" className="mt-3" /> : mes.rows.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucuneDeclaration}</p> : (
             <LiveList as="ul" className="-mx-2">
               {mes.rows.filter((x) => x.methode === "ESPECES").map((x) => (
                 <li key={x.id}>

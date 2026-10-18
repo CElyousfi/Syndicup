@@ -3,7 +3,7 @@ import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
 import type { Contestation } from "../../../../../lib/api/types";
-import { contexteLignes, getLots, getSynthese } from "../../../../../lib/finances-data";
+import { contexteLignes, getLots, getSynthese, SYNTHESE_VIDE } from "../../../../../lib/finances-data";
 import { getDict, isLocale } from "../../../../../lib/i18n";
 import { formatDateHeure, formatPeriode } from "../../../../../lib/format";
 import { PageHeader } from "../../../../../components/page-header";
@@ -15,6 +15,8 @@ import { Avatar } from "../../../../../components/ui/avatar";
 import { CAlert, CScale, IconCircle } from "../../../../../components/ui/color-icons";
 import { contestationVariant } from "../../../../../lib/status";
 import { RepondreModal } from "./repondre-modal";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -36,7 +38,7 @@ export default async function ContestationsPage({
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const f = dict.finances;
 
-  const [contestationsRes, synthese, lots, membres] = await Promise.all([
+  const [contestationsRes, syntheseRes, lots, membres] = await Promise.all([
     apiFetch<Contestation[]>("/finances/contestations"),
     getSynthese(),
     getLots(),
@@ -46,7 +48,8 @@ export default async function ContestationsPage({
 
   // Contexte des lignes contestées (lot + période) depuis la synthèse partagée.
   const lotParId = new Map(lots.map((l) => [l.id, l.numero]));
-  const cx = contexteLignes(synthese);
+  // Contexte seulement (libellés lot/période) : une synthèse en échec laisse « — », sans mentir.
+  const cx = contexteLignes(syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE);
   const ligneContexte = new Map(
     [...cx.entries()].map(([id, c]) => [
       id,
@@ -63,7 +66,9 @@ export default async function ContestationsPage({
         subtitle={gestion ? f.contestationsSubtitle : undefined}
       />
 
-      {contestations.length === 0 ? (
+      {!contestationsRes.ok ? (
+        <LoadError error={failureOf(contestationsRes)} locale={ctx.locale} />
+      ) : contestations.length === 0 ? (
         <EmptyState title={f.aucuneContestation} illustration="empty-litiges" />
       ) : (
         <>
