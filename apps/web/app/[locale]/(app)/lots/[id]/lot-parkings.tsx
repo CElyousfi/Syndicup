@@ -12,8 +12,9 @@ import { badgeAccesVariant } from "../../../../../lib/status";
 import { BadgeModal, BadgePerduModal, BadgeRestituerModal, RetirerVehiculeModal, VehiculeModal } from "../../parkings/parkings-client";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { LoadError } from "../../../../../components/ui/load-error";
-import { failureOf } from "../../../../../lib/api/unwrap";
+import { failureOf, isRefused } from "../../../../../lib/api/unwrap";
 
+/** Sections refusées par conception (403 : rôle sans parkings.lire / vehicules.gerer_propres) : masquées. */
 export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict: Dict; locale: Locale; lot: Lot; gestion: boolean }) {
   const t = dict.parkings;
   const e = dict.enumsParkings;
@@ -29,6 +30,7 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
   const ligne = "flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash";
   return (
     <div className="space-y-8">
+      {!isRefused(attrRes) ? (
       <section>
         <SectionHeader title={t.onglets.mesAttributions} action={<Link href={`/${locale}/parkings`} className="link text-[14px]">{t.titre}</Link>} />
         {!attrRes.ok ? <LoadError error={failureOf(attrRes)} locale={locale} variant="inline" /> : attributions.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucuneAttribution}</p> : (
@@ -50,7 +52,9 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
           </LiveList>
         )}
       </section>
+      ) : null}
       <div className="grid gap-8 lg:grid-cols-2">
+        {!isRefused(vehRes) ? (
         <section className="min-w-0">
           <SectionHeader title={t.vehicules} action={gestion ? <VehiculeModal dict={dict} locale={locale} lots={lots} /> : undefined} />
           {!vehRes.ok ? <LoadError error={failureOf(vehRes)} locale={locale} variant="inline" /> : vehicules.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunVehicule}</p> : (
@@ -69,6 +73,8 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
             </LiveList>
           )}
         </section>
+        ) : null}
+        {!isRefused(badgesRes) ? (
         <section className="min-w-0">
           <SectionHeader title={t.badges} action={gestion ? <BadgeModal dict={dict} locale={locale} lots={lots} /> : undefined} />
           {!badgesRes.ok ? <LoadError error={failureOf(badgesRes)} locale={locale} variant="inline" /> : badges.length === 0 ? <p className="mt-3 text-sm text-soft">{t.aucunBadge}</p> : (
@@ -87,6 +93,7 @@ export async function LotParkingsSection({ dict, locale, lot, gestion }: { dict:
             </LiveList>
           )}
         </section>
+        ) : null}
       </div>
     </div>
   );

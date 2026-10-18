@@ -33,9 +33,23 @@ export function unwrap<T>(res: ApiResult<T>): Loaded<T> {
 /** Alias lisible pour les listes. */
 export const unwrapList = unwrap;
 
-/** Réponse optionnelle (appel non fait pour ce rôle → `null`) : non chargée = vide légitime. */
+/**
+ * Refus PAR CONCEPTION (403) : la ressource ne concerne pas ce rôle (ex. le comptable d'un
+ * cabinet et les AG, le représentant d'une personne morale et les espaces communs — matrice
+ * apps/api/lib/auth/permissions.ts). Ce n'est pas une panne : jamais « Réessayer ».
+ */
+export function isRefused(res: ApiResult<unknown> | null | undefined): boolean {
+  return !!res && !res.ok && res.status === 403;
+}
+
+/**
+ * Réponse optionnelle : appel non fait pour ce rôle (`null`) OU refusé par conception (403)
+ * → vide légitime `{ ok: true, data: empty }`. Les autres échecs restent des échecs.
+ * Pour une section qui n'a pas de sens pour le rôle, préférer `isRefused()` et MASQUER la
+ * section (pas une tuile vide ni un zéro).
+ */
 export function unwrapOptional<T>(res: ApiResult<T> | null | undefined, empty: T): Loaded<T> {
-  if (!res) return { ok: true, data: empty };
+  if (!res || isRefused(res)) return { ok: true, data: empty };
   return unwrap(res);
 }
 

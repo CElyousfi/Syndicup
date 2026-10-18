@@ -46,7 +46,7 @@ import { IconCalendar, IconScale, IconVote, IconWrench } from "../../../../compo
 import { AgPoster, ChecklistTile, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
 import { Amount } from "../../../../components/ui/amount";
 import { LoadError } from "../../../../components/ui/load-error";
-import { failureOf } from "../../../../lib/api/unwrap";
+import { failureOf, isRefused } from "../../../../lib/api/unwrap";
 
 export async function DashboardSyndic({
   ctx,
@@ -106,6 +106,18 @@ export async function DashboardSyndic({
   );
   const totalLots = lots.length;
   const indispo = dict.common.none;
+  // Refus PAR CONCEPTION (403, apps/api/lib/auth/permissions.ts) : la section ne concerne pas ce
+  // rôle et disparaît (SYNDIC_COMPTABLE n'a ni ag.lire, ni incidents.voir_tous_copropriete, ni
+  // litiges.lire, ni espaces_communs.lire). Seule une vraie panne affiche « indisponible ».
+  const refuse403 = (l: { ok: boolean; error?: { status: number } }) => !l.ok && l.error?.status === 403;
+  const voitFinances = !refuse403(syntheseRes);
+  const voitIncidents = !isRefused(incidentsRes);
+  const voitAg = !isRefused(agsRes);
+  const voitReservations = !isRefused(reservationsRes);
+  const voitLitiges = !isRefused(litigesRes);
+  const voitLots = !refuse403(lotsRes);
+  const voitTuileBas = lectureSeule ? voitLitiges : voitReservations;
+  const nbTuiles = [voitFinances, voitFinances, voitIncidents, voitLots].filter(Boolean).length;
 
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
@@ -172,8 +184,8 @@ export async function DashboardSyndic({
       {!finErreur && impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
 
       {/* Soldes Wise : tuiles chiffres clés */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
-        <StatCard
+      <div className={`grid gap-4 sm:grid-cols-2 ${nbTuiles >= 4 ? "xl:grid-cols-4" : nbTuiles === 3 ? "xl:grid-cols-3" : ""}`} data-tour="dash-stats">
+        {voitFinances ? <StatCard
           icon={<CCoins />}
           tone="sand"
           label={dict.dash.impayes}
@@ -181,8 +193,8 @@ export async function DashboardSyndic({
           trend={finErreur ? dict.errors.load.solde : undefined}
           trendTone="neutral"
           href={p("/finances/appels-de-fonds")}
-        />
-        <StatCard
+        /> : null}
+        {voitFinances ? <StatCard
           icon={<CMoneyBag />}
           tone="sage"
           label={dict.finances.tauxPaiement}
@@ -190,8 +202,8 @@ export async function DashboardSyndic({
           trendTone={tauxRecouvrement >= 0.85 ? "ok" : tauxRecouvrement >= 0.6 ? "warn" : "danger"}
           trend={finErreur ? undefined : <TrendArrow up={tauxRecouvrement >= 0.6} />}
           href={p("/finances/appels-de-fonds")}
-        />
-        <StatCard
+        /> : null}
+        {voitIncidents ? <StatCard
           icon={<CWrench />}
           tone="tosca"
           label={dict.dash.incidentsOuverts}
@@ -199,21 +211,21 @@ export async function DashboardSyndic({
           trend={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
           trendTone="danger"
           href={p("/incidents")}
-        />
-        <StatCard
+        /> : null}
+        {voitLots ? <StatCard
           icon={<CBuilding />}
           tone="lilac"
           label={dict.nav.lots}
           value={lotsRes.ok ? totalLots : indispo}
           href={p("/lots")}
-        />
+        /> : null}
       </div>
 
       {/* Actions rondes — mêmes entrées et mêmes droits que le bouton « Actions ». */}
       {lectureSeule ? null : <RoundActions ctx={ctx} />}
 
-      {/* Prochaine AG : LE fait marquant, en carte-affiche. */}
-      <div className="mt-10">
+      {/* Prochaine AG : LE fait marquant, en carte-affiche (absente pour un rôle sans ag.lire). */}
+      {voitAg ? <div className="mt-10">
         {!agsRes.ok ? (
           <Section title={dict.dash.prochaineAg}>
             <LoadError error={failureOf(agsRes)} locale={locale} variant="inline" />
@@ -241,11 +253,11 @@ export async function DashboardSyndic({
             />
           </Section>
         )}
-      </div>
+      </div> : null}
 
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-3">
         {/* Encaissement par appel — barres */}
-        <Card className="lg:col-span-2">
+        {voitFinances ? <Card className="lg:col-span-2">
           <SectionHeader
             title={dict.dash.recouvrement}
             subtitle={dict.dash.recouvrementHint}
@@ -282,10 +294,10 @@ export async function DashboardSyndic({
               legendTotal={dict.finances.montantTotal}
             />
           )}
-        </Card>
+        </Card> : null}
 
         {/* Impayés — anneau : par niveau de relance si l'info existe, sinon encaissé/impayé. */}
-        <Card>
+        {voitFinances ? <Card>
           <SectionHeader
             title={parNiveau.length > 0 ? dict.dash.impayesParNiveau : dict.dash.impayes}
           />
@@ -325,10 +337,10 @@ export async function DashboardSyndic({
               />
             )}
           </div>
-        </Card>
+        </Card> : null}
 
-        {/* Incidents ouverts — liste à plat */}
-        <Section
+        {/* Incidents ouverts — liste à plat (absente pour un rôle sans incidents.voir_tous_copropriete) */}
+        {voitIncidents ? <Section
           className="lg:col-span-2"
           title={dict.dash.incidentsOuverts}
           subtitle={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
@@ -368,10 +380,10 @@ export async function DashboardSyndic({
               })}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
-        {/* Réservations à valider (syndic) / litiges ouverts (conseil) */}
-        <Section
+        {/* Réservations à valider (syndic) / litiges ouverts (conseil) — absente si le rôle n'y a pas droit */}
+        {voitTuileBas ? <Section
           title={lectureSeule ? dict.dash.litigesOuverts : dict.dash.reservationsAValider}
           href={p(lectureSeule ? "/litiges" : "/reservations")}
           linkLabel={dict.common.seeAll}
@@ -422,7 +434,7 @@ export async function DashboardSyndic({
               ))}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
         {/* Appels de fonds — liste à plat, jauge d'encaissement */}
         {appels.length > 0 ? (

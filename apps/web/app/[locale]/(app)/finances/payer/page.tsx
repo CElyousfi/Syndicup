@@ -30,8 +30,10 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
   const { dict } = ctx;
   const j = dict.justificatifs;
   const e = dict.enumsJustificatifs;
-  const [comptesRes, { lots, lignes, erreur: erreurLots }, mes] = await Promise.all([comptesBancaires(ctx.coproprieteId), lotsEtLignesOuvertes(), justificatifs()]);
-  const { soldes, erreur: erreurSoldes } = await soldesLots(lots);
+  const [comptesRes, { lots, lignes, erreur: erreurLots, lotsRefuses }, mes] = await Promise.all([comptesBancaires(ctx.coproprieteId), lotsEtLignesOuvertes(), justificatifs()]);
+  const { soldes, erreur: erreurSoldes, refuse: soldesRefuses } = await soldesLots(lots);
+  // Rôle sans accès aux lots ni aux soldes (403 par conception) : pas de carte « solde ».
+  const voitSolde = !lotsRefuses && !soldesRefuses;
   // Solde indisponible (lots ou un solde de lot non lus) : JAMAIS « 0 MAD — solde à jour ».
   const soldeIndisponible = erreurLots ?? erreurSoldes;
   const comptes = comptesRes.ok ? comptesRes.data : [];
@@ -45,7 +47,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
     <div className="page-root">
       <PageHeader title={j.payerTitre} subtitle={j.payerSubtitle} />
       {/* Résumé : ce que je dois, ce qui attend validation, le paiement en ligne. */}
-      <Card className="mb-10 p-6 sm:p-8">
+      {voitSolde ? <Card className="mb-10 p-6 sm:p-8">
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-center">
           {soldeIndisponible ? (
             <div className="min-w-0">
@@ -82,12 +84,12 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
             </div>
           </div>
         </div>
-      </Card>
+      </Card> : null}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="min-w-0 space-y-4 lg:col-span-2">
           <Card>
             <SectionHeader title={j.virement} subtitle={j.virementAide} />
-            {!comptesRes.ok ? <LoadError error={comptesRes.error} locale={ctx.locale} variant="inline" className="mt-4" /> : comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompte}</p> : (
+            {!comptesRes.ok && comptesRes.error.status !== 403 ? <LoadError error={comptesRes.error} locale={ctx.locale} variant="inline" className="mt-4" /> : comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompte}</p> : (
               <ul className="mt-4 space-y-2">
                 {comptes.map((c) => (
                   <li key={c.index} className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-surface px-4 py-3.5">

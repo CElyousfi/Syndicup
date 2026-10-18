@@ -45,7 +45,7 @@ import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
 import { Amount } from "../../../../components/ui/amount";
 import { LoadError } from "../../../../components/ui/load-error";
-import { failureOf } from "../../../../lib/api/unwrap";
+import { failureOf, isRefused } from "../../../../lib/api/unwrap";
 
 export async function DashboardResident({
   ctx,
@@ -75,12 +75,24 @@ export async function DashboardResident({
   const documents = documentsRes.ok ? documentsRes.data : [];
 
   const lots = lotsRes.ok ? lotsRes.data : [];
+  // Refus PAR CONCEPTION (403, matrice apps/api/lib/auth/permissions.ts) : la section ne concerne
+  // pas ce rôle et disparaît — ex. PERSONNE_MORALE_REPRESENTANT n'a ni lots.lire, ni
+  // finances.lister_appels_de_fonds, ni espaces_communs.lire ; GESTIONNAIRE_LCD pas les espaces.
+  // Seule une VRAIE panne affiche « indisponible — Réessayer ».
+  const voitLots = !isRefused(lotsRes);
+  const voitIncidents = !isRefused(incidentsRes);
+  const voitReservations = !isRefused(reservationsRes);
+  const voitAg = agsRes !== null && !isRefused(agsRes);
+  const voitAnnonces = !isRefused(annoncesRes);
+  const voitNotifs = !isRefused(notifsRes);
   // Soldes en un appel — la RLS de la synthèse limite les lignes aux lots de l'appelant.
   // Synthèse (ou lots) en échec : solde INDISPONIBLE — jamais « 0 MAD — Payé » en vert.
-  const synthese = locataire ? null : await getSynthese();
-  const soldeErreur = locataire ? null : !lotsRes.ok ? failureOf(lotsRes) : synthese && !synthese.ok ? synthese.error : null;
+  const synthese = locataire || !voitLots ? null : await getSynthese();
+  const syntheseRefusee = synthese !== null && !synthese.ok && synthese.error.status === 403;
+  const voitSoldes = !locataire && voitLots && !syntheseRefusee;
+  const soldeErreur = !voitSoldes ? null : !lotsRes.ok ? failureOf(lotsRes) : synthese && !synthese.ok ? synthese.error : null;
   const soldes = synthese?.ok ? soldeParLot(synthese.data) : new Map<string, bigint>();
-  const lotsAvecSolde = locataire ? [] : lots;
+  const lotsAvecSolde = voitSoldes ? lots : [];
 
   const prochaineAg = agsRes?.ok
     ? (agsRes.data
@@ -112,10 +124,10 @@ export async function DashboardResident({
 
       {/* Soldes Wise : tuiles chiffres clés */}
       <div
-        className={`grid gap-4 sm:grid-cols-2 ${locataire ? "" : "xl:grid-cols-3"}`}
+        className={`grid gap-4 sm:grid-cols-2 ${[voitSoldes, voitIncidents, voitReservations].filter(Boolean).length > 2 ? "xl:grid-cols-3" : ""}`}
         data-tour="dash-stats"
       >
-        {!locataire && soldeErreur ? (
+        {voitSoldes && soldeErreur ? (
           <StatCard
             icon={<CCoins />}
             tone="sand"
@@ -125,7 +137,7 @@ export async function DashboardResident({
             trendTone="neutral"
             href={p("/tableau-de-bord")}
           />
-        ) : !locataire ? (
+        ) : voitSoldes ? (
           <StatCard
             icon={<CCoins />}
             tone={totalDu > 0n ? "sand" : "sage"}
@@ -136,27 +148,31 @@ export async function DashboardResident({
             href={p("/lots")}
           />
         ) : null}
-        <StatCard
-          icon={<CWrench />}
-          tone="tosca"
-          label={dict.incidents.mesSignalements}
-          value={incidentsRes.ok ? incidents.length : dict.common.none}
-          href={p("/incidents")}
-        />
-        <StatCard
-          icon={<CCalendar />}
-          tone="lilac"
-          label={dict.nav.reservations}
-          value={reservationsRes.ok ? reservations.length : dict.common.none}
-          href={p("/reservations")}
-        />
+        {voitIncidents ? (
+          <StatCard
+            icon={<CWrench />}
+            tone="tosca"
+            label={dict.incidents.mesSignalements}
+            value={incidentsRes.ok ? incidents.length : dict.common.none}
+            href={p("/incidents")}
+          />
+        ) : null}
+        {voitReservations ? (
+          <StatCard
+            icon={<CCalendar />}
+            tone="lilac"
+            label={dict.nav.reservations}
+            value={reservationsRes.ok ? reservations.length : dict.common.none}
+            href={p("/reservations")}
+          />
+        ) : null}
       </div>
 
       {/* Actions rondes — mêmes entrées et mêmes droits que le bouton « Actions ». */}
       <RoundActions ctx={ctx} />
 
       {/* Mon solde, lot par lot (blocs de solde Wise) */}
-      {!locataire ? (
+      {voitSoldes ? (
         <Section
           className="mt-10"
           title={dict.dash.monSolde}
@@ -214,10 +230,14 @@ export async function DashboardResident({
         </Section>
       ) : null}
 
-      {/* Prochaine AG (pas pour le locataire) — carte-affiche */}
-      {!locataire ? (
+      {/* Prochaine AG (pas pour le locataire, ni pour un rôle sans ag.lire) — carte-affiche */}
+      {!locataire && voitAg ? (
         <div className="mt-10">
-          {prochaineAg ? (
+          {agsRes && !agsRes.ok ? (
+            <Section title={dict.dash.prochaineAg}>
+              <LoadError error={failureOf(agsRes)} locale={locale} variant="inline" />
+            </Section>
+          ) : prochaineAg ? (
             <AgPoster
               ag={prochaineAg}
               dict={dict}
@@ -261,16 +281,20 @@ export async function DashboardResident({
       ) : null}
 
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">
-        <Section title={dict.dash.mesIncidents} href={p("/incidents")} linkLabel={dict.common.seeAll}>
-          {incidentsRes.ok ? <ListeIncidents incidents={incidents} ctx={ctx} /> : <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" />}
-        </Section>
+        {voitIncidents ? (
+          <Section title={dict.dash.mesIncidents} href={p("/incidents")} linkLabel={dict.common.seeAll}>
+            {incidentsRes.ok ? <ListeIncidents incidents={incidents} ctx={ctx} /> : <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" />}
+          </Section>
+        ) : null}
 
-        <Section title={dict.dash.mesReservations} href={p("/reservations")} linkLabel={dict.common.seeAll}>
-          {reservationsRes.ok ? <ListeReservations reservations={reservations} ctx={ctx} /> : <LoadError error={failureOf(reservationsRes)} locale={locale} variant="inline" />}
-        </Section>
+        {voitReservations ? (
+          <Section title={dict.dash.mesReservations} href={p("/reservations")} linkLabel={dict.common.seeAll}>
+            {reservationsRes.ok ? <ListeReservations reservations={reservations} ctx={ctx} /> : <LoadError error={failureOf(reservationsRes)} locale={locale} variant="inline" />}
+          </Section>
+        ) : null}
 
         {/* M21 — Tableau d'affichage */}
-        <Section
+        {voitAnnonces ? <Section
           title={dict.communication.titre}
           subtitle={annoncesNonLues > 0 ? fill(dict.communication.nonLues, { n: annoncesNonLues }) : undefined}
           href={p("/affichage")}
@@ -305,10 +329,10 @@ export async function DashboardResident({
               ))}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
         {/* Notifications récentes */}
-        <Section title={dict.dash.notificationsRecentes} href={p("/notifications")} linkLabel={dict.notifs.voirToutes}>
+        {voitNotifs ? <Section title={dict.dash.notificationsRecentes} href={p("/notifications")} linkLabel={dict.notifs.voirToutes}>
           {!notifsRes.ok ? (
             <LoadError error={failureOf(notifsRes)} locale={locale} variant="inline" />
           ) : notifs.length === 0 ? (
@@ -331,7 +355,7 @@ export async function DashboardResident({
               ))}
             </FlatList>
           )}
-        </Section>
+        </Section> : null}
 
         {/* Documents de la copropriété — consultables dans l'app */}
         <DocumentsCard documents={documents} dict={dict} locale={locale} className="lg:col-span-2" />

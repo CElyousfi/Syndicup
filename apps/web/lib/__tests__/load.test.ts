@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dataOr, firstFailure, unwrapList, unwrapOptional } from "../api/unwrap";
+import { dataOr, firstFailure, isRefused, unwrapList, unwrapOptional } from "../api/unwrap";
 import { decideFailure, forbiddenPath, loginPath } from "../api/or-fail";
 import type { ApiResult } from "../api/types";
 
@@ -25,6 +25,15 @@ describe("unwrapList", () => {
   it("appel non fait pour ce rôle = vide légitime", () => {
     expect(unwrapOptional(null, [] as number[])).toEqual({ ok: true, data: [] });
     expect(unwrapOptional(ko(0, "NETWORK"), [] as number[]).ok).toBe(false);
+  });
+  it("403 par conception = « ne concerne pas ce rôle », jamais une panne", () => {
+    expect(unwrapOptional(ko(403, "FORBIDDEN"), [] as number[])).toEqual({ ok: true, data: [] });
+    expect(isRefused(ko(403, "FORBIDDEN"))).toBe(true);
+    expect(isRefused(ko(500, "INTERNAL_ERROR"))).toBe(false);
+    expect(isRefused(ok([]))).toBe(false);
+    expect(isRefused(null)).toBe(false);
+    // unwrap (strict) garde le 403 comme échec : à l'appelant de décider de masquer.
+    expect(unwrapList(ko(403, "FORBIDDEN")).ok).toBe(false);
   });
   it("dataOr / firstFailure", () => {
     expect(dataOr(unwrapList(ko(500, "X")), [1])).toEqual([1]);

@@ -12,7 +12,7 @@ import { describeError } from "../../lib/errors";
 import { fill, getDict, type Locale } from "../../lib/i18n";
 import type { LoadFailure } from "../../lib/api/unwrap";
 import { Illustration } from "./illustration";
-import { IconCircle, CAlert } from "./color-icons";
+import { IconCircle, CAlert, CShield } from "./color-icons";
 import { ReferenceChip, RefreshButton } from "./error-parts";
 
 export function LoadError({
@@ -30,6 +30,22 @@ export function LoadError({
   className?: string;
 }) {
   const e = getDict(locale).errors;
+  // Filet de sécurité : un 403 est un refus PAR CONCEPTION (la ressource ne concerne pas ce
+  // rôle, apps/api/lib/auth/permissions.ts), jamais une panne — pas de « Réessayer » éternel.
+  // En ligne : rien (l'appelant devrait masquer la section, cf. isRefused) ; en page : un
+  // message calme « Pas d'accès ».
+  if (error.status === 403) {
+    if (variant === "inline") return null;
+    return (
+      <div role="status" className={`flex flex-col items-center px-6 py-12 text-center ${className}`}>
+        <IconCircle tone="sand" size={64} className="mb-5">
+          <CShield width={28} height={28} />
+        </IconCircle>
+        <h3 className="text-[19px] font-bold tracking-tight text-ink">{e.forbidden.title}</h3>
+        <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-soft">{e.forbidden.body}</p>
+      </div>
+    );
+  }
   const d = describeError(
     { code: error.code, message: error.message, status: error.status, retryAfter: error.retryAfter, requestId: error.requestId },
     locale
