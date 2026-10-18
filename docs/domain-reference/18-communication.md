@@ -25,7 +25,7 @@
 
 | Objet | Statuts | Transitions |
 | --- | --- | --- |
-| Annonce | `BROUILLON` → `PUBLIEE` → `ARCHIVEE` | publier (immédiat / programmé, fan-out), archiver (quitte le tableau, lectures conservées) ; un brouillon se supprime, une annonce publiée ne se supprime jamais. |
+| Annonce | `BROUILLON` → `PUBLIEE` → `ARCHIVEE` | publier (immédiat / programmé, fan-out), archiver (quitte le tableau, lectures conservées) ; un brouillon se supprime, une annonce publiée ne se supprime jamais. ⚠️ Ajouté et signalé : désarchiver (`POST /annonces/{id}/desarchiver`, « Annuler » du toast) — mêmes droits que l'archivage, retour au statut précédent (PUBLIEE si `publie_le` passé, sinon BROUILLON) et à l'épingle d'avant (lue dans l'audit `ANNONCE_ARCHIVEE`), sans nouvelle diffusion ; audit `ANNONCE_DESARCHIVEE`. Aucun délai fixé (Doc A n'en prévoit pas). |
 | Sondage | `BROUILLON` → `OUVERT` → `CLOS` | ouvrir (`SONDAGE_OUVERT` à l'audience), clore (manuel ou job à `date_fin`, `SONDAGE_CLOS` avec le nombre de réponses) ; un sondage ouvert ne se modifie plus (les réponses seraient faussées). |
 
 Réponse : une seule par membre (409 `SONDAGE_DEJA_REPONDU`), options contrôlées (422

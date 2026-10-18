@@ -343,7 +343,39 @@ export async function archiverAnnonce(ctx: TenantContext, id: string) {
     const a = await chargerAnnonce(db, id);
     if (a.statut === "ARCHIVEE") throw new CommunicationError("ANNONCE_STATUT_INVALIDE", "Annonce déjà archivée.");
     await db.annonce.update({ where: { id }, data: { statut: "ARCHIVEE", epingle: false } });
-    await audit(db, ctx, "ANNONCE_ARCHIVEE", "annonce", id, { statut: a.statut }, { statut: "ARCHIVEE" });
+    // `epingle` conservé dans l'audit : c'est ce qui permet à `desarchiverAnnonce` (« Annuler »)
+    // de restaurer exactement l'état d'avant.
+    await audit(db, ctx, "ANNONCE_ARCHIVEE", "annonce", id, { statut: a.statut, epingle: a.epingle }, { statut: "ARCHIVEE" });
+    return obtenirAnnonceDb(db, ctx, id);
+  });
+}
+
+/**
+ * POST /annonces/{id}/desarchiver — annule un archivage (toast « Annuler »). ⚠️ Transition
+ * ARCHIVEE → statut précédent ajoutée et signalée (domain-reference 18.1 ne liste que les
+ * transitions avant ; rien n'y rend l'archivage définitif). Mêmes permissions que l'archivage.
+ *
+ * - Statut restauré : PUBLIEE si l'annonce avait été publiée (`publie_le` passé), sinon BROUILLON
+ *   (un brouillon archivé, éventuellement programmé, redevient brouillon — jamais publié par ce
+ *   biais). Aucune notification renvoyée : la diffusion a déjà eu lieu (ou aura lieu au job).
+ * - Épingle restaurée depuis le dernier audit ANNONCE_ARCHIVEE (`avant_json.epingle`).
+ * - Idempotent naturellement : une annonce non archivée est renvoyée telle quelle (200), sans audit.
+ */
+export async function desarchiverAnnonce(ctx: TenantContext, id: string) {
+  assertPeutGerer(ctx);
+  return withTenant(ctx, async (db) => {
+    const a = await chargerAnnonce(db, id);
+    if (a.statut !== "ARCHIVEE") return obtenirAnnonceDb(db, ctx, id);
+    const dernierArchivage = await db.auditLog.findFirst({
+      where: { coproprieteId: ctx.coproprieteId, entite: "annonce", entiteId: id, action: "ANNONCE_ARCHIVEE" },
+      orderBy: { horodatage: "desc" },
+      select: { avantJson: true },
+    });
+    const avant = (dernierArchivage?.avantJson ?? {}) as { epingle?: unknown };
+    const epingle = typeof avant.epingle === "boolean" ? avant.epingle : false;
+    const statut = a.publieLe && a.publieLe.getTime() <= Date.now() ? "PUBLIEE" : "BROUILLON";
+    await db.annonce.update({ where: { id }, data: { statut, epingle } });
+    await audit(db, ctx, "ANNONCE_DESARCHIVEE", "annonce", id, { statut: "ARCHIVEE" }, { statut, epingle });
     return obtenirAnnonceDb(db, ctx, id);
   });
 }
