@@ -21,7 +21,7 @@ export interface ActionModalSuccess {
   /** Message du succès (le message renvoyé par l'action, s'il existe, l'emporte). */
   message: string;
   /** Prochaines étapes proposées sous le message (ex. « Voir la dépense »). */
-  next?: ReactNode | ((close: () => void) => ReactNode);
+  next?: ReactNode | ((close: () => void, state: Extract<FormState, { status: "success" }>) => ReactNode);
   /** Action MAJEURE : écran de succès plein (Wise) puis fermeture — au lieu du panneau. */
   illustration?: string;
   /** Moment signature joué par l'écran plein (paiement, envoi, vote, justifiée). */
@@ -148,7 +148,7 @@ function ActionModalBody({
           message={message}
           closeLabel={closeLabel}
           onClose={close}
-          next={typeof success.next === "function" ? success.next(close) : success.next}
+          next={typeof success.next === "function" && state.status === "success" ? success.next(close, state) : typeof success.next === "function" ? null : success.next}
         />
       ) : (
         children({ state: etatFormulaire, formAction, pending, close })

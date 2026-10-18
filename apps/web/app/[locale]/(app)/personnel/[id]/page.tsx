@@ -190,7 +190,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
                     <TD className="text-end tnum">{c.nbJours}</TD>
                     <TD>{c.remplacant?.nom ?? "—"}</TD>
                     <TD><div className="flex items-center gap-1"><Badge variant={congeVariant[c.statut]}>{en.statutConge[c.statut]}</Badge>{c.document && gestion ? <DocumentViewerButton documentId={c.document.id} nom={c.document.nom} labels={viewer} iconOnly /> : null}</div></TD>
-                    <TD className="text-end">{c.statut === "DEMANDE" ? (gestion ? <DeciderCongeButtons dict={dict} locale={ctx.locale} conge={c} remplacants={remplacants} /> : soi ? <AnnulerCongeBouton dict={dict} locale={ctx.locale} congeId={c.id} /> : null) : null}</TD>
+                    <TD className="text-end">{c.statut === "DEMANDE" ? (gestion ? <DeciderCongeButtons dict={dict} locale={ctx.locale} conge={c} remplacants={remplacants} /> : soi ? <AnnulerCongeBouton dict={dict} locale={ctx.locale} congeId={c.id} debut={c.dateDebut} fin={c.dateFin} /> : null) : null}</TD>
                   </TR>
                 ))}
               </LiveList>

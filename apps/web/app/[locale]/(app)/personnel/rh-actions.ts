@@ -114,7 +114,7 @@ export async function demanderConge(_prev: FormState, fd: FormData): Promise<For
   const id = optionnel(fd, "personnel_id");
   const certificat = await televerser(fd, "certificat");
   if (certificat && "erreur" in certificat) return certificat.erreur;
-  const res = await apiFetch<Conge>(id ? `/personnel/${id}/conges` : "/personnel/conges", { method: "POST", idempotent: true, body: { type: champ(fd, "type"), date_debut: champ(fd, "date_debut"), date_fin: champ(fd, "date_fin"), nb_jours: optionnel(fd, "nb_jours") ?? undefined, motif: optionnel(fd, "motif"), certificat, remplacant_personnel_id: optionnel(fd, "remplacant_personnel_id") } });
+  const res = await apiFetch<Conge>(id ? `/personnel/${id}/conges` : "/personnel/conges", { method: "POST", idempotent: true, body: { type: champ(fd, "type"), date_debut: champ(fd, "date_debut"), date_fin: champ(fd, "date_fin"), nb_jours: optionnel(fd, "nb_jours")?.replace(",", ".") ?? undefined, motif: optionnel(fd, "motif"), certificat, remplacant_personnel_id: optionnel(fd, "remplacant_personnel_id") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, ...(id ? [`/personnel/${id}`] : []));
   return success();
