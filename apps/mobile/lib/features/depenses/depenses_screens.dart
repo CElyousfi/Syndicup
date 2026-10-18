@@ -71,7 +71,7 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
           depenses,
           onRetry: () => ref.invalidate(depensesProvider(statut)),
           data: (rows) => rows.isEmpty
-              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
+              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search', actionLabel: _onglet == 'TOUS' ? null : context.mdict.ux.clearFilter, onAction: () => setState(() => _onglet = 'TOUS'))
               : CardList([for (final x in rows) DepenseRow(x, key: ValueKey(x.id))]),
         )),
       ],

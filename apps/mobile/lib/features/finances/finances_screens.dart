@@ -105,7 +105,7 @@ class BudgetsScreen extends ConsumerWidget {
         SuBanner(tone: BannerTone.info, body: d.finances.budgetActifRequis),
         const SizedBox(height: 12),
         AsyncView(budgets, onRetry: () => ref.invalidate(budgetsProvider), data: (list) {
-          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded, illustration: 'empty-appels');
+          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded, illustration: 'empty-appels', actionLabel: ctx.isGestion ? d.finances.creerBudget : null, onAction: () => _form(context, ref, null));
           final sorted = [...list]..sort((a, b) => b.exercice.compareTo(a.exercice));
           final actif = sorted.where((b) => b.statut == 'ACTIF').firstOrNull;
           return Column(

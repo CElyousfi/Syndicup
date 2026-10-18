@@ -13,6 +13,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -63,7 +64,10 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
         FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? humanizeCode(v)), onChanged: (v) => setState(() => _categorie = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(value: _categorie, child: AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
-          if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: _categorie == null ? 'empty-annonces' : 'empty-search');
+          if (rows.isEmpty) {
+            if (_categorie != null) return EmptyState(title: c.aucuneFiltre, icon: Icons.filter_alt_off_rounded, illustration: 'empty-search', actionLabel: context.mdict.ux.clearFilter, onAction: () => setState(() => _categorie = null));
+            return EmptyState(title: c.aucune, hint: gestion ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: 'empty-annonces', actionLabel: gestion ? c.nouvelle : null, onAction: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))));
+          }
           // Affiche « à la une » : l'annonce épinglée publiée la plus récente (elle reste aussi dans la liste).
           final epinglees = rows.where((a) => a.epingle && a.statut == 'PUBLIEE').toList()..sort((a, b) => (b.publieLe ?? b.creeLe).compareTo(a.publieLe ?? a.creeLe));
           final une = epinglees.firstOrNull;

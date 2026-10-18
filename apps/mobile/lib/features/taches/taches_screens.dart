@@ -58,7 +58,7 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
         ],
         SuFadeSwitch(value: _filtre, child: AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
           final visibles = gardien && _filtre == 'OUVERTES' ? rows.where((x) => x.ouverte).toList() : rows;
-          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search');
+          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search', actionLabel: !gardien && _filtre != 'OUVERTES' ? context.mdict.ux.clearFilter : null, onAction: () => setState(() => _filtre = 'OUVERTES'));
           return CardList([for (final x in visibles) TacheRow(x, key: ValueKey(x.id), file: file)]);
         })),
       ],

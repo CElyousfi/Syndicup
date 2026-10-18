@@ -42,7 +42,7 @@ class EspacesScreen extends ConsumerWidget {
     final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()), icon: const Icon(Icons.add_rounded), label: Text(d.espaces.nouveau)) : null;
     Future<void> refresh() => refreshing(ref, [espacesProvider]);
     final liste = AsyncView(espaces, onRetry: () => ref.invalidate(espacesProvider), skeletonCount: 2, loading: const LoadingList(count: 2, height: 260), data: (list) {
-      if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations');
+      if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations', actionLabel: ctx.isGestion ? d.espaces.nouveau : null, onAction: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()));
       return Column(
         children: [
           for (int k = 0; k < list.length; k++)

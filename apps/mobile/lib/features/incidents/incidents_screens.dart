@@ -15,6 +15,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/live/live_activities.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
@@ -63,7 +64,8 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
         if (visible.isEmpty) {
           // Filtre précis sans résultat : illustration « recherche » ; sinon la boîte à outils.
           final filtre = _statut != 'OUVERTS' && _statut != 'TOUS';
-          return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: filtre ? 'empty-search' : 'empty-incidents', actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
+          if (filtre) return EmptyState(title: context.mdict.ux.filteredEmpty, icon: Icons.filter_alt_off_rounded, illustration: 'empty-search', actionLabel: context.mdict.ux.clearFilter, onAction: () => setState(() => _statut = 'OUVERTS'));
+          return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: 'empty-incidents', actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
         }
         return CardList([
           for (final i in visible)
@@ -769,7 +771,7 @@ class PrestatairesScreen extends ConsumerWidget {
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.nouveauPrestataire)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(prestatairesProvider), data: (ps) {
-          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded, illustration: 'empty-personnel');
+          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded, illustration: 'empty-personnel', actionLabel: ctx.isGestion ? d.incidents.nouveauPrestataire : null, onAction: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()));
           return CardList([
             for (final p in ps)
               ListRow(

@@ -37,7 +37,7 @@ class AgListScreen extends ConsumerWidget {
       children: [
         PhotoBanner('salle', title: ctx.copropriete?.nom),
         AsyncView(ags, onRetry: () => ref.invalidate(agListProvider), data: (list) {
-          if (list.isEmpty) return EmptyState(title: d.ag.aucuneAg, hint: ctx.isGestion ? d.ag.aucuneAgAide : null, icon: Icons.how_to_vote_rounded, illustration: 'empty-ag');
+          if (list.isEmpty) return EmptyState(title: d.ag.aucuneAg, hint: ctx.isGestion ? d.ag.aucuneAgAide : null, icon: Icons.how_to_vote_rounded, illustration: 'empty-ag', actionLabel: ctx.isGestion ? d.ag.creer : null, onAction: () => context.push('/ag/nouvelle'));
           final sorted = [...list]..sort((a, b) => b.dateAg.compareTo(a.dateAg));
           return CardList([
             for (final a in sorted)

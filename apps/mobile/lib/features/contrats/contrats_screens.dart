@@ -9,6 +9,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/format/centimes.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -80,7 +81,7 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
             contrats,
             onRetry: () => ref.invalidate(contratsProvider(statut)),
             data: (rows) => rows.isEmpty
-                ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
+                ? EmptyState(title: statut == null ? d.contrats.aucun : d.contrats.aucunFiltre, hint: statut == null ? d.contrats.aucunAide : null, icon: Icons.handshake_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search', actionLabel: _onglet == 'TOUS' ? null : context.mdict.ux.clearFilter, onAction: () => setState(() => _onglet = 'TOUS'))
                 : CardList([for (final c in rows) _ContratRow(c, key: ValueKey(c.id))]),
           ),
         ),
