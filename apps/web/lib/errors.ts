@@ -14,8 +14,9 @@
  *  - RATE_LIMITED + Retry-After → « Réessayez dans X min » ;
  *  - status 0 / NETWORK → API injoignable.
  */
-import { fill, getDict, type Locale } from "./i18n";
-import type { ErrorsDict } from "./i18n/errors-fr";
+import { fill, getDict, type Dict, type Locale } from "./i18n";
+
+type ErrorsDict = Dict["errors"];
 
 /** Prochaine étape proposée après un échec. */
 export type ErrorAction = "retry" | "relogin" | "refresh" | "contact" | "none";

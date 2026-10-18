@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { actionFor, describeError, formatRetryAfter, normalizeCode, shortRef, stripSpecRefs } from "../errors";
 import { fr } from "../i18n/fr";
 import { ar } from "../i18n/ar";
+import * as ui from "../i18n/errors-ui-fr";
+import * as uiAr from "../i18n/errors-ui-ar";
 
 /** Codes de apps/api/lib/http/respond.ts (ErrorCode) — copie volontaire : un nouveau code côté
  *  API qui n'arrive pas au dictionnaire fait échouer ce test. */
@@ -41,6 +43,19 @@ describe("dictionnaire d'erreurs", () => {
       const k = code as keyof typeof fr.errors.codes;
       expect(ar.errors.codes[k].title).not.toBe(fr.errors.codes[k].title);
     }
+  });
+});
+
+describe("pièces client (errors-ui-*.ts) = dictionnaire complet", () => {
+  it.each([
+    ["fr", fr, ui.errorActionsFr, ui.boundaryFr, ui.viewerFr, ui.staleFr, ui.referenceFr],
+    ["ar", ar, uiAr.errorActionsAr, uiAr.boundaryAr, uiAr.viewerAr, uiAr.staleAr, uiAr.referenceAr],
+  ] as const)("%s", (_l, d, actions, boundary, viewer, stale, reference) => {
+    expect(d.errors.actions).toEqual(actions);
+    expect(d.errors.boundary).toEqual(boundary);
+    expect(d.errors.viewer).toEqual(viewer);
+    expect(d.errors.stale).toEqual(stale);
+    expect({ reference: d.errors.reference, referenceCopy: d.errors.referenceCopy, referenceCopied: d.errors.referenceCopied }).toEqual(reference);
   });
 });
 

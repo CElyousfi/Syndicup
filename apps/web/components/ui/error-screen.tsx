@@ -13,8 +13,8 @@ import { Button } from "./button";
 import { IconCircle, CAlert } from "./color-icons";
 import { Illustration } from "./illustration";
 import { ReferenceChip } from "./error-parts";
-import { boundaryFr, errorActionsFr, referenceFr } from "../../lib/i18n/errors-fr";
-import { boundaryAr, errorActionsAr, referenceAr } from "../../lib/i18n/errors-ar";
+import { boundaryFr, errorActionsFr, referenceFr } from "../../lib/i18n/errors-ui-fr";
+import { boundaryAr, errorActionsAr, referenceAr } from "../../lib/i18n/errors-ui-ar";
 
 /** Textes importés pièce par pièce : jamais le dictionnaire complet dans le bundle client. */
 const TEXTES = {

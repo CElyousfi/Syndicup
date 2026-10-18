@@ -14,8 +14,8 @@ import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { FadeImg } from "../ui/motion/fade-img";
 import { IconAlert, IconDownload, IconEye } from "../ui/icons";
-import { errorActionsFr, viewerFr } from "../../lib/i18n/errors-fr";
-import { errorActionsAr, viewerAr } from "../../lib/i18n/errors-ar";
+import { errorActionsFr, viewerFr } from "../../lib/i18n/errors-ui-fr";
+import { errorActionsAr, viewerAr } from "../../lib/i18n/errors-ui-ar";
 
 export interface ViewerLabels {
   see: string;
