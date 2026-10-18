@@ -31,6 +31,9 @@ export const staleAr: DeepDict<typeof staleFr> = {
   lost: "انقطع الاتصال",
   lastUpdate: "آخر تحديث قبل {temps}",
   never: "في انتظار أول تحديث",
+  seconds: "{n} ثانية",
+  minutes: "{n} دقيقة",
+  retry: "إعادة المحاولة",
 };
 
 export const referenceAr: DeepDict<typeof referenceFr> = {

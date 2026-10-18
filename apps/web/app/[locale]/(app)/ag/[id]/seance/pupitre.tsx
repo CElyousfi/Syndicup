@@ -21,6 +21,7 @@ import { resolutionVariant } from "../../../../../../lib/status";
 import { finaliserResolution, cloturerAg } from "../../actions";
 import { CloturerModal } from "../ag-actions";
 import { SalleSeance } from "./salle";
+import { StaleIndicator, useStale } from "../../../../../../components/ui/stale-indicator";
 
 /**
  * E5 — pupitre de séance (syndic) : résultats agrégés en direct, finalisation résolution par
@@ -49,7 +50,11 @@ export function Pupitre({
 
   const resolution = resolutions[index];
 
-  // Rafraîchissement live des agrégats (5 s).
+  // Rafraîchissement live des agrégats (5 s). Un échec n'est jamais silencieux : la pastille
+  // « Connexion perdue — dernière mise à jour il y a … » s'affiche jusqu'au prochain succès.
+  const stale = useStale();
+  const { ok: staleOk, fail: staleFail } = stale;
+  const [essai, setEssai] = useState(0);
   useEffect(() => {
     if (!resolution) return;
     let annule = false;
@@ -59,7 +64,11 @@ export function Pupitre({
           `/api/ag-resultats?ag=${agId}&resolution=${resolution.id}`,
           { cache: "no-store" }
         );
-        if (!r.ok || annule) return;
+        if (annule) return;
+        if (!r.ok) {
+          staleFail();
+          return;
+        }
         const data = (await r.json()) as {
           resolutions: AgResolution[];
           resultats: AgResultatLigne[] | null;
@@ -67,8 +76,11 @@ export function Pupitre({
         setResolutions(data.resolutions);
         setResultats(data.resultats);
         setChargement(false);
-      } catch {
-        // tick suivant
+        staleOk();
+      } catch (e) {
+        // Hors-ligne passager : signalé à l'écran, nouvel essai au tick suivant.
+        if (!annule) staleFail();
+        console.warn(JSON.stringify({ niveau: "warn", message: "pupitre : resultats indisponibles", erreur: String(e) }));
       }
     };
     void charger();
@@ -77,7 +89,7 @@ export function Pupitre({
       annule = true;
       clearInterval(timer);
     };
-  }, [agId, resolution?.id, resolution, finaliserState]);
+  }, [agId, resolution?.id, resolution, finaliserState, essai, staleOk, staleFail]);
 
   if (!resolution) return <Banner variant="info">{a.aucuneResolution}</Banner>;
 
@@ -101,6 +113,12 @@ export function Pupitre({
 
   return (
     <div className="space-y-6">
+      <StaleIndicator
+        failing={stale.failing}
+        lastUpdated={stale.lastUpdated}
+        labels={dict.errors.stale}
+        onRetry={() => setEssai((n) => n + 1)}
+      />
       {/* Salle verte : la résolution courante en affiche. */}
       <SalleSeance
         dict={dict}

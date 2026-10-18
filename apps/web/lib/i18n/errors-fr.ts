@@ -31,6 +31,9 @@ export const staleFr = {
   lost: "Connexion perdue",
   lastUpdate: "dernière mise à jour il y a {temps}",
   never: "en attente de la première mise à jour",
+  seconds: "{n} s",
+  minutes: "{n} min",
+  retry: "Réessayer",
 };
 
 /** Référence courte (8 caractères) à communiquer au support — copiable. */

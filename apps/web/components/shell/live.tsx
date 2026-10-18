@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useStale } from "../ui/stale-indicator";
 import { useRouter } from "next/navigation";
 import { toast } from "../../lib/toast";
 import { playSound } from "../../lib/feel/sounds";
@@ -33,6 +34,10 @@ export function useLive(unreadInitial: number, locale: string) {
   const [unread, setUnread] = useState(unreadInitial);
   const vus = useRef<Set<string>>(new Set());
   const lues = useRef<Set<string>>(new Set());
+  // Santé du direct : un sondage en échec n'est jamais silencieux (pastille de la coque).
+  const stale = useStale();
+  const { ok: staleOk, fail: staleFail } = stale;
+  const pollRef = useRef<(() => Promise<void>) | null>(null);
 
   useEffect(() => setUnread(unreadInitial), [unreadInitial]);
 
@@ -78,8 +83,14 @@ export function useLive(unreadInitial: number, locale: string) {
       if (document.visibilityState !== "visible") return;
       try {
         const r = await fetch(`/api/notifications-live?locale=${locale}`, { cache: "no-store" });
-        if (!r.ok) return;
+        if (!r.ok) {
+          // Session expirée (401) : la prochaine navigation renvoie à la connexion ; autre :
+          // données en direct figées — signalées par la pastille de la coque.
+          staleFail();
+          return;
+        }
         const data = (await r.json()) as { unread: number; items: NotificationLive[] };
+        staleOk();
         setUnread(data.unread);
         if (vus.current.size === 0) {
           data.items.forEach((n) => vus.current.add(n.id));
@@ -91,15 +102,19 @@ export function useLive(unreadInitial: number, locale: string) {
           recevoir(n);
         }
         if (nouveau) router.refresh();
-      } catch {
-        /* réseau indisponible : prochain tick */
+      } catch (e) {
+        // Réseau indisponible : signalé (pastille), nouvel essai au prochain tick.
+        staleFail();
+        console.warn(JSON.stringify({ niveau: "warn", message: "notifications en direct indisponibles", erreur: String(e) }));
       }
     };
+    pollRef.current = poll;
 
     const connecter = () => {
       if (arrete || typeof EventSource === "undefined") return;
       source = new EventSource("/api/notifications-stream");
       source.addEventListener("open", () => {
+        staleOk();
         if (timerPoll) {
           clearInterval(timerPoll);
           timerPoll = null;
@@ -136,7 +151,7 @@ export function useLive(unreadInitial: number, locale: string) {
       if (timerPoll) clearInterval(timerPoll);
       if (timerReconnexion) clearTimeout(timerReconnexion);
     };
-  }, [locale, router]);
+  }, [locale, router, staleOk, staleFail]);
 
   // 3. Re-synchronisation des données de page.
   useEffect(() => {
@@ -156,5 +171,10 @@ export function useLive(unreadInitial: number, locale: string) {
     };
   }, [router]);
 
-  return unread;
+  const retry = useCallback(() => {
+    void pollRef.current?.();
+    router.refresh();
+  }, [router]);
+
+  return { unread, stale: { failing: stale.failing, lastUpdated: stale.lastUpdated, retry } };
 }

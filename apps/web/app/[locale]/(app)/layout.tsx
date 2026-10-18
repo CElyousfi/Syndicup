@@ -63,6 +63,7 @@ export default async function AppLayout({
         done: dict.common.done,
       }}
       alive={dict.alive}
+      staleLabels={dict.errors.stale}
       quick={buildQuickActions(nav, ctx.role, ctx.roles, dict, ctx.locale)}
       tour={dict.onboarding}
       dari={ctx.role === "MEMBRE_CABINET" ? null : { labels: dict.dari, prenom: ctx.profil.prenom ?? "" }}
