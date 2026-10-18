@@ -944,3 +944,153 @@ class DariDict {
 extension DariDictContext on BuildContext {
   DariDict get dari => DariDict.of(Localizations.localeOf(this));
 }
+
+/// Envois de fichiers, validation avant envoi, données périmées, déconnexion — `context.mup`.
+/// Classe à part (et non un champ de [MobileDict]) : ajout sans toucher aux constructeurs.
+class MobileUp {
+  const MobileUp({
+    required this.tooLargeTitle,
+    required this.tooLarge,
+    required this.badTypeTitle,
+    required this.badTypeImages,
+    required this.badTypeImagesPdf,
+    required this.badTypeDocuments,
+    required this.storageTitle,
+    required this.storage,
+    required this.networkTitle,
+    required this.network,
+    required this.cancelledTitle,
+    required this.cancelled,
+    required this.waiting,
+    required this.uploading,
+    required this.done,
+    required this.failed,
+    required this.retryOne,
+    required this.cancel,
+    required this.remove,
+    required this.sizeMo,
+    required this.sizeKo,
+    required this.photoVideo,
+    required this.fichier,
+    required this.fieldRequired,
+    required this.amountInvalid,
+    required this.amountPositive,
+    required this.phoneInvalid,
+    required this.integerInvalid,
+    required this.periodInvalid,
+    required this.numberInvalid,
+    required this.valuePositive,
+    required this.endAfterStart,
+    required this.missing,
+    required this.missingSep,
+    required this.missingProof,
+    required this.missingFile,
+    required this.missingCategory,
+    required this.staleAt,
+    required this.staleOn,
+    required this.logoutTitle,
+    required this.logoutBody,
+  });
+
+  final String tooLargeTitle, tooLarge, badTypeTitle, badTypeImages, badTypeImagesPdf, badTypeDocuments, storageTitle, storage, networkTitle, network, cancelledTitle, cancelled;
+  final String waiting, uploading, done, failed, retryOne, cancel, remove, sizeMo, sizeKo, photoVideo, fichier;
+  final String fieldRequired, amountInvalid, amountPositive, phoneInvalid, integerInvalid, periodInvalid, numberInvalid, valuePositive, endAfterStart, missing, missingSep, missingProof, missingFile, missingCategory;
+  final String staleAt, staleOn, logoutTitle, logoutBody;
+
+  /// « À compléter : lot, montant » — texte d'aide sous un bouton d'envoi désactivé.
+  String missingList(List<String> champs) => fill(missing, {'champs': champs.join(missingSep)});
+
+  static const fr = MobileUp(
+    tooLargeTitle: 'Fichier trop lourd',
+    tooLarge: 'Fichier trop lourd (max {max} Mo).',
+    badTypeTitle: 'Format non accepté',
+    badTypeImages: 'Format non accepté : photo uniquement (JPEG, PNG, WebP ou HEIC).',
+    badTypeImagesPdf: 'Format non accepté : PDF ou photo.',
+    badTypeDocuments: 'Format non accepté : PDF, photo, vidéo (MP4, MOV, WebM), Word, Excel, PowerPoint, OpenDocument, RTF, texte ou ZIP.',
+    storageTitle: 'Envoi du fichier refusé',
+    storage: 'Le stockage n\'a pas accepté le fichier. Réessayez dans un instant.',
+    networkTitle: 'Envoi interrompu',
+    network: 'La connexion a coupé pendant l\'envoi. Réessayez : les fichiers déjà envoyés ne repartiront pas.',
+    cancelledTitle: 'Envoi annulé',
+    cancelled: 'L\'envoi du fichier a été annulé.',
+    waiting: 'Prêt à envoyer',
+    uploading: 'Envoi… {pct} %',
+    done: 'Envoyé',
+    failed: 'Échec de l\'envoi',
+    retryOne: 'Renvoyer ce fichier',
+    cancel: 'Annuler l\'envoi',
+    remove: 'Retirer le fichier',
+    sizeMo: '{n} Mo',
+    sizeKo: '{n} Ko',
+    photoVideo: 'Photo ou vidéo',
+    fichier: 'Fichier (PDF, Word, Excel…)',
+    fieldRequired: 'Champ obligatoire',
+    amountInvalid: 'Montant invalide — exemple : 1 250,50',
+    amountPositive: 'Le montant doit être supérieur à 0',
+    phoneInvalid: 'Numéro invalide — exemple : +212 6 12 34 56 78',
+    integerInvalid: 'Saisissez un nombre entier',
+    periodInvalid: 'Format attendu : AAAA-MM (ex. 2026-10)',
+    numberInvalid: 'Nombre invalide — exemple : 125,5',
+    valuePositive: 'La valeur doit être supérieure à 0',
+    endAfterStart: 'L\'heure de fin doit être après l\'heure de début',
+    missing: 'À compléter : {champs}',
+    missingSep: ', ',
+    missingProof: 'preuve de paiement',
+    missingFile: 'fichier',
+    missingCategory: 'catégorie',
+    staleAt: 'Données de {heure} — serveur injoignable',
+    staleOn: 'Données du {date} à {heure} — serveur injoignable',
+    logoutTitle: 'Se déconnecter ?',
+    logoutBody: 'Vous devrez vous reconnecter pour accéder à votre résidence. Les pages gardées sur ce téléphone seront effacées.',
+  );
+
+  static const ar = MobileUp(
+    tooLargeTitle: 'الملف كبير جدًا',
+    tooLarge: 'الملف كبير جدًا (الحد الأقصى {max} ميغابايت).',
+    badTypeTitle: 'صيغة غير مقبولة',
+    badTypeImages: 'صيغة غير مقبولة: الصور فقط (JPEG أو PNG أو WebP أو HEIC).',
+    badTypeImagesPdf: 'صيغة غير مقبولة: ملف PDF أو صورة.',
+    badTypeDocuments: 'صيغة غير مقبولة: PDF أو صورة أو فيديو (MP4 أو MOV أو WebM) أو Word أو Excel أو PowerPoint أو OpenDocument أو RTF أو نص أو ZIP.',
+    storageTitle: 'رُفض إرسال الملف',
+    storage: 'لم يقبل التخزين الملف. أعيدوا المحاولة بعد لحظات.',
+    networkTitle: 'انقطع الإرسال',
+    network: 'انقطع الاتصال أثناء الإرسال. أعيدوا المحاولة: الملفات المُرسَلة لن تُرسَل مرة أخرى.',
+    cancelledTitle: 'أُلغي الإرسال',
+    cancelled: 'أُلغي إرسال الملف.',
+    waiting: 'جاهز للإرسال',
+    uploading: 'جارٍ الإرسال… {pct}٪',
+    done: 'أُرسل',
+    failed: 'فشل الإرسال',
+    retryOne: 'إعادة إرسال هذا الملف',
+    cancel: 'إلغاء الإرسال',
+    remove: 'إزالة الملف',
+    sizeMo: '{n} ميغابايت',
+    sizeKo: '{n} كيلوبايت',
+    photoVideo: 'صورة أو فيديو',
+    fichier: 'ملف (PDF أو Word أو Excel…)',
+    fieldRequired: 'حقل إلزامي',
+    amountInvalid: 'مبلغ غير صالح — مثال: 1 250,50',
+    amountPositive: 'يجب أن يكون المبلغ أكبر من 0',
+    phoneInvalid: 'رقم غير صالح — مثال: ‎+212 6 12 34 56 78',
+    integerInvalid: 'أدخلوا عددًا صحيحًا',
+    periodInvalid: 'الصيغة المطلوبة: AAAA-MM (مثال: 2026-10)',
+    numberInvalid: 'عدد غير صالح — مثال: 125,5',
+    valuePositive: 'يجب أن تكون القيمة أكبر من 0',
+    endAfterStart: 'يجب أن تكون ساعة النهاية بعد ساعة البداية',
+    missing: 'يجب إكمال: {champs}',
+    missingSep: '، ',
+    missingProof: 'إثبات الأداء',
+    missingFile: 'الملف',
+    missingCategory: 'الفئة',
+    staleAt: 'معطيات الساعة {heure} — تعذّر الوصول إلى الخادم',
+    staleOn: 'معطيات {date} على الساعة {heure} — تعذّر الوصول إلى الخادم',
+    logoutTitle: 'تسجيل الخروج؟',
+    logoutBody: 'سيتعيّن عليكم تسجيل الدخول من جديد للوصول إلى إقامتكم. ستُمحى الصفحات المحفوظة على هذا الهاتف.',
+  );
+
+  static MobileUp of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+}
+
+extension MobileUpContext on BuildContext {
+  MobileUp get mup => MobileUp.of(Localizations.localeOf(this));
+}
