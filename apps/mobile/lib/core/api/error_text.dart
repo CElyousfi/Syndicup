@@ -39,14 +39,17 @@ class ErrorText {
 
 /// Retire les références de spécification des messages serveur (« (Partie 5.5) », « (Doc A §8) »,
 /// « Doc A §2.1 », « Master Spec 3.1 ») : elles parlent aux développeurs, pas aux résidents.
+/// Même prudence que l'API (respond.ts) : « Partie » et « § » seuls sont du vocabulaire métier
+/// (« § 4.2 du règlement », « art. 16 §2 ») et restent ; seules les formes préfixées partent,
+/// et « (Partie n) » seule entre parenthèses.
 String stripSpecRefs(String message) {
   var s = message;
-  // Parenthèses qui contiennent une référence : retirées en entier (« (Doc A §2.1 : propriétaire MRE) »).
-  s = s.replaceAll(RegExp(r'\s*\([^()]*(?:Partie\s*\d|Doc\s*A|Master\s*Spec|§|LEGAL_QUESTIONS|brief\s*§)[^()]*\)'), '');
-  // Références nues restantes.
-  s = s.replaceAll(RegExp(r'[,;]?\s*(?:Doc\s*A\s*)?§\s*\d+(?:\.\d+)*'), '');
-  s = s.replaceAll(RegExp(r'[,;]?\s*(?:Master\s*Spec\s*)?Partie\s*\d+(?:\.\d+)*'), '');
-  s = s.replaceAll(RegExp(r'[,;]?\s*Master\s*Spec(?:\s*\d+(?:\.\d+)*)?'), '');
+  const prefixe = r'(?:Doc\s*A|Master\s*Spec|LEGAL_QUESTIONS(?:_BRIEF)?|BRIEF|CLAUDE\.md)';
+  // Parenthèses qui citent une source préfixée (« (Doc A §2.1 : propriétaire MRE) »).
+  s = s.replaceAll(RegExp(r'\s*\([^()]*' + prefixe + r'[^()]*\)'), '');
+  s = s.replaceAll(RegExp(r'\s*\(\s*Partie\s*\d+(?:\.\d+)*\s*\)'), '');
+  // Références préfixées nues (« — Master Spec Partie 2.4 », « Doc A §8.3 »).
+  s = s.replaceAll(RegExp(r'\s*[—–]?\s*' + prefixe + r'(?:\s*(?:Partie|§)?\s*\d+(?:\.\d+)*)*'), '');
   s = s.replaceAll(RegExp(r'\s{2,}'), ' ');
   s = s.replaceAllMapped(RegExp(r'\s+([.,;:!?])'), (m) => m.group(1)!);
   return s.trim();

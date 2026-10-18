@@ -84,6 +84,9 @@ void main() {
       expect(e(fr, 'CONFLICT', 409, message: 'Déjà inscrit — connectez-vous (Partie 5.5).').body, 'Déjà inscrit — connectez-vous.');
       expect(e(fr, 'UNPROCESSABLE_ENTITY', 422, message: 'Seul le syndic gère les contrats (Doc A §8).').body, 'Seul le syndic gère les contrats.');
       expect(e(fr, 'CODE_INCONNU', 422, message: 'Règle Doc A §2.1 non respectée.').body, 'Règle non respectée.');
+      expect(e(fr, 'CONFLICT', 409, message: 'Syndic déjà actif — Master Spec Partie 2.4.').body, 'Syndic déjà actif.');
+      // Vocabulaire métier conservé (même règle que l'API).
+      expect(e(fr, 'CODE_INCONNU', 422, message: 'Voir le § 4.2 du règlement.').body, 'Voir le § 4.2 du règlement.');
     });
 
     test('AR : jamais le message français du serveur', () {
