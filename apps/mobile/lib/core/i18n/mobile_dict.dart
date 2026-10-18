@@ -604,6 +604,8 @@ class MobileUx {
     required this.accessSuspended,
     required this.undo,
     required this.annonceRestauree,
+    required this.notifLue,
+    required this.notifsLues,
     required this.doorFailTitle,
     required this.doorFailBody,
     required this.emailRequired,
@@ -641,6 +643,9 @@ class MobileUx {
 
   /// Toast après « Annuler » d'un archivage d'annonce (POST /annonces/{id}/desarchiver).
   final String annonceRestauree;
+
+  /// Toasts « marquer comme lu » (envoi différé ~6 s, « Annuler » sans requête) ; `{n}` = nombre.
+  final String notifLue, notifsLues;
   final String emailRequired, emailInvalid, passwordShort;
   final String bioFailed, bioLockedOut, bioUnavailable, bioUsePasswordTitle, bioUsePasswordBody, bioUsePasswordConfirm;
   final String offlineTitle, offlineBody, financeOfflineTitle, financeOfflineBody;
@@ -721,6 +726,8 @@ class MobileUx {
     accessSuspended: 'Accès suspendu : l\'abonnement de la résidence est à régulariser. Contactez votre syndic.',
     undo: 'Annuler',
     annonceRestauree: 'Archivage annulé : l\'annonce est de retour sur le tableau.',
+    notifLue: 'Notification marquée comme lue.',
+    notifsLues: '{n} notifications marquées comme lues.',
     doorFailTitle: 'Réponse non envoyée — touchez pour ouvrir',
     doorFailBody: 'Votre réponse au visiteur n\'est pas partie. Ouvrez l\'application pour répondre.',
     emailRequired: 'Saisissez votre e-mail',
@@ -819,6 +826,8 @@ class MobileUx {
     accessSuspended: 'الوصول معلّق: يجب تسوية اشتراك الإقامة. تواصلوا مع السنديك.',
     undo: 'تراجع',
     annonceRestauree: 'تم التراجع عن الأرشفة: عاد الإعلان إلى لوحة الإعلانات.',
+    notifLue: 'تم اعتبار الإشعار مقروءًا.',
+    notifsLues: 'تم اعتبار {n} إشعارات مقروءة.',
     doorFailTitle: 'لم يُرسَل الرد — اضغطوا للفتح',
     doorFailBody: 'لم يُرسَل ردّكم على الزائر. افتحوا التطبيق للرد.',
     emailRequired: 'أدخلوا بريدكم الإلكتروني',

@@ -1278,6 +1278,8 @@ export const fr = {
     nonLues: "{n} non lues",
     toutesLues: "Vous êtes à jour.",
     marquerLu: "Marquer comme lu",
+    marqueeLue: "Notification marquée comme lue.",
+    lectureEchec: "La lecture n'a pas pu être enregistrée : la notification reste non lue.",
     aucune: "Aucune notification.",
     aucuneAide: "Vous retrouverez ici les événements qui vous concernent : appels de fonds, assemblées, visites…",
     voirToutes: "Voir toutes les notifications",
