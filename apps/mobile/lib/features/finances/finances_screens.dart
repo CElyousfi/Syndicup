@@ -924,7 +924,7 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
                   leading: IconCircle(Icons.calendar_month_rounded, tone: pp >= pd ? Tone.ok : Tone.sand),
                   title: formatPeriode(p, l),
                   subtitle: '${c.colAppels}: ${appels.where((a) => a.periode == p).length} · ${formatPourcent(ratio(pp, pd))}',
-                  trailing: _MontantFin(versChaine(pd), secondaire: _sousMontant(context, '${resident ? c.regle : c.encaisse} ${formatMontant(versChaine(pp))}')),
+                  trailing: _MontantFin(versChaine(pd), secondaire: _sousMontant(context, '${resident ? c.regle : c.encaisse} ${formatMAD(versChaine(pp), l)}')),
                 );
               }),
           ]),

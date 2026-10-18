@@ -125,6 +125,7 @@ class _InvitationScanScreenState extends State<InvitationScanScreen> {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
     // Caméra plein écran ; bouton rond blanc de fermeture, titre blanc par-dessus (Wise).
+    // Barre propre (pas SuPage) : transparente au-dessus du flux caméra (extendBodyBehindAppBar).
     return Scaffold(
       backgroundColor: Colors.black,
       extendBodyBehindAppBar: true,

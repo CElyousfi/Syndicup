@@ -294,7 +294,7 @@ class RapportsScreen extends ConsumerWidget {
             ),
             SectionHeader(d.rapports.budget, subtitle: x.budget.budgetId != null ? '${d.rapports.prevu} ${formatMAD(x.budget.budgetMontantTotal, l)} · ${d.rapports.realise} ${formatMAD(x.budget.totaux.realise, l)}' : d.rapports.aucunBudget),
             if (x.budget.postes.isNotEmpty)
-              SuCard(child: Column(children: [for (final p in x.budget.postes) _Ligne(label: p.libelle ?? (d.enumsDepenses.categorieDepense[p.categorie] ?? humanizeCode(p.categorie)), valeur: '${formatMontant(p.realise)} / ${formatMontant(p.montantPrevu)}', ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null)])),
+              SuCard(child: Column(children: [for (final p in x.budget.postes) _Ligne(label: p.libelle ?? (d.enumsDepenses.categorieDepense[p.categorie] ?? humanizeCode(p.categorie)), valeur: formatMontantSur(p.realise, p.montantPrevu, l), ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null)])),
             SectionHeader(d.rapports.depenses, subtitle: '${d.rapports.parCategorie} · ${x.exercice}', actionLabel: d.rapports.voirTout, onAction: () => context.push('/depenses')),
             SuCard(child: Column(children: [
               for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? humanizeCode(c.categorie), montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} % · ${c.nb}' : null),
@@ -377,7 +377,7 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
             ]),
             SectionHeader(d.rapports.budget, subtitle: x.budgetActif ? '${d.rapports.prevu} ${formatMAD(x.budgetPrevu, l)} · ${d.rapports.realise} ${formatMAD(x.budgetRealise, l)}${x.budgetPourcentage != null ? ' · ${x.budgetPourcentage} %' : ''}' : d.rapports.aucunBudget),
             if (x.postes.isNotEmpty)
-              SuCard(child: Column(children: [for (final p in x.postes) _Ligne(label: p.libelle, valeur: '${formatMontant(p.realise)} / ${formatMontant(p.montantPrevu)}', ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null, hint: d.enumsDepenses.categorieDepense[p.categorie])])),
+              SuCard(child: Column(children: [for (final p in x.postes) _Ligne(label: p.libelle, valeur: formatMontantSur(p.realise, p.montantPrevu, l), ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null, hint: d.enumsDepenses.categorieDepense[p.categorie])])),
             SectionHeader(d.rapports.parCategorie, subtitle: '${d.rapports.depenses} · ${formatMAD(x.depensesTotal, l)}'),
             SuCard(child: Column(children: [
               for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? humanizeCode(c.categorie), montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} %' : null),

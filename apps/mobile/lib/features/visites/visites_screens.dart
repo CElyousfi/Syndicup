@@ -353,6 +353,8 @@ class _VisiteRepondreScreenState extends ConsumerState<VisiteRepondreScreen> {
     void fermer() => context.canPop() ? context.pop() : context.go('/tableau-de-bord');
     final reponse = _reponse ?? v?.statut;
     final autorise = reponse == 'AUTORISE';
+    // Barre propre (pas SuPage) : moment « porte » plein écran sans titre, fermé par « × »
+    // (retour au tableau de bord si l'écran a été ouvert depuis une notification).
     return Scaffold(
       backgroundColor: SuColors.surface,
       appBar: AppBar(

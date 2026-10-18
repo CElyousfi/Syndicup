@@ -84,7 +84,9 @@ class _ParkingsScreenState extends ConsumerState<ParkingsScreen> with TickerProv
   }
 }
 
-/// En-tête du shell avec onglets (route racine « Plus » → parkings).
+/// En-tête du shell avec onglets (route racine « Plus » → parkings, cabinet). Reste une barre
+/// propre : SuPage.rootHeader ne porte pas d'onglets ; hors racine, les écrans passent par
+/// `SuPage(bottom:)`.
 class ShellHeaderWithBottom extends StatelessWidget implements PreferredSizeWidget {
   const ShellHeaderWithBottom({super.key, required this.title, required this.bottom});
   final String title;

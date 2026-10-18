@@ -137,9 +137,9 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
     final ctx = ref.watch(appContextProvider);
     final d = context.dict;
     final lot = ref.watch(lotProvider(widget.id));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(lot.valueOrNull == null ? d.lots.title : '${d.enums.typeLot[lot.valueOrNull!.typeLot] ?? ''} ${lot.valueOrNull!.numero}'),
+    // Page standard (retour rond, titre compact) : les onglets passent en `bottom`, le corps en `body`.
+    return SuPage(
+        title: lot.valueOrNull == null ? d.lots.title : '${d.enums.typeLot[lot.valueOrNull!.typeLot] ?? ''} ${lot.valueOrNull!.numero}',
         actions: [
           if (ctx.isGestion)
             PopupMenuButton<String>(
@@ -161,7 +161,6 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
             ),
         ],
         bottom: TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: d.lots.onglets.propriete), Tab(text: d.lots.onglets.occupation), Tab(text: d.lots.onglets.finances), Tab(text: d.lots.onglets.parkings), Tab(text: d.lots.onglets.historique)]),
-      ),
       body: AsyncView(
         lot,
         onRetry: () => ref.invalidate(lotProvider(widget.id)),
@@ -400,7 +399,7 @@ class _Finances extends ConsumerWidget {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             AnimatedAmount(li.montantDu, currency: false, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
-                                            Padding(padding: const EdgeInsets.only(top: 3), child: Text('${d.finances.paye.toLowerCase()} ${formatMontant(li.montantPaye)}', style: t.bodySmall)),
+                                            Padding(padding: const EdgeInsets.only(top: 3), child: Text('${d.finances.paye.toLowerCase()} ${formatMAD(li.montantPaye, l)}', style: t.bodySmall)),
                                           ],
                                         ),
                                       ],

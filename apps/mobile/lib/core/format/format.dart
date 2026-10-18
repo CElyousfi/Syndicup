@@ -36,6 +36,10 @@ String formatMAD(String? value, Locale locale) {
   return locale.languageCode == 'ar' ? '$m د.م.' : '$m MAD';
 }
 
+/// Deux montants côte à côte (« réalisé / prévu », « payé / total ») : la devise une seule
+/// fois, sur le DERNIER chiffre — « 1 250,00 / 5 000,00 MAD » (même règle partout).
+String formatMontantSur(String? a, String? b, Locale locale) => '${formatMontant(a)} / ${formatMAD(b, locale)}';
+
 /// Entier "1000" → "1 000" (tantièmes, compteurs).
 String formatEntier(Object? value) {
   if (value == null || value.toString().isEmpty) return '—';

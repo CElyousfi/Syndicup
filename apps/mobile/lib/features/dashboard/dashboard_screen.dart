@@ -251,7 +251,7 @@ class _DashSyndic extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        MoneyText('${formatMontant(versChaine(totaux[a.id]?.paye ?? BigInt.zero))} / ${formatMontant(a.montantTotal)}', style: t.labelSmall?.copyWith(color: SuColors.ink)),
+                        MoneyText(formatMontantSur(versChaine(totaux[a.id]?.paye ?? BigInt.zero), a.montantTotal, context.locale), style: t.labelSmall?.copyWith(color: SuColors.ink)),
                         const SizedBox(height: 6),
                         Gauge(totaux[a.id]?.taux ?? 0, height: 6),
                       ],
