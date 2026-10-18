@@ -5,6 +5,7 @@ import { ActionModal } from "../../../../../../components/ui/action-modal";
 import { IrreversibleNotice } from "../../../../../../components/ui/irreversible-notice";
 import { Field, Input, Select, Textarea } from "../../../../../../components/ui/field";
 import { MoneyInput } from "../../../../../../components/ui/money-input";
+import { ConfirmAction } from "../../../../../../components/ui/confirm-action";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Button } from "../../../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
@@ -234,8 +235,11 @@ export function AjouterFactureModal({ dict, locale, depense }: Props) {
   );
 }
 
-/** Statut d'une facture : changement réversible (vérifiée ↔ contestée), annoncé en toast. */
-export function StatutFactureForm({ dict, locale, depenseId, factureId, statut }: { dict: Dict; locale: Locale; depenseId: string; factureId: string; statut: StatutFacture }) {
+/**
+ * Statut d'une facture, annoncé en toast. Contester est confirmé (inscrit au journal, retire la
+ * facture du règlement et des rappels) ; vérifier / régler restent en un geste.
+ */
+export function StatutFactureForm({ dict, locale, depenseId, factureId, numero, statut }: { dict: Dict; locale: Locale; depenseId: string; factureId: string; numero: string | null; statut: StatutFacture }) {
   const [state, action] = useActionState(changerStatutFacture, IDLE);
   const d = dict.depenses;
   const cibles: Array<{ statut: StatutFacture; label: string; variant?: "secondary" | "dangerGhost" | "ghost" }> = [];
@@ -246,7 +250,22 @@ export function StatutFactureForm({ dict, locale, depenseId, factureId, statut }
   if (cibles.length === 0) return null;
   return (
     <div className="flex flex-wrap items-center gap-1">
-      {cibles.map((c) => (
+      {cibles.map((c) =>
+        c.statut === "CONTESTEE" ? (
+          <ConfirmAction
+            key={c.statut}
+            action={changerStatutFacture}
+            fields={{ locale, depense_id: depenseId, facture_id: factureId, statut: "CONTESTEE" }}
+            triggerLabel={c.label}
+            triggerVariant="dangerGhost"
+            title={d.contesterFactureTitre}
+            question={numero ? fill(d.contesterFactureQuestion, { facture: numero }) : d.contesterFactureSansNumero}
+            consequence={d.contesterFactureConsequence}
+            confirmLabel={d.contesterFactureConfirmer}
+            closeLabel={dict.common.close}
+            success={dict.formulaires.succes.factureStatut}
+          />
+        ) : (
         <form key={c.statut} action={action}>
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="depense_id" value={depenseId} />
@@ -254,7 +273,8 @@ export function StatutFactureForm({ dict, locale, depenseId, factureId, statut }
           <input type="hidden" name="statut" value={c.statut} />
           <SubmitButton variant={c.variant ?? "ghost"} size="sm">{c.label}</SubmitButton>
         </form>
-      ))}
+        ),
+      )}
       <FormAlert state={state} compact />
     </div>
   );

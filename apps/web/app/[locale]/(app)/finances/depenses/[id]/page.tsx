@@ -137,7 +137,7 @@ export default async function DepenseDetailPage({
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-2">
                           <FileViewerButton src={`/api/depense-document?id=${id}&type=facture&n=${n}`} nom={f.document?.nom ?? "facture.pdf"} labels={viewerLabels} label={d.voirFacture} />
-                          {syndic ? <StatutFactureForm dict={dict} locale={ctx.locale} depenseId={id} factureId={f.id} statut={f.statut} /> : null}
+                          {syndic ? <StatutFactureForm dict={dict} locale={ctx.locale} depenseId={id} factureId={f.id} numero={f.numero} statut={f.statut} /> : null}
                         </div>
                       </div>
                       <span className="tnum shrink-0 text-[17px] font-bold text-ink"><Amount value={f.montantTtc} locale={ctx.locale} /></span>
