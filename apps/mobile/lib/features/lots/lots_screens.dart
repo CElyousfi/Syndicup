@@ -599,6 +599,8 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
   bool _loading = false;
   bool _init = false;
   ApiFail? _fail;
+  /// Erreurs de saisie posées avant l'envoi (format des nombres) — l'API n'est pas appelée.
+  String? _tantiemesErr, _superficieErr;
 
   @override
   Widget build(BuildContext context) {
@@ -622,13 +624,13 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
       children: [
         SuSelect<String>(label: d.lots.type, value: _type, options: d.enums.typeLot.keys.toList(), labelOf: (v) => d.enums.typeLot[v]!, onChanged: (v) => setState(() => _type = v), required: true),
         const SizedBox(height: 12),
-        SuField(label: d.lots.numero, controller: _numero, required: true, error: fieldError(_fail, 'numero')),
+        SuField(label: d.lots.numero, controller: _numero, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'numero')),
         const SizedBox(height: 12),
         SuField(label: d.lots.etage, controller: _etage, keyboardType: const TextInputType.numberWithOptions(signed: true), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[-0-9]'))], error: fieldError(_fail, 'etage'), optionalLabel: d.common.optional),
         const SizedBox(height: 12),
-        SuField(label: d.lots.tantiemes, controller: _tantiemes, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: fill(d.lots.tantiemesSur, {'total': formatEntier(ref.read(appContextProvider).copropriete?.totalTantiemes)}), error: fieldError(_fail, 'tantiemes')),
+        SuField(label: d.lots.tantiemes, controller: _tantiemes, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: fill(d.lots.tantiemesSur, {'total': formatEntier(ref.read(appContextProvider).copropriete?.totalTantiemes)}), onChanged: (_) => setState(() => _tantiemesErr = null), error: _tantiemesErr ?? fieldError(_fail, 'tantiemes')),
         const SizedBox(height: 12),
-        SuField(label: d.lots.superficie, controller: _superficie, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, optionalLabel: d.common.optional, error: fieldError(_fail, 'superficie')),
+        SuField(label: d.lots.superficie, controller: _superficie, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, optionalLabel: d.common.optional, onChanged: (_) => setState(() => _superficieErr = null), error: _superficieErr ?? fieldError(_fail, 'superficie')),
         const SizedBox(height: 12),
         SuSelect<String?>(label: d.lots.typeUsage, value: _usage, options: [null, ...d.lots.usages.keys], labelOf: (v) => v == null ? d.common.none : d.lots.usages[v]!, onChanged: (v) => setState(() => _usage = v)),
         const SizedBox(height: 12),
@@ -636,12 +638,31 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
         const SizedBox(height: 18),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: _submit),
+        SubmitButton(
+          label: d.common.save,
+          loading: _loading,
+          fail: _fail,
+          missing: [
+            if (_numero.text.trim().isEmpty) d.lots.numero,
+            if (_tantiemes.text.trim().isEmpty) d.lots.tantiemes,
+          ],
+          onPressed: _numero.text.trim().isEmpty || _tantiemes.text.trim().isEmpty ? null : _submit,
+        ),
       ],
     );
   }
 
   Future<void> _submit() async {
+    // Nombres lisibles d'abord (virgule acceptée) ; une erreur reste sous le champ, sans envoi.
+    final tErr = SuValidators.nombre(context)(_tantiemes.text);
+    final sErr = SuValidators.nombre(context, optional: true)(_superficie.text);
+    if (tErr != null || sErr != null) {
+      setState(() {
+        _tantiemesErr = tErr;
+        _superficieErr = sErr;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _fail = null;
@@ -651,8 +672,8 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
       'type_usage': _usage,
       'numero': _numero.text.trim(),
       'etage': _etage.text.trim().isEmpty ? null : int.tryParse(_etage.text.trim()),
-      'tantiemes': _tantiemes.text.trim(),
-      'superficie': _superficie.text.trim().isEmpty ? null : _superficie.text.trim(),
+      'tantiemes': parseMontant(_tantiemes.text)!,
+      'superficie': _superficie.text.trim().isEmpty ? null : parseMontant(_superficie.text),
       'lot_parent_id': _parent,
     };
     final api = ref.read(apiClientProvider);
@@ -908,6 +929,8 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
   final _idem = IdemKey();
   final _email = TextEditingController();
   final _tel = TextEditingController();
+  /// Erreurs de saisie (format) posées avant la confirmation — l'API n'est pas appelée.
+  String? _emailErr, _telErr;
   bool _dette = false, _loading = false;
   ApiFail? _fail;
   String? _code;
@@ -959,9 +982,9 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
         const SizedBox(height: 4),
         Text(d.lots.transfertCoordonneesAide, style: t.bodySmall),
         const SizedBox(height: 10),
-        SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, error: fieldError(_fail, 'nouveau_proprietaire.email') ?? fieldError(_fail, 'nouveau_proprietaire')),
+        SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, onChanged: (_) => setState(() => _emailErr = null), error: _emailErr ?? fieldError(_fail, 'nouveau_proprietaire.email') ?? fieldError(_fail, 'nouveau_proprietaire')),
         const SizedBox(height: 10),
-        SuField(label: d.auth.phoneLabel, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, error: fieldError(_fail, 'nouveau_proprietaire.telephone')),
+        SuField(label: d.auth.phoneLabel, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, onChanged: (_) => setState(() => _telErr = null), error: _telErr ?? fieldError(_fail, 'nouveau_proprietaire.telephone')),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
@@ -970,7 +993,18 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
           loading: _loading,
           fail: _fail,
           danger: true,
+          missing: [if (du > BigInt.zero && !_dette) d.lots.transfertDetteReprise],
           onPressed: (du > BigInt.zero && !_dette) ? null : () async {
+            // Formats vérifiés AVANT la confirmation d'un transfert irréversible.
+            final emailErr = SuValidators.email(context, optional: true)(_email.text);
+            final telErr = SuValidators.telephone(context)(_tel.text);
+            if (emailErr != null || telErr != null) {
+              setState(() {
+                _emailErr = emailErr;
+                _telErr = telErr;
+              });
+              return;
+            }
             final ok = await confirmDialog(context, title: d.lots.transfertEtape3, body: d.lots.transfertConfirmeAide, confirmLabel: d.lots.transfertConfirme, danger: true, irreversible: true);
             if (!ok) return;
             setState(() {
