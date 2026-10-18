@@ -198,6 +198,19 @@ describe("M21 — annonces, audiences, lectures, commentaires", () => {
     // Nettoyage : sinon le job horaire du test suivant le publierait aussi.
     await supprimerAnnonce(S(), b.id);
   });
+  it("désarchiver un brouillon programmé dont l'heure est PASSÉE : redevient BROUILLON (statut lu dans l'audit), puis le job le publie ET le diffuse", async () => {
+    const b = await creerAnnonce(S(), { titre: "Programmée échue", contenu: "Coupure demain.", categorie: "INFORMATION", audience: "PROPRIETAIRES", epingle: false, commentaires_actives: true, pieces_jointes: [] });
+    // Heure de publication passée avant que le job horaire ne soit passé.
+    await admin.annonce.update({ where: { id: b.id }, data: { publieLe: new Date(Date.now() - 3600_000) } });
+    await archiverAnnonce(S(), b.id);
+    const restauree = await desarchiverAnnonce(S(), b.id);
+    expect(restauree.statut).toBe("BROUILLON"); // jamais PUBLIEE sans diffusion
+    const notif = () => admin.notification.count({ where: { coproprieteId: copro, templateCode: "ANNONCE_PUBLIEE", contenuJson: { path: ["annonce_id"], equals: b.id } } });
+    expect(await notif()).toBe(0);
+    expect(await withTenant(SYS(), (db) => executerProgrammees(db, copro, new Date()))).toMatchObject({ publiees: 1 });
+    expect((await obtenirAnnonce(S(), b.id)).statut).toBe("PUBLIEE");
+    expect(await notif()).toBe(2); // amina + omar
+  });
   it("publication programmée : reste brouillon (invisible) puis publiée par le job horaire, une seule fois", async () => {
     const p = await creerAnnonce(S(), { titre: "AG du 15", contenu: "Convocation à venir.", categorie: "AG", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });
     const dans2h = new Date(Date.now() + 2 * 3600_000).toISOString();

@@ -7597,9 +7597,12 @@ paths:
       tags: [Communication]
       summary: "Annuler un archivage (toast « Annuler ») — mêmes droits que l'archivage (syndic / conseil)."
       description: |
-        ⚠️ Transition ARCHIVEE → statut précédent ajoutée et signalée (domain-reference 18.1).
-        Restaure PUBLIEE si l'annonce avait été publiée (`publie_le` passé), sinon BROUILLON ; l'épingle
-        est restaurée depuis le dernier audit ANNONCE_ARCHIVEE. Aucune notification n'est renvoyée.
+        ⚠️ À VALIDER PAR L'HUMAIN : transition ARCHIVEE → statut précédent, absente de
+        domain-reference 18.1 (qui ne liste que BROUILLON → PUBLIEE → ARCHIVEE) et non encore
+        reportée dans le texte de référence. Statut et épingle restaurés depuis le dernier audit
+        ANNONCE_ARCHIVEE (`avant_json.statut` / `avant_json.epingle`) : un brouillon programmé,
+        même échu, redevient BROUILLON et sera publié + diffusé par le job horaire ; repli sans
+        audit : PUBLIEE si `publie_le` est passé, sinon BROUILLON. Aucune notification n'est renvoyée.
         Idempotent naturellement : une annonce non archivée est renvoyée telle quelle (200, sans audit).
         Audit ANNONCE_DESARCHIVEE.
       parameters: [{ $ref: "#/components/parameters/LotId" }]

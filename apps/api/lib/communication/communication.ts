@@ -352,13 +352,14 @@ export async function archiverAnnonce(ctx: TenantContext, id: string) {
 
 /**
  * POST /annonces/{id}/desarchiver — annule un archivage (toast « Annuler »). ⚠️ Transition
- * ARCHIVEE → statut précédent ajoutée et signalée (domain-reference 18.1 ne liste que les
- * transitions avant ; rien n'y rend l'archivage définitif). Mêmes permissions que l'archivage.
+ * ARCHIVEE → statut précédent ajoutée, À VALIDER PAR L'HUMAIN (domain-reference 18.1 ne liste
+ * que les transitions avant ; rien n'y rend l'archivage définitif). Mêmes permissions que
+ * l'archivage.
  *
- * - Statut restauré : PUBLIEE si l'annonce avait été publiée (`publie_le` passé), sinon BROUILLON
- *   (un brouillon archivé, éventuellement programmé, redevient brouillon — jamais publié par ce
- *   biais). Aucune notification renvoyée : la diffusion a déjà eu lieu (ou aura lieu au job).
- * - Épingle restaurée depuis le dernier audit ANNONCE_ARCHIVEE (`avant_json.epingle`).
+ * - Statut et épingle restaurés depuis le dernier audit ANNONCE_ARCHIVEE (`avant_json.statut`,
+ *   `avant_json.epingle`) : un brouillon (même programmé et échu) redevient BROUILLON, jamais
+ *   publié par ce biais. Repli sans audit : PUBLIEE si `publie_le` est passé, sinon BROUILLON.
+ *   Aucune notification renvoyée : la diffusion a déjà eu lieu (ou aura lieu au job).
  * - Idempotent naturellement : une annonce non archivée est renvoyée telle quelle (200), sans audit.
  */
 export async function desarchiverAnnonce(ctx: TenantContext, id: string) {
@@ -371,9 +372,17 @@ export async function desarchiverAnnonce(ctx: TenantContext, id: string) {
       orderBy: { horodatage: "desc" },
       select: { avantJson: true },
     });
-    const avant = (dernierArchivage?.avantJson ?? {}) as { epingle?: unknown };
+    const avant = (dernierArchivage?.avantJson ?? {}) as { epingle?: unknown; statut?: unknown };
     const epingle = typeof avant.epingle === "boolean" ? avant.epingle : false;
-    const statut = a.publieLe && a.publieLe.getTime() <= Date.now() ? "PUBLIEE" : "BROUILLON";
+    // Statut d'avant l'archivage, lu dans l'audit : un brouillon programmé dont l'heure est
+    // passée redevient BROUILLON (le job horaire le publiera ET le diffusera) — jamais PUBLIEE
+    // sans diffusion. Repli sur `publie_le` seulement pour un archivage antérieur sans audit.
+    const statut =
+      avant.statut === "PUBLIEE" || avant.statut === "BROUILLON"
+        ? avant.statut
+        : a.publieLe && a.publieLe.getTime() <= Date.now()
+          ? "PUBLIEE"
+          : "BROUILLON";
     await db.annonce.update({ where: { id }, data: { statut, epingle } });
     await audit(db, ctx, "ANNONCE_DESARCHIVEE", "annonce", id, { statut: "ARCHIVEE" }, { statut, epingle });
     return obtenirAnnonceDb(db, ctx, id);
