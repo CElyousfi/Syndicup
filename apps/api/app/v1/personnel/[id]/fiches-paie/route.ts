@@ -2,7 +2,7 @@
 import { withApiHandler } from "../../../../../lib/http/handler";
 import { tenantFromRequest } from "../../../../../lib/http/request-context";
 import { ok, failZod } from "../../../../../lib/http/respond";
-import { readIdempotencyKey } from "../../../../../lib/http/idempotency";
+import { readIdempotencyKeyOptionnelle } from "../../../../../lib/http/idempotency";
 import { mapErreurRh } from "../../../../../lib/personnel/http";
 import { creerFichePaie, listerFichesPaie } from "../../../../../lib/personnel/rh";
 import { fichePaieCreateSchema, fichesPaieFiltresSchema } from "../../../../../lib/personnel/schemas";
@@ -20,10 +20,9 @@ async function handlePOST(req: Request, { params }: P) {
     const ctx = await tenantFromRequest(req); const { id } = await params;
     const parsed = fichePaieCreateSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return failZod(parsed.error);
-    const f = await creerFichePaie(ctx, id, parsed.data);
+    const f = await creerFichePaie(ctx, id, parsed.data, readIdempotencyKeyOptionnelle(req));
     return ok(f, { status: f.regeneree ? 200 : 201 });
   } catch (e) { const m = mapErreurRh(e); if (m) return m; throw e; }
 }
-void readIdempotencyKey;
 export const GET = withApiHandler(handleGET);
 export const POST = withApiHandler(handlePOST);

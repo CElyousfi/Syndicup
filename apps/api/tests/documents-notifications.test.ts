@@ -5,12 +5,15 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { disconnectTenantDb, withTenant } from "../lib/tenant/db";
+import { IdempotencyConflitError } from "../lib/http/idempotency";
 import type { TenantContext } from "../lib/tenant/context";
 import {
   creerDocument,
   listerDocuments,
   PermissionRefuseeError as DocPermissionRefuseeError,
+  CheminDocumentInvalideError,
 } from "../lib/documents/documents";
 import {
   envoyerNotification,
@@ -63,6 +66,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await admin.idempotencyKey.deleteMany({ where: { coproprieteId: coproA } });
   await admin.notification.deleteMany({ where: { coproprieteId: coproA } });
   await admin.document.deleteMany({ where: { coproprieteId: coproA } });
   await admin.roleUtilisateur.deleteMany({ where: { coproprieteId: coproA } });
@@ -83,6 +87,35 @@ describe("Documents — visibilité par rôle (Doc A §12.3)", () => {
         storage_path: `${coproA}/documents/reglement/1.pdf`,
       })
     ).rejects.toBeInstanceOf(DocPermissionRefuseeError);
+  });
+
+  it("storage_path hors de `<copropriete>/documents/` est refusé (400 VALIDATION_ERROR), aucune ligne créée", async () => {
+    const autreCopro = "00000000-0000-4000-8000-0000000000aa";
+    for (const storage_path of [
+      `${autreCopro}/documents/vole.pdf`, // autre tenant
+      `${coproA}/personnel/contrat.pdf`, // autre module
+      `${coproA}/documents/`, // vide
+      `${coproA}/documents/../${autreCopro}/documents/x.pdf`, // traversée
+      `documents/${coproA}/x.pdf`,
+    ]) {
+      await expect(
+        creerDocument(ctxSyndicA(), { type: "reglement_interieur", nom: "Hors périmètre", visibilite: "PUBLIC_COPROPRIETE", storage_path })
+      ).rejects.toBeInstanceOf(CheminDocumentInvalideError);
+    }
+    expect(await admin.document.count({ where: { coproprieteId: coproA, nom: "Hors périmètre" } })).toBe(0);
+  });
+
+  it("Idempotency-Key optionnelle : même clé + même payload → même document, une seule ligne ; payload différent → 409", async () => {
+    const cle = randomUUID();
+    const input = { type: "pv_ag", nom: "PV rejoué", visibilite: "SYNDIC_ONLY" as const, storage_path: `${coproA}/documents/pv-rejoue.pdf` };
+    const d1 = await creerDocument(ctxSyndicA(), input, cle);
+    const d2 = await creerDocument(ctxSyndicA(), input, cle);
+    expect(d2.id).toBe(d1.id);
+    expect(await admin.document.count({ where: { coproprieteId: coproA, nom: "PV rejoué" } })).toBe(1);
+    await expect(creerDocument(ctxSyndicA(), { ...input, nom: "Autre" }, cle)).rejects.toBeInstanceOf(IdempotencyConflitError);
+    // Sans clé : comportement inchangé (chaque appel crée une ligne).
+    await creerDocument(ctxSyndicA(), input);
+    expect(await admin.document.count({ where: { coproprieteId: coproA, nom: "PV rejoué" } })).toBe(2);
   });
 
   it("un document PUBLIC_COPROPRIETE est visible par tous les rôles du tenant", async () => {

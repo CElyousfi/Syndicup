@@ -8,7 +8,9 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { withTenant, disconnectTenantDb } from "../lib/tenant/db";
+import { IdempotencyConflitError } from "../lib/http/idempotency";
 import type { TenantContext } from "../lib/tenant/context";
 import {
   creerIncident,
@@ -146,6 +148,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await admin.idempotencyKey.deleteMany({ where: { coproprieteId: coproA } });
   await admin.auditLog.deleteMany({ where: { coproprieteId: coproA } });
   // Périmètre STRICT : incident_log est append-only et probant — un nettoyage global
   // effaçait le journal de tous les incidents de la base locale (démo comprise).
@@ -179,6 +182,18 @@ describe("Création d'incident et calcul du SLA (Doc A §5)", () => {
     const deltaHeures =
       (incident.slaDeadline!.getTime() - incident.creeLe.getTime()) / (1000 * 60 * 60);
     expect(deltaHeures).toBeCloseTo(4, 1);
+  });
+
+  it("Idempotency-Key optionnelle : retry même clé + même payload → même incident, un seul journal ; payload différent → 409", async () => {
+    const cle = randomUUID();
+    const input = { lot_id: lotA1, categorie: "PLOMBERIE" as const, sous_categorie: "Retry réseau", description: "Doublon évité.", partie: "PRIVATIVE" as const, urgence: "NORMALE" as const };
+    const i1 = await creerIncident(ctxAlice(), input, cle);
+    const i2 = await creerIncident(ctxAlice(), input, cle);
+    expect(i2.id).toBe(i1.id);
+    expect(await admin.incident.count({ where: { coproprieteId: coproA, sousCategorie: "Retry réseau" } })).toBe(1);
+    expect(await admin.incidentLog.count({ where: { incidentId: i1.id } })).toBe(1);
+    await expect(creerIncident(ctxAlice(), { ...input, description: "Autre" }, cle)).rejects.toBeInstanceOf(IdempotencyConflitError);
+    expect(await admin.incident.count({ where: { coproprieteId: coproA, sousCategorie: "Retry réseau" } })).toBe(1);
   });
 
   it("un incident URGENCE_MAXIMALE a un SLA de 30 minutes", async () => {

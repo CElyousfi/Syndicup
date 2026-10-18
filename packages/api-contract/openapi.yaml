@@ -69,6 +69,18 @@ components:
       schema:
         type: string
         format: uuid
+    IdempotencyKeyOptionnelle:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Acceptée mais OPTIONNELLE : des clients en production (anciennes builds mobiles, Server
+        Actions web) ne l'envoient pas encore. Présente → même clé + même payload = réponse rejouée
+        (meta.rejouee), même clé + payload différent = 409 CONFLICT ; présente mais invalide (non
+        UUID) = 400 VALIDATION_ERROR. Absente → exécution sans protection de transport.
+      schema:
+        type: string
+        format: uuid
     Page:
       name: page
       in: query
@@ -3547,10 +3559,16 @@ paths:
   /lots:
     get:
       tags: [Lots]
+      description: >
+        Filtres serveur optionnels (Zod, valeur invalide → 400) — exactement ceux de l'écran Lots ;
+        ils restreignent ce que la RLS laisse voir et `meta.total` compte le résultat filtré.
       parameters:
         - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 }, description: "Numéro du lot, ou nom / prénom (« prénom nom », « nom prénom ») d'un propriétaire rattaché — « contient », insensible à la casse, `%` et `_` cherchés tels quels." }
+        - { name: type, in: query, schema: { type: string, enum: [APPARTEMENT, PARKING, CAVE, LOCAL, TOIT_TERRASSE, VILLA, COMMERCIAL, BUREAU, LOGE_GARDIEN] }, description: type_lot }
+        - { name: statut, in: query, schema: { type: string, enum: [OCCUPE, VACANT, ORPHELIN, EN_SUCCESSION, SINISTRE, TANTIEME_A_REGULARISER] } }
       responses:
         "200":
           description: OK
@@ -4600,8 +4618,16 @@ paths:
     post:
       tags: [Assemblées Générales]
       summary: Envoie la convocation. Génère une ligne ag_notification_log par destinataire (Master Spec Partie 8.2).
-      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      description: >
+        Idempotency-Key optionnelle. Garantie exacte : le rejeu (même clé) d'une convocation dont
+        la transaction a été COMMITTÉE renvoie la réponse stockée sans rien renvoyer. Les envois
+        partent pendant la transaction (délai porté à 60 s pour cette opération) : si elle échoue
+        ou expire AVANT le commit, rien n'est enregistré (journal, statut, clé) et un nouvel essai
+        peut ré-émettre. Sans clé, la transition unique PLANIFIEE → CONVOQUEE refuse un second
+        appel committé (422).
+      parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "200":
           description: "Convoquée, statut → CONVOQUEE."
           content:
@@ -4617,9 +4643,12 @@ paths:
       tags: [Assemblées Générales]
       summary: >
         Ajout nécessaire (Doc A §6.4) : bascule CONVOQUEE→EN_COURS après la date prévue. Rôle
-        autorisé — syndic.
-      parameters: [{ $ref: "#/components/parameters/AgId" }]
+        autorisé — syndic. Idempotency-Key optionnelle : le rejeu d'une ouverture COMMITTÉE ne
+        renvoie aucun AG_OUVERTE ; un échec ou un délai dépassé avant le commit (transaction
+        portée à 60 s) n'enregistre rien et un nouvel essai peut ré-émettre les push.
+      parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "200":
           description: "Ouverte, statut → EN_COURS, quorum_requis fixé (snapshot copropriete)."
           content:
@@ -4870,10 +4899,22 @@ paths:
       summary: >
         Liste des incidents. Confidentialité RLS (Doc A §12.3) : syndic/conseil syndical/gardien
         voient tout ; un résident ne voit que les incidents qu'il a créés ; un prestataire ne voit
-        que les incidents qui lui sont assignés.
-      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
+        que les incidents qui lui sont assignés. Filtres serveur optionnels (Zod, valeur invalide
+        → 400) : ils ne font que restreindre ce que la RLS laisse voir, et `meta.total` compte le
+        résultat filtré.
       parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
         - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
+        - { name: sejour_id, in: query, schema: { type: string, format: uuid }, description: "M15 — incidents liés à un séjour LCD." }
+        - name: statut
+          in: query
+          description: "Un ou plusieurs statuts, séparés par des virgules (`statut=OUVERT,EN_COURS`) ou paramètre répété."
+          schema: { type: string, example: "OUVERT,EN_COURS" }
+        - { name: urgence, in: query, schema: { type: string, enum: [NORMALE, URGENTE, URGENCE_MAXIMALE] } }
+        - { name: categorie, in: query, schema: { type: string, enum: [PLOMBERIE, ELECTRICITE, ASCENSEUR, NETTOYAGE, SECURITE, STRUCTURE, JARDINS_ESPACES_VERTS, NUISANCES, PARKING, EQUIPEMENTS_COLLECTIFS, ADMINISTRATIF] } }
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 }, description: "Recherche « contient » (insensible à la casse) dans sous-catégorie et description ; `%` et `_` cherchés tels quels." }
       responses:
         "200":
           description: OK
@@ -4886,19 +4927,23 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Incident" }
                   meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Incidents]
       summary: >
         Signale un incident (Doc A §5). Rôle autorisé — tous sauf prestataire ("reçoit
         l'assignation, ne crée pas" — Master Spec Partie 4.2). sla_deadline calculé à la création
-        (voir schéma Incident).
+        (voir schéma Incident). Idempotency-Key optionnelle : même clé + même payload = réponse
+        rejouée (aucun second incident après un échec ambigu), payload différent = 409.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
           application/json:
             schema: { $ref: "#/components/schemas/IncidentCreate" }
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "201":
           description: Créé, statut OUVERT.
           content:
@@ -4910,6 +4955,34 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /incidents/compteurs:
+    get:
+      tags: [Incidents]
+      summary: "Cartes de synthèse : nombre d'incidents par statut et ouverts / en cours au SLA dépassé, sur tout le périmètre visible de l'appelant (RLS)."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [par_statut, total, sla_depasses]
+                    properties:
+                      par_statut:
+                        type: object
+                        required: [OUVERT, EN_COURS, RESOLU, FERME]
+                        properties:
+                          OUVERT: { type: integer }
+                          EN_COURS: { type: integer }
+                          RESOLU: { type: integer }
+                          FERME: { type: integer }
+                      total: { type: integer }
+                      sla_depasses: { type: integer, description: "OUVERT ou EN_COURS dont sla_deadline est passée." }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /incidents/{id}:
     get:
@@ -5301,7 +5374,9 @@ paths:
         AUTORISE|REFUSE) ; le gardien peut clôturer en relai ses propres enregistrements. Le
         gardien reçoit la réponse en notification (VISITE_REPONSE). 404 (et non 403) si la
         visite appartient à un autre lot — la RLS cache la ligne (anti-énumération).
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+        Idempotency-Key optionnelle (anciennes builds mobiles) : un retry réseau avec la même clé
+        rejoue la réponse au lieu d'un 422.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -5513,8 +5588,17 @@ paths:
     post:
       tags: [Documents]
       summary: Rôle autorisé — syndic.
+      description: >
+        `storage_path` doit être le chemin renvoyé par POST /documents/upload-url : il commence
+        par `<copropriete_id>/documents/` (tenant de l'appelant), sans segment vide, `.` ni `..` —
+        sinon 400 VALIDATION_ERROR et aucune ligne n'est créée. Idempotency-Key optionnelle :
+        même clé + même payload = réponse rejouée (aucun doublon), payload différent = 409.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "201": { description: Créé. }
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
+        "400": { $ref: "#/components/responses/ValidationError" }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /documents/upload-url:
     post:
@@ -7119,8 +7203,8 @@ paths:
         "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Personnel RH]
-      summary: "Modifie le dossier RH (syndic) : poste, contrat, dates, salaire, CNSS, contact d'urgence, horaires, notes, statut (PARTI libère la loge), logement, contrat de travail signé. Audit sans PII sensible."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Modifie le dossier RH (syndic) : poste, contrat, dates, salaire, CNSS, contact d'urgence, horaires, notes, statut (PARTI libère la loge), logement, contrat de travail signé. Audit sans PII sensible. Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7201,8 +7285,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: "Prépare (ou recalcule) la fiche BROUILLON d'une période (syndic) : calcul depuis les paramètres de paie s'ils existent, sinon brouillon « brut seul » (non validable)."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Prépare (ou recalcule) la fiche BROUILLON d'une période (syndic) : calcul depuis les paramètres de paie s'ils existent, sinon brouillon « brut seul » (non validable). Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7216,10 +7300,11 @@ paths:
   /personnel/{id}/fiches-paie/{fid}:
     patch:
       tags: [Personnel RH]
-      summary: Recalcule un brouillon (brut, primes, retenues, jours d'absence).
+      summary: Recalcule un brouillon (brut, primes, retenues, jours d'absence). Idempotency-Key optionnelle.
       parameters:
         - $ref: "#/components/parameters/LotId"
         - { name: fid, in: path, required: true, schema: { type: string, format: uuid } }
+        - $ref: "#/components/parameters/IdempotencyKeyOptionnelle"
       requestBody:
         required: true
         content:
@@ -7370,8 +7455,8 @@ paths:
   /personnel/conges/{cid}/annuler:
     post:
       tags: [Personnel RH]
-      summary: Annule — l'employé sa demande en attente ; le syndic une demande ou un congé approuvé futur (présences retirées).
-      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }]
+      summary: Annule — l'employé sa demande en attente ; le syndic une demande ou un congé approuvé futur (présences retirées). Idempotency-Key optionnelle (envoyée par le mobile, pas encore par le web).
+      parameters: [{ name: cid, in: path, required: true, schema: { type: string, format: uuid } }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
@@ -7396,8 +7481,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: "Saisie / correction en masse par date (upsert personnel + date) — syndic pour tous, l'employé pour lui-même."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Saisie / correction en masse par date (upsert personnel + date) — syndic pour tous, l'employé pour lui-même. Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7448,8 +7533,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Personnel RH]
-      summary: Évalue (note 1–5, période) — une évaluation par évaluateur et période (upsert).
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: Évalue (note 1–5, période) — une évaluation par évaluateur et période (upsert). Idempotency-Key optionnelle.
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7474,8 +7559,8 @@ paths:
         "403": { $ref: "#/components/responses/Forbidden" }
     patch:
       tags: [Personnel RH]
-      summary: "Remplace les paramètres de paie (syndic, audité PAIE_PARAMETRES_MODIFIES) — `parametres_paie: null` = non configurés (les validations de paie sont alors refusées)."
-      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      summary: "Remplace les paramètres de paie (syndic, audité PAIE_PARAMETRES_MODIFIES) — `parametres_paie: null` = non configurés (les validations de paie sont alors refusées). Idempotency-Key optionnelle."
+      parameters: [{ $ref: "#/components/parameters/LotId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -7571,6 +7656,24 @@ paths:
         "200": { description: OK }
         "403": { $ref: "#/components/responses/Forbidden" }
         "422": { $ref: "#/components/responses/ValidationError" }
+  /annonces/{id}/desarchiver:
+    post:
+      tags: [Communication]
+      summary: "Annuler un archivage (toast « Annuler ») — mêmes droits que l'archivage (syndic / conseil)."
+      description: |
+        ⚠️ À VALIDER PAR L'HUMAIN : transition ARCHIVEE → statut précédent, absente de
+        domain-reference 18.1 (qui ne liste que BROUILLON → PUBLIEE → ARCHIVEE) et non encore
+        reportée dans le texte de référence. Statut et épingle restaurés depuis le dernier audit
+        ANNONCE_ARCHIVEE (`avant_json.statut` / `avant_json.epingle`) : un brouillon programmé,
+        même échu, redevient BROUILLON et sera publié + diffusé par le job horaire ; repli sans
+        audit : PUBLIEE si `publie_le` est passé, sinon BROUILLON. Aucune notification n'est renvoyée.
+        Idempotent naturellement : une annonce non archivée est renvoyée telle quelle (200, sans audit).
+        Audit ANNONCE_DESARCHIVEE.
+      parameters: [{ $ref: "#/components/parameters/LotId" }]
+      responses:
+        "200": { description: "OK — l'annonce dans son état restauré (même forme que GET /annonces/{id})." }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
   /annonces/{id}/lu:
     post:
       tags: [Communication]

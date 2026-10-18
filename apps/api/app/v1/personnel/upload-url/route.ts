@@ -2,7 +2,6 @@
 import { withApiHandler } from "../../../../lib/http/handler";
 import { tenantFromRequest } from "../../../../lib/http/request-context";
 import { ok, failZod } from "../../../../lib/http/respond";
-import { readIdempotencyKey } from "../../../../lib/http/idempotency";
 import { mapErreurRh } from "../../../../lib/personnel/http";
 import { preparerUploadPersonnel } from "../../../../lib/personnel/rh";
 import { personnelUploadUrlSchema } from "../../../../lib/personnel/schemas";
@@ -14,5 +13,4 @@ async function handlePOST(req: Request) {
     return ok(await preparerUploadPersonnel(ctx, parsed.data), { status: 201 });
   } catch (e) { const m = mapErreurRh(e); if (m) return m; throw e; }
 }
-void readIdempotencyKey;
 export const POST = withApiHandler(handlePOST);

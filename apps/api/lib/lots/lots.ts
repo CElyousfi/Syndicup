@@ -5,7 +5,7 @@
  * base par des triggers (migration M3) — ce service se contente de remonter une erreur métier
  * explicite (422) quand le trigger rejette l'écriture, jamais un 500 générique.
  */
-import { Prisma } from "@prisma/client";
+import { Prisma, type Lot } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
@@ -15,6 +15,8 @@ import { money, toApiString } from "../money";
 import { genererCode, expiration } from "../auth/invitations";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
+import { motifContient } from "../http/recherche";
+import type { LotsFiltres } from "./schemas";
 import type {
   LotCreateInput,
   LotUpdateInput,
@@ -111,20 +113,64 @@ async function chargerRattachements(db: TenantDb, lotIds: string[]) {
   };
 }
 
-export async function listerLots(ctx: TenantContext, page: number, limit: number) {
+/**
+ * Filtres (Zod en amont : lotsFiltresSchema) — restreignent seulement ce que la RLS laisse voir ;
+ * `total` compte le résultat filtré. `q` : numéro du lot OU nom / prénom (ou « prénom nom »,
+ * « nom prénom ») d'un propriétaire rattaché visible — ILIKE, jokers échappés.
+ */
+export async function listerLots(ctx: TenantContext, page: number, limit: number, filtres: LotsFiltres = {}) {
   if (can("lots.lire", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les lots.");
   }
   return withTenant(ctx, async (db) => {
-    const [total, rows] = await Promise.all([
-      db.lot.count({ where: { coproprieteId: ctx.coproprieteId } }),
-      db.lot.findMany({
-        where: { coproprieteId: ctx.coproprieteId },
-        orderBy: { numero: "asc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-    ]);
+    const skip = (page - 1) * limit;
+    let total: number;
+    let rows: Lot[];
+    if (!filtres.q) {
+      const where: Prisma.LotWhereInput = {
+        coproprieteId: ctx.coproprieteId,
+        ...(filtres.type ? { typeLot: filtres.type } : {}),
+        ...(filtres.statut ? { statut: filtres.statut } : {}),
+      };
+      [total, rows] = await Promise.all([
+        db.lot.count({ where }),
+        db.lot.findMany({ where, orderBy: { numero: "asc" }, skip, take: limit }),
+      ]);
+    } else {
+      // Recherche : un seul prédicat SQL (numéro OU propriétaire rattaché, ILIKE jokers échappés,
+      // ESCAPE '!') pour le total ET la page — jamais une liste d'identifiants non bornée ; RLS
+      // de la transaction appliquée à lot, lot_proprietaire et utilisateur.
+      const motif = motifContient(filtres.q);
+      const conds: Prisma.Sql[] = [
+        Prisma.sql`l.copropriete_id = ${ctx.coproprieteId}::uuid`,
+        Prisma.sql`(
+          l.numero ILIKE ${motif} ESCAPE '!'
+          OR EXISTS (
+            SELECT 1 FROM lot_proprietaire lp
+            JOIN utilisateur u ON u.id = lp.utilisateur_id
+            WHERE lp.lot_id = l.id
+              AND (
+                u.nom ILIKE ${motif} ESCAPE '!'
+                OR u.prenom ILIKE ${motif} ESCAPE '!'
+                OR (coalesce(u.prenom, '') || ' ' || coalesce(u.nom, '')) ILIKE ${motif} ESCAPE '!'
+                OR (coalesce(u.nom, '') || ' ' || coalesce(u.prenom, '')) ILIKE ${motif} ESCAPE '!'
+              )
+          )
+        )`,
+      ];
+      if (filtres.type) conds.push(Prisma.sql`l.type_lot::text = ${filtres.type}`);
+      if (filtres.statut) conds.push(Prisma.sql`l.statut::text = ${filtres.statut}`);
+      const predicat = Prisma.join(conds, " AND ");
+      const [compte, pageIds] = await Promise.all([
+        db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM lot l WHERE ${predicat}`,
+        db.$queryRaw<{ id: string }[]>`SELECT l.id FROM lot l WHERE ${predicat} ORDER BY l.numero ASC, l.id ASC LIMIT ${limit} OFFSET ${skip}`,
+      ]);
+      const ids = pageIds.map((r) => r.id);
+      const lignes = ids.length ? await db.lot.findMany({ where: { id: { in: ids } } }) : [];
+      const parId = new Map(lignes.map((l) => [l.id, l]));
+      total = Number(compte[0]?.n ?? 0);
+      rows = ids.map((id) => parId.get(id)).filter((l): l is NonNullable<typeof l> => Boolean(l));
+    }
     const { proprietaires, occupants } = await chargerRattachements(
       db,
       rows.map((l) => l.id)

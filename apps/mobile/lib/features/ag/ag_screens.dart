@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -262,8 +263,8 @@ class AgDetailScreen extends ConsumerWidget {
               // Actions syndic selon le statut.
               if (ctx.isGestion) ...[
                 const SizedBox(height: 20),
-                if (a.statut == 'PLANIFIEE') _ActionAg(label: d.ag.convoquer, hint: d.ag.convoquerAide, icon: Icons.send_rounded, path: '/ag/$id/convoquer', onDone: refresh, successMessage: d.ag.convoquee),
-                if (a.statut == 'CONVOQUEE') _ActionAg(label: d.ag.ouvrirSeance, hint: d.ag.ouvrirSeanceAide, icon: Icons.play_arrow_rounded, path: '/ag/$id/ouvrir', onDone: () {
+                if (a.statut == 'PLANIFIEE') _ActionAg(label: d.ag.convoquer, hint: d.ag.convoquerAide, icon: Icons.send_rounded, path: '/ag/$id/convoquer', intent: 'ag-convoquer:$id', onDone: refresh, successMessage: d.ag.convoquee),
+                if (a.statut == 'CONVOQUEE') _ActionAg(label: d.ag.ouvrirSeance, hint: d.ag.ouvrirSeanceAide, icon: Icons.play_arrow_rounded, path: '/ag/$id/ouvrir', intent: 'ag-ouvrir:$id', onDone: () {
                   refresh();
                   context.push('/ag/$id/seance');
                 }),
@@ -354,8 +355,13 @@ class OrdreResolution extends StatelessWidget {
 }
 
 class _ActionAg extends ConsumerStatefulWidget {
-  const _ActionAg({required this.label, required this.hint, required this.icon, required this.path, required this.onDone, this.successMessage});
+  const _ActionAg({required this.label, required this.hint, required this.icon, required this.path, required this.intent, required this.onDone, this.successMessage});
   final String label, hint, path;
+
+  /// Intention d'idempotence (ex. `ag-convoquer:<id>`) : même clé d'un essai à l'autre jusqu'au
+  /// succès — un « Réessayer » après un échec ambigu rejoue la convocation committée au lieu
+  /// d'un 422 (l'API rejoue la réponse stockée, aucun renvoi).
+  final String intent;
   final IconData icon;
   final VoidCallback onDone;
   final String? successMessage;
@@ -385,7 +391,9 @@ class _ActionAgState extends ConsumerState<_ActionAg> {
               _loading = true;
               _fail = null;
             });
-            final r = await ref.read(apiClientProvider).post<dynamic>(widget.path);
+            final r = await ref.read(apiClientProvider).post<dynamic>(widget.path, idempotencyKey: IdemKeys.of(widget.intent).forPayload(null));
+            // Succès → clé oubliée (done) ; échec ambigu → clé gardée pour le prochain essai.
+            IdemKeys.settle(widget.intent, r);
             if (!context.mounted) return;
             setState(() => _loading = false);
             if (r is ApiFail) {

@@ -154,6 +154,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
   late final UploadQueue _file = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.documents, max: 1);
   bool _loading = false;
   ApiFail? _fail;
+  final IdemKey _idem = IdemKey();
 
   @override
   void initState() {
@@ -199,12 +200,13 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
       return;
     }
     final nomFichier = _file.slots.first.piece.nom;
-    final res = await api.post<dynamic>('/documents', body: {'type': _type.text.trim(), 'nom': _nom.text.trim().isEmpty ? nomFichier : _nom.text.trim(), 'visibilite': _visibilite, 'storage_path': _file.paths.first});
+    final body = <String, Object?>{'type': _type.text.trim(), 'nom': _nom.text.trim().isEmpty ? nomFichier : _nom.text.trim(), 'visibilite': _visibilite, 'storage_path': _file.paths.first};
+    // Clé stable par intention : POST /documents rejoue — après un échec ambigu, « Réessayer »
+    // renvoie le même fichier avec la même clé et récupère le document déjà créé (aucun doublon).
+    final res = await api.post<dynamic>('/documents', body: body, idempotencyKey: _idem.forPayload(body));
+    _idem.settle(res);
     if (!mounted) return;
     if (res is ApiFail) {
-      // POST /documents n'a pas de clé d'idempotence : après un échec ambigu, le document existe
-      // peut-être déjà — le prochain essai envoie un fichier neuf au lieu de rattacher le même.
-      if (IdemKey.isAmbiguous(res.status, res.error.code)) _file.forgetUploads();
       setState(() {
         _loading = false;
         _fail = res;

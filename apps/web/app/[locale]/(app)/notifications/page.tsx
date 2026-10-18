@@ -59,7 +59,13 @@ export default async function NotificationsPage({
       {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : items.length === 0 ? (
         <EmptyState title={n.aucune} hint={n.aucuneAide} illustration="empty-notifications" />
       ) : (
-        <NotificationsList items={items} marquerLuLabel={n.marquerLu} />
+        <NotificationsList
+          items={items}
+          marquerLuLabel={n.marquerLu}
+          marqueeLabel={n.marqueeLue}
+          annulerLabel={dict.common.undo}
+          echecLabel={n.lectureEchec}
+        />
       )}
     </div>
   );

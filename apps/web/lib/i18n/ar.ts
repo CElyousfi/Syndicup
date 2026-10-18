@@ -13,6 +13,8 @@ export const ar: DeepDict<typeof fr> = {
   },
 
   common: {
+    /** Bouton « Annuler » d'un toast après une action réversible (≠ cancel d'une modale). */
+    undo: "تراجع",
     save: "حفظ",
     actions: "إجراءات",
     cancel: "إلغاء",
@@ -1272,6 +1274,8 @@ export const ar: DeepDict<typeof fr> = {
     nonLues: "{n} غير مقروءة",
     toutesLues: "أنتم على اطلاع بكل جديد.",
     marquerLu: "اعتبارها مقروءة",
+    marqueeLue: "تم اعتبار الإشعار مقروءًا.",
+    lectureEchec: "تعذّر تسجيل القراءة: يبقى الإشعار غير مقروء.",
     aucune: "لا توجد إشعارات.",
     aucuneAide: "ستجدون هنا الأحداث التي تهمكم: استدعاءات الأموال، الجموع العامة، الزيارات…",
     voirToutes: "عرض جميع الإشعارات",
@@ -2236,6 +2240,8 @@ export const ar: DeepDict<typeof fr> = {
     archiver: "أرشفة",
     archiverCorps: "يغادر الإعلان لوحة الإعلانات؛ يُحتفظ بالسجل والقراءات.",
     archivee: "تمت أرشفة الإعلان.",
+    desarchivee: "تم التراجع عن الأرشفة: عاد الإعلان إلى لوحة الإعلانات.",
+    desarchiver: "إلغاء الأرشفة",
     supprimer: "حذف المسودة",
     supprimee: "حُذفت المسودة.",
     enregistree: "تم حفظ الإعلان.",

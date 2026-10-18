@@ -138,6 +138,8 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
   late final UploadQueue _photos = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.incidents, max: 5);
   bool _loading = false;
   ApiFail? _fail;
+  /// Clé d'idempotence de CE signalement (stable d'un essai à l'autre jusqu'au succès).
+  final IdemKey _idem = IdemKey();
 
   @override
   void initState() {
@@ -301,7 +303,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
       return;
     }
     final chemins = _photos.paths;
-    final r = await api.post<Incident>('/incidents', body: {
+    final body = <String, Object?>{
       'lot_id': _lot,
       'categorie': _categorie,
       'sous_categorie': _sous.text.trim(),
@@ -312,7 +314,11 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
       if (_categorie == 'PARKING' && _emplacement != null) 'emplacement_id': _emplacement,
       if (_categorie == 'PARKING' && _plaque.text.trim().isNotEmpty) 'immatriculation_signalee': _plaque.text.trim(),
       if (chemins.isNotEmpty) 'photos': chemins,
-    }, parse: (j) => Incident.fromJson(asMap(j)));
+    };
+    // Clé stable par intention (POST /incidents rejoue : un « Réessayer » après un échec ambigu
+    // renvoie le même incident au lieu d'en créer un second).
+    final r = await api.post<Incident>('/incidents', body: body, idempotencyKey: _idem.forPayload(body), parse: (j) => Incident.fromJson(asMap(j)));
+    _idem.settle(r);
     if (!mounted) return;
     switch (r) {
       case ApiOk<Incident>(:final data):
@@ -330,10 +336,8 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         context.pushReplacement('/incidents/${data.id}');
         if (racine.mounted) showSuccess(racine, title: titre, body: corps, illustration: 'ok-incident');
       case ApiFail<Incident>():
-        // POST /incidents n'a pas de clé d'idempotence : après un échec ambigu, le signalement
-        // existe peut-être déjà — le prochain essai envoie des photos neuves (jamais deux lignes
-        // sur les mêmes fichiers). Après un refus certain (4xx), les photos envoyées sont gardées.
-        if (IdemKey.isAmbiguous(r.status, r.error.code)) _photos.forgetUploads();
+        // Les photos déjà au stockage sont gardées : le prochain essai renvoie le MÊME payload
+        // avec la MÊME clé (échec ambigu) → le serveur rejoue la réponse, jamais deux lignes.
         setState(() {
           _loading = false;
           _fail = r;

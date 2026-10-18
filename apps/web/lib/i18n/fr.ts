@@ -10,6 +10,8 @@ export const fr = {
   },
 
   common: {
+    /** Bouton « Annuler » d'un toast après une action réversible (≠ cancel d'une modale). */
+    undo: "Annuler",
     save: "Enregistrer",
     actions: "Actions",
     cancel: "Annuler",
@@ -1276,6 +1278,8 @@ export const fr = {
     nonLues: "{n} non lues",
     toutesLues: "Vous êtes à jour.",
     marquerLu: "Marquer comme lu",
+    marqueeLue: "Notification marquée comme lue.",
+    lectureEchec: "La lecture n'a pas pu être enregistrée : la notification reste non lue.",
     aucune: "Aucune notification.",
     aucuneAide: "Vous retrouverez ici les événements qui vous concernent : appels de fonds, assemblées, visites…",
     voirToutes: "Voir toutes les notifications",
@@ -2250,6 +2254,8 @@ export const fr = {
     archiver: "Archiver",
     archiverCorps: "L'annonce quitte le tableau d'affichage ; l'historique et les lectures sont conservés.",
     archivee: "Annonce archivée.",
+    desarchivee: "Archivage annulé : l'annonce est de retour sur le tableau.",
+    desarchiver: "Désarchiver",
     supprimer: "Supprimer le brouillon",
     supprimee: "Brouillon supprimé.",
     enregistree: "Annonce enregistrée.",

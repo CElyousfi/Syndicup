@@ -2,7 +2,7 @@
 import { withApiHandler } from "../../../../../lib/http/handler";
 import { tenantFromRequest } from "../../../../../lib/http/request-context";
 import { ok, failZod } from "../../../../../lib/http/respond";
-import { readIdempotencyKey } from "../../../../../lib/http/idempotency";
+import { readIdempotencyKeyOptionnelle } from "../../../../../lib/http/idempotency";
 import { mapErreurRh } from "../../../../../lib/personnel/http";
 import { listerPresences, saisirPresences } from "../../../../../lib/personnel/rh";
 import { presencesQuerySchema, presencesUpsertSchema } from "../../../../../lib/personnel/schemas";
@@ -20,9 +20,8 @@ async function handlePOST(req: Request, { params }: P) {
     const ctx = await tenantFromRequest(req); const { id } = await params;
     const parsed = presencesUpsertSchema.safeParse(await req.json().catch(() => null));
     if (!parsed.success) return failZod(parsed.error);
-    return ok(await saisirPresences(ctx, id, parsed.data));
+    return ok(await saisirPresences(ctx, id, parsed.data, readIdempotencyKeyOptionnelle(req)));
   } catch (e) { const m = mapErreurRh(e); if (m) return m; throw e; }
 }
-void readIdempotencyKey;
 export const GET = withApiHandler(handleGET);
 export const POST = withApiHandler(handlePOST);

@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import { creerUrlSignee, creerUrlUploadSignee, supprimerObjet } from "../storage/supabase-storage";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
@@ -13,6 +14,8 @@ import type { DocumentCreateInput, DocumentUploadUrlInput } from "./schemas";
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
 export class ContrainteMetierError extends Error {}
+/** storage_path hors du périmètre `<copropriete>/documents/` du tenant → 400 VALIDATION_ERROR. */
+export class CheminDocumentInvalideError extends Error {}
 
 /**
  * POST /documents/upload-url — prépare un téléversement : chemin canonique dans le périmètre du
@@ -35,11 +38,21 @@ export async function preparerUpload(ctx: TenantContext, input: DocumentUploadUr
   return { storage_path: storagePath, upload_url: url, token };
 }
 
-export async function creerDocument(ctx: TenantContext, input: DocumentCreateInput) {
+export async function creerDocument(ctx: TenantContext, input: DocumentCreateInput, idempotencyKey?: string) {
   if (can("documents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ajouter un document.");
   }
-  return withTenant(ctx, async (db) => {
+  // Le chemin doit être celui préparé par POST /documents/upload-url pour CE tenant : jamais un
+  // objet d'une autre copropriété ni d'un autre module (download-url refuserait ensuite de le
+  // servir, mais la ligne ne doit même pas exister). Aucun segment `..` / vide toléré.
+  const prefixe = `${ctx.coproprieteId}/documents/`;
+  const reste = input.storage_path.startsWith(prefixe) ? input.storage_path.slice(prefixe.length) : null;
+  if (reste === null || reste.length === 0 || reste.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
+    throw new CheminDocumentInvalideError(`storage_path doit commencer par « ${prefixe} » (chemin renvoyé par POST /documents/upload-url).`);
+  }
+  // Idempotency-Key OPTIONNELLE : même clé + même payload → réponse rejouée (pas de doublon
+  // après un échec ambigu) ; payload différent → 409 ; sans clé, comportement inchangé.
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: "POST /documents", payload: input }, async (db) => {
     const document = await db.document.create({
       data: {
         coproprieteId: ctx.coproprieteId,

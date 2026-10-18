@@ -226,6 +226,53 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     _rafraichirAffichage(ref);
   }
 
+  /// Archivage immédiat + « Annuler » (POST /annonces/{id}/desarchiver : état d'avant restauré,
+  /// aucune nouvelle diffusion). Le conteneur est capturé : l'annulation reste possible même si
+  /// l'écran a été quitté entre-temps.
+  Future<void> _archiver(String id) async {
+    final c = context.dict.communication;
+    final ux = context.mdict.ux;
+    final container = ProviderScope.containerOf(context, listen: false);
+    final api = container.read(apiClientProvider);
+    void rafraichir() {
+      container.invalidate(annonceProvider(id));
+      container.invalidate(annoncesProvider);
+      container.invalidate(annoncesNonLuesProvider);
+    }
+
+    final r = await api.post<dynamic>('/annonces/$id/archiver', body: const {});
+    if (!mounted) return;
+    if (r is ApiFail) {
+      showApiError(context, r);
+      return;
+    }
+    rafraichir();
+    showDone(context, c.archivee, undoLabel: ux.undo, onUndo: () async {
+      final u = await api.post<dynamic>('/annonces/$id/desarchiver', body: const {});
+      rafraichir();
+      if (!mounted) return;
+      if (u is ApiFail) {
+        showApiError(context, u);
+        return;
+      }
+      showToast(context, ux.annonceRestauree);
+    });
+  }
+
+  /// « Désarchiver » depuis une annonce ARCHIVEE (après expiration du toast) — idempotent côté API.
+  Future<void> _desarchiver(String id) async {
+    final ux = context.mdict.ux;
+    final r = await ref.read(apiClientProvider).post<dynamic>('/annonces/$id/desarchiver', body: const {});
+    if (!mounted) return;
+    if (r is ApiFail) {
+      showApiError(context, r);
+      return;
+    }
+    ref.invalidate(annonceProvider(id));
+    _rafraichirAffichage(ref);
+    showToast(context, ux.annonceRestauree);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctx = ref.watch(appContextProvider);
@@ -284,11 +331,16 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                       if (a.statut == 'BROUILLON') SuButton(onPressed: () async {
                         if (await confirmDialog(context, title: c.publierTitre, body: c.publierCorps, confirmLabel: c.publier)) await _action('/annonces/${a.id}/publier', idempotent: true, succes: c.enregistree, corps: c.publierCorps);
                       }, icon: Icons.send_rounded, label: c.publier),
-                      if (a.statut == 'PUBLIEE') SuButton(variant: SuButtonVariant.secondary, onPressed: () async {
-                        if (await confirmDialog(context, title: c.archiver, body: c.archiverCorps, danger: true)) await _action('/annonces/${a.id}/archiver', succes: c.archivee);
-                      }, icon: Icons.archive_outlined, label: c.archiver),
+                      // Archiver est réversible : pas de dialogue, « Annuler » dans le toast (~6 s).
+                      if (a.statut == 'PUBLIEE') SuButton(variant: SuButtonVariant.secondary, onPressed: () => _archiver(a.id), icon: Icons.archive_outlined, label: c.archiver),
                     ]),
                   ),
+                  // Retour possible après le toast : « Désarchiver » (mêmes rôles que l'archivage).
+                  if (a.statut == 'ARCHIVEE' && (ctx.isGestion || a.categorie != 'URGENCE'))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: SuButton(variant: SuButtonVariant.secondary, onPressed: () => _desarchiver(a.id), icon: Icons.unarchive_outlined, label: context.mdict.ux.desarchiver),
+                    ),
                 ],
                 SectionHeader(c.commentaires, subtitle: a.commentaires.isNotEmpty ? '${a.commentaires.length}' : null),
                 if (a.commentaires.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(c.aucunCommentaire, style: t.bodyMedium?.copyWith(color: SuColors.soft))),

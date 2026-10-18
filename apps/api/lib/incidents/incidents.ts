@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
 import { pousserActivite, etatIncident } from "../notifications/activites";
 import { withTenant } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
@@ -24,6 +25,9 @@ import type {
   PrestataireUpdateInput,
 } from "./schemas";
 import type { IncidentEvaluationInput } from "../depenses/schemas";
+import { STATUTS_INCIDENT, type IncidentsFiltres } from "./schemas";
+import { motifContient } from "../http/recherche";
+import { Prisma } from "@prisma/client";
 
 export class PermissionRefuseeError extends Error {}
 export class IncidentIntrouvableError extends Error {}
@@ -79,7 +83,12 @@ export async function preparerUploadPhoto(ctx: TenantContext, input: IncidentUpl
   return { storage_path: storagePath, upload_url: url, token };
 }
 
-export async function creerIncident(ctx: TenantContext, input: IncidentCreateInput) {
+/**
+ * `idempotencyKey` OPTIONNELLE : un retry après un échec ambigu (réseau coupé après le commit)
+ * avec la même clé + le même payload rejoue la réponse au lieu de créer un second incident ;
+ * même clé + payload différent → 409. Sans clé : comportement inchangé.
+ */
+export async function creerIncident(ctx: TenantContext, input: IncidentCreateInput, idempotencyKey?: string) {
   if (can("incidents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à créer un incident (Doc A §5).");
   }
@@ -91,7 +100,7 @@ export async function creerIncident(ctx: TenantContext, input: IncidentCreateInp
       throw new PermissionRefuseeError("Photo hors du périmètre de la copropriété.");
     }
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: "POST /incidents", payload: input }, async (db) => {
     if (input.lot_id) {
       const lot = await db.lot.findUnique({ where: { id: input.lot_id } });
       if (!lot) throw new IncidentIntrouvableError("Lot introuvable.");
@@ -188,22 +197,88 @@ async function notifierNouveauSignalement(
 }
 
 
-export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: { sejourId?: string } = {}) {
+type FiltresIncidents = { sejourId?: string } & Partial<IncidentsFiltres>;
+
+/**
+ * Filtres serveur (Zod en amont : incidentsFiltresSchema) — la RLS reste la seule source de
+ * visibilité (un résident ne filtre que ses signalements, un prestataire ses tickets) ; les
+ * filtres ne font que restreindre, `total` compte le résultat filtré.
+ */
+function whereIncidents(ctx: TenantContext, filtres: FiltresIncidents): Prisma.IncidentWhereInput {
+  return {
+    coproprieteId: ctx.coproprieteId,
+    ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}),
+    ...(filtres.statut?.length ? { statut: { in: filtres.statut } } : {}),
+    ...(filtres.urgence ? { urgence: filtres.urgence } : {}),
+    ...(filtres.categorie ? { categorie: filtres.categorie } : {}),
+    ...(filtres.lot_id ? { lotId: filtres.lot_id } : {}),
+  };
+}
+
+/**
+ * Même prédicat en SQL, avec la recherche `q` (ILIKE, jokers échappés, ESCAPE '!') DANS la
+ * requête principale — jamais une liste d'identifiants non bornée. Exécuté sous la même
+ * transaction RLS que le reste.
+ */
+function predicatSqlIncidents(ctx: TenantContext, filtres: FiltresIncidents, motif: string): Prisma.Sql {
+  const conds: Prisma.Sql[] = [
+    Prisma.sql`copropriete_id = ${ctx.coproprieteId}::uuid`,
+    Prisma.sql`(sous_categorie ILIKE ${motif} ESCAPE '!' OR description ILIKE ${motif} ESCAPE '!')`,
+  ];
+  if (filtres.sejourId) conds.push(Prisma.sql`sejour_id = ${filtres.sejourId}::uuid`);
+  if (filtres.statut?.length) conds.push(Prisma.sql`statut::text = ANY(${filtres.statut}::text[])`);
+  if (filtres.urgence) conds.push(Prisma.sql`urgence::text = ${filtres.urgence}`);
+  if (filtres.categorie) conds.push(Prisma.sql`categorie::text = ${filtres.categorie}`);
+  if (filtres.lot_id) conds.push(Prisma.sql`lot_id = ${filtres.lot_id}::uuid`);
+  return Prisma.join(conds, " AND ");
+}
+
+export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: FiltresIncidents = {}) {
   if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
   }
-  const where = { coproprieteId: ctx.coproprieteId, ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}) };
+  const skip = (page - 1) * limit;
   return withTenant(ctx, async (db) => {
-    const [total, rows] = await Promise.all([
-      db.incident.count({ where }),
-      db.incident.findMany({
-        where,
-        orderBy: { creeLe: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
+    if (!filtres.q) {
+      const where = whereIncidents(ctx, filtres);
+      const [total, rows] = await Promise.all([
+        db.incident.count({ where }),
+        db.incident.findMany({ where, orderBy: { creeLe: "desc" }, skip, take: limit }),
+      ]);
+      return { total, rows };
+    }
+    // Recherche : total + identifiants de LA page en SQL (bornés par `limit`), puis lecture
+    // Prisma de ces lignes seulement, réordonnées comme la page.
+    const predicat = predicatSqlIncidents(ctx, filtres, motifContient(filtres.q));
+    const [compte, pageIds] = await Promise.all([
+      db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM incident WHERE ${predicat}`,
+      db.$queryRaw<{ id: string }[]>`SELECT id FROM incident WHERE ${predicat} ORDER BY cree_le DESC, id DESC LIMIT ${limit} OFFSET ${skip}`,
     ]);
-    return { total, rows };
+    const ids = pageIds.map((r) => r.id);
+    const lignes = ids.length ? await db.incident.findMany({ where: { id: { in: ids } } }) : [];
+    const parId = new Map(lignes.map((l) => [l.id, l]));
+    return { total: Number(compte[0]?.n ?? 0), rows: ids.map((id) => parId.get(id)).filter((l): l is NonNullable<typeof l> => Boolean(l)) };
+  });
+}
+
+/**
+ * GET /incidents/compteurs — cartes de synthèse de l'écran Incidents : nombre par statut et
+ * signalements ouverts / en cours dont le SLA est dépassé. Même périmètre RLS que la liste ;
+ * aucun filtre (les cartes décrivent tout ce que l'appelant voit).
+ */
+export async function compteursIncidents(ctx: TenantContext, now = new Date()) {
+  if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [groupes, slaDepasses] = await Promise.all([
+      db.incident.groupBy({ by: ["statut"], where: { coproprieteId: ctx.coproprieteId }, _count: { _all: true } }),
+      db.incident.count({ where: { coproprieteId: ctx.coproprieteId, statut: { in: ["OUVERT", "EN_COURS"] }, slaDeadline: { lt: now } } }),
+    ]);
+    const parStatut = Object.fromEntries(STATUTS_INCIDENT.map((s) => [s, 0])) as Record<(typeof STATUTS_INCIDENT)[number], number>;
+    for (const g of groupes) parStatut[g.statut] = g._count._all;
+    const total = Object.values(parStatut).reduce((a, b) => a + b, 0);
+    return { par_statut: parStatut, total, sla_depasses: slaDepasses };
   });
 }
 

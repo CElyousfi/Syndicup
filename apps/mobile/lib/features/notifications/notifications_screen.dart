@@ -11,6 +11,7 @@ import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
 import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
+import '../../core/util/deferred_commit.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -22,12 +23,78 @@ class NotificationsScreen extends ConsumerStatefulWidget {
   ConsumerState<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
+class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with WidgetsBindingObserver {
   bool _nonLues = false;
-  bool _toutLire = false;
 
+  /// « Marquer comme lu » / « Tout marquer comme lu » : UI tout de suite, requête DIFFÉRÉE (~6 s,
+  /// durée du toast « Annuler »). La ligne `notification` est append-only (Master Spec 7.2) : pas
+  /// de « non lu » serveur, l'annulation ne peut être que côté client. Ce qui attend part au
+  /// dispose et quand l'app passe en arrière-plan — rien n'est perdu.
+  late final EnvoiDiffere<String> _differe = EnvoiDiffere<String>(_envoyerLot);
+
+  /// Conteneur capturé : l'envoi différé doit aboutir même après le dispose de l'écran.
+  ProviderContainer? _container;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _container = ProviderScope.containerOf(context, listen: false);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pas `inactive` (centre de contrôle, appel entrant, sélecteur d'apps) : l'utilisateur est
+    // encore là et peut toucher « Annuler ».
+    // Compromis ACCEPTÉ : une app tuée depuis le sélecteur iOS (sans passer par `paused`) ou par
+    // le système peut perdre les lectures en attente — elles restent simplement « non lues »
+    // côté serveur. Sans conséquence : l'état « lu » n'a aucune valeur probante (la preuve
+    // d'envoi est la ligne notification elle-même) et l'utilisateur les retrouvera non lues.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden || state == AppLifecycleState.detached) {
+      _differe.vider();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _differe.vider();
+    super.dispose();
+  }
+
+  bool _lu(NotificationItem n) => n.lu || _differe.enAttente(n.id);
+
+  /// Envoi effectif d'un lot échu / vidé. Le compteur ne baisse que pour les lectures que le
+  /// serveur a bien enregistrées ; un échec remet la ligne en « non lue » (elle n'est plus en
+  /// attente) et le signale.
+  Future<void> _envoyerLot(List<String> ids) async {
+    final container = _container;
+    if (container == null) return;
+    final api = container.read(apiClientProvider);
+    final res = await Future.wait([for (final id in ids) api.patch<dynamic>('/notifications/$id/read')]);
+    final live = container.read(notificationsLiveProvider.notifier);
+    for (final r in res) {
+      if (r is ApiOk) live.decrement();
+    }
+    container.invalidate(notificationsProvider);
+    final echecs = res.whereType<ApiFail<dynamic>>().toList();
+    if (!mounted) return;
+    setState(() {});
+    if (echecs.isNotEmpty) {
+      echecs.length == 1 && res.length == 1 ? showApiError(context, echecs.first) : showToast(context, context.mdict.ux.markAllFailed, error: true);
+    }
+  }
+
+  /// Ouvrir une notification = lue IMMÉDIATEMENT (on navigue, pas d'annulation).
   Future<void> _lire(NotificationItem n) async {
-    if (!n.lu) {
+    final enAttente = _differe.enAttente(n.id);
+    _differe.retirer(n.id);
+    if (!n.lu || enAttente) {
       final r = await ref.read(apiClientProvider).patch<dynamic>('/notifications/${n.id}/read');
       if (!mounted) return;
       // Le compteur ne baisse que si le serveur a bien enregistré la lecture.
@@ -36,26 +103,23 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     }
   }
 
-  /// « Tout marquer comme lu » : en cours = bouton qui tourne ; le compteur n'est remis à zéro que
-  /// si TOUTES les lectures ont été enregistrées ; sinon il reflète ce qui reste non lu.
-  Future<void> _toutMarquerLu(List<NotificationItem> list) async {
-    if (_toutLire) return;
-    final nonLues = list.where((x) => !x.lu).toList();
-    if (nonLues.isEmpty) return;
-    setState(() => _toutLire = true);
-    final api = ref.read(apiClientProvider);
-    final res = await Future.wait([for (final n in nonLues) api.patch<dynamic>('/notifications/${n.id}/read')]);
-    if (!mounted) return;
-    final echecs = res.whereType<ApiFail<dynamic>>().toList();
-    final live = ref.read(notificationsLiveProvider.notifier);
-    if (echecs.isEmpty) {
-      live.setUnread(0);
-    } else {
-      live.setUnread(echecs.length);
-      echecs.length == res.length ? showApiError(context, echecs.first) : showToast(context, context.mdict.ux.markAllFailed, error: true);
-    }
-    setState(() => _toutLire = false);
-    await refreshing(ref, [notificationsProvider]);
+  /// Marquage différé d'un ou plusieurs ids + toast « Annuler » (qui restaure l'UI sans requête).
+  void _marquerDiffere(List<NotificationItem> items) {
+    final ids = [for (final x in items) if (!_lu(x)) x.id];
+    final lot = _differe.programmer(ids);
+    if (lot == null) return;
+    setState(() {});
+    final ux = context.mdict.ux;
+    final n = ids.length;
+    showDone(context, n == 1 ? ux.notifLue : fill(ux.notifsLues, {'n': n}), undoLabel: ux.undo, onUndo: () {
+      if (!mounted) return;
+      if (_differe.annuler(lot) != null) {
+        setState(() {});
+      } else {
+        // Le lot est déjà parti (expiration / arrière-plan) : rien à annuler, on le dit.
+        showToast(context, context.mdict.ux.dejaEnregistre);
+      }
+    });
   }
 
   @override
@@ -70,12 +134,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
         SuButton(
           variant: SuButtonVariant.ghost,
           label: d.notifs.toutesLues,
-          loading: _toutLire,
-          onPressed: (notifs.valueOrNull ?? const <NotificationItem>[]).any((x) => !x.lu) ? () => _toutMarquerLu(notifs.valueOrNull ?? const <NotificationItem>[]) : null,
+          onPressed: (notifs.valueOrNull ?? const <NotificationItem>[]).any((x) => !_lu(x)) ? () => _marquerDiffere(notifs.valueOrNull ?? const <NotificationItem>[]) : null,
         ),
       ],
       children: [
-        Segmented<bool>(value: _nonLues, options: const [false, true], labelOf: (v) => v ? fill(d.notifs.nonLues, {'n': (notifs.valueOrNull ?? const []).where((x) => !x.lu).length}) : '${d.common.all} · ${notifs.valueOrNull?.length ?? 0}', onChanged: (v) => setState(() => _nonLues = v)),
+        Segmented<bool>(value: _nonLues, options: const [false, true], labelOf: (v) => v ? fill(d.notifs.nonLues, {'n': (notifs.valueOrNull ?? const <NotificationItem>[]).where((x) => !_lu(x)).length}) : '${d.common.all} · ${notifs.valueOrNull?.length ?? 0}', onChanged: (v) => setState(() => _nonLues = v)),
         const SizedBox(height: 4),
         AsyncView(
           notifs,
@@ -85,7 +148,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                 value: _nonLues,
                 child: Builder(
                   builder: (context) {
-                    final visible = list.where((n) => !_nonLues || !n.lu).toList()..sort((a, b) => b.horodatageEnvoi.compareTo(a.horodatageEnvoi));
+                    final visible = list.where((n) => !_nonLues || !_lu(n)).toList()..sort((a, b) => b.horodatageEnvoi.compareTo(a.horodatageEnvoi));
                     if (visible.isEmpty) {
                       return Padding(padding: const EdgeInsets.only(top: 12), child: EmptyState(title: d.notifs.aucune, hint: d.notifs.aucuneAide, icon: Icons.notifications_none_rounded, illustration: 'empty-notifications'));
                     }
@@ -103,13 +166,15 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                             for (final n in g.value)
                               SuSwipeAction(
                                 key: ValueKey(n.id),
-                                enabled: !n.lu,
-                                onAction: () => _lire(n),
+                                enabled: !_lu(n),
+                                // Balayage = marquage DIFFÉRÉ avec « Annuler » ; toucher = ouvrir (lu tout de suite).
+                                onAction: () async => _marquerDiffere([n]),
                                 icon: Icons.done_all_rounded,
                                 label: d.notifs.marquerLu,
                                 child: _NotifRow(
                                   key: ValueKey('row-${n.id}'),
                                   n: n,
+                                  lu: _lu(n),
                                   icon: _icon(n.templateCode),
                                   meta: n.statutEnvoi == 'EN_ATTENTE' ? '${formatHeure(n.horodatageEnvoi, l)} · ${fill(d.notifs.envoiEnAttente, {'canal': (d.enums.canal[n.canal] ?? humanizeCode(n.canal)).toLowerCase()})}' : '${d.enums.canal[n.canal] ?? humanizeCode(n.canal)} · ${formatHeure(n.horodatageEnvoi, l)}',
                                   onTap: () {
@@ -159,8 +224,11 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
 /// Ligne de notification Wise : pastille 48 (teintée si non lue), titre gras si non lu, extrait
 /// ardoise, canal + heure, point vert profond en fin de ligne.
 class _NotifRow extends StatelessWidget {
-  const _NotifRow({super.key, required this.n, required this.icon, required this.meta, required this.onTap});
+  const _NotifRow({super.key, required this.n, required this.lu, required this.icon, required this.meta, required this.onTap});
   final NotificationItem n;
+
+  /// Lu côté serveur OU marquage différé en attente (affichage optimiste).
+  final bool lu;
   final IconData icon;
   final String meta;
   final VoidCallback onTap;
@@ -168,7 +236,7 @@ class _NotifRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = Theme.of(context).textTheme;
-    final nonLue = !n.lu;
+    final nonLue = !lu;
     return SuTap(
       scale: 0.985,
       onTap: onTap,

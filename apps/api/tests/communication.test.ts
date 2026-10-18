@@ -16,7 +16,7 @@ import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { disconnectTenantDb, withTenant } from "../lib/tenant/db";
 import type { TenantContext } from "../lib/tenant/context";
-import { archiverAnnonce, commenterAnnonce, creerAnnonce, creerContact, lecturesAnnonce, listerAnnonces, marquerLue, masquerCommentaire, obtenirAnnonce, publierAnnonce, definirPreferencesNotification, CommunicationError, PermissionRefuseeError } from "../lib/communication/communication";
+import { archiverAnnonce, commenterAnnonce, creerAnnonce, creerContact, desarchiverAnnonce, lecturesAnnonce, listerAnnonces, marquerLue, masquerCommentaire, obtenirAnnonce, publierAnnonce, supprimerAnnonce, definirPreferencesNotification, CommunicationError, IntrouvableError, PermissionRefuseeError } from "../lib/communication/communication";
 import { PREFERENCES_DEFAUT } from "../lib/communication/schemas";
 import { cloreSondage, creerSondage, listerSondages, obtenirSondage, ouvrirSondage, repondreSondage, resultatsSondage } from "../lib/communication/sondages";
 import { executerDigest, executerProgrammees } from "../lib/communication/jobs";
@@ -163,6 +163,53 @@ describe("M21 — annonces, audiences, lectures, commentaires", () => {
     await archiverAnnonce(S(), fermee.id);
     expect((await listerAnnonces(A(), {}, PAGE, TRI)).rows.map((r) => r.id)).not.toContain(fermee.id);
     expect(await admin.auditLog.count({ where: { coproprieteId: copro, action: { in: ["ANNONCE_PUBLIEE", "ANNONCE_ARCHIVEE", "COMMENTAIRE_MASQUE"] } } })).toBeGreaterThanOrEqual(5);
+  });
+  it("désarchiver (« Annuler ») : restaure PUBLIEE + épingle, sans renvoyer de notification ; idempotent ; 403 résident ; autre tenant introuvable", async () => {
+    const e = await creerAnnonce(S(), { titre: "Ascenseur en panne", contenu: "Réparation lundi.", categorie: "INFORMATION", audience: "TOUS", epingle: true, commentaires_actives: true, pieces_jointes: [] });
+    await publierAnnonce(S(), e.id, {}, randomUUID());
+    const notifsAvant = await admin.notification.count({ where: { coproprieteId: copro, contenuJson: { path: ["annonce_id"], equals: e.id } } });
+    const archivee = await archiverAnnonce(C(), e.id);
+    expect(archivee.statut).toBe("ARCHIVEE");
+    expect(archivee.epingle).toBe(false);
+    // Mauvais rôle : mêmes droits que l'archivage.
+    await expect(desarchiverAnnonce(A(), e.id)).rejects.toThrow(PermissionRefuseeError);
+    await expect(desarchiverAnnonce(G(), e.id)).rejects.toThrow(PermissionRefuseeError);
+    // Autre copropriété : la RLS rend l'annonce invisible → introuvable (404).
+    const autreTenant: TenantContext = { utilisateurId: syndic, coproprieteId: randomUUID(), role: "SYNDIC" };
+    await expect(desarchiverAnnonce(autreTenant, e.id)).rejects.toThrow(IntrouvableError);
+    const restauree = await desarchiverAnnonce(C(), e.id);
+    expect(restauree.statut).toBe("PUBLIEE");
+    expect(restauree.epingle).toBe(true);
+    expect((await listerAnnonces(A(), {}, PAGE, TRI)).rows.map((r) => r.id)).toContain(e.id);
+    // Aucune nouvelle diffusion.
+    expect(await admin.notification.count({ where: { coproprieteId: copro, contenuJson: { path: ["annonce_id"], equals: e.id } } })).toBe(notifsAvant);
+    // Déjà dans l'état cible : 200, même état, aucun audit supplémentaire.
+    const audits = await admin.auditLog.count({ where: { coproprieteId: copro, entiteId: e.id, action: "ANNONCE_DESARCHIVEE" } });
+    expect(audits).toBe(1);
+    const encore = await desarchiverAnnonce(S(), e.id);
+    expect(encore.statut).toBe("PUBLIEE");
+    expect(await admin.auditLog.count({ where: { coproprieteId: copro, entiteId: e.id, action: "ANNONCE_DESARCHIVEE" } })).toBe(1);
+    // Un brouillon programmé archivé redevient brouillon (le job le publiera) — jamais publié
+    // par ce biais. (Un brouillon sans `publie_le` ne s'archive pas : contrainte annonce_publiee_check.)
+    const b = await creerAnnonce(S(), { titre: "Brouillon programmé", contenu: "x", categorie: "INFORMATION", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });
+    await publierAnnonce(S(), b.id, { publie_le: new Date(Date.now() + 2 * 3600_000).toISOString() }, randomUUID());
+    await archiverAnnonce(S(), b.id);
+    expect((await desarchiverAnnonce(S(), b.id)).statut).toBe("BROUILLON");
+    // Nettoyage : sinon le job horaire du test suivant le publierait aussi.
+    await supprimerAnnonce(S(), b.id);
+  });
+  it("désarchiver un brouillon programmé dont l'heure est PASSÉE : redevient BROUILLON (statut lu dans l'audit), puis le job le publie ET le diffuse", async () => {
+    const b = await creerAnnonce(S(), { titre: "Programmée échue", contenu: "Coupure demain.", categorie: "INFORMATION", audience: "PROPRIETAIRES", epingle: false, commentaires_actives: true, pieces_jointes: [] });
+    // Heure de publication passée avant que le job horaire ne soit passé.
+    await admin.annonce.update({ where: { id: b.id }, data: { publieLe: new Date(Date.now() - 3600_000) } });
+    await archiverAnnonce(S(), b.id);
+    const restauree = await desarchiverAnnonce(S(), b.id);
+    expect(restauree.statut).toBe("BROUILLON"); // jamais PUBLIEE sans diffusion
+    const notif = () => admin.notification.count({ where: { coproprieteId: copro, templateCode: "ANNONCE_PUBLIEE", contenuJson: { path: ["annonce_id"], equals: b.id } } });
+    expect(await notif()).toBe(0);
+    expect(await withTenant(SYS(), (db) => executerProgrammees(db, copro, new Date()))).toMatchObject({ publiees: 1 });
+    expect((await obtenirAnnonce(S(), b.id)).statut).toBe("PUBLIEE");
+    expect(await notif()).toBe(2); // amina + omar
   });
   it("publication programmée : reste brouillon (invisible) puis publiée par le job horaire, une seule fois", async () => {
     const p = await creerAnnonce(S(), { titre: "AG du 15", contenu: "Convocation à venir.", categorie: "AG", audience: "TOUS", epingle: false, commentaires_actives: true, pieces_jointes: [] });

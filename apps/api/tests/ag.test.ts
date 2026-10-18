@@ -6,6 +6,7 @@
  */
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import { disconnectTenantDb } from "../lib/tenant/db";
 import type { TenantContext } from "../lib/tenant/context";
 import {
@@ -147,6 +148,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   const coproIds = [coproA, coproNonConfiguree, coproExtra];
+  await admin.idempotencyKey.deleteMany({ where: { coproprieteId: { in: coproIds } } });
   await admin.agNotificationLog.deleteMany({});
   await admin.agVote.deleteMany({});
   await admin.agProcuration.deleteMany({});
@@ -183,6 +185,22 @@ describe("Convocation (Master Spec Partie 8.2)", () => {
     expect(notifAlice?.canal).toBe("EMAIL");
   });
 
+  it("Idempotency-Key optionnelle : rejeu même clé → réponse rejouée, convocations envoyées UNE fois ; sans clé, la transition unique refuse toujours (422)", async () => {
+    const ag = await creerAg(ctxSyndicA(), { type: "ORDINAIRE", date_ag: DANS_20_JOURS().toISOString() });
+    const cle = randomUUID();
+    const c1 = await convoquerAg(ctxSyndicA(), ag.id, cle);
+    const c2 = await convoquerAg(ctxSyndicA(), ag.id, cle);
+    expect(c2.id).toBe(c1.id);
+    expect(c2.statut).toBe("CONVOQUEE");
+    const nbLog = await admin.agNotificationLog.count({ where: { agId: ag.id } });
+    expect(nbLog).toBeGreaterThan(0);
+    const nbNotifs = await admin.notification.count({ where: { templateCode: "AG_CONVOCATION", contenuJson: { path: ["ag_id"], equals: ag.id } } });
+    expect(nbNotifs).toBe(nbLog); // une seule vague : rejeu sans nouvel envoi
+    expect(await admin.auditLog.count({ where: { entiteId: ag.id, action: "AG_CONVOQUEE" } })).toBe(1);
+    // Le payload est fixé par l'AG (clé liée à l'endpoint) : pas de 409 possible ; sans clé → 422.
+    await expect(convoquerAg(ctxSyndicA(), ag.id)).rejects.toBeInstanceOf(ContrainteMetierError);
+  });
+
   it("rejette la convocation si le délai est insuffisant", async () => {
     const ag = await creerAg(ctxSyndicA(), { type: "ORDINAIRE", date_ag: DANS_5_JOURS().toISOString() });
     await expect(convoquerAg(ctxSyndicA(), ag.id)).rejects.toBeInstanceOf(ContrainteMetierError);
@@ -208,6 +226,19 @@ describe("Ouverture (Doc A §6.4)", () => {
     const ouverte = await ouvrirAg(ctxSyndicA(), ag.id);
     expect(ouverte.statut).toBe("EN_COURS");
     expect(ouverte.quorumRequis?.toString()).toBe("0.5");
+  });
+
+  it("Idempotency-Key optionnelle : ouverture rejouée, AG_OUVERTE envoyée une seule fois", async () => {
+    const ag = await admin.assembleeGenerale.create({
+      data: { coproprieteId: coproA, type: "ORDINAIRE", dateAg: HIER(), statut: "CONVOQUEE" },
+    });
+    const cle = randomUUID();
+    const o1 = await ouvrirAg(ctxSyndicA(), ag.id, cle);
+    const nb = await admin.notification.count({ where: { templateCode: "AG_OUVERTE", contenuJson: { path: ["ag_id"], equals: ag.id } } });
+    const o2 = await ouvrirAg(ctxSyndicA(), ag.id, cle);
+    expect(o2.id).toBe(o1.id);
+    expect(o2.statut).toBe("EN_COURS");
+    expect(await admin.notification.count({ where: { templateCode: "AG_OUVERTE", contenuJson: { path: ["ag_id"], equals: ag.id } } })).toBe(nb);
   });
 
   it("rejette l'ouverture avant la date prévue", async () => {

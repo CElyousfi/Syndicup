@@ -17,7 +17,7 @@ import { ProgressBar } from "../../../../../components/ui/progress";
 import { FileViewerButton } from "../../../../../components/documents/document-viewer";
 import { annonceVariant, categorieAnnonceVariant } from "../../../../../lib/status";
 import { Markdown } from "../markdown";
-import { ArchiverModal, CommentaireForm, MarquerLu, MasquerBouton, PublierModal, SupprimerBouton } from "../affichage-client";
+import { ArchiverModal, CommentaireForm, DesarchiverBouton, MarquerLu, MasquerBouton, PublierModal, SupprimerBouton } from "../affichage-client";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { failWith } from "../../../../../lib/api/or-fail";
 
@@ -55,6 +55,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
           {a.statut === "BROUILLON" && peutModifier ? <PublierModal dict={dict} locale={ctx.locale} annonce={a} /> : null}
           {a.statut === "PUBLIEE" && peutModifier ? <ArchiverModal dict={dict} locale={ctx.locale} annonce={a} /> : null}
           {a.statut === "BROUILLON" && peutModifier ? <SupprimerBouton dict={dict} locale={ctx.locale} id={a.id} /> : null}
+          {a.statut === "ARCHIVEE" && (syndic || a.categorie !== "URGENCE") ? <DesarchiverBouton dict={dict} locale={ctx.locale} id={a.id} /> : null}
         </div> : undefined}
       />
       {sp.cree === "1" ? <Banner variant="ok">{c.enregistree}</Banner> : null}

@@ -63,10 +63,22 @@ export type TenantDb = Omit<
  * Exécute `fn` dans une transaction dont le contexte RLS est celui du tenant vérifié.
  * `set_config(..., true)` = portée transaction : le contexte disparaît au commit/rollback,
  * aucune fuite possible entre deux requêtes du pool.
+ *
+ * `options` (facultatif) : délais de la transaction interactive Prisma. Absent = défauts Prisma
+ * (maxWait 2 s, timeout 5 s) — inchangés pour tout le reste du code. Réservé aux opérations
+ * dont le fan-out est long et synchrone (convocation / ouverture d'AG).
  */
+export interface TenantTxOptions {
+  /** Attente max d'une connexion du pool (ms). */
+  maxWait?: number;
+  /** Durée max de la transaction (ms). */
+  timeout?: number;
+}
+
 export async function withTenant<T>(
   ctx: TenantContext,
-  fn: (db: TenantDb) => Promise<T>
+  fn: (db: TenantDb) => Promise<T>,
+  options?: TenantTxOptions
 ): Promise<T> {
   assertValidTenantContext(ctx);
   return basePrisma.$transaction(async (tx) => {
@@ -76,7 +88,8 @@ export async function withTenant<T>(
              set_config('app.current_user_id', ${ctx.utilisateurId}, true)
     `;
     return fn(tx as unknown as TenantDb);
-  });
+    // `undefined` = défauts Prisma (aucun changement pour les appelants existants).
+  }, options);
 }
 
 /** Réservé aux tests et aux scripts d'arrêt propre. */
