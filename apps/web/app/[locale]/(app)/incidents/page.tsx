@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAppContext } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
-import type { CategorieIncident, Incident, Prestataire, StatutIncident } from "../../../../lib/api/types";
-import { fill, getDict, isLocale } from "../../../../lib/i18n";
+import type { CategorieIncident, CompteursIncidents, Incident, Prestataire, StatutIncident } from "../../../../lib/api/types";
+import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
@@ -21,8 +21,6 @@ import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { LiveList } from "../../../../components/ui/live-list";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
-import { collectPages, compteHonnete } from "../../../../lib/api/collect";
-import { Banner } from "../../../../components/ui/banner";
 
 export async function generateMetadata({
   params,
@@ -52,45 +50,26 @@ export default async function IncidentsPage({
   const peutSignaler = !prestataire;
 
   const page = Math.max(1, Number(sp.page) || 1);
-  // GET /incidents n'accepte que page + limit (filtres serveur à venir, API #18). Sans filtre :
-  // pagination de l'API (?page). Filtre actif : lecture des 500 signalements les plus récents
-  // (pages de 100 en parallèle) puis filtre et pagination ici ; au-delà, « n+ » + bandeau.
+  // Filtres appliqués PAR L'API (statut, urgence, catégorie) : meta.total est filtré, la
+  // pagination suit l'URL ; les cartes de synthèse viennent de /incidents/compteurs (tout le
+  // périmètre visible de l'appelant), jamais de la page affichée.
   const filtre = Boolean(sp.statut || sp.urgence || sp.categorie);
-  const PAR_PAGE = 50;
-  const [listeRes, collecteRes, prestatairesRes] = await Promise.all([
-    filtre ? Promise.resolve(null) : apiFetch<Incident[]>("/incidents", { searchParams: { page, limit: PAR_PAGE } }),
-    filtre ? collectPages<Incident>("/incidents", { limit: 100, maxPages: 5 }) : Promise.resolve(null),
+  const [incidentsRes, compteursRes, prestatairesRes] = await Promise.all([
+    apiFetch<Incident[]>("/incidents", {
+      searchParams: { page, limit: 50, statut: sp.statut || undefined, urgence: sp.urgence || undefined, categorie: sp.categorie || undefined },
+    }),
+    apiFetch<CompteursIncidents>("/incidents/compteurs"),
     gestion && ctx.role !== "GARDIEN"
       ? apiFetch<Prestataire[]>("/prestataires")
       : Promise.resolve(null),
   ]);
-  const incidentsRes = (collecteRes ?? listeRes)!;
-  const tous = collecteRes?.ok ? collecteRes.data.rows : listeRes?.ok ? listeRes.data : [];
-  // Lecture complète : tout a été lu (filtre) ou la page 1 contient tout (sans filtre).
-  const complet = collecteRes?.ok ? collecteRes.data.complete : listeRes?.ok ? page === 1 && !listeRes.meta.has_more : true;
-  const filtres = tous.filter((inc) => {
-    if (sp.statut && inc.statut !== sp.statut) return false;
-    if (sp.urgence && inc.urgence !== sp.urgence) return false;
-    if (sp.categorie && inc.categorie !== sp.categorie) return false;
-    return true;
-  });
-  const incidents = filtre ? filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE) : filtres;
-  const metaPage = filtre
-    ? { request_id: "", page, has_more: page * PAR_PAGE < filtres.length, total: complet ? filtres.length : undefined }
-    : listeRes?.ok
-      ? listeRes.meta
-      : { request_id: "" };
+  const incidents = incidentsRes.ok ? incidentsRes.data : [];
   const prestataireParId = new Map(
     (prestatairesRes?.ok ? prestatairesRes.data : []).map((p) => [p.id, p.nom])
   );
-
-  // Indicateurs sur les lignes lues — « n+ » dès que la lecture ne couvre pas tout.
-  const ouverts = tous.filter((x) => x.statut === "OUVERT" || x.statut === "EN_COURS");
-  const slaDepassesNb = ouverts.filter(
-    (x) => x.slaDeadline && new Date(x.slaDeadline).getTime() < Date.now()
-  ).length;
-  const resolusNb = tous.filter((x) => x.statut === "RESOLU" || x.statut === "FERME").length;
-  const compte = (n: number) => compteHonnete(n, complet, dict.formulaires.filtres.auMoins);
+  const compteurs = compteursRes.ok ? compteursRes.data : null;
+  const ouvertsNb = compteurs ? compteurs.par_statut.OUVERT + compteurs.par_statut.EN_COURS : 0;
+  const resolusNb = compteurs ? compteurs.par_statut.RESOLU + compteurs.par_statut.FERME : 0;
 
   const p = (path: string) => `/${locale}${path}`;
   const titre = prestataire ? i.mesTickets : gestion ? i.titre : i.mesSignalements;
@@ -112,30 +91,31 @@ export default async function IncidentsPage({
         }
       />
 
-      {tous.length > 0 ? (
+      {!compteursRes.ok ? (
+        <LoadError error={failureOf(compteursRes)} locale={ctx.locale} variant="inline" className="mb-5" />
+      ) : compteurs && compteurs.total > 0 ? (
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
           <StatCard
             icon={<CWrench />}
             tone="tosca"
             label={dict.dash.incidentsOuverts}
-            value={compte(ouverts.length)}
+            value={ouvertsNb}
           />
           <StatCard
             icon={<CAlert />}
             tone="danger"
             label={i.slaDepasse}
-            value={compte(slaDepassesNb)}
-            trendTone={slaDepassesNb > 0 ? "danger" : "ok"}
+            value={compteurs.sla_depasses}
+            trendTone={compteurs.sla_depasses > 0 ? "danger" : "ok"}
           />
           <StatCard
             icon={<CShield />}
             tone="ok"
             label={dict.enums.statutIncident.RESOLU}
-            value={compte(resolusNb)}
+            value={resolusNb}
           />
         </div>
       ) : null}
-      {filtre && !complet ? <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner> : null}
 
       <form className="filters mb-4 flex flex-wrap items-center gap-2" method="GET">
         <Select name="statut" defaultValue={sp.statut ?? ""} className="h-10 w-full sm:w-44">
@@ -173,7 +153,7 @@ export default async function IncidentsPage({
         </Button>
       </form>
 
-      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 && filtre && tous.length > 0 ? (
+      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 && filtre ? (
         <EmptyState
           title={dict.formulaires.filtres.aucunResultat}
           hint={dict.formulaires.filtres.aucunResultatAide}
@@ -279,7 +259,7 @@ export default async function IncidentsPage({
           </TableCard>
           {incidentsRes.ok ? (
             <Pagination
-              meta={metaPage}
+              meta={incidentsRes.meta}
               basePath={p("/incidents")}
               searchParams={{ statut: sp.statut, urgence: sp.urgence, categorie: sp.categorie }}
               dict={dict}

@@ -32,7 +32,6 @@ import { Amount } from "../../../../components/ui/amount";
 import { LiveList } from "../../../../components/ui/live-list";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
-import { collectPages } from "../../../../lib/api/collect";
 import { Banner } from "../../../../components/ui/banner";
 
 /** Glyphe couleur par famille de lot — habitat vs bâtiment/annexe. */
@@ -63,36 +62,15 @@ export default async function LotsPage({
   const estResident = !voitSolde && !ctx.roles.includes("GARDIEN");
 
   const page = Math.max(1, Number(sp.page) || 1);
-  const PAR_PAGE = 50;
-  // GET /lots n'accepte que page + limit : un filtre (recherche, type, statut) appliqué à la
-  // seule page 1 cachait des lots. Filtre actif → lecture des 500 premiers lots (pages de 100)
-  // puis pagination des résultats ; au-delà, l'écran le dit (aucun résultat inventé).
+  // Filtres appliqués PAR L'API (q, type, statut) : meta.total est filtré, la pagination suit
+  // l'URL. Le compteur « Lots » reste le total de la copropriété (requête sans filtre, 1 ligne).
   const filtre = Boolean(sp.q || sp.type || sp.statut);
-  const res = await apiFetch<Lot[]>("/lots", { searchParams: { page: filtre ? 1 : page, limit: filtre ? 1 : PAR_PAGE } });
-  const collecte = filtre ? await collectPages<Lot>("/lots", { limit: 100, maxPages: 5 }) : null;
-  const tous = collecte ? (collecte.ok ? collecte.data.rows : []) : res.ok ? res.data : [];
-  const complet = collecte ? collecte.ok && collecte.data.complete : true;
-
-  const q = (sp.q ?? "").toLowerCase();
-  const filtres = tous.filter((l) => {
-    if (sp.type && l.typeLot !== sp.type) return false;
-    if (sp.statut && l.statut !== sp.statut) return false;
-    if (q) {
-      const proprios = (l.proprietaires ?? [])
-        .map((p) => nomComplet(p.utilisateur) ?? "")
-        .join(" ")
-        .toLowerCase();
-      if (!l.numero.toLowerCase().includes(q) && !proprios.includes(q)) return false;
-    }
-    return true;
-  });
-  const lots = filtre ? filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE) : filtres;
-  const metaPage = filtre
-    ? { request_id: "", page, has_more: page * PAR_PAGE < filtres.length, total: complet ? filtres.length : undefined }
-    : res.ok
-      ? res.meta
-      : { request_id: "" };
-  const chargementKo = collecte && !collecte.ok ? collecte : !res.ok ? res : null;
+  const [res, totalRes] = await Promise.all([
+    apiFetch<Lot[]>("/lots", { searchParams: { page, limit: 50, q: sp.q || undefined, type: sp.type || undefined, statut: sp.statut || undefined } }),
+    filtre ? apiFetch<Lot[]>("/lots", { searchParams: { page: 1, limit: 1 } }) : Promise.resolve(null),
+  ]);
+  const lots = res.ok ? res.data : [];
+  const totalLots = totalRes ? (totalRes.ok ? totalRes.meta.total : undefined) : res.ok ? res.meta.total : undefined;
 
   // Solde par lot en un appel (synthèse financière, RLS appliquée côté API).
   // Synthèse en échec : soldes « — » ligne par ligne et total indisponible (jamais « 0 — Payé »).
@@ -115,7 +93,7 @@ export default async function LotsPage({
         subtitle={
           res.ok && !estResident
             ? fill(dict.lots.subtitle, {
-                count: res.meta.total ?? tous.length,
+                count: totalLots ?? lots.length,
                 tantiemes: totalTantiemes ? formatEntier(totalTantiemes) : "—",
               })
             : undefined
@@ -141,7 +119,7 @@ export default async function LotsPage({
             icon={<CBuilding />}
             tone="sage"
             label={dict.nav.lots}
-            value={res.ok ? (res.meta.total ?? tous.length) : dict.common.none}
+            value={res.ok && totalLots !== undefined ? totalLots : dict.common.none}
           />
           <StatCard
             icon={<CScale />}
@@ -203,12 +181,8 @@ export default async function LotsPage({
         </form>
       ) : null}
 
-      {filtre && !complet && collecte?.ok ? (
-        <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner>
-      ) : null}
-
-      {chargementKo ? (
-        <LoadError error={failureOf(chargementKo)} locale={ctx.locale} />
+      {!res.ok ? (
+        <LoadError error={failureOf(res)} locale={ctx.locale} />
       ) : lots.length === 0 && filtre ? (
         <EmptyState
           title={dict.formulaires.filtres.aucunResultat}
@@ -317,7 +291,7 @@ export default async function LotsPage({
           </TableCard>
           {res.ok ? (
             <Pagination
-              meta={metaPage}
+              meta={res.meta}
               basePath={p("/lots")}
               searchParams={{ q: sp.q, type: sp.type, statut: sp.statut }}
               dict={dict}

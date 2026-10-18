@@ -2827,8 +2827,6 @@ export const ar: DeepDict<typeof fr> = {
       effacer: "مسح عوامل التصفية",
       aucunResultat: "لا نتائج لعوامل التصفية هذه",
       aucunResultatAide: "وسّعوا البحث أو امسحوا عوامل التصفية لرؤية كل شيء.",
-      auMoins: "{n}+",
-      compteurPartiel: "العدّادات محسوبة على أحدث {n}.",
     },
   },
   errors: {

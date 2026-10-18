@@ -2852,8 +2852,6 @@ export const fr = {
       effacer: "Effacer les filtres",
       aucunResultat: "Aucun résultat pour ces filtres",
       aucunResultatAide: "Élargissez la recherche ou effacez les filtres pour tout revoir.",
-      auMoins: "{n}+",
-      compteurPartiel: "Compteurs calculés sur les {n} plus récents.",
     },
   },
   errors: {
