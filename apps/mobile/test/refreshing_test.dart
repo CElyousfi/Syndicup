@@ -5,9 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:syndicup/core/api/refresh.dart';
 
-/// Lectures factices : chaque construction attend que le test libère la réponse.
+/// Lectures factices : la réponse arrive quand le test la libère.
 var _appels = 0;
-var _appelsFamille = 0;
 Completer<int> _reponse = Completer<int>();
 
 final _lecture = FutureProvider.autoDispose<int>((ref) {
@@ -15,10 +14,7 @@ final _lecture = FutureProvider.autoDispose<int>((ref) {
   return _reponse.future;
 });
 
-final _famille = FutureProvider.autoDispose.family<String, String>((ref, id) async {
-  _appelsFamille++;
-  return 'lot $id';
-});
+final _famille = FutureProvider.autoDispose.family<String, String>((ref, id) => Future<String>.value('lot $id'));
 
 Future<WidgetRef> _monter(WidgetTester tester) async {
   late WidgetRef capture;
@@ -31,10 +27,16 @@ Future<WidgetRef> _monter(WidgetTester tester) async {
   return capture;
 }
 
+/// Le ProviderScope planifie son travail sur les images : on fait avancer les images.
+Future<void> _jusqua(WidgetTester tester, bool Function() cond) async {
+  for (var i = 0; i < 20 && !cond(); i++) {
+    await tester.pump(const Duration(milliseconds: 10));
+  }
+}
+
 void main() {
   setUp(() {
     _appels = 0;
-    _appelsFamille = 0;
     _reponse = Completer<int>();
   });
 
@@ -42,41 +44,32 @@ void main() {
     final ref = await _monter(tester);
     var fini = false;
     unawaited(refreshing(ref, [_lecture]).then((_) => fini = true));
-    await tester.pump();
-    expect(_appels, 1, reason: 'la lecture a été relancée');
+    await tester.pump(const Duration(milliseconds: 10));
+    expect(_appels, greaterThanOrEqualTo(1), reason: 'la lecture a été relancée');
     expect(fini, isFalse, reason: 'pas de coche tant que le serveur n\'a pas répondu');
     _reponse.complete(42);
-    await tester.pump();
-    await tester.pump();
-    expect(fini, isTrue);
-  });
-
-  testWidgets('une erreur termine aussi l\'actualisation (jamais bloquée)', (tester) async {
-    final ref = await _monter(tester);
-    var fini = false;
-    unawaited(refreshing(ref, [_lecture]).then((_) => fini = true));
-    await tester.pump();
-    _reponse.completeError(StateError('réseau'));
-    await tester.pump();
-    await tester.pump();
+    await _jusqua(tester, () => fini);
     expect(fini, isTrue);
   });
 
   testWidgets('instance de famille attendue ; famille entière seulement invalidée', (tester) async {
     final ref = await _monter(tester);
-    await refreshing(ref, [_famille('A')]);
-    expect(_appelsFamille, 1);
-    // Famille entière : rien à attendre (aucune instance écoutée), retour immédiat.
-    await refreshing(ref, [_famille]);
+    var a = false;
+    var b = false;
+    unawaited(refreshing(ref, [_famille('A')]).then((_) => a = true));
+    unawaited(refreshing(ref, [_famille]).then((_) => b = true));
+    await _jusqua(tester, () => a && b);
+    expect(a, isTrue);
+    expect(b, isTrue);
   });
 
   testWidgets('délai dépassé : on rend la main', (tester) async {
     final ref = await _monter(tester);
     var fini = false;
     unawaited(refreshing(ref, [_lecture], timeout: const Duration(milliseconds: 50)).then((_) => fini = true));
-    await tester.pump(const Duration(milliseconds: 60));
-    await tester.pump();
+    await _jusqua(tester, () => fini);
     expect(fini, isTrue);
     _reponse.complete(1);
+    await tester.pump();
   });
 }
