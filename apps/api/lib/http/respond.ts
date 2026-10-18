@@ -174,20 +174,27 @@ export function ok(data: unknown, init?: { status?: number; meta?: Record<string
 // Les services citent leurs sources (« (Partie 5.5) », « (Doc A §6) », « — Master Spec Partie
 // 2.4 », « LEGAL_QUESTIONS_BRIEF §9 »). Utile dans le code et les logs, illisible pour un
 // copropriétaire : retiré ici, une seule fois, du texte renvoyé au client.
+//
+// Prudence : « Partie » et « § » seuls sont des mots du métier (« Partie 2 non attribuée »,
+// « § 4.2 du règlement », « art. 16 §2 de la loi 18-00 ») — jamais retirés tels quels. Seules
+// les formes clairement préfixées le sont (Doc A, Master Spec, LEGAL_QUESTIONS_BRIEF / brief §,
+// CLAUDE.md), plus une parenthèse qui ne contient QUE « Partie <n> » (éventuellement plusieurs,
+// séparés par virgules / barres obliques).
 const NUM = String.raw`\d+(?:\.\d+)*`;
 const REF_SOURCE = [
   String.raw`Master\s+Spec(?:\s+Partie\s+${NUM})?`,
-  String.raw`Partie\s+${NUM}`,
   String.raw`Doc\s+A(?:\s*§\s*${NUM})?`,
   String.raw`(?:docs\/)?LEGAL_QUESTIONS_BRIEF(?:\.md)?(?:\s*§\s*${NUM})?`,
   String.raw`brief\s*§\s*${NUM}`,
   String.raw`CLAUDE\.md(?:\s*§\s*${NUM})?`,
-  String.raw`§\s*${NUM}`,
 ].join("|");
-// Suites accolées : « / 4.4 », « et 6 », « , §8.3 », « étape 2 », « point 4 », « — M6 ».
-const REF_SUITE = String.raw`(?:\s*(?:\/|et)\s*(?:§\s*)?${NUM}|\s*,\s*§\s*${NUM}|\s+(?:étape|point)\s+\d+|\s*—\s*M\d+\b)*`;
+// Suites accolées à une source préfixée : « / 4.4 », « /§2.2 », « , §8.3 », « étape 2 »,
+// « point 4 », « — M6 ».
+const REF_SUITE = String.raw`(?:\s*\/\s*(?:§\s*)?${NUM}|\s*,\s*§\s*${NUM}|\s+(?:étape|point)\s+\d+|\s*—\s*M\d+\b)*`;
 const REF = String.raw`(?:voir\s+)?(?:${REF_SOURCE})${REF_SUITE}`;
-const RE_INDICE = /Partie\s+\d|Doc\s+A\b|Master\s+Spec|§\s*\d|LEGAL_QUESTIONS_BRIEF|CLAUDE\.md/;
+const RE_INDICE_PREFIXE = /Doc\s+A\b|Master\s+Spec|LEGAL_QUESTIONS_BRIEF|brief\s*§|CLAUDE\.md/;
+const RE_PARTIE_SEULE = new RegExp(String.raw`^\s*Partie\s+${NUM}(?:\s*[,/]\s*(?:Partie\s+)?${NUM})*\s*$`);
+const RE_INDICE = new RegExp(String.raw`${RE_INDICE_PREFIXE.source}|\(\s*Partie\s+\d`);
 const RE_REF = new RegExp(REF, "g");
 const RE_PARENTHESE = /\s*\(([^()]*)\)/g;
 const RE_REF_TIRET = new RegExp(String.raw`\s*(?:—|–|\s-)\s*${REF}(?:\s*(?:\/|,)\s*${REF})*`, "g");
@@ -198,7 +205,8 @@ const BORDS = /^[\s,;:/—–-]+|[\s,;:/—–-]+$/g;
 export function nettoyerMessage(message: string): string {
   if (!RE_INDICE.test(message)) return message;
   let s = message.replace(RE_PARENTHESE, (entier: string, interieur: string) => {
-    if (!RE_INDICE.test(interieur)) return entier;
+    if (RE_PARTIE_SEULE.test(interieur)) return "";
+    if (!RE_INDICE_PREFIXE.test(interieur)) return entier;
     const reste = interieur
       .replace(RE_REF, "")
       .replace(/\s*([,;/])\s*(?:[,;/—–-]\s*)+/g, "$1 ")

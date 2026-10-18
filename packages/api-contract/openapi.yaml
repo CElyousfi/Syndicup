@@ -5534,20 +5534,20 @@ paths:
                 nom_fichier: { type: string, minLength: 1, maxLength: 200 }
                 content_type:
                   type: string
-                  description: "Image (JPEG, PNG, WebP, HEIC/HEIF), PDF, Word (.doc/.docx), Excel (.xls/.xlsx), texte ou CSV — sinon 400 VALIDATION_ERROR."
-                  enum:
-                    - image/jpeg
-                    - image/png
-                    - image/webp
-                    - image/heic
-                    - image/heif
-                    - application/pdf
-                    - application/msword
-                    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
-                    - application/vnd.ms-excel
-                    - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
-                    - text/plain
-                    - text/csv
+                  maxLength: 150
+                  description: >
+                    Type MIME (insensible à la casse, paramètres « ; charset=… » ignorés) parmi :
+                    image/jpeg, image/png, image/webp, image/heic, image/heif, image/gif,
+                    video/mp4, video/quicktime, video/webm, application/pdf, application/msword,
+                    application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+                    application/vnd.ms-excel,
+                    application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+                    application/vnd.ms-powerpoint,
+                    application/vnd.openxmlformats-officedocument.presentationml.presentation,
+                    application/vnd.oasis.opendocument.text, application/vnd.oasis.opendocument.spreadsheet,
+                    application/vnd.oasis.opendocument.presentation, application/rtf, text/rtf,
+                    text/plain, text/csv, application/zip, application/x-zip-compressed —
+                    sinon 400 VALIDATION_ERROR.
       responses:
         "201":
           description: Chemin canonique + URL signée d'upload.

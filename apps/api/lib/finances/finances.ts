@@ -76,7 +76,7 @@ export async function genererAppelDeFonds(
     });
     if (!budgetActif) {
       throw new ContrainteMetierError(
-        `Aucun budget_ag ACTIF pour l'exercice ${exercice} — impossible de générer l'appel de fonds (Partie 6.2, étape 1).`
+        `Aucun budget_ag ACTIF pour l'exercice ${exercice} — impossible de générer l'appel de fonds (Master Spec Partie 6.2 étape 1).`
       );
     }
 

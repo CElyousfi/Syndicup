@@ -37,6 +37,21 @@ const assistant = vi.hoisted(() => {
 });
 vi.mock("../lib/assistant", () => assistant);
 
+// Supabase Storage simulé : chaque test choisit la réponse de createSignedUrl.
+const storage = vi.hoisted(() => ({ createSignedUrl: vi.fn() }));
+vi.mock("@supabase/supabase-js", () => ({
+  createClient: () => ({
+    storage: {
+      getBucket: async () => ({ data: { id: "documents" }, error: null }),
+      createBucket: async () => ({ data: null, error: null }),
+      from: () => ({ createSignedUrl: storage.createSignedUrl }),
+    },
+  }),
+}));
+
+const sentry = vi.hoisted(() => ({ captureException: vi.fn() }));
+vi.mock("../lib/observability/sentry", () => sentry);
+
 const tenant = vi.hoisted(() => ({ surcharge: null as null | (() => Promise<unknown>) }));
 vi.mock("../lib/http/request-context", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/http/request-context")>();
@@ -49,7 +64,8 @@ vi.mock("../lib/http/request-context", async (importOriginal) => {
 import { withApiHandler } from "../lib/http/handler";
 import { ok, fail, nettoyerMessage } from "../lib/http/respond";
 import { withTenantIdempotent, IdempotencyConflitError } from "../lib/http/idempotency";
-import { StockageIndisponibleError } from "../lib/storage/erreurs";
+import { StockageIndisponibleError, estPanneStockage } from "../lib/storage/erreurs";
+import { creerUrlSignee } from "../lib/storage/supabase-storage";
 import { upstashRateLimiter, secondesAvantFinFenetre } from "../lib/rate-limit/upstash";
 import { enforceRateLimit } from "../lib/rate-limit/apply";
 import { _resetMemoryRateLimiter } from "../lib/rate-limit/memory";
@@ -76,6 +92,7 @@ beforeEach(() => {
   fauxDb.idempotencyKey.create.mockReset();
   fauxDb.idempotencyKey.update.mockReset();
   tenant.surcharge = null;
+  sentry.captureException.mockReset();
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -89,6 +106,22 @@ describe("withApiHandler — erreurs Prisma récupérables", () => {
     expect(body.error.code).toBe("NOT_FOUND");
     expect(body.error.message).toBe("Cet élément n'existe plus. Actualisez la page.");
     expect(res.headers.get("x-request-id")).toBe(body.meta.request_id);
+  });
+
+  it("P2025 laisse une trace : warn structuré avec méthode, chemin et modèle", async () => {
+    const write = vi.mocked(process.stdout.write);
+    write.mockClear();
+    await withApiHandler(() => {
+      throw erreurPrisma("P2025", { modelName: "Lot" });
+    })(req(), undefined);
+    const lignes = write.mock.calls.map((c) => JSON.parse(String(c[0])) as Record<string, unknown>);
+    const trace = lignes.find((l) => String(l.message).includes("P2025"));
+    expect(trace).toBeDefined();
+    expect(trace!.niveau).toBe("warn");
+    expect(trace!.methode).toBe("POST");
+    expect(trace!.url).toBe("/v1/test");
+    expect(trace!.modele).toBe("Lot");
+    expect(trace!.request_id).toMatch(UUID_RE);
   });
 
   it("P2002 non traité par le domaine → 409 CONFLICT sans texte Postgres ni code Prisma", async () => {
@@ -120,6 +153,55 @@ describe("withApiHandler — erreurs Prisma récupérables", () => {
     expect(body.error.code).toBe("SERVICE_UNAVAILABLE");
     expect(body.error.message).toMatch(/stockage des fichiers est momentanément indisponible/);
     expect(body.error.message).not.toMatch(/ECONNRESET/);
+    expect(sentry.captureException).toHaveBeenCalledTimes(1); // la panne alerte quand même
+  });
+});
+
+describe("Stockage — seules les pannes deviennent 503", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "https://stockage.example";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "cle-de-test";
+    storage.createSignedUrl.mockReset();
+    sentry.captureException.mockReset();
+  });
+  const viaHandler = () => withApiHandler(async () => ok({ url: await creerUrlSignee("c/documents/x.pdf") }))(req(), undefined);
+
+  it("objet absent (HTTP 400, statusCode « 404 ») → PAS un 503 : 500 enveloppé + Sentry", async () => {
+    storage.createSignedUrl.mockResolvedValue({
+      data: null,
+      error: Object.assign(new Error("Object not found"), { name: "StorageApiError", status: 400, statusCode: "404" }),
+    });
+    const res = await viaHandler();
+    expect(res.status).toBe(500);
+    expect((await res.json()).error.code).toBe("INTERNAL_ERROR");
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("HTTP 404 franc → PAS un 503", async () => {
+    storage.createSignedUrl.mockResolvedValue({ data: null, error: Object.assign(new Error("Not found"), { status: 404, statusCode: "404" }) });
+    expect((await viaHandler()).status).toBe(500);
+  });
+
+  it("HTTP 503 du fournisseur → 503 SERVICE_UNAVAILABLE + Retry-After + Sentry", async () => {
+    storage.createSignedUrl.mockResolvedValue({ data: null, error: Object.assign(new Error("Service Unavailable"), { status: 503, statusCode: "503" }) });
+    const res = await viaHandler();
+    expect(res.status).toBe(503);
+    expect(res.headers.get("retry-after")).toBe("10");
+    expect(sentry.captureException).toHaveBeenCalledTimes(1);
+  });
+
+  it("échec réseau (StorageUnknownError, aucun statut) → 503", async () => {
+    storage.createSignedUrl.mockResolvedValue({ data: null, error: Object.assign(new Error("fetch failed"), { name: "StorageUnknownError" }) });
+    expect((await viaHandler()).status).toBe(503);
+  });
+
+  it("classification : 429 et 5xx = panne ; 4xx = non", () => {
+    expect(estPanneStockage({ status: 429 })).toBe(true);
+    expect(estPanneStockage({ status: 502 })).toBe(true);
+    expect(estPanneStockage({ status: 400, statusCode: "500" })).toBe(false); // 4xx HTTP l'emporte
+    expect(estPanneStockage({ status: 403, statusCode: "403" })).toBe(false);
+    expect(estPanneStockage({ status: 400, statusCode: "InvalidKey" })).toBe(false);
+    expect(estPanneStockage(new Error("fetch failed"))).toBe(true);
   });
 });
 
@@ -264,6 +346,38 @@ describe("fail() — références de spec retirées du message utilisateur", () 
     const m = "Lot introuvable.";
     expect(nettoyerMessage(m)).toBe(m);
     expect(nettoyerMessage("Seuil de 100 % (inclus).")).toBe("Seuil de 100 % (inclus).");
+  });
+
+  it("« Partie » et « § » du vocabulaire métier ne sont jamais retirés", () => {
+    for (const m of [
+      "Bâtiment B — Partie 2 non attribuée.",
+      "Contraire au règlement (§ 4.2 du règlement de copropriété).",
+      "(§ 4.2 du règlement de copropriété)",
+      "Délai non respecté (art. 16 §2 de la loi 18-00).",
+      "(art. 16 §2 de la loi 18-00)",
+      "Voir la Partie 3 du règlement intérieur.",
+      "Les parties communes (Partie 2 et 3 du règlement) sont concernées.",
+    ]) {
+      expect(nettoyerMessage(m)).toBe(m);
+    }
+  });
+
+  it("parenthèse ne contenant que « Partie <n> » (une ou plusieurs) → retirée", () => {
+    expect(nettoyerMessage("Déjà inscrit — connectez-vous (Partie 5.5).")).toBe("Déjà inscrit — connectez-vous.");
+    expect(nettoyerMessage("Accès refusé (Partie 4.2 / 4.4).")).toBe("Accès refusé.");
+    expect(nettoyerMessage("Accès refusé (Partie 4.2, Partie 1.6).")).toBe("Accès refusé.");
+  });
+
+  it("forme préfixée « Master Spec Partie » dans une parenthèse mixte → seule la référence part", () => {
+    expect(nettoyerMessage("lot_id interdit pour le rôle GARDIEN (rattaché à la copropriété, Master Spec Partie 5.3).")).toBe(
+      "lot_id interdit pour le rôle GARDIEN (rattaché à la copropriété)."
+    );
+    expect(nettoyerMessage("Aucun budget_ag ACTIF pour l'exercice 2026 — impossible de générer l'appel de fonds (Master Spec Partie 6.2 étape 1).")).toBe(
+      "Aucun budget_ag ACTIF pour l'exercice 2026 — impossible de générer l'appel de fonds."
+    );
+    expect(nettoyerMessage("seul un compte DESACTIVE est anonymisable (machine à états, Master Spec Partie 5.2).")).toBe(
+      "seul un compte DESACTIVE est anonymisable (machine à états)."
+    );
   });
 
   it("fail() nettoie le message ET les messages de champs", async () => {
@@ -422,8 +536,25 @@ describe("Messages propres — import et documents", () => {
     expect(m).toBe("La somme des tantièmes (1060.00) dépasserait le total défini au règlement (1000.00). Corrigez les tantièmes du lot ou le total du règlement.");
   });
 
-  it("upload-url documents : types d'images, PDF et bureautique acceptés ; le reste refusé", () => {
-    for (const t of ["image/jpeg", "application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "text/csv"]) {
+  it("upload-url documents : images, vidéos, PDF, bureautique, RTF, ZIP acceptés ; le reste refusé", () => {
+    for (const t of [
+      "image/jpeg",
+      "image/gif",
+      "video/mp4",
+      "video/quicktime",
+      "video/webm",
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.oasis.opendocument.text",
+      "application/vnd.oasis.opendocument.spreadsheet",
+      "application/vnd.oasis.opendocument.presentation",
+      "application/rtf",
+      "application/zip",
+      "text/csv",
+      "Application/PDF; charset=binary",
+    ]) {
       expect(documentUploadUrlSchema.safeParse({ nom_fichier: "a", content_type: t }).success).toBe(true);
     }
     for (const t of ["text/html", "application/x-msdownload", "application/octet-stream", "image/svg+xml"]) {

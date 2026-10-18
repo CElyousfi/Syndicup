@@ -15,11 +15,11 @@ import { IdempotencyKeyManquanteError, IdempotencyConflitError } from "./idempot
 import { fail, avecRetryAfter } from "./respond";
 import { codePrisma, champsPrisma } from "./prisma-errors";
 import { StockageIndisponibleError } from "../storage/erreurs";
+import { logger } from "../logging/logger";
+import { captureException } from "../observability/sentry";
 
 /** Délai suggéré avant de réessayer après une panne du stockage de fichiers. */
 const STOCKAGE_RETRY_AFTER_SEC = 10;
-import { logger } from "../logging/logger";
-import { captureException } from "../observability/sentry";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -49,10 +49,18 @@ export function withApiHandler<C = unknown>(handler: RouteHandler<C>): RouteHand
             url: new URL(req.url).pathname,
             erreur: e.detail,
           });
+          // Panne fournisseur : récupérable pour l'utilisateur, mais doit alerter (Sentry).
+          captureException(e);
           res = avecRetryAfter(fail("SERVICE_UNAVAILABLE", e.message), STOCKAGE_RETRY_AFTER_SEC);
         } else if (codePrisma(e) === "P2025") {
           // update/delete/findUniqueOrThrow sur une ligne disparue (supprimée entre-temps, ou
-          // masquée par la RLS) : état normal, pas un bug.
+          // masquée par la RLS) : état normal le plus souvent — tracé quand même, un vrai bug
+          // (mauvais id, filtre tenant) doit laisser une piste.
+          logger.warn("Élément introuvable (Prisma P2025) non mappé par le domaine", {
+            methode: req.method,
+            url: new URL(req.url).pathname,
+            modele: (e as { meta?: { modelName?: unknown } }).meta?.modelName ?? null,
+          });
           res = fail("NOT_FOUND", "Cet élément n'existe plus. Actualisez la page.");
         } else if (codePrisma(e) === "P2002") {
           // Violation d'unicité non traitée par le domaine : 409 sans aucun texte Postgres.
