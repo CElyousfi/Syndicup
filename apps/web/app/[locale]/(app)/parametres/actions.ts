@@ -3,14 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { readSession } from "../../../../lib/session";
-import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, sessionExpired, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
+import { type FormState } from "../../../../lib/forms";
+import { fromApiError, sessionExpired, fileTooLarge, uploadRefused, localError, succes } from "../../../../lib/forms-server";
+import type { Dict } from "../../../../lib/i18n";
 import type { Copropriete } from "../../../../lib/api/types";
 import { montantSaisi } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
 }
+
+/** Message de succès choisi par le formulaire (une clé, jamais un texte venu du navigateur). */
+const SUCCES = {
+  logoEnregistre: (d: Dict) => d.parametres.logoMisAJour,
+  logoRetire: (d: Dict) => d.parametres.logoRetire,
+  photoEnregistree: (d: Dict) => d.parametres.photoMiseAJour,
+  photoRetiree: (d: Dict) => d.parametres.photoRetiree,
+} as const;
 
 async function patchCopro(
   fd: FormData,
@@ -28,7 +37,7 @@ async function patchCopro(
   });
   if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/parametres`);
-  return success();
+  return succes((d) => d.formulaires.succes.parametresEnregistres);
 }
 
 export async function modifierIdentite(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -117,7 +126,7 @@ export async function televerserLogo(_prev: FormState, fd: FormData): Promise<Fo
   const res = await patchCopro(fd, locale, { logo_storage_path: prep.data.storage_path }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
-  return success(champ(fd, "message_succes") || undefined);
+  return succes(SUCCES[fd.get("succes") as keyof typeof SUCCES] ?? ((d) => d.formulaires.succes.parametresEnregistres));
 }
 
 export async function retirerLogo(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -125,7 +134,7 @@ export async function retirerLogo(_prev: FormState, fd: FormData): Promise<FormS
   const res = await patchCopro(fd, locale, { logo_storage_path: null }, champ(fd, "copro_id") || undefined);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
-  return success(champ(fd, "message_succes") || undefined);
+  return succes(SUCCES[fd.get("succes") as keyof typeof SUCCES] ?? ((d) => d.formulaires.succes.parametresEnregistres));
 }
 
 /**
@@ -170,7 +179,7 @@ export async function televerserPhoto(_prev: FormState, fd: FormData): Promise<F
   const res = await patchCopro(fd, locale, { photos_json: photos }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
-  return success(champ(fd, "message_succes") || undefined);
+  return succes(SUCCES[fd.get("succes") as keyof typeof SUCCES] ?? ((d) => d.formulaires.succes.parametresEnregistres));
 }
 
 export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -183,7 +192,7 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
   const res = await patchCopro(fd, locale, { photos_json: Object.keys(photos).length ? photos : null }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
-  return success(champ(fd, "message_succes") || undefined);
+  return succes(SUCCES[fd.get("succes") as keyof typeof SUCCES] ?? ((d) => d.formulaires.succes.parametresEnregistres));
 }
 
 /** M20 — paramètres de paie (PROVISOIRES, brief §11) : PATCH /coproprietes/{id}/parametres-paie ; « effacer » = null. */
@@ -216,5 +225,5 @@ export async function modifierParametresPaie(_prev: FormState, fd: FormData): Pr
   const res = await apiFetch(`/coproprietes/${coproprieteId}/parametres-paie`, { method: "PATCH", body: { parametres_paie: body } });
   if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/parametres`);
-  return success();
+  return succes((d) => d.formulaires.succes.parametresEnregistres);
 }
