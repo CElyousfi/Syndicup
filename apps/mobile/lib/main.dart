@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'app.dart';
 import 'core/auth/session.dart';
 import 'core/bootstrap.dart';
+import 'core/crash.dart';
 import 'core/feel/feel.dart';
 import 'core/feel/frame_stats.dart';
 import 'core/i18n/i18n.dart';
@@ -14,6 +15,8 @@ import 'core/widgets/illustration.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Plantages : journalisés (JSON), carte calme à la place de l'écran rouge (core/crash.dart).
+  CrashCapture.install();
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark));
 

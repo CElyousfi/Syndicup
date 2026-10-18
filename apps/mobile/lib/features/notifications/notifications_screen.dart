@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/realtime/notifications_live.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/notifications_link.dart';
+import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 
 /// I2 — centre de notifications : titre/corps rendus dans MA langue, lu/non-lu, deep-link.
@@ -20,13 +24,38 @@ class NotificationsScreen extends ConsumerStatefulWidget {
 
 class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   bool _nonLues = false;
+  bool _toutLire = false;
 
   Future<void> _lire(NotificationItem n) async {
     if (!n.lu) {
-      ref.read(notificationsLiveProvider.notifier).decrement();
-      await ref.read(apiClientProvider).patch<dynamic>('/notifications/${n.id}/read');
+      final r = await ref.read(apiClientProvider).patch<dynamic>('/notifications/${n.id}/read');
+      if (!mounted) return;
+      // Le compteur ne baisse que si le serveur a bien enregistré la lecture.
+      if (r is ApiOk) ref.read(notificationsLiveProvider.notifier).decrement();
       ref.invalidate(notificationsProvider);
     }
+  }
+
+  /// « Tout marquer comme lu » : en cours = bouton qui tourne ; le compteur n'est remis à zéro que
+  /// si TOUTES les lectures ont été enregistrées ; sinon il reflète ce qui reste non lu.
+  Future<void> _toutMarquerLu(List<NotificationItem> list) async {
+    if (_toutLire) return;
+    final nonLues = list.where((x) => !x.lu).toList();
+    if (nonLues.isEmpty) return;
+    setState(() => _toutLire = true);
+    final api = ref.read(apiClientProvider);
+    final res = await Future.wait([for (final n in nonLues) api.patch<dynamic>('/notifications/${n.id}/read')]);
+    if (!mounted) return;
+    final echecs = res.whereType<ApiFail<dynamic>>().toList();
+    final live = ref.read(notificationsLiveProvider.notifier);
+    if (echecs.isEmpty) {
+      live.setUnread(0);
+    } else {
+      live.setUnread(echecs.length);
+      echecs.length == res.length ? showApiError(context, echecs.first) : showToast(context, context.mdict.ux.markAllFailed, error: true);
+    }
+    setState(() => _toutLire = false);
+    await refreshing(ref, [notificationsProvider]);
   }
 
   @override
@@ -36,19 +65,13 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final notifs = ref.watch(notificationsProvider);
     return SuPage(
       title: d.notifs.titre,
-      onRefresh: () async => ref.invalidate(notificationsProvider),
+      onRefresh: () => refreshing(ref, [notificationsProvider]),
       actions: [
         SuButton(
           variant: SuButtonVariant.ghost,
           label: d.notifs.toutesLues,
-          onPressed: () async {
-            final list = notifs.valueOrNull ?? const <NotificationItem>[];
-            for (final n in list.where((x) => !x.lu)) {
-              await ref.read(apiClientProvider).patch<dynamic>('/notifications/${n.id}/read');
-            }
-            ref.read(notificationsLiveProvider.notifier).setUnread(0);
-            ref.invalidate(notificationsProvider);
-          },
+          loading: _toutLire,
+          onPressed: (notifs.valueOrNull ?? const <NotificationItem>[]).any((x) => !x.lu) ? () => _toutMarquerLu(notifs.valueOrNull ?? const <NotificationItem>[]) : null,
         ),
       ],
       children: [
@@ -88,7 +111,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
                                   key: ValueKey('row-${n.id}'),
                                   n: n,
                                   icon: _icon(n.templateCode),
-                                  meta: n.statutEnvoi == 'EN_ATTENTE' ? '${formatHeure(n.horodatageEnvoi, l)} · ${fill(d.notifs.envoiEnAttente, {'canal': (d.enums.canal[n.canal] ?? n.canal).toLowerCase()})}' : '${d.enums.canal[n.canal] ?? n.canal} · ${formatHeure(n.horodatageEnvoi, l)}',
+                                  meta: n.statutEnvoi == 'EN_ATTENTE' ? '${formatHeure(n.horodatageEnvoi, l)} · ${fill(d.notifs.envoiEnAttente, {'canal': (d.enums.canal[n.canal] ?? humanizeCode(n.canal)).toLowerCase()})}' : '${d.enums.canal[n.canal] ?? humanizeCode(n.canal)} · ${formatHeure(n.horodatageEnvoi, l)}',
                                   onTap: () {
                                     _lire(n);
                                     context.push(lienNotification(n.templateCode, n.contenuJson));

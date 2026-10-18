@@ -33,7 +33,7 @@ class PublicScaffold extends StatelessWidget {
                 child: Row(
                   children: [
                     if (back) ...[
-                      CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()),
+                      CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: MaterialLocalizations.of(context).backButtonTooltip, onTap: () => context.pop()),
                       const Spacer(),
                     ] else ...[
                       // Petit écran : la marque se réduit plutôt que de pousser la langue hors de l'écran.

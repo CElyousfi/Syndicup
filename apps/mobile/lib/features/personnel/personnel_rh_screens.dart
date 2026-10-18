@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -40,7 +42,7 @@ class MonDossierScreen extends ConsumerWidget {
     final list = ref.watch(personnelProvider);
     return list.when(
       loading: () => SuPage(title: d.personnel.monDossier, children: const [LoadingList()]),
-      error: (e, _) => SuPage(title: d.personnel.monDossier, children: [ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider))]),
+      error: (e, _) => SuPage(title: d.personnel.monDossier, onRefresh: () => refreshing(ref, [personnelProvider]), children: [ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider))]),
       data: (ps) {
         final mienne = ps.where((p) => p.utilisateurId == ctx.profil.id).firstOrNull;
         if (mienne == null) return SuPage(title: d.personnel.monDossier, children: [EmptyState(title: d.personnel.aucuneFiche, icon: Icons.badge_outlined, illustration: 'empty-personnel')]);
@@ -91,7 +93,7 @@ class _PersonnelDetailScreenState extends ConsumerState<PersonnelDetailScreen> w
     final initial = onglets.indexOf(widget.onglet ?? 'fiche');
     final tabs = _controller(onglets.length, initial < 0 ? 0 : initial);
     String libelle(String o) => switch (o) { 'paie' => d.personnel.onglets.paie, 'conges' => d.personnel.onglets.conges, 'presences' => d.personnel.onglets.presences, _ => d.personnel.onglets.fiche };
-    final titre = x == null ? d.personnel.dossier : (soi && !ctx.isGestion ? d.personnel.monDossier : x.fiche.nomAffiche(d.enumsPersonnelRh.poste[x.fiche.poste] ?? x.fiche.poste));
+    final titre = x == null ? d.personnel.dossier : (soi && !ctx.isGestion ? d.personnel.monDossier : x.fiche.nomAffiche(d.enumsPersonnelRh.poste[x.fiche.poste] ?? humanizeCode(x.fiche.poste)));
     // Page Wise à onglets : bouton rond de retour, titre compact, action ronde (planning).
     return SuPage(
       title: titre,
@@ -128,7 +130,7 @@ class _FicheTab extends ConsumerWidget {
     final l = context.locale;
     final e = d.enumsPersonnelRh;
     final p = detail.fiche;
-    final nom = p.nomAffiche(e.poste[p.poste] ?? p.poste);
+    final nom = p.nomAffiche(e.poste[p.poste] ?? humanizeCode(p.poste));
     final solde = detail.soldeConges;
     final pm = detail.presencesMois;
     int? joursFin;
@@ -144,9 +146,9 @@ class _FicheTab extends ConsumerWidget {
             const SizedBox(height: 14),
             Text(nom, style: t.displaySmall, textAlign: TextAlign.center),
             const SizedBox(height: 4),
-            Text('${e.poste[p.poste] ?? p.poste}${p.typeContrat != null && complet ? ' · ${e.typeContratTravail[p.typeContrat!] ?? p.typeContrat}' : ''}', style: t.bodyLarge?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
+            Text('${e.poste[p.poste] ?? humanizeCode(p.poste)}${p.typeContrat != null && complet ? ' · ${e.typeContratTravail[p.typeContrat!] ?? p.typeContrat}' : ''}', style: t.bodyLarge?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
             const SizedBox(height: 12),
-            StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, pulse: p.statut == 'ABSENT'),
+            StatusBadge(d.enums.statutPersonnel[p.statut] ?? humanizeCode(p.statut), variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, pulse: p.statut == 'ABSENT'),
           ]),
         ),
         if (complet && joursFin != null && joursFin >= 0 && joursFin <= 30) Padding(padding: const EdgeInsets.only(top: 20), child: SuBanner(tone: BannerTone.warn, body: fill(d.personnel.finContratProche, {'n': '$joursFin'}))),
@@ -225,7 +227,7 @@ class _PaieTab extends ConsumerWidget {
     final nonConfigure = gestion && detail.paie != null && detail.paie!['parametres_configures'] == false;
     final t = Theme.of(context).textTheme;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(fichesPaieProvider(detail.fiche.id)),
+      onRefresh: () => refreshing(ref, [fichesPaieProvider(detail.fiche.id)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -240,7 +242,7 @@ class _PaieTab extends ConsumerWidget {
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
                     Expanded(child: Text('${d.personnel.net} · ${formatPeriode(derniere.periode, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft))),
-                    StatusBadge(d.enumsPersonnelRh.statutFichePaie[derniere.statut] ?? derniere.statut, variant: fichePaieVariant[derniere.statut] ?? BadgeVariant.neutral, small: true),
+                    StatusBadge(d.enumsPersonnelRh.statutFichePaie[derniere.statut] ?? humanizeCode(derniere.statut), variant: fichePaieVariant[derniere.statut] ?? BadgeVariant.neutral, small: true),
                   ]),
                   const SizedBox(height: 10),
                   FittedBox(fit: BoxFit.scaleDown, alignment: AlignmentDirectional.centerStart, child: AnimatedAmount(derniere.net, style: t.displayMedium, textDirection: TextDirection.ltr, maxLines: null)),
@@ -256,7 +258,7 @@ class _PaieTab extends ConsumerWidget {
                     leading: IconCircle(Icons.receipt_long_rounded, tone: f.statut == 'PAYEE' ? Tone.ok : (f.statut == 'VALIDEE' ? Tone.action : Tone.neutral)),
                     title: formatPeriode(f.periode, l),
                     subtitle: '${d.personnel.net} ${formatMAD(f.net, l)} · ${d.personnel.brut} ${formatMAD(f.brut, l)}',
-                    trailing: StatusBadge(d.enumsPersonnelRh.statutFichePaie[f.statut] ?? f.statut, variant: fichePaieVariant[f.statut] ?? BadgeVariant.neutral, small: true),
+                    trailing: StatusBadge(d.enumsPersonnelRh.statutFichePaie[f.statut] ?? humanizeCode(f.statut), variant: fichePaieVariant[f.statut] ?? BadgeVariant.neutral, small: true),
                     chevron: true,
                     onTap: () => ouvrirPdfApi(context, ref, endpoint: '/personnel/${f.personnelId}/fiches-paie/${f.id}/pdf', query: {'langue': langue}, titre: '${d.personnel.fichePaie} ${f.periode}'),
                   ),
@@ -282,11 +284,7 @@ class _CongesTab extends ConsumerWidget {
     final id = detail.fiche.id;
     final conges = ref.watch(congesProvider(id));
     final solde = detail.soldeConges;
-    void rafraichir() {
-      ref.invalidate(congesProvider(id));
-      ref.invalidate(personnelDetailProvider(id));
-      ref.invalidate(congesEnAttenteProvider);
-    }
+    Future<void> rafraichir() => refreshing(ref, [congesProvider(id), personnelDetailProvider(id), congesEnAttenteProvider]);
     final t = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -298,7 +296,7 @@ class _CongesTab extends ConsumerWidget {
             )
           : null,
       body: SuRefresh(
-        onRefresh: () async => rafraichir(),
+        onRefresh: rafraichir,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
@@ -322,7 +320,7 @@ class _CongesTab extends ConsumerWidget {
               if (cs.isEmpty) return EmptyState(title: d.personnel.aucunConge, icon: Icons.beach_access_outlined, illustration: 'empty-personnel');
               return CardList([
                 for (final c in cs)
-                  _CongeRow(key: ValueKey(c.id), conge: c, gestion: gestion, soi: soi, onDone: rafraichir, sousTitre: '${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)} · ${c.nbJours} ${d.personnel.nbJours.toLowerCase()}${c.remplacantNom != null ? ' · ${d.personnel.remplacant} ${c.remplacantNom}' : ''}${c.motifRefus != null ? '\n${d.personnel.motifRefus} : ${c.motifRefus}' : ''}', titre: '${e.typeConge[c.type] ?? c.type}${c.motif != null ? ' · ${c.motif}' : ''}'),
+                  _CongeRow(key: ValueKey(c.id), conge: c, gestion: gestion, soi: soi, onDone: rafraichir, sousTitre: '${formatJourAnnee(c.dateDebut, l)} → ${formatJourAnnee(c.dateFin, l)} · ${c.nbJours} ${d.personnel.nbJours.toLowerCase()}${c.remplacantNom != null ? ' · ${d.personnel.remplacant} ${c.remplacantNom}' : ''}${c.motifRefus != null ? '\n${d.personnel.motifRefus} : ${c.motifRefus}' : ''}', titre: '${e.typeConge[c.type] ?? humanizeCode(c.type)}${c.motif != null ? ' · ${c.motif}' : ''}'),
               ]);
             }),
           ],
@@ -346,14 +344,19 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
   bool _busy = false;
 
   Future<void> _decider(String action, {String? motif}) async {
+    if (_busy) return;
     setState(() => _busy = true);
-    final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/conges/${widget.conge.id}/$action', body: motif == null ? {} : {'motif_refus': motif}, idempotent: true);
+    final body = motif == null ? <String, Object?>{} : <String, Object?>{'motif_refus': motif};
+    final intent = 'conge-$action:${widget.conge.id}';
+    final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/conges/${widget.conge.id}/$action', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body));
+    IdemKeys.settle(intent, r);
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
+    IdemKeys.done(intent);
     final d = context.dict;
     showToast(context, action == 'approuver' ? d.personnel.congeApprouve : (action == 'refuser' ? d.personnel.congeRefuse : d.personnel.congeAnnule));
     widget.onDone();
@@ -394,7 +397,7 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
         if (await confirmDialog(context, title: d.personnel.annulerConge, body: widget.sousTitre, danger: true)) await _decider('annuler');
       }, label: d.personnel.annulerConge);
     } else {
-      trailing = StatusBadge(d.enumsPersonnelRh.statutConge[c.statut] ?? c.statut, variant: congeVariant[c.statut] ?? BadgeVariant.neutral, small: true);
+      trailing = StatusBadge(d.enumsPersonnelRh.statutConge[c.statut] ?? humanizeCode(c.statut), variant: congeVariant[c.statut] ?? BadgeVariant.neutral, small: true);
     }
     return ListRow(
       leading: IconCircle(c.type == 'MALADIE' ? Icons.medical_services_rounded : Icons.beach_access_rounded, tone: enAttente ? Tone.warn : Tone.sage),
@@ -414,6 +417,7 @@ class _CongeForm extends ConsumerStatefulWidget {
 }
 
 class _CongeFormState extends ConsumerState<_CongeForm> {
+  final _idem = IdemKey();
   String _type = 'ANNUEL';
   DateTime? _debut, _fin;
   final _motif = TextEditingController();
@@ -443,7 +447,7 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
       children: [
         Text(d.personnel.demanderCongeAide, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
-        SuSelect<String>(label: d.personnel.typeConge, value: _type, options: const ['ANNUEL', 'MALADIE', 'SANS_SOLDE', 'EXCEPTIONNEL'], labelOf: (v) => d.enumsPersonnelRh.typeConge[v] ?? v, onChanged: (v) => setState(() => _type = v)),
+        SuSelect<String>(label: d.personnel.typeConge, value: _type, options: const ['ANNUEL', 'MALADIE', 'SANS_SOLDE', 'EXCEPTIONNEL'], labelOf: (v) => d.enumsPersonnelRh.typeConge[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _type = v)),
         const SizedBox(height: 12),
         Row(children: [
           Expanded(child: _DateField(label: d.personnel.dateDebut, value: _debut == null ? null : formatJourAnnee(jourIso(_debut!), l), onTap: () => _pick(true), error: fieldError(_fail, 'date_debut'))),
@@ -466,7 +470,9 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                     _loading = true;
                     _fail = null;
                   });
-                  final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/${widget.personnelId}/conges', idempotent: true, body: {'type': _type, 'date_debut': jourIso(_debut!), 'date_fin': jourIso(_fin!), if (_motif.text.trim().isNotEmpty) 'motif': _motif.text.trim()});
+                  final body = {'type': _type, 'date_debut': jourIso(_debut!), 'date_fin': jourIso(_fin!), if (_motif.text.trim().isNotEmpty) 'motif': _motif.text.trim()};
+                  final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/${widget.personnelId}/conges', idempotencyKey: _idem.forPayload(body), body: body);
+                  _idem.settle(r);
                   if (!mounted) return;
                   if (r is ApiFail) {
                     setState(() {
@@ -541,7 +547,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     if (!mounted) return;
     setState(() => _pointage = false);
     if (r.refus != null) {
-      showToast(context, r.refus!.error.message, error: true);
+      showApiError(context, r.refus!);
       return;
     }
     showToast(context, r.enFile ? context.mdict.pendingSend : d.personnel.pointe);
@@ -563,7 +569,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     final nbJours = DateTime(a, m + 1, 0).day;
     final t = Theme.of(context).textTheme;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(presencesProvider(cle)),
+      onRefresh: () => refreshing(ref, [presencesProvider(cle)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -585,9 +591,9 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 4),
             child: Row(children: [
-              CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
+              CircleIconButton(tooltip: d.personnel.moisPrecedent, icon: Icons.chevron_left_rounded, onTap: () => setState(() => _periode = _decalerMois(_periode, -1))),
               Expanded(child: SuFadeSwitch(value: _periode, alignment: Alignment.center, child: Text(formatPeriode(_periode, l), textAlign: TextAlign.center, style: t.headlineSmall))),
-              CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, mirror: true, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
+              CircleIconButton(tooltip: d.personnel.moisSuivant, icon: Icons.chevron_right_rounded, onTap: () => setState(() => _periode = _decalerMois(_periode, 1))),
             ]),
           ),
           const SizedBox(height: 12),
@@ -596,7 +602,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
             return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Wrap(spacing: 6, runSpacing: 6, children: [
                 for (final s in const ['PRESENT', 'ABSENT', 'CONGE', 'MALADIE'])
-                  StatusBadge('${e.statutPresence[s] ?? s} · ${ps.where((p) => p.statut == s).length}', variant: presenceVariant[s] ?? BadgeVariant.neutral, small: true),
+                  StatusBadge('${e.statutPresence[s] ?? humanizeCode(s)} · ${ps.where((p) => p.statut == s).length}', variant: presenceVariant[s] ?? BadgeVariant.neutral, small: true),
               ]),
               const SizedBox(height: 8),
               CardList([
@@ -619,7 +625,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
                       subtitle: p?.commentaire,
                       padding: const EdgeInsets.symmetric(vertical: 8),
                       trailing: p != null
-                          ? StatusBadge(e.statutPresence[p.statut] ?? p.statut, variant: presenceVariant[p.statut] ?? BadgeVariant.neutral, small: true)
+                          ? StatusBadge(e.statutPresence[p.statut] ?? humanizeCode(p.statut), variant: presenceVariant[p.statut] ?? BadgeVariant.neutral, small: true)
                           : (enFile ? const Icon(Icons.cloud_upload_rounded, size: 18, color: SuColors.soft) : Text('—', style: t.bodyMedium?.copyWith(color: SuColors.faint))),
                     );
                   }),
@@ -657,20 +663,20 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
     return SuPage(
       title: d.personnel.planning,
       subtitle: x == null ? d.personnel.planningSubtitle : '${formatJourAnnee(x.jours.first, l)} → ${formatJourAnnee(x.jours.last, l)}',
-      onRefresh: () async => ref.invalidate(planningProvider(_semaine)),
+      onRefresh: () => refreshing(ref, [planningProvider(_semaine)]),
       children: [
         // Navigation de semaine Wise : boutons ronds (miroir RTL) de part et d'autre du lien « Aujourd'hui ».
         Row(children: [
-          CircleIconButton(tooltip: d.personnel.semainePrecedente, icon: Icons.chevron_left_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7))),
+          CircleIconButton(tooltip: d.personnel.semainePrecedente, icon: Icons.chevron_left_rounded, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, -7))),
           Expanded(child: Center(child: LinkButton(d.common.today, onTap: () => setState(() => _semaine = null)))),
-          CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, mirror: true, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
+          CircleIconButton(tooltip: d.personnel.semaineSuivante, icon: Icons.chevron_right_rounded, onTap: x == null ? null : () => setState(() => _semaine = _decaler(x.semaine, 7))),
         ]),
         const SizedBox(height: 4),
         SuFadeSwitch(value: _semaine, child: AsyncView(planning, onRetry: () => ref.invalidate(planningProvider(_semaine)), data: (x) {
           if (x.personnels.isEmpty) return EmptyState(title: d.personnel.aucuneFiche, icon: Icons.calendar_view_week_outlined, illustration: 'empty-personnel');
           return Column(children: [
             for (final pp in x.personnels) ...[
-              SectionHeader(pp.fiche.nomAffiche(e.poste[pp.fiche.poste] ?? pp.fiche.poste), subtitle: e.poste[pp.fiche.poste] ?? pp.fiche.poste, actionLabel: d.personnel.dossier, onAction: () => context.push('/personnel/${pp.fiche.id}')),
+              SectionHeader(pp.fiche.nomAffiche(e.poste[pp.fiche.poste] ?? humanizeCode(pp.fiche.poste)), subtitle: e.poste[pp.fiche.poste] ?? humanizeCode(pp.fiche.poste), actionLabel: d.personnel.dossier, onAction: () => context.push('/personnel/${pp.fiche.id}')),
               SuCard(padding: const EdgeInsets.symmetric(vertical: 6), child: Column(children: [
                 for (var i = 0; i < pp.jours.length; i++)
                   Builder(builder: (_) {

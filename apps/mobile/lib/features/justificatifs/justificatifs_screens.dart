@@ -4,7 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -80,9 +82,9 @@ class JustificatifRow extends StatelessWidget {
     final v = justificatifVariant[x.statut] ?? BadgeVariant.neutral;
     return ListRow(
       leading: IconCircle(_iconeMethode(x.methode), tone: x.enAttente ? Tone.warn : _toneDe(v)),
-      title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? x.methode}',
+      title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? humanizeCode(x.methode)}',
       subtitle: '${formatDate(x.datePaiementDeclaree, l)}${x.reference != null ? ' · ${x.reference}' : ''}${x.declareParNom != null ? ' · ${x.declareParNom}' : ''}',
-      trailing: _MontantFin(x.montant, secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: v, small: true)),
+      trailing: _MontantFin(x.montant, secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? humanizeCode(x.statut), variant: v, small: true)),
       onTap: () => context.push('/justificatifs/${x.id}'),
     );
   }
@@ -102,9 +104,7 @@ class PayerScreen extends ConsumerWidget {
       title: d.justificatifs.payerTitre,
       subtitle: d.justificatifs.payerSubtitle,
       onRefresh: () async {
-        ref.invalidate(justificatifsProvider);
-        ref.invalidate(comptesBancairesProvider);
-        ref.invalidate(lotsProvider);
+        await refreshing(ref, [justificatifsProvider, comptesBancairesProvider, lotsProvider]);
       },
       children: [
         SectionHeader(d.justificatifs.virement, subtitle: d.justificatifs.virementAide),
@@ -178,12 +178,12 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
       children: [
         Text(especes ? j.especesAideGardien : j.declarerAide, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
-        SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? x.typeLot} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
+        SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? humanizeCode(x.typeLot)} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
         const SizedBox(height: 10),
         SuField(label: '${j.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, mono: true, textDirection: TextDirection.ltr, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'montant')),
         const SizedBox(height: 10),
         if (!especes) ...[
-          Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? v, onChanged: (v) => setState(() => _methode = v)),
+          Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _methode = v)),
           const SizedBox(height: 10),
           if (widget.comptes.isNotEmpty) ...[
             SuSelect<CompteBancaire>(label: j.beneficiaire, value: _compte, options: widget.comptes, labelOf: (c) => '${c.libelle} · ${c.ribMasque}', onChanged: (v) => setState(() => _compte = v), required: true),
@@ -315,9 +315,9 @@ class _JustificatifsScreenState extends ConsumerState<JustificatifsScreen> {
     return SuPage(
       title: d.justificatifs.titre,
       subtitle: d.justificatifs.subtitle,
-      onRefresh: () async => ref.invalidate(justificatifsProvider),
+      onRefresh: () => refreshing(ref, [justificatifsProvider]),
       children: [
-        FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
+        FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? humanizeCode(s)), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(value: _onglet, child: AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x, key: ValueKey(x.id))]))),
       ],
@@ -336,7 +336,7 @@ class EspecesScreen extends ConsumerWidget {
     return SuPage(
       title: d.justificatifs.especesTitre,
       subtitle: d.justificatifs.especesSubtitle,
-      onRefresh: () async => ref.invalidate(justificatifsProvider),
+      onRefresh: () => refreshing(ref, [justificatifsProvider]),
       children: [
         SubmitButton(label: d.justificatifs.especesSaisir, icon: Icons.payments_rounded, onPressed: lots.isEmpty ? null : () => showFormSheet<void>(context, title: d.justificatifs.especesSaisir, builder: (_) => DeclarationForm(lots: lots, comptes: const [], mode: 'especes', onDone: () => ref.invalidate(justificatifsProvider)))),
         SectionHeader(d.justificatifs.mesSaisies),
@@ -351,11 +351,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
   const JustificatifDetailScreen({super.key, required this.id});
   final String id;
 
-  void _refresh(WidgetRef ref) {
-    ref.invalidate(justificatifProvider(id));
-    ref.invalidate(justificatifsProvider);
-    ref.invalidate(soldeLotProvider);
-  }
+  Future<void> _refresh(WidgetRef ref) => refreshing(ref, [justificatifProvider(id), justificatifsProvider, soldeLotProvider]);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -367,7 +363,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
     final x = ref.watch(justificatifProvider(id));
     return SuPage(
       title: x.valueOrNull == null ? j.titre : '${x.valueOrNull!.lotNumero ?? ''} · ${formatMAD(x.valueOrNull!.montant, l)}',
-      onRefresh: () async => _refresh(ref),
+      onRefresh: () => _refresh(ref),
       children: [
         AsyncView(x, onRetry: () => ref.invalidate(justificatifProvider(id)), data: (y) {
           final affectations = (y.details['affectations'] as List?)?.whereType<Map>().toList() ?? const [];
@@ -383,8 +379,8 @@ class JustificatifDetailScreen extends ConsumerWidget {
                 Padding(padding: const EdgeInsets.only(top: 4), child: Text('${y.lotNumero ?? j.lot} · ${formatDate(y.datePaiementDeclaree, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
                 const SizedBox(height: 12),
                 Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? y.statut, variant: v),
-                  StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? y.methode, variant: BadgeVariant.outline),
+                  StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? humanizeCode(y.statut), variant: v),
+                  StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? humanizeCode(y.methode), variant: BadgeVariant.outline),
                 ]),
               ]),
             ),
@@ -412,7 +408,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
             ],
             if (y.enAttente && y.declareParId == ctx.profil.id && !ctx.isGestion) ...[
               const SizedBox(height: 8),
-              Center(child: LinkButton(j.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, y))),
+              Center(child: BusyBuilder('justificatif-annuler:${y.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(j.annuler, color: SuColors.danger, onTap: () => guardAction('justificatif-annuler:${y.id}', () => _annuler(context, ref, y))))),
             ],
             SectionHeader(j.lignesOuvertes),
             if (y.lignesOuvertes.isEmpty)
@@ -424,8 +420,8 @@ class JustificatifDetailScreen extends ConsumerWidget {
                     key: ValueKey(li.appelDeFondsLotId),
                     leading: IconCircle(Icons.request_quote_rounded, tone: li.appelDeFondsLotId == y.appelDeFondsLotId ? Tone.sage : Tone.neutral),
                     title: formatPeriode(li.periode, l),
-                    subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? li.type}',
-                    trailing: _MontantFin(li.restant, upIsGood: false, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
+                    subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? humanizeCode(li.type)}',
+                    trailing: _MontantFin(li.restant, upIsGood: false, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? humanizeCode(li.statut), variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
                   ),
               ]),
             if (affectations.isNotEmpty) ...[
@@ -442,14 +438,16 @@ class JustificatifDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.justificatifs.annuler, body: d.common.irreversible, confirmLabel: d.justificatifs.annuler, danger: true);
     if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Justificatif>('/finances/justificatifs/${y.id}/annuler', body: const {}, idempotent: true, parse: (j) => Justificatif.fromJson(asMap(j)));
+    final intent = 'justificatif-annuler:${y.id}';
+    final r = await ref.read(apiClientProvider).post<Justificatif>('/finances/justificatifs/${y.id}/annuler', body: const {}, idempotencyKey: IdemKeys.of(intent).value, parse: (j) => Justificatif.fromJson(asMap(j)));
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Justificatif>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.justificatifs.annule);
       case ApiFail<Justificatif>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 }

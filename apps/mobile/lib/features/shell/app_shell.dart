@@ -12,6 +12,7 @@ import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
+import '../../core/auth/session_events.dart';
 import '../../core/bootstrap.dart';
 import '../../core/feel/feel.dart';
 import '../../core/i18n/i18n.dart';
@@ -24,6 +25,7 @@ import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/deeplinks/deeplinks.dart';
 import '../../core/home_widgets/home_widgets.dart';
+import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../assistant/dari.dart';
@@ -64,6 +66,8 @@ class _AppShellState extends ConsumerState<AppShell> {
     super.initState();
     _life;
     SuPage.rootHeader = () => const ShellHeader();
+    // 402 (accès de la résidence suspendu) : un toast explicite plutôt qu'une erreur générique.
+    SessionEvents.instance.accessSuspended.addListener(_onAccesSuspendu);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       LaunchHandoff.play(context);
@@ -228,8 +232,13 @@ class _AppShellState extends ConsumerState<AppShell> {
     SuToaster.show(context, e.titre ?? context.mdict.newNotification, duration: const Duration(seconds: 6), actionLabel: context.mdict.open, onAction: () => GoRouter.of(context).push(path));
   }
 
+  void _onAccesSuspendu() {
+    if (mounted) showToast(context, context.mdict.ux.accessSuspended, error: true);
+  }
+
   @override
   void dispose() {
+    SessionEvents.instance.accessSuspended.removeListener(_onAccesSuspendu);
     _sub?.cancel();
     _partageSub?.cancel();
     _backTimer?.cancel();
@@ -547,7 +556,7 @@ class _MenuSheet extends ConsumerWidget {
                 children: [
                   const IconCircle(Icons.apartment_rounded, tone: Tone.sage, size: 44, iconSize: 22),
                   const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? ctx.role), style: t.labelSmall)])),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? humanizeCode(ctx.role)), style: t.labelSmall)])),
                   if (ctx.multiCopro)
                     LinkButton(dict.a11y.switchCopro, onTap: () {
                       Navigator.pop(context);
@@ -581,7 +590,7 @@ class _MenuSheet extends ConsumerWidget {
             children: [
               Avatar(nom, size: 44, tinted: false),
               const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nom, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis), Text(dict.roles[ctx.role] ?? ctx.role, style: t.labelSmall)])),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nom, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis), Text(dict.roles[ctx.role] ?? humanizeCode(ctx.role), style: t.labelSmall)])),
             ],
           ),
           const SizedBox(height: 4),
@@ -682,7 +691,7 @@ class ShellHeader extends ConsumerWidget implements PreferredSizeWidget {
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 8, 0),
+          padding: const EdgeInsetsDirectional.fromSTEB(16, 10, 8, 0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

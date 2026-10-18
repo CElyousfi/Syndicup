@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -81,7 +82,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     return SuPage(
       title: p.titre,
       subtitle: ctx.copropriete?.nom,
-      onRefresh: () async => ref.invalidate(coproprieteProvider(ctx.coproprieteId)),
+      onRefresh: () => refreshing(ref, [coproprieteProvider(ctx.coproprieteId)]),
       children: [
         AsyncView(copro, onRetry: () => ref.invalidate(coproprieteProvider(ctx.coproprieteId)), data: (c) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -96,7 +97,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               const SizedBox(height: 10),
               SuField(label: p.ville, controller: _ville, error: fieldError(_fail, 'ville')),
               const SizedBox(height: 10),
-              KeyValueRow(p.typeResidence, d.enums.typeResidence[c.typeResidence] ?? c.typeResidence),
+              KeyValueRow(p.typeResidence, d.enums.typeResidence[c.typeResidence] ?? humanizeCode(c.typeResidence)),
               const SizedBox(height: 4),
               SuField(label: p.nbLots, controller: _nbLots, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], textDirection: TextDirection.ltr, error: fieldError(_fail, 'nb_lots')),
               const SizedBox(height: 12),
@@ -123,7 +124,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             SuCard(
               child: c.politiqueRecouvrementJson == null || c.politiqueRecouvrementJson!.isEmpty
                   ? Text(p.nonConfigure, style: t.bodyMedium?.copyWith(color: SuColors.soft))
-                  : Column(children: [for (final e in c.politiqueRecouvrementJson!.entries) KeyValueRow(d.enums.escalade[e.key] ?? e.key, '${e.value}', mono: true)]),
+                  : Column(children: [for (final e in c.politiqueRecouvrementJson!.entries) KeyValueRow(d.enums.escalade[e.key] ?? humanizeCode(e.key), '${e.value}', mono: true)]),
             ),
             SectionHeader(p.legaux),
             SuBanner(tone: BannerTone.legal, body: p.legauxBanner),
@@ -183,7 +184,7 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
     final r = await api.patch<dynamic>('/coproprietes/${widget.copro.id}', body: {'photos_json': photos.isEmpty ? null : photos});
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(coproPhotosProvider(widget.copro.id));
@@ -201,7 +202,7 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
     if (!mounted) return;
     if (prep is ApiFail<Map<String, dynamic>>) {
       setState(() => _enCours = null);
-      showToast(context, prep.error.message, error: true);
+      showApiError(context, prep);
       return;
     }
     final pr = (prep as ApiOk<Map<String, dynamic>>).data;

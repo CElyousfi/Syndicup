@@ -86,7 +86,7 @@ const ELEMENTS = {
     {
       key: "overlay",
       label: "Feuilles, dialogues, toasts",
-      alive: [/\bshowFormSheet\b/, /\bshowSuSheet\b/, /\bconfirmDialog\(/, /\bshowToast\(/, /\bshowSuccess\(/],
+      alive: [/\bshowFormSheet\b/, /\bshowSuSheet\b/, /\bconfirmDialog\(/, /\bshowToast\(/, /\bshowSuccess\(/, /\bshowApiError\(/, /\bshowDone\(/],
       raw: [
         { re: /\bshowModalBottomSheet\b/, fix: "showSuSheet / showFormSheet" },
         { re: /\bshowDialog\b|\bAlertDialog\(/, fix: "confirmDialog / showSuSheet" },

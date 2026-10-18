@@ -6,7 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -49,8 +51,7 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
       title: d.depenses.titre,
       subtitle: d.depenses.subtitle,
       onRefresh: () async {
-        ref.invalidate(depensesProvider);
-        ref.invalidate(budgetVsRealiseProvider);
+        await refreshing(ref, [depensesProvider, budgetVsRealiseProvider]);
       },
       children: [
         if (rapport != null) ...[
@@ -64,13 +65,13 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
           ]),
           const SizedBox(height: 12),
         ],
-        FilterChips<String>(value: _onglet, options: _statutsOnglets, labelOf: (s) => s == 'TOUS' ? d.depenses.tous : (d.enumsDepenses.statutDepense[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
+        FilterChips<String>(value: _onglet, options: _statutsOnglets, labelOf: (s) => s == 'TOUS' ? d.depenses.tous : (d.enumsDepenses.statutDepense[s] ?? humanizeCode(s)), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(value: _onglet, child: AsyncView(
           depenses,
           onRetry: () => ref.invalidate(depensesProvider(statut)),
           data: (rows) => rows.isEmpty
-              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search')
+              ? EmptyState(title: statut == null ? d.depenses.aucune : d.depenses.aucuneFiltre, hint: statut == null && ctx.isGestion ? d.depenses.aucuneAide : null, icon: Icons.receipt_long_rounded, illustration: statut == null ? 'empty-documents' : 'empty-search', actionLabel: _onglet == 'TOUS' ? null : context.mdict.ux.clearFilter, onAction: () => setState(() => _onglet = 'TOUS'))
               : CardList([for (final x in rows) DepenseRow(x, key: ValueKey(x.id))]),
         )),
       ],
@@ -105,12 +106,12 @@ class DepenseRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final d = context.dict;
     final l = context.locale;
-    final sous = [formatDate(x.dateDepense, l), d.enumsDepenses.categorieDepense[x.categorie] ?? x.categorie, if (x.prestataire != null) x.prestataire!.nom].join(' · ');
+    final sous = [formatDate(x.dateDepense, l), d.enumsDepenses.categorieDepense[x.categorie] ?? humanizeCode(x.categorie), if (x.prestataire != null) x.prestataire!.nom].join(' · ');
     return ListRow(
       leading: IconCircle(x.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: x.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand),
       title: x.libelle,
       subtitle: sous,
-      trailing: _MontantFin(x.montantTtc, secondaire: StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true)),
+      trailing: _MontantFin(x.montantTtc, secondaire: StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? humanizeCode(x.statut), variant: depenseVariant[x.statut] ?? BadgeVariant.neutral, small: true)),
       onTap: () => context.push('/depenses/${x.id}'),
     );
   }
@@ -121,12 +122,7 @@ class DepenseDetailScreen extends ConsumerWidget {
   const DepenseDetailScreen({super.key, required this.id});
   final String id;
 
-  void _refresh(WidgetRef ref) {
-    ref.invalidate(depenseProvider(id));
-    ref.invalidate(depenseDocumentsProvider(id));
-    ref.invalidate(depensesProvider);
-    ref.invalidate(budgetVsRealiseProvider);
-  }
+  Future<void> _refresh(WidgetRef ref) => refreshing(ref, [depenseProvider(id), depenseDocumentsProvider(id), depensesProvider, budgetVsRealiseProvider]);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -140,7 +136,7 @@ class DepenseDetailScreen extends ConsumerWidget {
     return SuPage(
       title: dep.valueOrNull?.libelle ?? d.depenses.titre,
       subtitle: dep.valueOrNull == null ? null : d.enumsDepenses.categorieDepense[dep.valueOrNull!.categorie],
-      onRefresh: () async => _refresh(ref),
+      onRefresh: () => _refresh(ref),
       children: [
         AsyncView(dep, onRetry: () => ref.invalidate(depenseProvider(id)), data: (x) {
           final niveauConseil = x.niveauApprobationRequis == 'CONSEIL';
@@ -161,8 +157,8 @@ class DepenseDetailScreen extends ConsumerWidget {
                   Padding(padding: const EdgeInsets.only(top: 4), child: Text(d.depenses.montantTtc, style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
                   const SizedBox(height: 12),
                   Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
-                    StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? x.statut, variant: depenseVariant[x.statut] ?? BadgeVariant.neutral),
-                    StatusBadge(d.enumsDepenses.sourceFinancement[x.source] ?? x.source, variant: x.source == 'FONDS_RESERVE' ? BadgeVariant.info : BadgeVariant.outline),
+                    StatusBadge(d.enumsDepenses.statutDepense[x.statut] ?? humanizeCode(x.statut), variant: depenseVariant[x.statut] ?? BadgeVariant.neutral),
+                    StatusBadge(d.enumsDepenses.sourceFinancement[x.source] ?? humanizeCode(x.source), variant: x.source == 'FONDS_RESERVE' ? BadgeVariant.info : BadgeVariant.outline),
                     if (x.budgetPoste != null) StatusBadge(x.budgetPoste!.nom, variant: BadgeVariant.neutral),
                   ]),
                 ]),
@@ -189,7 +185,7 @@ class DepenseDetailScreen extends ConsumerWidget {
               // Actions
               if (peutDecider || peutPayer || peutSoumettre || peutAnnuler) ...[
                 const SizedBox(height: 14),
-                if (peutSoumettre) SubmitButton(label: d.depenses.soumettre, icon: Icons.send_rounded, onPressed: () => _soumettre(context, ref, x)),
+                if (peutSoumettre) BusyBuilder('depense-soumettre:${x.id}', builder: (_, busy) => SubmitButton(label: d.depenses.soumettre, icon: Icons.send_rounded, loading: busy, onPressed: () => guardAction('depense-soumettre:${x.id}', () => _soumettre(context, ref, x)))),
                 if (peutDecider) ...[
                   SubmitButton(label: d.depenses.approuver, icon: Icons.check_circle_rounded, onPressed: () => _decider(context, ref, x, approuver: true)),
                   const SizedBox(height: 8),
@@ -198,7 +194,7 @@ class DepenseDetailScreen extends ConsumerWidget {
                 if (peutPayer) SubmitButton(label: d.depenses.payer, icon: Icons.photo_camera_rounded, onPressed: () => _payer(context, ref, x)),
                 if (peutAnnuler) ...[
                   const SizedBox(height: 8),
-                  Center(child: LinkButton(d.depenses.annuler, color: SuColors.danger, onTap: () => _annuler(context, ref, x))),
+                  Center(child: BusyBuilder('depense-annuler:${x.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.depenses.annuler, color: SuColors.danger, onTap: () => guardAction('depense-annuler:${x.id}', () => _annuler(context, ref, x))))),
                 ],
               ],
               // Paiement
@@ -263,14 +259,16 @@ class DepenseDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.depenses.soumettreTitre, body: d.depenses.soumettreCorps, confirmLabel: d.depenses.soumettre);
     if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/soumettre', body: const {}, idempotent: true, parse: (j) => Depense.fromJson(asMap(j)));
+    final intent = 'depense-soumettre:${x.id}';
+    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/soumettre', body: const {}, idempotencyKey: IdemKeys.of(intent).value, parse: (j) => Depense.fromJson(asMap(j)));
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Depense>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.depenses.soumise);
       case ApiFail<Depense>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 
@@ -278,14 +276,18 @@ class DepenseDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final motif = await demanderMotifDepense(context, title: d.depenses.annulerTitre, body: d.depenses.annulerCorps, label: d.depenses.annulerMotif, submit: d.depenses.annuler, danger: true);
     if (motif == null || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/annuler', body: {'motif': motif.isEmpty ? null : motif}, idempotent: true, parse: (j) => Depense.fromJson(asMap(j)));
+    final body = {'motif': motif.isEmpty ? null : motif};
+    final intent = 'depense-annuler:${x.id}';
+    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => Depense.fromJson(asMap(j)));
+    IdemKeys.settle(intent, r);
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Depense>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.depenses.annulee);
       case ApiFail<Depense>():
-        showToast(context, r.error.message, error: true);
+        showApiError(context, r);
     }
   }
 
@@ -324,9 +326,9 @@ class _LogItem extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.only(bottom: last ? 0 : 12),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(d.enumsDepenses.typeLog[log.type] ?? log.type, style: t.titleSmall),
+              Text(d.enumsDepenses.typeLog[log.type] ?? humanizeCode(log.type), style: t.titleSmall),
               if (motif is String && motif.isNotEmpty) Text(motif, style: t.bodySmall?.copyWith(color: SuColors.ink)),
-              if (methode is String) Text('${d.enumsDepenses.methodePaiementDepense[methode] ?? methode}${reference is String && reference.isNotEmpty ? ' · $reference' : ''}', style: t.bodySmall?.copyWith(color: SuColors.ink), textDirection: TextDirection.ltr),
+              if (methode is String) Text('${d.enumsDepenses.methodePaiementDepense[methode] ?? humanizeCode(methode)}${reference is String && reference.isNotEmpty ? ' · $reference' : ''}', style: t.bodySmall?.copyWith(color: SuColors.ink), textDirection: TextDirection.ltr),
               Text('${log.acteurNom ?? '—'} · ${formatDateHeure(log.horodatage, context.locale)}', style: t.labelSmall),
             ]),
           ),
@@ -444,7 +446,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         const SizedBox(height: 6),
         Text(d.depenses.payerCorps, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 14),
-        Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsDepenses.methodePaiementDepense[v] ?? v, onChanged: (v) => setState(() => _methode = v)),
+        Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsDepenses.methodePaiementDepense[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _methode = v)),
         const SizedBox(height: 14),
         SuField(label: d.depenses.reference, controller: _reference, help: d.depenses.referenceAide, required: referenceRequise, optionalLabel: referenceRequise ? null : d.common.optional, mono: true, textDirection: TextDirection.ltr, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'reference')),
         const SizedBox(height: 10),

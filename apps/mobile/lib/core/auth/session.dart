@@ -2,9 +2,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../api/api_client.dart';
+import '../api/idempotency.dart';
 import '../api/models.dart';
 import '../api/swr.dart';
 import '../home_widgets/home_widgets.dart';
+import 'session_events.dart';
 
 /// Session locale : jetons Supabase (rotatifs) + copropriété active. Stockés dans le trousseau
 /// (Keychain / EncryptedSharedPreferences), jamais en clair.
@@ -101,6 +103,8 @@ class SessionController extends Notifier<Session?> implements TokenSource {
 
   Future<void> signOut() async {
     state = null;
+    // Aucune clé d'idempotence d'un utilisateur ne survit à sa session.
+    IdemKeys.clear();
     await _storage.clear();
     // Plus aucune donnée personnelle sur l'écran d'accueil ni dans les raccourcis.
     await HomeWidgets.instance.clear();
@@ -118,10 +122,34 @@ class SessionController extends Notifier<Session?> implements TokenSource {
 
   @override
   Future<void> onSessionExpired() => signOut();
+
+  @override
+  Future<bool> adoptStoredTokens(String spentRefreshToken) async {
+    final s = state;
+    if (s == null) return false; // déconnecté : on ne ressuscite jamais une session
+    final stored = await _storage.read();
+    if (stored == null || stored.refreshToken == spentRefreshToken) return false;
+    state = s.copyWith(accessToken: stored.accessToken, refreshToken: stored.refreshToken);
+    return true;
+  }
+
+  /// Retour au premier plan : jetons éventuellement renouvelés en arrière-plan (isolate des
+  /// actions de notification) repris depuis le trousseau, sans changer de copropriété.
+  Future<void> reloadFromStorage() async {
+    final s = state;
+    if (s == null) return;
+    final stored = await _storage.read();
+    if (stored == null || stored.refreshToken == s.refreshToken) return;
+    state = s.copyWith(accessToken: stored.accessToken, refreshToken: stored.refreshToken);
+  }
 }
 
 final sessionProvider = NotifierProvider<SessionController, Session?>(SessionController.new);
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(ref.read(sessionProvider.notifier));
+  return ApiClient(ref.read(sessionProvider.notifier))
+    // Fin de session : le routeur renvoie à la connexion en gardant l'écran en cours (router.dart).
+    ..onSessionExpired = SessionEvents.instance.markExpired
+    // 402 : accès de la résidence suspendu — toast dans la coque (app_shell.dart).
+    ..onPaymentRequired = SessionEvents.instance.paymentRequired;
 });

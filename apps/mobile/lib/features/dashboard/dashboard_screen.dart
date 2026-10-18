@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/format/centimes.dart';
@@ -166,13 +167,7 @@ class _DashSyndic extends ConsumerWidget {
     final documents = ref.watch(documentsProvider);
 
     Future<void> refresh() async {
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(incidentsProvider);
-      ref.invalidate(agListProvider);
-      ref.invalidate(reservationsProvider);
-      ref.invalidate(lotsProvider);
-      ref.invalidate(litigesProvider);
-      ref.invalidate(documentsProvider);
+      await refreshing(ref, [syntheseProvider, incidentsProvider, agListProvider, reservationsProvider, lotsProvider, litigesProvider, documentsProvider]);
     }
 
     final s = synthese.valueOrNull ?? const SyntheseFinanciere();
@@ -231,7 +226,7 @@ class _DashSyndic extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(d.enums.escalade[n.niveau] ?? n.niveau, style: t.labelSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w700)),
+                          Text(d.enums.escalade[n.niveau] ?? humanizeCode(n.niveau), style: t.labelSmall?.copyWith(color: SuColors.ink, fontWeight: FontWeight.w700)),
                           AnimatedAmount(versChaine(n.montant), style: t.bodySmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w600), textDirection: TextDirection.ltr, maxLines: null, upIsGood: false),
                         ],
                       ),
@@ -250,7 +245,7 @@ class _DashSyndic extends ConsumerWidget {
                   key: ValueKey(a.id),
                   leading: const IconCircle(Icons.request_quote_rounded, tone: Tone.sand),
                   title: formatPeriode(a.periode, l),
-                  subtitle: '${d.enums.typeAppel[a.type] ?? a.type} · ${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)}',
+                  subtitle: '${d.enums.typeAppel[a.type] ?? humanizeCode(a.type)} · ${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)}',
                   trailing: SizedBox(
                     width: 120,
                     child: Column(
@@ -326,10 +321,10 @@ class _AgCard extends StatelessWidget {
     return PosterCard(
       art: 'poster-ag',
       onTap: () => context.push('/ag/${a.id}'),
-      kicker: '${d.enums.typeAg[a.type] ?? a.type}${rel.isEmpty ? '' : ' · $rel'}',
+      kicker: '${d.enums.typeAg[a.type] ?? humanizeCode(a.type)}${rel.isEmpty ? '' : ' · $rel'}',
       title: formatDateLongue(a.dateAg, context.locale),
       body: [
-        d.enums.statutAg[a.statut] ?? a.statut,
+        d.enums.statutAg[a.statut] ?? humanizeCode(a.statut),
         if (a.resolutions.isNotEmpty) '${a.resolutions.length} ${d.ag.resolutions.toLowerCase()}',
       ].join(' · '),
       ctaLabel: resident && a.statut == 'EN_COURS' ? d.ag.rejoindreSeance : resident && a.statut == 'CONVOQUEE' ? d.dash.donnerProcuration : null,
@@ -348,10 +343,10 @@ class IncidentRow extends StatelessWidget {
     return ListRow(
       leading: IconCircle(Icons.build_rounded, tone: i.slaDepasse ? Tone.danger : Tone.tosca),
       title: i.sousCategorie,
-      subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie}',
+      subtitle: '${d.enums.categorieIncident[i.categorie] ?? humanizeCode(i.categorie)} · ${d.enums.partie[i.partie] ?? humanizeCode(i.partie)}',
       trailing: i.slaDepasse
           ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, pulse: true)
-          : StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral),
+          : StatusBadge(d.enums.statutIncident[i.statut] ?? humanizeCode(i.statut), variant: incidentVariant[i.statut] ?? BadgeVariant.neutral),
       onTap: () => context.push('/incidents/${i.id}'),
     );
   }
@@ -383,17 +378,9 @@ class _DashResident extends ConsumerWidget {
     final sejoursLcd = ctx.declareSejoursLcd ? (ref.watch(lcdSejoursProvider).valueOrNull ?? const <LcdSejour>[]) : const <LcdSejour>[];
 
     Future<void> refresh() async {
-      ref.invalidate(lotsProvider);
+      await refreshing(ref, [lotsProvider]);
       if (ctx.declareSejoursLcd) ref.invalidate(lcdSejoursProvider);
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(agListProvider);
-      ref.invalidate(incidentsProvider);
-      ref.invalidate(reservationsProvider);
-      ref.invalidate(visitesProvider);
-      ref.invalidate(notificationsProvider);
-      ref.invalidate(documentsProvider);
-      ref.invalidate(annoncesProvider);
-      ref.invalidate(annoncesNonLuesProvider);
+      await refreshing(ref, [syntheseProvider, agListProvider, incidentsProvider, reservationsProvider, visitesProvider, notificationsProvider, documentsProvider, annoncesProvider, annoncesNonLuesProvider]);
     }
 
     final mesLots = (lots.valueOrNull ?? const <Lot>[]).where((x) => x.concerne(ctx.profil.id)).toList();
@@ -489,7 +476,7 @@ class _DashResident extends ConsumerWidget {
               ? _EmptyLine(d.espaces.aucuneReservation, icon: Icons.event_available_rounded)
               : CardList([
                   for (final r in mesResas)
-                    ListRow(key: ValueKey(r.id), leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
+                    ListRow(key: ValueKey(r.id), leading: const IconCircle(Icons.calendar_month_rounded, tone: Tone.sand), title: formatDateHeure(r.dateDebut, l), trailing: StatusBadge(d.enums.statutReservation[r.statut] ?? humanizeCode(r.statut), variant: reservationVariant[r.statut] ?? BadgeVariant.neutral), onTap: () => context.push('/reservations')),
                 ]),
           if (pvDispo) ...[
             SectionHeader(d.dash.pvDisponibles),
@@ -534,7 +521,7 @@ class _SoldeCard extends StatelessWidget {
           children: [
             IconCircle(Icons.home_rounded, tone: aJour ? Tone.sage : Tone.sand, size: 40, iconSize: 20),
             const SizedBox(width: 12),
-            Expanded(child: Text('${d.enums.typeLot[lot.typeLot] ?? lot.typeLot} ${lot.numero}', style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            Expanded(child: Text('${d.enums.typeLot[lot.typeLot] ?? humanizeCode(lot.typeLot)} ${lot.numero}', style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis)),
             if (!loading) StatusBadge(aJour ? d.enums.statutLigne['PAYE']! : d.enums.statutLigne['IMPAYE']!, variant: aJour ? BadgeVariant.ok : BadgeVariant.danger, small: true),
           ],
         ),
@@ -596,8 +583,7 @@ class _DashGardien extends ConsumerWidget {
 
     return SuRefresh(
       onRefresh: () async {
-        ref.invalidate(visitesProvider);
-        ref.invalidate(incidentsProvider);
+        await refreshing(ref, [visitesProvider, incidentsProvider]);
         await ref.read(visitesSyncProvider.notifier).flush();
       },
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
@@ -688,7 +674,7 @@ class _DashPrestataire extends ConsumerWidget {
     final tickets = incidents.valueOrNull ?? const <Incident>[];
     final ouverts = tickets.where((i) => i.ouvert).toList();
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(incidentsProvider),
+      onRefresh: () => refreshing(ref, [incidentsProvider]),
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
         key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),

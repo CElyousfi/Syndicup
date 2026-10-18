@@ -81,6 +81,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     final nom = nomCompletProfil(ctx);
     return SuPage(
       title: d.profil.titre,
+      // Profil = contexte de session : rechargé depuis /users/me (rôles, statut, langue).
+      onRefresh: () => ref.read(appStateProvider.notifier).reload(),
       children: [
         // En-tête « Account » de Wise : grand avatar centré, nom en gras, rôle, statut du compte.
         SuEnter(
@@ -94,7 +96,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
                 const SizedBox(height: 4),
                 Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
-                StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral),
+                StatusBadge(d.enums.statutCompte[p.statutCompte] ?? humanizeCode(p.statutCompte), variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral),
               ],
             ),
           ),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -40,7 +41,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     return SuPage(
       title: d.documents.titre,
       subtitle: d.documents.subtitle,
-      onRefresh: () async => ref.invalidate(documentsProvider),
+      onRefresh: () => refreshing(ref, [documentsProvider]),
       actions: [if (ctx.isGestion) CircleIconButton(icon: Icons.upload_file_rounded, tooltip: d.documents.televerser, onTap: () => _upload(context))],
       children: [
         PhotoBanner('cour', title: ctx.copropriete?.nom),
@@ -94,23 +95,24 @@ class DocumentRow extends ConsumerWidget {
     return ListRow(
       leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.lilac),
       title: doc.nom,
-      subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
+      subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? humanizeCode(doc.visibilite)}',
       trailing: canDelete
-          ? SuIconButton(
-              icon: Icons.delete_outline_rounded,
-              color: SuColors.faint,
-              onPressed: () async {
-                final ok = await confirmDialog(context, title: d.gestion.supprimer, body: d.gestion.documentSupprimerAide, danger: true, irreversible: true);
-                if (!ok) return;
-                final r = await ref.read(apiClientProvider).delete<dynamic>('/documents/${doc.id}');
-                if (!context.mounted) return;
-                if (r is ApiFail) {
-                  showToast(context, r.error.message, error: true);
-                } else {
-                  ref.invalidate(documentsProvider);
-                  showToast(context, d.gestion.supprime);
-                }
-              },
+          ? BusyBuilder(
+              'document-supprimer:${doc.id}',
+              builder: (_, busy) => busy
+                  ? const Padding(padding: EdgeInsets.all(12), child: LoadingOrb(size: 9))
+                  : SuIconButton(
+                      icon: Icons.delete_outline_rounded,
+                      color: SuColors.faint,
+                      onPressed: () => runAction<dynamic>(
+                        context,
+                        () => ref.read(apiClientProvider).delete<dynamic>('/documents/${doc.id}'),
+                        busyKey: 'document-supprimer:${doc.id}',
+                        confirm: ActionConfirm(title: d.gestion.supprimer, body: d.gestion.documentSupprimerAide, danger: true, irreversible: true),
+                        successMsg: d.gestion.supprime,
+                        onSuccess: (_) => ref.invalidate(documentsProvider),
+                      ),
+                    ),
             )
           : null,
       onTap: () => ouvrirDocument(context, ref, doc.id, titre: doc.nom),
@@ -212,7 +214,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
         const SizedBox(height: 12),
         SuField(label: d.documents.type, controller: _type, help: d.documents.typeHint, error: fieldError(_fail, 'type'), required: true),
         const SizedBox(height: 12),
-        SuSelect<String>(label: d.documents.visibilite, value: _visibilite, options: const ['PUBLIC_COPROPRIETE', 'SYNDIC_ONLY', 'CONSEIL_SYNDICAL'], labelOf: (v) => d.enums.visibiliteDocument[v] ?? v, onChanged: (v) => setState(() => _visibilite = v), help: d.documents.visibiliteAide[_visibilite]),
+        SuSelect<String>(label: d.documents.visibilite, value: _visibilite, options: const ['PUBLIC_COPROPRIETE', 'SYNDIC_ONLY', 'CONSEIL_SYNDICAL'], labelOf: (v) => d.enums.visibiliteDocument[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _visibilite = v), help: d.documents.visibiliteAide[_visibilite]),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),

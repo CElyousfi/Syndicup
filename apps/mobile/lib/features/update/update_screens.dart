@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -7,9 +10,21 @@ import '../../core/theme/tokens.dart';
 import '../../core/update/update_gate.dart';
 import '../../core/widgets/widgets.dart';
 
+/// Fiche de l'app sur le store de la plateforme (repli quand l'API ne donne pas d'URL) —
+/// l'identifiant de paquet vient du build (package_info), jamais codé en dur.
+Future<Uri> _storeParDefaut() async {
+  String id = 'ma.syndicup.app';
+  try {
+    id = (await PackageInfo.fromPlatform()).packageName;
+  } catch (_) {
+    // Hors plateforme (tests) : identifiant de l'application Android (build.gradle).
+  }
+  if (Platform.isIOS) return Uri.parse('https://apps.apple.com/search?term=${Uri.encodeQueryComponent('SyndicUp')}');
+  return Uri.parse('https://play.google.com/store/apps/details?id=${Uri.encodeQueryComponent(id)}');
+}
+
 Future<void> _openStore(String? url) async {
-  if (url == null) return;
-  final uri = Uri.parse(url);
+  final uri = (url == null || url.isEmpty) ? await _storeParDefaut() : Uri.parse(url);
   if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) await launchUrl(uri);
 }
 

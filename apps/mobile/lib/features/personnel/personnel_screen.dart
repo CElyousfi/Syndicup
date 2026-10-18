@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -34,8 +35,7 @@ class PersonnelScreen extends ConsumerWidget {
       subtitle: d.personnel.subtitle,
       actions: [if (ctx.isGestion || ctx.isConseil) CircleIconButton(tooltip: d.personnel.planning, icon: Icons.calendar_view_week_rounded, onTap: () => context.push('/personnel/planning'))],
       onRefresh: () async {
-        ref.invalidate(personnelProvider);
-        ref.invalidate(congesEnAttenteProvider);
+        await refreshing(ref, [personnelProvider, congesEnAttenteProvider]);
       },
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.personnel.nouvelleFiche, builder: (_) => _PersonnelForm(lots: lots)), icon: const Icon(Icons.add_rounded), label: Text(d.personnel.nouvelleFiche)) : null,
       children: [
@@ -60,13 +60,13 @@ class PersonnelScreen extends ConsumerWidget {
                   Builder(key: ValueKey(p.id), builder: (_) {
                     final estMoi = p.utilisateurId == ctx.profil.id;
                     final ouvrable = ctx.isGestion || estMoi;
-                    final poste = d.enumsPersonnelRh.poste[p.poste] ?? p.poste;
+                    final poste = d.enumsPersonnelRh.poste[p.poste] ?? humanizeCode(p.poste);
                     return ListRow(
                       leading: Avatar(p.nomAffiche(nom(p.utilisateurId)), size: 48, solid: estMoi),
                       title: p.nomAffiche(nom(p.utilisateurId)),
                       subtitle: '$poste · ${d.personnel.logement} : ${p.logementLotNumero ?? lots.where((x) => x.id == p.logementLotId).map((x) => x.numero).firstOrNull ?? d.personnel.aucuneLoge}',
                       trailing: Row(mainAxisSize: MainAxisSize.min, children: [
-                        StatusBadge(d.enums.statutPersonnel[p.statut] ?? p.statut, variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, small: true),
+                        StatusBadge(d.enums.statutPersonnel[p.statut] ?? humanizeCode(p.statut), variant: personnelVariant[p.statut] ?? BadgeVariant.neutral, small: true),
                         if (ctx.isGestion) SuIconButton(tooltip: d.personnel.changerStatut, icon: Icons.swap_horiz_rounded, iconSize: 20, onPressed: () => showFormSheet<void>(context, title: d.personnel.changerStatut, builder: (_) => _StatutForm(p: p, lots: lots))),
                       ]),
                       chevron: ouvrable,
@@ -104,7 +104,7 @@ class _PersonnelFormState extends ConsumerState<_PersonnelForm> {
       children: [
         SuField(label: d.lots.utilisateur, controller: _user, help: d.personnel.utilisateurAide, required: true, mono: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'utilisateur_id')),
         const SizedBox(height: 12),
-        SuSelect<String>(label: d.personnel.statut, value: _statut, options: const ['PRESENT', 'ABSENT', 'REMPLACE'], labelOf: (v) => d.enums.statutPersonnel[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+        SuSelect<String>(label: d.personnel.statut, value: _statut, options: const ['PRESENT', 'ABSENT', 'REMPLACE'], labelOf: (v) => d.enums.statutPersonnel[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
         const SizedBox(height: 12),
         SuSelect<String?>(label: d.personnel.logement, value: _lot, options: [null, ...loges.map((x) => x.id)], labelOf: (v) => v == null ? d.personnel.aucuneLoge : loges.firstWhere((x) => x.id == v).numero, onChanged: (v) => setState(() => _lot = v), help: d.personnel.logementAide),
         const SizedBox(height: 16),
@@ -161,7 +161,7 @@ class _StatutFormState extends ConsumerState<_StatutForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuSelect<String>(label: d.personnel.statut, value: _statut, options: const ['PRESENT', 'ABSENT', 'REMPLACE'], labelOf: (v) => d.enums.statutPersonnel[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+        SuSelect<String>(label: d.personnel.statut, value: _statut, options: const ['PRESENT', 'ABSENT', 'REMPLACE'], labelOf: (v) => d.enums.statutPersonnel[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
         const SizedBox(height: 12),
         SuSelect<String?>(label: d.personnel.logement, value: _lot, options: [null, ...loges.map((x) => x.id)], labelOf: (v) => v == null ? d.personnel.aucuneLoge : loges.firstWhere((x) => x.id == v).numero, onChanged: (v) => setState(() => _lot = v)),
         const SizedBox(height: 16),

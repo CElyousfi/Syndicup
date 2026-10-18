@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -44,7 +45,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
     return SuPage(
       title: d.invitations.titre,
       subtitle: d.invitations.subtitle,
-      onRefresh: () async => ref.invalidate(invitationsProvider),
+      onRefresh: () => refreshing(ref, [invitationsProvider]),
       fab: FloatingActionButton.extended(onPressed: _nouvelle, icon: const Icon(Icons.add_rounded), label: Text(d.invitations.nouvelle)),
       children: [
         SuBanner(tone: BannerTone.info, body: d.invitations.envoiManuel),
@@ -57,9 +58,9 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
               ListRow(
                 key: ValueKey(i.id),
                 leading: IconCircle(Icons.vpn_key_rounded, tone: i.statut == 'EN_ATTENTE' ? Tone.action : Tone.neutral),
-                title: '${d.roles[i.roleCible] ?? i.roleCible}${i.lotId != null ? ' · ${lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull ?? ''}' : ''}',
-                subtitle: '${i.code} · ${d.enums.canal[i.canal] ?? i.canal} · ${d.invitations.expiration} ${formatDateCourte(i.expireLe, l)}${i.ouverteLe != null ? ' · ${d.invitations.ouverte}' : ''}',
-                trailing: StatusBadge(d.enums.statutInvitation[i.statut] ?? i.statut, variant: invitationVariant[i.statut] ?? BadgeVariant.neutral, small: true),
+                title: '${d.roles[i.roleCible] ?? humanizeCode(i.roleCible)}${i.lotId != null ? ' · ${lots.where((x) => x.id == i.lotId).map((x) => x.numero).firstOrNull ?? ''}' : ''}',
+                subtitle: '${i.code} · ${d.enums.canal[i.canal] ?? humanizeCode(i.canal)} · ${d.invitations.expiration} ${formatDateCourte(i.expireLe, l)}${i.ouverteLe != null ? ' · ${d.invitations.ouverte}' : ''}',
+                trailing: StatusBadge(d.enums.statutInvitation[i.statut] ?? humanizeCode(i.statut), variant: invitationVariant[i.statut] ?? BadgeVariant.neutral, small: true),
                 onTap: () => _detail(context, i),
               ),
           ]);
@@ -86,38 +87,41 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
             CodeCard(invitation: i),
             const SizedBox(height: 16),
             if (i.statut == 'EXPIREE' || i.statut == 'EN_ATTENTE')
-              SuButton(
+              BusyBuilder('invitation-regenerer:${i.id}', builder: (_, busy) => SuButton(
                 variant: SuButtonVariant.secondary,
-                onPressed: () async {
-                  final r = await ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j)));
-                  if (!sheet.mounted) return;
-                  if (r is ApiFail) showToast(sheet, (r as ApiFail).error.message, error: true); else {
+                loading: busy,
+                onPressed: () => runAction<Invitation>(
+                  sheet,
+                  () => ref.read(apiClientProvider).post<Invitation>('/invitations/${i.id}/regenerer', parse: (j) => Invitation.fromJson(asMap(j))),
+                  busyKey: 'invitation-regenerer:${i.id}',
+                  onSuccess: (_) {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.invitations.regeneree);
-                  }
-                },
+                  },
+                ),
                 icon: Icons.refresh_rounded,
                 label: d.invitations.regenerer,
-              ),
+              )),
             if (i.statut == 'EN_ATTENTE') const SizedBox(height: 8),
             if (i.statut == 'EN_ATTENTE')
-              SuButton(
+              BusyBuilder('invitation-annuler:${i.id}', builder: (_, busy) => SuButton(
                 variant: SuButtonVariant.ghost,
-                onPressed: () async {
-                  final ok = await confirmDialog(sheet, title: d.gestion.invitationAnnuler, body: d.gestion.invitationAnnulerAide, danger: true);
-                  if (!ok) return;
-                  final r = await ref.read(apiClientProvider).delete<dynamic>('/invitations/${i.id}');
-                  if (!sheet.mounted) return;
-                  if (r is ApiFail) showToast(sheet, r.error.message, error: true); else {
+                loading: busy,
+                onPressed: () => runAction<dynamic>(
+                  sheet,
+                  () => ref.read(apiClientProvider).delete<dynamic>('/invitations/${i.id}'),
+                  busyKey: 'invitation-annuler:${i.id}',
+                  confirm: ActionConfirm(title: d.gestion.invitationAnnuler, body: d.gestion.invitationAnnulerAide, danger: true),
+                  onSuccess: (_) {
                     ref.invalidate(invitationsProvider);
                     Navigator.pop(sheet);
                     showToast(context, d.gestion.invitationAnnulee);
-                  }
-                },
+                  },
+                ),
                 style: TextButton.styleFrom(foregroundColor: SuColors.danger),
                 label: d.gestion.invitationAnnuler,
-              ),
+              )),
           ],
         ),
       ),
@@ -209,7 +213,7 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
           SuSelect<String>(label: d.invitations.lot, value: _lot, options: lots.map((x) => x.id).toList(), labelOf: (id) => lots.firstWhere((x) => x.id == id).numero, onChanged: (v) => setState(() => _lot = v), required: true, error: fieldError(_fail, 'lot_id'), placeholder: context.mdict.selectLot),
           const SizedBox(height: 12),
         ],
-        SuSelect<String>(label: d.invitations.canal, value: _canal, options: const ['QR_CODE', 'SMS', 'EMAIL', 'WHATSAPP'], labelOf: (v) => d.enums.canal[v] ?? v, onChanged: (v) => setState(() => _canal = v)),
+        SuSelect<String>(label: d.invitations.canal, value: _canal, options: const ['QR_CODE', 'SMS', 'EMAIL', 'WHATSAPP'], labelOf: (v) => d.enums.canal[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _canal = v)),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),

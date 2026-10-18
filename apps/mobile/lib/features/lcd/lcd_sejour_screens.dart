@@ -9,7 +9,9 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -78,7 +80,7 @@ class SejourRow extends StatelessWidget {
       leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)),
       title: libelleSejour(s),
       subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}${heure != null && s.statut == 'PREVU' ? ' · $heure' : ''}${enAttente ? ' · ${md.pendingSend}' : ''}',
-      trailing: trailing ?? StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true, pulse: s.statut == 'EN_COURS'),
+      trailing: trailing ?? StatusBadge(d.enums.statutSejour[s.statut] ?? humanizeCode(s.statut), variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true, pulse: s.statut == 'EN_COURS'),
       onTap: () => context.push('/location-courte-duree/sejours/${s.id}'),
     );
   }
@@ -100,7 +102,7 @@ Future<void> confirmerSejour(BuildContext context, WidgetRef ref, LcdSejour s, S
   final r = await ref.read(lcdSyncProvider.notifier).confirmer(sejourId: s.id, action: action, payload: payload, libelle: libelleSejour(s));
   if (!context.mounted) return;
   if (r.refus != null) {
-    showToast(context, r.refus!.error.message, error: true);
+    showApiError(context, r.refus!);
   } else if (r.enFile) {
     showToast(context, md.pendingSend);
   } else {
@@ -377,7 +379,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
             children: [
               Expanded(child: SuField(label: d.lcd.voyageurNationalite, controller: _nat, hint: d.lcd.voyageurNationaliteAide, maxLength: 3, textDirection: TextDirection.ltr, inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z]'))], error: fieldError(_fail, 'voyageur_nationalite'))),
               const SizedBox(width: 10),
-              Expanded(child: SuSelect<String?>(label: d.lcd.pieceIdentiteType, value: _piece, options: [null, ...d.enums.typePieceIdentite.keys], labelOf: (v) => v == null ? d.common.none : d.enums.typePieceIdentite[v] ?? v, onChanged: (v) => setState(() => _piece = v), placeholder: d.common.none)),
+              Expanded(child: SuSelect<String?>(label: d.lcd.pieceIdentiteType, value: _piece, options: [null, ...d.enums.typePieceIdentite.keys], labelOf: (v) => v == null ? d.common.none : d.enums.typePieceIdentite[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _piece = v), placeholder: d.common.none)),
             ],
           ),
           const SizedBox(height: 16),
@@ -417,7 +419,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
             ? null
             : Padding(
                 padding: const EdgeInsetsDirectional.only(start: 16),
-                child: Align(alignment: AlignmentDirectional.centerStart, child: CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: _etape > 0 ? d.common.previous : MaterialLocalizations.of(context).backButtonTooltip, onTap: _precedent)),
+                child: Align(alignment: AlignmentDirectional.centerStart, child: CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: _etape > 0 ? d.common.previous : MaterialLocalizations.of(context).backButtonTooltip, onTap: _precedent)),
               ),
         children: [
           if (_edition && existing!.isLoading && !_prefilled)
@@ -593,18 +595,22 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
     final motif = await showFormSheet<String>(context, title: d.lcd.annuler, builder: (ctx) => _MotifForm(body: d.lcd.annulerAide, label: d.lcd.motifAnnulation, submit: d.lcd.annuler, danger: true));
     if (motif == null || !mounted) return;
     setState(() => _loading = true);
-    final r = await ref.read(apiClientProvider).post<LcdSejour>('/lcd/sejours/${s.id}/annuler', body: {'motif': motif.isEmpty ? null : motif}, idempotencyKey: const Uuid().v4(), parse: (j) => LcdSejour.fromJson(asMap(j)));
+    final body = {'motif': motif.isEmpty ? null : motif};
+    final intent = 'sejour-annuler:${s.id}';
+    final r = await ref.read(apiClientProvider).post<LcdSejour>('/lcd/sejours/${s.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => LcdSejour.fromJson(asMap(j)));
+    IdemKeys.settle(intent, r);
     if (!mounted) return;
     setState(() => _loading = false);
     switch (r) {
       case ApiOk<LcdSejour>():
+        IdemKeys.done(intent);
         ref.invalidate(lcdSejourProvider(s.id));
         ref.invalidate(lcdSejoursProvider);
         ref.invalidate(lcdDuJourProvider);
         ref.invalidate(lcdDeclarationProvider(s.declarationLcdId));
         showToast(context, d.lcd.annule);
-      case ApiFail<LcdSejour>(:final error):
-        showToast(context, error.message, error: true);
+      case ApiFail<LcdSejour>():
+        showApiError(context, r);
     }
   }
 
@@ -624,7 +630,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
       title: d.lcd.sejours,
       subtitle: sejour.valueOrNull == null ? null : fill(md.lcdSejourDe, {'lot': sejour.valueOrNull!.lotNumero}),
       onRefresh: () async {
-        ref.invalidate(lcdSejourProvider(widget.id));
+        await refreshing(ref, [lcdSejourProvider(widget.id)]);
         await ref.read(lcdSyncProvider.notifier).flush();
       },
       children: [
@@ -632,7 +638,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
           final peutGerer = ctx.isGestion || s.declareParId == me || ctx.declareSejoursLcd;
           final enFile = queue.where((q) => !q.definitif).isNotEmpty;
           // Fin de pièce dans un isolat LTR (U+2066…U+2069) : jamais réordonnée par le bidi après un libellé arabe.
-          final piece = s.pieceIdentiteType == null ? null : '${d.enums.typePieceIdentite[s.pieceIdentiteType] ?? s.pieceIdentiteType}${s.pieceIdentiteFin != null ? ' · \u2066****${s.pieceIdentiteFin}\u2069' : ''}';
+          final piece = s.pieceIdentiteType == null ? null : '${d.enums.typePieceIdentite[s.pieceIdentiteType] ?? humanizeCode(s.pieceIdentiteType)}${s.pieceIdentiteFin != null ? ' · \u2066****${s.pieceIdentiteFin}\u2069' : ''}';
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -647,7 +653,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                     const SizedBox(height: 4),
                     Text('${d.lcd.lot} ${s.lotNumero} · ${fill(d.lcd.nuits, {'n': s.nuits})} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}', style: t.bodyLarge?.copyWith(color: SuColors.soft)),
                     const SizedBox(height: 12),
-                    StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
+                    StatusBadge(d.enums.statutSejour[s.statut] ?? humanizeCode(s.statut), variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
                   ],
                 ),
               ),
@@ -669,7 +675,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                 ),
               ),
               if (enFile) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.warn, body: '${md.pendingSend} — ${md.queueHint}')],
-              if (queue.any((q) => q.definitif)) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, body: queue.firstWhere((q) => q.definitif).derniereErreur ?? md.failedDefinitive)],
+              if (queue.any((q) => q.definitif)) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, body: erreurFile(context, queue.firstWhere((q) => q.definitif).derniereErreur) ?? md.failedDefinitive)],
               const SizedBox(height: 20),
               if (peutConfirmer && s.statut == 'PREVU' && !enFile)
                 SubmitButton(label: d.lcd.confirmerArrivee, icon: Icons.login_rounded, loading: _loading, onPressed: () => confirmerSejour(context, ref, s, 'arrivee')),
@@ -746,7 +752,7 @@ class _EvenementItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.enums.typeEvenementSejour[e.type] ?? e.type, style: t.titleMedium),
+                  Text(d.enums.typeEvenementSejour[e.type] ?? humanizeCode(e.type), style: t.titleMedium),
                   const SizedBox(height: 2),
                   Text(formatDateHeure(e.horodatage, context.locale), style: t.bodySmall),
                   if (constate != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text('${d.lcd.nbVoyageursConstate} : $constate', style: t.bodySmall)),
@@ -947,7 +953,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
@@ -962,7 +968,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
     final r = await ref.read(apiClientProvider).delete<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemin': pj.path});
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
     ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
@@ -1007,7 +1013,7 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
                             PositionedDirectional(
                               end: 4,
                               top: 4,
-                              child: CircleIconButton(onTap: () => _retirer(pj), icon: Icons.close_rounded, size: 30, color: SuColors.surface, iconColor: SuColors.ink, tooltip: d.lcd.retirerPiece),
+                              child: BusyBuilder('sejour-piece-retirer:${pj.path}', builder: (_, busy) => CircleIconButton(onTap: busy ? null : () => guardAction('sejour-piece-retirer:${pj.path}', () => _retirer(pj)), icon: busy ? Icons.hourglass_top_rounded : Icons.close_rounded, size: 30, color: SuColors.surface, iconColor: SuColors.ink, tooltip: d.lcd.retirerPiece)),
                             ),
                         ],
                       ),

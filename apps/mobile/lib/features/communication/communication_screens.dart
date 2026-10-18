@@ -4,13 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -28,12 +31,7 @@ String texteAnnonce(String md) => md
     .replaceAllMapped(RegExp(r'^\s*[-+*]\s+', multiLine: true), (_) => '• ')
     .replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&').replaceAll('&quot;', '"').replaceAll('&#39;', "'");
 
-void _rafraichirAffichage(WidgetRef ref) {
-  ref.invalidate(annoncesProvider);
-  ref.invalidate(annoncesNonLuesProvider);
-  ref.invalidate(sondagesProvider);
-  ref.invalidate(contactsUtilesProvider);
-}
+Future<void> _rafraichirAffichage(WidgetRef ref) => refreshing(ref, [annoncesProvider, annoncesNonLuesProvider, sondagesProvider, contactsUtilesProvider]);
 
 /// Tableau d'affichage — annonces (épinglées d'abord, filtre catégorie), sondages, contacts utiles.
 class AffichageScreen extends ConsumerStatefulWidget {
@@ -60,13 +58,16 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
     return SuPage(
       title: c.titre,
       subtitle: nonLues > 0 ? fill(c.nonLues, {'n': '$nonLues'}) : c.subtitle,
-      onRefresh: () async => _rafraichirAffichage(ref),
+      onRefresh: () => _rafraichirAffichage(ref),
       fab: gestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))), icon: const Icon(Icons.campaign_rounded), label: Text(c.nouvelle)) : null,
       children: [
-        FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? v), onChanged: (v) => setState(() => _categorie = v)),
+        FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? humanizeCode(v)), onChanged: (v) => setState(() => _categorie = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(value: _categorie, child: AsyncView(annonces, onRetry: () => ref.invalidate(annoncesProvider(_categorie)), data: (rows) {
-          if (rows.isEmpty) return EmptyState(title: _categorie == null ? c.aucune : c.aucuneFiltre, hint: gestion && _categorie == null ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: _categorie == null ? 'empty-annonces' : 'empty-search');
+          if (rows.isEmpty) {
+            if (_categorie != null) return EmptyState(title: c.aucuneFiltre, icon: Icons.filter_alt_off_rounded, illustration: 'empty-search', actionLabel: context.mdict.ux.clearFilter, onAction: () => setState(() => _categorie = null));
+            return EmptyState(title: c.aucune, hint: gestion ? c.aucuneAide : null, icon: Icons.campaign_outlined, illustration: 'empty-annonces', actionLabel: gestion ? c.nouvelle : null, onAction: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))));
+          }
           // Affiche « à la une » : l'annonce épinglée publiée la plus récente (elle reste aussi dans la liste).
           final epinglees = rows.where((a) => a.epingle && a.statut == 'PUBLIEE').toList()..sort((a, b) => (b.publieLe ?? b.creeLe).compareTo(a.publieLe ?? a.creeLe));
           final une = epinglees.firstOrNull;
@@ -77,7 +78,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
                 child: PosterCard(
                   color: SuColors.ink,
                   art: 'poster-annonce',
-                  kicker: '${e.categorieAnnonce[une.categorie] ?? une.categorie} · ${c.epinglee}',
+                  kicker: '${e.categorieAnnonce[une.categorie] ?? humanizeCode(une.categorie)} · ${c.epinglee}',
                   title: une.titre,
                   body: une.apercu.characters.length > 140 ? '${une.apercu.characters.take(140).toString().trimRight()}…' : une.apercu,
                   onTap: () => context.push('/affichage/${une.id}'),
@@ -94,7 +95,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
                 leading: IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral),
                 title: s.question,
                 subtitle: s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateCourte(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)}),
-                trailing: StatusBadge(s.maReponse != null ? c.dejaRepondu : (e.statutSondage[s.statut] ?? s.statut), variant: s.maReponse != null ? BadgeVariant.info : (sondageVariant[s.statut] ?? BadgeVariant.neutral), small: true),
+                trailing: StatusBadge(s.maReponse != null ? c.dejaRepondu : (e.statutSondage[s.statut] ?? humanizeCode(s.statut)), variant: s.maReponse != null ? BadgeVariant.info : (sondageVariant[s.statut] ?? BadgeVariant.neutral), small: true),
                 chevron: true,
                 onTap: () => context.push('/affichage/sondages/${s.id}'),
               ),
@@ -141,9 +142,9 @@ class AnnonceCard extends StatelessWidget {
         Expanded(
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Wrap(spacing: 6, runSpacing: 6, children: [
-              StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral, small: true),
+              StatusBadge(e.categorieAnnonce[a.categorie] ?? humanizeCode(a.categorie), variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral, small: true),
               if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink, small: true),
-              if (a.statut != 'PUBLIEE') StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral, small: true),
+              if (a.statut != 'PUBLIEE') StatusBadge(e.statutAnnonce[a.statut] ?? humanizeCode(a.statut), variant: annonceVariant[a.statut] ?? BadgeVariant.neutral, small: true),
               if (!a.lu && a.statut == 'PUBLIEE') StatusBadge(c.nonLue, variant: BadgeVariant.warn, small: true, pulse: true),
             ]),
             const SizedBox(height: 10),
@@ -205,12 +206,14 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
 
   /// [corps] non nul : action majeure (publication) → écran de succès plein écran.
   Future<void> _action(String path, {Map<String, Object?> body = const {}, bool idempotent = false, String? succes, String? corps}) async {
-    final r = await ref.read(apiClientProvider).post<dynamic>(path, body: body, idempotent: idempotent);
+    final r = await ref.read(apiClientProvider).post<dynamic>(path, body: body, idempotencyKey: idempotent ? IdemKeys.of('annonce:$path').forPayload(body) : null);
+    if (idempotent && r is ApiFail) IdemKeys.settle('annonce:$path', r);
     if (!mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
       return;
     }
+    if (idempotent) IdemKeys.settle('annonce:$path', r);
     if (succes != null) {
       if (corps != null) {
         showSuccess(context, title: succes, body: corps, illustration: 'ok-general', moment: SuMomentKind.sent);
@@ -234,7 +237,7 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: annonce.valueOrNull?.titre ?? c.titre,
-      onRefresh: () async => ref.invalidate(annonceProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [annonceProvider(widget.id)]),
       children: [
         AsyncView(
           annonce,
@@ -251,14 +254,14 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Wrap(spacing: 6, runSpacing: 6, children: [
-                      StatusBadge(e.categorieAnnonce[a.categorie] ?? a.categorie, variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral),
-                      StatusBadge(e.statutAnnonce[a.statut] ?? a.statut, variant: annonceVariant[a.statut] ?? BadgeVariant.neutral),
+                      StatusBadge(e.categorieAnnonce[a.categorie] ?? humanizeCode(a.categorie), variant: categorieAnnonceVariant[a.categorie] ?? BadgeVariant.neutral),
+                      StatusBadge(e.statutAnnonce[a.statut] ?? humanizeCode(a.statut), variant: annonceVariant[a.statut] ?? BadgeVariant.neutral),
                       if (a.epingle) StatusBadge(c.epinglee, variant: BadgeVariant.ink),
                     ]),
                   ),
                 ]),
                 const SizedBox(height: 14),
-                Text('${a.publieLe != null ? (a.statut == 'BROUILLON' ? fill(c.programmeeLe, {'date': formatDateHeure(a.publieLe, l)}) : fill(c.publieeLe, {'date': formatDateHeure(a.publieLe, l)})) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})} · ${e.audience[a.audience] ?? a.audience}${a.batiment != null ? ' ${a.batiment}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+                Text('${a.publieLe != null ? (a.statut == 'BROUILLON' ? fill(c.programmeeLe, {'date': formatDateHeure(a.publieLe, l)}) : fill(c.publieeLe, {'date': formatDateHeure(a.publieLe, l)})) : formatDateHeure(a.creeLe, l)} · ${fill(c.par, {'nom': a.auteur.affichage})} · ${e.audience[a.audience] ?? humanizeCode(a.audience)}${a.batiment != null ? ' ${a.batiment}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                 const SizedBox(height: 16),
                 SuCard(padding: const EdgeInsets.all(20), child: SelectableText(texteAnnonce(a.contenu), style: t.bodyLarge?.copyWith(color: SuColors.ink, height: 1.55))),
                 if (a.piecesJointes.isNotEmpty) ...[
@@ -366,7 +369,8 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
     if (r is ApiFail<Map<String, dynamic>>) { setState(() { _loading = false; _fail = r; }); return; }
     final id = (r as ApiOk<Map<String, dynamic>>).data['id'] as String;
     if (publier) {
-      final p = await api.post<dynamic>('/annonces/$id/publier', idempotent: true, body: {if (_programme != null) 'publie_le': _programme!.toUtc().toIso8601String()});
+      final p = await api.post<dynamic>('/annonces/$id/publier', idempotencyKey: IdemKeys.of('annonce-publier:$id').value, body: {if (_programme != null) 'publie_le': _programme!.toUtc().toIso8601String()});
+      IdemKeys.settle('annonce-publier:$id', p);
       if (!mounted) return;
       if (p is ApiFail) { setState(() { _loading = false; _fail = p; }); return; }
     }
@@ -400,9 +404,9 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
       const SizedBox(height: 16),
       SuField(label: c.titreChamp, controller: _titre, required: true, maxLength: 200, error: fieldError(_fail, 'titre')),
       const SizedBox(height: 12),
-      SuSelect<String>(label: c.categorie, value: _categorie, options: _categories.where((k) => ctx.isGestion || k != 'URGENCE').toList(), labelOf: (v) => e.categorieAnnonce[v] ?? v, onChanged: (v) => setState(() => _categorie = v)),
+      SuSelect<String>(label: c.categorie, value: _categorie, options: _categories.where((k) => ctx.isGestion || k != 'URGENCE').toList(), labelOf: (v) => e.categorieAnnonce[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _categorie = v)),
       const SizedBox(height: 12),
-      SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? v, onChanged: (v) => setState(() => _audience = v), help: c.audienceAide),
+      SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _audience = v), help: c.audienceAide),
       if (_audience == 'BATIMENT') ...[const SizedBox(height: 12), SuField(label: c.batiment, controller: _batiment, required: true, help: c.batimentAide, error: fieldError(_fail, 'batiment'))],
       const SizedBox(height: 12),
       SuField(label: c.contenu, controller: _contenu, required: true, maxLines: 6, maxLength: 20000, help: c.contenuAide, error: fieldError(_fail, 'contenu')),
@@ -452,9 +456,11 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
   bool _envoi = false;
 
   Future<void> _transition(String action, String succes) async {
-    final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${widget.id}/$action', body: const {}, idempotent: true);
+    final intent = 'sondage-$action:${widget.id}';
+    final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${widget.id}/$action', body: const {}, idempotencyKey: IdemKeys.of(intent).value);
     if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+    if (r is ApiFail) { showApiError(context, r); return; }
+    IdemKeys.done(intent);
     showToast(context, succes);
     ref.invalidate(sondageProvider(widget.id));
     _rafraichirAffichage(ref);
@@ -472,7 +478,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: c.sondage,
-      onRefresh: () async => ref.invalidate(sondageProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [sondageProvider(widget.id)]),
       children: [
         AsyncView(
           sondage,
@@ -484,12 +490,12 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
               Row(children: [
                 IconCircle(Icons.poll_rounded, tone: s.statut == 'OUVERT' ? Tone.action : Tone.neutral, size: 56),
                 const SizedBox(width: 14),
-                Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: [StatusBadge(e.statutSondage[s.statut] ?? s.statut, variant: sondageVariant[s.statut] ?? BadgeVariant.neutral), if (s.maReponse != null) StatusBadge(c.dejaRepondu, variant: BadgeVariant.info)])),
+                Expanded(child: Wrap(spacing: 6, runSpacing: 6, children: [StatusBadge(e.statutSondage[s.statut] ?? humanizeCode(s.statut), variant: sondageVariant[s.statut] ?? BadgeVariant.neutral), if (s.maReponse != null) StatusBadge(c.dejaRepondu, variant: BadgeVariant.info)])),
               ]),
               const SizedBox(height: 16),
               Text(s.question, style: t.headlineMedium),
               const SizedBox(height: 6),
-              Text('${s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateHeure(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)})} · ${e.audience[s.audience] ?? s.audience}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
+              Text('${s.statut == 'CLOS' ? fill(c.closLe, {'date': formatDateHeure(s.closLe ?? s.dateFin, l)}) : fill(c.finLe, {'date': formatDateHeure(s.dateFin, l)})} · ${e.audience[s.audience] ?? humanizeCode(s.audience)}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
               const SizedBox(height: 16),
               SuBanner(tone: BannerTone.info, body: c.mention),
               if (s.description != null && s.description!.isNotEmpty) Padding(padding: const EdgeInsets.only(top: 12), child: SuCard(child: Text(texteAnnonce(s.description!), style: t.bodyLarge?.copyWith(color: SuColors.ink)))),
@@ -524,10 +530,14 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                 const SizedBox(height: 8),
                 SubmitButton(label: c.repondre, loading: _envoi, onPressed: _choix.isEmpty ? null : () async {
                   setState(() => _envoi = true);
-                  final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${s.id}/repondre', body: {'choix': _choix.toList()}, idempotent: true);
+                  final body = {'choix': _choix.toList()..sort()};
+                  final intent = 'sondage-repondre:${s.id}';
+                  final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${s.id}/repondre', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body));
+                  IdemKeys.settle(intent, r);
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
-                  if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+                  if (r is ApiFail) { showApiError(context, r); return; }
+                  IdemKeys.done(intent);
                   ref.invalidate(sondageProvider(widget.id));
                   ref.invalidate(sondagesProvider);
                   // Réponse délibérée et unique : succès plein écran.
@@ -630,7 +640,8 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
     if (r is ApiFail<Map<String, dynamic>>) { setState(() { _loading = false; _fail = r; }); return; }
     final id = (r as ApiOk<Map<String, dynamic>>).data['id'] as String;
     if (ouvrir) {
-      final o = await api.post<dynamic>('/sondages/$id/ouvrir', idempotent: true, body: const {});
+      final o = await api.post<dynamic>('/sondages/$id/ouvrir', idempotencyKey: IdemKeys.of('sondage-ouvrir:$id').value, body: const {});
+      IdemKeys.settle('sondage-ouvrir:$id', o);
       if (!mounted) return;
       if (o is ApiFail) { setState(() { _loading = false; _fail = o; }); return; }
     }
@@ -668,7 +679,7 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
       for (var i = 0; i < _options.length; i++) Padding(padding: const EdgeInsets.only(top: 8), child: SuField(label: fill(c.option, {'n': '${i + 1}'}), controller: _options[i], required: i < 2, maxLength: 200)),
       if (_options.length < 10) Align(alignment: AlignmentDirectional.centerStart, child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => setState(() => _options.add(TextEditingController())), icon: Icons.add_rounded, label: fill(c.option, {'n': '${_options.length + 1}'}))),
       const SizedBox(height: 8),
-      SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? v, onChanged: (v) => setState(() => _audience = v)),
+      SuSelect<String>(label: c.audience, value: _audience, options: _audiences, labelOf: (v) => e.audience[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _audience = v)),
       if (_audience == 'BATIMENT') ...[const SizedBox(height: 12), SuField(label: c.batiment, controller: _batiment, required: true, error: fieldError(_fail, 'batiment'))],
       const SizedBox(height: 12),
       // Date de fin : tuile Wise (pastille, libellé + date, lien « Modifier »).
@@ -743,7 +754,7 @@ class _PreferencesNotificationSheetState extends ConsumerState<PreferencesNotifi
       const SizedBox(height: 8),
       SuCheckbox(value: _digest, onChanged: (v) => setState(() => _digest = v), label: c.digestHebdo, help: c.digestHebdoAide),
       const SizedBox(height: 8),
-      SuSelect<String>(label: c.canalDigest, value: _canal, options: const ['EMAIL', 'PUSH', 'SMS', 'AUCUN'], labelOf: (v) => e.canalPreference[v] ?? v, onChanged: (v) => setState(() => _canal = v)),
+      SuSelect<String>(label: c.canalDigest, value: _canal, options: const ['EMAIL', 'PUSH', 'SMS', 'AUCUN'], labelOf: (v) => e.canalPreference[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _canal = v)),
       const SizedBox(height: 8),
       SuCheckbox(value: _push, onChanged: (v) => setState(() => _push = v), label: c.annoncesPush, help: c.annoncesPushAide),
       const SizedBox(height: 14),

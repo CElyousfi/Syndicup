@@ -1,3 +1,5 @@
+// Les écrans traduisent les erreurs d'API via les extensions de error_text.dart (errorText, .text()).
+export '../api/error_text.dart';
 export 'badge.dart';
 export 'brand.dart';
 export 'cards.dart';
@@ -13,3 +15,5 @@ export 'success.dart';
 export 'alive.dart';
 export 'ambient.dart';
 export 'signature.dart';
+export 'run_action.dart';
+export 'date_field.dart';

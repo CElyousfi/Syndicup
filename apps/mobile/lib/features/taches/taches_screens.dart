@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -45,19 +47,18 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
       title: gardien ? t.mesTaches : t.titre,
       subtitle: gardien ? t.mesTachesSubtitle : t.subtitle,
       onRefresh: () async {
-        ref.invalidate(mesTachesProvider);
-        ref.invalidate(tachesProvider);
+        await refreshing(ref, [mesTachesProvider, tachesProvider]);
       },
       children: [
         SuQueueSyncFlash(pending: file.length),
         if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), label: d.common.retry))),
         if (!gardien) ...[
-          FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? v }, onChanged: (v) => setState(() => _filtre = v)),
+          FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? humanizeCode(v) }, onChanged: (v) => setState(() => _filtre = v)),
           const SizedBox(height: 16),
         ],
         SuFadeSwitch(value: _filtre, child: AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
           final visibles = gardien && _filtre == 'OUVERTES' ? rows.where((x) => x.ouverte).toList() : rows;
-          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search');
+          if (visibles.isEmpty) return EmptyState(title: gardien ? t.aucuneMienne : (_filtre == 'OUVERTES' ? t.aucune : t.aucuneFiltre), hint: ctx.isGestion && _filtre == 'OUVERTES' ? t.aucuneAide : null, icon: Icons.task_alt_rounded, illustration: gardien || _filtre == 'OUVERTES' ? 'empty-taches' : 'empty-search', actionLabel: !gardien && _filtre != 'OUVERTES' ? context.mdict.ux.clearFilter : null, onAction: () => setState(() => _filtre = 'OUVERTES'));
           return CardList([for (final x in visibles) TacheRow(x, key: ValueKey(x.id), file: file)]);
         })),
       ],
@@ -79,8 +80,8 @@ class TacheRow extends StatelessWidget {
     return ListRow(
       leading: IconCircle(tacheIcone(x), tone: tacheTone(x)),
       title: x.titre,
-      subtitle: '${x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance}${x.assignee != null ? ' · ${x.assignee!.affichage}' : ''}${x.checklist != null && x.checklist!.isNotEmpty ? ' · ${fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})}' : ''}${x.origine != 'MANUELLE' ? ' · ${e.origine[x.origine] ?? x.origine}' : ''}',
-      trailing: enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : StatusBadge(x.enRetard ? t.enRetard : (e.statut[x.statut] ?? x.statut), variant: x.enRetard ? BadgeVariant.danger : (tacheVariant[x.statut] ?? BadgeVariant.neutral), small: true),
+      subtitle: '${x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance}${x.assignee != null ? ' · ${x.assignee!.affichage}' : ''}${x.checklist != null && x.checklist!.isNotEmpty ? ' · ${fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})}' : ''}${x.origine != 'MANUELLE' ? ' · ${e.origine[x.origine] ?? humanizeCode(x.origine)}' : ''}',
+      trailing: enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : StatusBadge(x.enRetard ? t.enRetard : (e.statut[x.statut] ?? humanizeCode(x.statut)), variant: x.enRetard ? BadgeVariant.danger : (tacheVariant[x.statut] ?? BadgeVariant.neutral), small: true),
       chevron: true,
       onTap: () => context.push('/taches/${x.id}'),
     );
@@ -104,11 +105,15 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
   bool _envoi = false;
 
   Future<void> _cocher(Tache x, ChecklistItem it, bool fait) async {
-    final r = await ref.read(apiClientProvider).request<dynamic>('PATCH', '/taches/${x.id}/checklist', body: {'item_id': it.id, 'fait': fait});
-    if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
-    ref.invalidate(tacheProvider(widget.id));
-    ref.invalidate(mesTachesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).request<dynamic>('PATCH', '/taches/${x.id}/checklist', body: {'item_id': it.id, 'fait': fait}),
+      busyKey: 'tache-checklist:${x.id}:${it.id}',
+      onSuccess: (_) {
+        ref.invalidate(tacheProvider(widget.id));
+        ref.invalidate(mesTachesProvider);
+      },
+    );
   }
 
   Future<void> _changerStatut(Tache x, bool syndic) async {
@@ -119,17 +124,20 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
     if (res.piece != null) {
       // Une photo ne se met pas en file : envoi direct (réseau requis).
       final prep = await api.post<Map<String, dynamic>>('/taches/upload-url', body: {'nom_fichier': res.piece!.nom, 'content_type': res.piece!.contentType}, parse: asMap);
-      if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showToast(context, (prep as ApiFail).error.message, error: true); return; }
+      if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showApiError(context, (prep as ApiFail)); return; }
       final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(res.piece!.chemin).readAsBytes(), res.piece!.contentType);
       if (!ok) { if (mounted) showToast(context, d.common.errorTitle, error: true); return; }
-      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotent: true, parse: (j) => Tache.fromJson(asMap(j)));
+      // Clé propre à cette intention (cette pièce, ce statut) : chaque nouvelle tentative de
+      // l'utilisateur téléverse une nouvelle pièce, donc une nouvelle écriture.
+      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotencyKey: IdemKeys.of('tache-statut:${x.id}:${prep.data['storage_path']}').value, parse: (j) => Tache.fromJson(asMap(j)));
+      IdemKeys.settle('tache-statut:${x.id}:${prep.data['storage_path']}', r);
       if (!mounted) return;
-      if (r is ApiFail<Tache>) { showToast(context, r.error.message, error: true); return; }
+      if (r is ApiFail<Tache>) { showApiError(context, r); return; }
       showToast(context, d.taches.statutChange);
     } else {
       final r = await ref.read(tachesSyncProvider.notifier).changerStatut(tacheId: x.id, statut: res.statut, commentaire: res.commentaire, libelle: x.titre);
       if (!mounted) return;
-      if (r.refus != null) { showToast(context, r.refus!.error.message, error: true); return; }
+      if (r.refus != null) { showApiError(context, r.refus!); return; }
       showToast(context, r.enFile ? context.mdict.pendingSend : (r.tache?.suivanteId != null ? '${d.taches.statutChange} ${d.taches.suivanteCreee}' : d.taches.statutChange));
     }
     ref.invalidate(tacheProvider(widget.id));
@@ -148,7 +156,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
     final tache = ref.watch(tacheProvider(widget.id));
     return SuPage(
       title: tache.valueOrNull?.titre ?? t.titre,
-      onRefresh: () async => ref.invalidate(tacheProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [tacheProvider(widget.id)]),
       children: [
         AsyncView(
           tache,
@@ -175,12 +183,12 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                         if (x.enRetard) StatusBadge(t.enRetard, variant: BadgeVariant.danger, pulse: true),
                       ]),
                       const SizedBox(height: 18),
-                      Text(e.statut[x.statut] ?? x.statut, style: tt.displaySmall),
+                      Text(e.statut[x.statut] ?? humanizeCode(x.statut), style: tt.displaySmall),
                       const SizedBox(height: 4),
-                      Text('${e.origine[x.origine] ?? x.origine}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+                      Text('${e.origine[x.origine] ?? humanizeCode(x.origine)}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
                       const SizedBox(height: 14),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        StatusBadge(e.priorite[x.priorite] ?? x.priorite, variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
+                        StatusBadge(e.priorite[x.priorite] ?? humanizeCode(x.priorite), variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
                       ]),
                       if (nbEtapes > 0) ...[
                         const SizedBox(height: 16),
@@ -199,7 +207,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   KeyValueRow(t.assignee, x.assignee?.affichage ?? t.nonAssignee),
                   KeyValueRow(t.echeance, x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance),
                   if (x.termineeLe != null) KeyValueRow(e.statut['TERMINEE'] ?? 'TERMINEE', formatDateHeure(x.termineeLe, l)),
-                  KeyValueRow(t.recurrence, x.recurrenceFrequence != null ? (e.frequence[x.recurrenceFrequence!] ?? x.recurrenceFrequence!) : t.aucuneRecurrence),
+                  KeyValueRow(t.recurrence, x.recurrenceFrequence != null ? (e.frequence[x.recurrenceFrequence!] ?? humanizeCode(x.recurrenceFrequence!)) : t.aucuneRecurrence),
                 ])),
                 if (x.checklist != null && x.checklist!.isNotEmpty) ...[
                   SectionHeader(t.checklist, subtitle: fill(t.checklistProgres, {'n': '$nbFaits', 'total': '$nbEtapes'})),
@@ -234,7 +242,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   final r = await ref.read(apiClientProvider).post<dynamic>('/taches/${x.id}/commentaires', body: {'contenu': _commentaire.text.trim()});
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
-                  if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
+                  if (r is ApiFail) { showApiError(context, r); return; }
                   _commentaire.clear();
                   showToast(context, t.commentaireEnvoye);
                   ref.invalidate(tacheProvider(widget.id));
@@ -320,7 +328,7 @@ class _StatutSheetState extends State<_StatutSheet> {
     final t = d.taches;
     final e = d.enumsTaches;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SuSelect<String>(label: t.nouveauStatut, value: _statut, options: _cibles(), labelOf: (v) => e.statut[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+      SuSelect<String>(label: t.nouveauStatut, value: _statut, options: _cibles(), labelOf: (v) => e.statut[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 12),
       SuField(label: t.commentaireStatut, controller: _commentaire, maxLines: 3, maxLength: 4000, optionalLabel: d.common.optional),
       const SizedBox(height: 8),

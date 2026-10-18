@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -14,6 +15,7 @@ import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
+import '../../core/i18n/mobile_dict.dart';
 import '../../core/live/live_activities.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
@@ -53,16 +55,17 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final titre = ctx.isPrestataire ? d.incidents.mesTickets : ctx.isResident ? d.incidents.mesSignalements : d.incidents.titre;
     final racine = !context.canPop();
     final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
-    Future<void> refresh() async => ref.invalidate(incidentsProvider);
+    Future<void> refresh() => refreshing(ref, [incidentsProvider]);
     final contenu = <Widget>[
-      FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+      FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 16),
       AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
         final visible = list.where((i) => _statut == 'TOUS' || (_statut == 'OUVERTS' ? i.ouvert : i.statut == _statut)).toList()..sort((a, b) => b.creeLe.compareTo(a.creeLe));
         if (visible.isEmpty) {
           // Filtre précis sans résultat : illustration « recherche » ; sinon la boîte à outils.
           final filtre = _statut != 'OUVERTS' && _statut != 'TOUS';
-          return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: filtre ? 'empty-search' : 'empty-incidents', actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
+          if (filtre) return EmptyState(title: context.mdict.ux.filteredEmpty, icon: Icons.filter_alt_off_rounded, illustration: 'empty-search', actionLabel: context.mdict.ux.clearFilter, onAction: () => setState(() => _statut = 'OUVERTS'));
+          return EmptyState(title: d.incidents.aucunIncident, hint: d.incidents.aucunIncidentAide, icon: Icons.build_rounded, illustration: 'empty-incidents', actionLabel: ctx.isPrestataire ? null : d.incidents.signaler, onAction: () => context.push('/incidents/nouveau'));
         }
         return CardList([
           for (final i in visible)
@@ -70,13 +73,13 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
               key: ValueKey(i.id),
               leading: IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : incidentTone(i.statut)),
               title: i.sousCategorie,
-              subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie} · ${formatDateHeure(i.creeLe, context.locale)}',
+              subtitle: '${d.enums.categorieIncident[i.categorie] ?? humanizeCode(i.categorie)} · ${d.enums.partie[i.partie] ?? humanizeCode(i.partie)} · ${formatDateHeure(i.creeLe, context.locale)}',
               trailing: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
+                  i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? humanizeCode(i.statut), variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
                   const SizedBox(height: 4),
-                  StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
+                  StatusBadge(d.enums.urgence[i.urgence] ?? humanizeCode(i.urgence), variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
                 ],
               ),
               onTap: () => context.push('/incidents/${i.id}'),
@@ -177,7 +180,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         const SizedBox(height: 18),
         SuField(label: d.incidents.sousCategorie, controller: _sous, hint: d.incidents.sousCategorieHint, required: true, error: fieldError(_fail, 'sous_categorie')),
         SectionHeader('2 · ${d.incidents.partie}', subtitle: d.incidents.partieAide),
-        Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? v, onChanged: (v) => setState(() => _partie = v)),
+        Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _partie = v)),
         SectionHeader('3 · ${d.incidents.urgence}'),
         for (final u in const ['NORMALE', 'URGENTE', 'URGENCE_MAXIMALE'])
           _ChoixTile(
@@ -212,7 +215,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
           const SizedBox(height: 14),
         ],
         if (_categorie == 'PARKING') ...[
-          SuSelect<String?>(label: d.incidents.emplacementConcerne, value: _emplacement, options: [null, ...emplacements.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : emplacements.where((x) => x.id == v).map((x) => '${x.code} · ${d.enumsParkings.typeEmplacement[x.type] ?? x.type}').firstOrNull ?? v, onChanged: (v) => setState(() => _emplacement = v), help: d.incidents.emplacementConcerneAide, error: fieldError(_fail, 'emplacement_id')),
+          SuSelect<String?>(label: d.incidents.emplacementConcerne, value: _emplacement, options: [null, ...emplacements.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : emplacements.where((x) => x.id == v).map((x) => '${x.code} · ${d.enumsParkings.typeEmplacement[x.type] ?? humanizeCode(x.type)}').firstOrNull ?? v, onChanged: (v) => setState(() => _emplacement = v), help: d.incidents.emplacementConcerneAide, error: fieldError(_fail, 'emplacement_id')),
           const SizedBox(height: 14),
           SuField(label: d.incidents.immatriculationSignalee, controller: _plaque, hint: '12345-A-6', help: d.incidents.immatriculationSignaleeAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'immatriculation_signalee'), keyboardType: TextInputType.visiblePassword),
           const SizedBox(height: 14),
@@ -429,8 +432,7 @@ class IncidentDetailScreen extends ConsumerWidget {
       title: inc.valueOrNull?.sousCategorie ?? d.incidents.titre,
       subtitle: inc.valueOrNull == null ? null : d.enums.categorieIncident[inc.valueOrNull!.categorie],
       onRefresh: () async {
-        ref.invalidate(incidentProvider(id));
-        ref.invalidate(incidentPhotosProvider(id));
+        await refreshing(ref, [incidentProvider(id), incidentPhotosProvider(id)]);
       },
       children: [
         AsyncView(inc, onRetry: () => ref.invalidate(incidentProvider(id)), data: (i) {
@@ -456,13 +458,13 @@ class IncidentDetailScreen extends ConsumerWidget {
                         if (i.slaDepasse) StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, pulse: true),
                       ]),
                       const SizedBox(height: 18),
-                      Text(d.enums.statutIncident[i.statut] ?? i.statut, style: t.displaySmall),
+                      Text(d.enums.statutIncident[i.statut] ?? humanizeCode(i.statut), style: t.displaySmall),
                       const SizedBox(height: 4),
                       Text(fill(d.incidents.creeLe, {'date': formatDateHeure(i.creeLe, l)}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                       const SizedBox(height: 14),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
-                        StatusBadge(d.enums.partie[i.partie] ?? i.partie, variant: BadgeVariant.outline),
+                        StatusBadge(d.enums.urgence[i.urgence] ?? humanizeCode(i.urgence), variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
+                        StatusBadge(d.enums.partie[i.partie] ?? humanizeCode(i.partie), variant: BadgeVariant.outline),
                         if (i.lotId != null) StatusBadge('${d.invitations.lot} ${lotNumero ?? ''}', variant: BadgeVariant.outline),
                       ]),
                       if (i.description != null) ...[
@@ -557,7 +559,7 @@ class IncidentDetailScreen extends ConsumerWidget {
                         d.parkings.titre,
                         valueWidget: (ctx.isGestion || ctx.isGardien || ctx.isConseil) ? Align(alignment: AlignmentDirectional.centerEnd, child: LinkButton(d.parkings.titre, onTap: () => context.push('/parkings/${i.emplacementId}'))) : null,
                       ),
-                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: SuButton(label: d.incidents.notifierVehicule, icon: Icons.campaign_rounded, variant: SuButtonVariant.secondary, onPressed: () => notifierVehiculeGenant(context, ref, i))),
+                    if ((ctx.isGestion || ctx.isGardien) && i.immatriculationSignalee != null) Padding(padding: const EdgeInsets.only(top: 8), child: BusyBuilder('incident-notifier-vehicule:${i.id}', builder: (_, busy) => SuButton(label: d.incidents.notifierVehicule, icon: Icons.campaign_rounded, variant: SuButtonVariant.secondary, loading: busy, onPressed: () => notifierVehiculeGenant(context, ref, i)))),
                   ]),
                 ),
               ],
@@ -634,7 +636,7 @@ class IncidentDetailScreen extends ConsumerWidget {
     final r = await ref.read(apiClientProvider).post<dynamic>('/incidents/${i.id}/assign', body: {'prestataire_id': picked.id});
     if (!context.mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
     } else {
       ref.invalidate(incidentProvider(i.id));
       ref.invalidate(incidentsProvider);
@@ -719,7 +721,7 @@ class _StatutFormState extends ConsumerState<_StatutForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuSelect<String>(label: d.incidents.statut, value: _statut, options: const ['OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+        SuSelect<String>(label: d.incidents.statut, value: _statut, options: const ['OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
         const SizedBox(height: 12),
         SuField(label: d.incidents.commentaire, controller: _commentaire, hint: d.incidents.commentaireHint, maxLines: 3, error: fieldError(_fail, 'commentaire')),
         const SizedBox(height: 16),
@@ -765,11 +767,11 @@ class PrestatairesScreen extends ConsumerWidget {
     return SuPage(
       title: d.incidents.prestataires,
       subtitle: d.incidents.prestatairesSubtitle,
-      onRefresh: () async => ref.invalidate(prestatairesProvider),
+      onRefresh: () => refreshing(ref, [prestatairesProvider]),
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.nouveauPrestataire)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(prestatairesProvider), data: (ps) {
-          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded, illustration: 'empty-personnel');
+          if (ps.isEmpty) return EmptyState(title: d.incidents.aucunPrestataire, hint: ctx.isGestion ? d.incidents.aucunPrestataireAide : null, icon: Icons.engineering_rounded, illustration: 'empty-personnel', actionLabel: ctx.isGestion ? d.incidents.nouveauPrestataire : null, onAction: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()));
           return CardList([
             for (final p in ps)
               ListRow(
@@ -779,11 +781,15 @@ class PrestatairesScreen extends ConsumerWidget {
                 subtitle: '${p.specialite} · ${p.contact}',
                 trailing: Row(mainAxisSize: MainAxisSize.min, children: [
                   StatusBadge(p.actif ? d.incidents.actif : d.incidents.inactif, variant: p.actif ? BadgeVariant.ok : BadgeVariant.outline, small: true),
-                  if (ctx.isGestion) SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () async {
-                    final r = await ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif});
-                    if (!context.mounted) return;
-                    if (r is ApiFail) showToast(context, r.error.message, error: true); else ref.invalidate(prestatairesProvider);
-                  }),
+                  if (ctx.isGestion)
+                    BusyBuilder('prestataire-actif:${p.id}', builder: (_, busy) => busy
+                        ? const Padding(padding: EdgeInsets.all(12), child: LoadingOrb(size: 9))
+                        : SuIconButton(tooltip: p.actif ? d.incidents.inactif : d.incidents.actif, icon: Icons.power_settings_new_rounded, color: p.actif ? SuColors.link : SuColors.faint, onPressed: () => runAction<dynamic>(
+                              context,
+                              () => ref.read(apiClientProvider).patch<dynamic>('/prestataires/${p.id}', body: {'actif': !p.actif}),
+                              busyKey: 'prestataire-actif:${p.id}',
+                              onSuccess: (_) => ref.invalidate(prestatairesProvider),
+                            ))),
                 ]),
               ),
           ]);

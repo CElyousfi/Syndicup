@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/feel/feel.dart';
@@ -251,8 +252,7 @@ class RapportsScreen extends ConsumerWidget {
       title: d.rapports.titre,
       subtitle: d.rapports.subtitle,
       onRefresh: () async {
-        ref.invalidate(tableauDeBordProvider);
-        ref.invalidate(rapportsGestionProvider);
+        await refreshing(ref, [tableauDeBordProvider, rapportsGestionProvider]);
       },
       children: [
         SuBanner(tone: BannerTone.info, body: d.rapports.compteCourantAide),
@@ -283,7 +283,7 @@ class RapportsScreen extends ConsumerWidget {
             SuCard(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 for (final tr in x.tranches)
-                  _Ligne(label: d.enumsRapports.tranche[tr.tranche] ?? tr.tranche, montant: tr.montant, upIsGood: false, ratio: _ratio(tr.montant, x.impayesTotal), color: tr.tranche == '0_30' ? SuColors.toscaDeep : tr.tranche == '31_90' ? SuColors.warn : SuColors.danger, hint: '${tr.nbLots} ${d.rapports.lots.toLowerCase()} · ${tr.nbLignes} ${d.rapports.lignes.toLowerCase()}'),
+                  _Ligne(label: d.enumsRapports.tranche[tr.tranche] ?? humanizeCode(tr.tranche), montant: tr.montant, upIsGood: false, ratio: _ratio(tr.montant, x.impayesTotal), color: tr.tranche == '0_30' ? SuColors.toscaDeep : tr.tranche == '31_90' ? SuColors.warn : SuColors.danger, hint: '${tr.nbLots} ${d.rapports.lots.toLowerCase()} · ${tr.nbLignes} ${d.rapports.lignes.toLowerCase()}'),
                 if (x.topLots.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(d.rapports.topLots, style: t.titleSmall),
@@ -294,15 +294,15 @@ class RapportsScreen extends ConsumerWidget {
             ),
             SectionHeader(d.rapports.budget, subtitle: x.budget.budgetId != null ? '${d.rapports.prevu} ${formatMAD(x.budget.budgetMontantTotal, l)} · ${d.rapports.realise} ${formatMAD(x.budget.totaux.realise, l)}' : d.rapports.aucunBudget),
             if (x.budget.postes.isNotEmpty)
-              SuCard(child: Column(children: [for (final p in x.budget.postes) _Ligne(label: p.libelle ?? (d.enumsDepenses.categorieDepense[p.categorie] ?? p.categorie), valeur: '${formatMontant(p.realise)} / ${formatMontant(p.montantPrevu)}', ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null)])),
+              SuCard(child: Column(children: [for (final p in x.budget.postes) _Ligne(label: p.libelle ?? (d.enumsDepenses.categorieDepense[p.categorie] ?? humanizeCode(p.categorie)), valeur: '${formatMontant(p.realise)} / ${formatMontant(p.montantPrevu)}', ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null)])),
             SectionHeader(d.rapports.depenses, subtitle: '${d.rapports.parCategorie} · ${x.exercice}', actionLabel: d.rapports.voirTout, onAction: () => context.push('/depenses')),
             SuCard(child: Column(children: [
-              for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? c.categorie, montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} % · ${c.nb}' : null),
+              for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? humanizeCode(c.categorie), montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} % · ${c.nb}' : null),
               if (x.parCategorie.isEmpty) _vide(context, d.rapports.aucuneDepense),
             ])),
             SectionHeader(d.rapports.incidentsOuverts),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Wrap(spacing: 8, runSpacing: 8, children: [for (final e in x.incidentsParUrgence.entries) StatusBadge('${d.enums.urgence[e.key] ?? e.key} · ${e.value}', variant: urgenceVariant[e.key] ?? BadgeVariant.neutral)]),
+              Wrap(spacing: 8, runSpacing: 8, children: [for (final e in x.incidentsParUrgence.entries) StatusBadge('${d.enums.urgence[e.key] ?? humanizeCode(e.key)} · ${e.value}', variant: urgenceVariant[e.key] ?? BadgeVariant.neutral)]),
               const SizedBox(height: 10),
               ListRow(padding: EdgeInsets.zero, title: d.rapports.justificatifsAttente, trailing: MoneyText('${x.justificatifsNb} · ${formatMAD(x.justificatifsMontant, l)}'), onTap: () => context.push('/justificatifs')),
             ])),
@@ -331,7 +331,7 @@ class _RapportRow extends ConsumerWidget {
       title: '${d.rapports.exercice} ${r.exercice}',
       subtitle: '${d.rapports.compteCourant} ${formatMAD(r.compteCourantCloture, l)}${r.tauxRecouvrement != null ? ' · ${r.tauxRecouvrement} %' : ''}',
       trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
-        StatusBadge(d.enumsRapports.statutRapport[r.statut] ?? r.statut, variant: rapportVariant[r.statut] ?? BadgeVariant.neutral, small: true),
+        StatusBadge(d.enumsRapports.statutRapport[r.statut] ?? humanizeCode(r.statut), variant: rapportVariant[r.statut] ?? BadgeVariant.neutral, small: true),
         const SizedBox(height: 4),
         Text(formatDateCourte(r.genereLe, l), style: Theme.of(context).textTheme.bodySmall),
       ]),
@@ -361,7 +361,7 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
     return SuPage(
       title: d.rapports.transparenceTitre,
       subtitle: d.rapports.transparenceSubtitle,
-      onRefresh: () async => ref.invalidate(transparenceProvider),
+      onRefresh: () => refreshing(ref, [transparenceProvider]),
       children: [
         Segmented<String>(value: _exercice, options: exercices, labelOf: (x) => x, onChanged: (v) => setState(() => _exercice = v)),
         const SizedBox(height: 12),
@@ -380,7 +380,7 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
               SuCard(child: Column(children: [for (final p in x.postes) _Ligne(label: p.libelle, valeur: '${formatMontant(p.realise)} / ${formatMontant(p.montantPrevu)}', ratio: _ratio(p.realise, p.montantPrevu), color: p.depassement ? SuColors.danger : null, hint: d.enumsDepenses.categorieDepense[p.categorie])])),
             SectionHeader(d.rapports.parCategorie, subtitle: '${d.rapports.depenses} · ${formatMAD(x.depensesTotal, l)}'),
             SuCard(child: Column(children: [
-              for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? c.categorie, montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} %' : null),
+              for (final c in x.parCategorie) _Ligne(label: d.enumsDepenses.categorieDepense[c.categorie] ?? humanizeCode(c.categorie), montant: c.montant, ratio: _ratio(c.montant, x.depensesTotal), color: SuColors.moss, hint: c.part != null ? '${c.part} %' : null),
               if (x.parCategorie.isEmpty) _vide(context, d.rapports.aucuneDepense),
             ])),
             SectionHeader(d.rapports.depenses, subtitle: x.facturesVisibles ? d.rapports.facturesVisibles : null),
@@ -393,7 +393,7 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
                     key: ValueKey(dep.id),
                     leading: IconCircle(dep.source == 'FONDS_RESERVE' ? Icons.savings_rounded : Icons.receipt_long_rounded, tone: dep.source == 'FONDS_RESERVE' ? Tone.lilac : Tone.sand),
                     title: dep.libelle,
-                    subtitle: '${formatDateCourte(dep.date, l)} · ${d.enumsDepenses.categorieDepense[dep.categorie] ?? dep.categorie}${dep.prestataire != null ? ' · ${dep.prestataire}' : ''}',
+                    subtitle: '${formatDateCourte(dep.date, l)} · ${d.enumsDepenses.categorieDepense[dep.categorie] ?? humanizeCode(dep.categorie)}${dep.prestataire != null ? ' · ${dep.prestataire}' : ''}',
                     trailing: _MontantFin(
                       dep.montantTtc,
                       secondaire: dep.factures.isEmpty

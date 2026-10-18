@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_client.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
@@ -172,7 +173,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 30),
-                      child: CircleIconButton(icon: Icons.arrow_back_rounded, mirror: true, tooltip: dd.retour, color: const Color(0x26FFFFFF), iconColor: Colors.white, onTap: () => context.pop()),
+                      child: CircleIconButton(icon: Icons.arrow_back_rounded, tooltip: dd.retour, color: const Color(0x26FFFFFF), iconColor: Colors.white, onTap: () => context.pop()),
                     ),
                     const SizedBox(width: 4),
                     DariMotion(_enCours ? DariClip.think : _hero, size: 98, semanticLabel: dd.nom),
@@ -223,7 +224,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
           Expanded(
             child: SuRefresh(
-              onRefresh: () async => ref.invalidate(assistantEtatProvider),
+              onRefresh: () => refreshing(ref, [assistantEtatProvider]),
               child: ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),
@@ -318,7 +319,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
             child: SafeArea(
               top: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 8, 6),
+                padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 6),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -442,7 +443,7 @@ class _InsightTile extends StatelessWidget {
             Expanded(child: Text(insight.texte, style: t.bodyMedium?.copyWith(color: SuColors.inkStrong, height: 1.4))),
             if (onTap != null) ...[
               const SizedBox(width: 8),
-              Padding(padding: const EdgeInsets.only(top: 1), child: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, color: SuColors.link, size: 22)),
+              const Padding(padding: EdgeInsets.only(top: 1), child: Icon(Icons.chevron_right_rounded, color: SuColors.link, size: 22)),
             ],
           ],
         ),
@@ -577,7 +578,7 @@ class DariDashboardCard extends ConsumerWidget {
                     const SizedBox(height: 8),
                     Row(children: [
                       Text(dd.carteQuestion, style: t.labelLarge?.copyWith(color: SuColors.link, fontWeight: FontWeight.w700)),
-                      Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left_rounded : Icons.chevron_right_rounded, size: 18, color: SuColors.link),
+                      const Icon(Icons.chevron_right_rounded, size: 18, color: SuColors.link),
                       const Spacer(),
                       if (autres > 0)
                         Container(

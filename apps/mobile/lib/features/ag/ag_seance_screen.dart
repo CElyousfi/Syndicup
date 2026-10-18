@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -19,6 +20,7 @@ import '../../core/live/live_activities.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
+import '../../core/api/refresh.dart';
 import '../../core/widgets/widgets.dart';
 import 'ag_screens.dart';
 
@@ -70,7 +72,7 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
     });
     return ag.when(
       loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: const [LoadingList(count: 3, height: 150)]),
-      error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
+      error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, onRefresh: () => refreshing(ref, [agProvider(widget.id)]), children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
       data: (a) => ctx.isGestion ? _Pupitre(ag: a) : _VueVotant(ag: a),
     );
   }
@@ -91,9 +93,9 @@ class _Salle extends StatelessWidget {
     final t = Theme.of(context).textTheme;
     final i = index.clamp(0, resolutions.length - 1);
     final r = resolutions[i];
+    // chevron_left/right se retournent seuls en RTL (matchTextDirection) : pas de `mirror`.
     Widget nav(IconData icon, String tip, VoidCallback? onTap) => CircleIconButton(
           icon: icon,
-          mirror: true,
           tooltip: tip,
           onTap: onTap,
           color: Colors.white.withValues(alpha: onTap == null ? 0.05 : 0.14),
@@ -212,6 +214,8 @@ class _VueVotant extends ConsumerStatefulWidget {
 }
 
 class _VueVotantState extends ConsumerState<_VueVotant> {
+  /// Clé stable par bulletin (même résolution, même choix) : un vote rejoué n'est jamais compté deux fois.
+  final _idem = IdemKey();
   int _index = -1;
   String? _identite; // lot:<id> | proc:<id>
   String? _choix;
@@ -247,7 +251,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
 
     return SuPage(
       title: d.ag.seance,
-      subtitle: d.enums.typeAg[ag.type] ?? ag.type,
+      subtitle: d.enums.typeAg[ag.type] ?? humanizeCode(ag.type),
       children: [
         _Salle(
           resolutions: resolutions,
@@ -265,8 +269,8 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, style: t.labelMedium?.copyWith(color: SuColors.soft))),
-                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral),
+                  Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite), style: t.labelMedium?.copyWith(color: SuColors.soft))),
+                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral),
                 ],
               ),
               const SizedBox(height: 14),
@@ -336,7 +340,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
   Future<void> _confirmer(AgResolution r) async {
     final d = context.dict;
     final choix = _choix!;
-    final ok = await confirmDialog(context, title: d.ag.voteConfirmTitre, body: fill(d.ag.voteConfirmCorps, {'valeur': d.enums.valeurVote[choix] ?? choix, 'ordre': r.ordre}), confirmLabel: d.ag.voter, irreversible: true);
+    final ok = await confirmDialog(context, title: d.ag.voteConfirmTitre, body: fill(d.ag.voteConfirmCorps, {'valeur': d.enums.valeurVote[choix] ?? humanizeCode(choix), 'ordre': r.ordre}), confirmLabel: d.ag.voter, irreversible: true);
     if (!ok) return;
     setState(() {
       _loading = true;
@@ -348,7 +352,8 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
       'valeur': choix,
       if (identite.startsWith('proc:')) ...{'procuration_id': identite.substring(5), 'lot_id': null} else 'lot_id': identite.substring(4),
     };
-    final res = await ref.read(apiClientProvider).post<AgVote>('/ag/${widget.ag.id}/votes', idempotent: true, body: body, parse: (j) => AgVote.fromJson(asMap(j)));
+    final res = await ref.read(apiClientProvider).post<AgVote>('/ag/${widget.ag.id}/votes', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AgVote.fromJson(asMap(j)));
+    _idem.settle(res);
     if (!mounted) return;
     switch (res) {
       case ApiOk<AgVote>(:final data):
@@ -424,6 +429,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
     return SuPage(
       title: d.ag.pupitre,
       subtitle: '${md.seanceEnCours} · ${d.enums.typeAg[ag.type] ?? ''}',
+      onRefresh: () => refreshing(ref, [agProvider(ag.id)]),
       children: [
         if (ag.statut == 'CLOTUREE') ...[
           SuBanner(tone: BannerTone.ok, title: d.ag.cloturee, body: d.ag.toutesFinalisees),
@@ -446,8 +452,8 @@ class _PupitreState extends ConsumerState<_Pupitre> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, variant: BadgeVariant.info, small: true))),
-                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                  Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite), variant: BadgeVariant.info, small: true))),
+                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
                 ]),
                 const SizedBox(height: 14),
                 Text(r.texte, style: t.headlineSmall?.copyWith(height: 1.4)),

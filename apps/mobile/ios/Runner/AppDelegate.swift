@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import flutter_local_notifications
 import UserNotifications
 
 @main
@@ -11,6 +12,12 @@ import UserNotifications
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Actions de notification « sans interface » (porte, marquer lu) : exécutées dans un isolate
+    // d'arrière-plan qui doit enregistrer ses propres plugins (trousseau, préférences, notifications
+    // locales) — sinon MissingPluginException (documentation flutter_local_notifications, iOS).
+    FlutterLocalNotificationsPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
     GeneratedPluginRegistrant.register(with: self)
     // Notifications locales / FCM : bannières au premier plan, actions, écran verrouillé.
     if #available(iOS 10.0, *) {

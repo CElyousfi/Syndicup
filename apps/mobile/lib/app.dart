@@ -28,6 +28,8 @@ class _SyndicUpAppState extends ConsumerState<SyndicUpApp> {
   // biométrique réarmé après 2 min en arrière-plan ; verdict de mise à jour rafraîchi.
   late final AppLifecycleListener _lifecycle = AppLifecycleListener(
     onResume: () {
+      // Jetons renouvelés pendant l'arrière-plan (réponse à la porte depuis une notification).
+      ref.read(sessionProvider.notifier).reloadFromStorage().catchError((Object e) => debugPrint('Relecture de la session : $e'));
       Feel.onResume();
       ref.read(lockedProvider.notifier).onResumed();
       ref.invalidate(updateVerdictProvider);

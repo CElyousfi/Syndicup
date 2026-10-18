@@ -8,9 +8,12 @@ import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:uuid/uuid.dart';
 
 import '../api/api_client.dart';
+import '../api/models.dart';
 import '../auth/session.dart';
 import '../config/app_config.dart';
 import '../i18n/i18n.dart';
@@ -557,31 +560,146 @@ class PushService {
 
   // ── Actions exécutées sans ouvrir l'app ────────────────────────────────────
   /// Porte (AUTORISER / REFUSER) et MARQUER_LU : un appel API direct avec la session stockée.
-  /// Aucune interface : si la session manque ou l'appel échoue, l'app s'ouvre au prochain lancement
-  /// sur l'objet concerné (le chemin reste dans la notification).
+  /// Le statut HTTP est vérifié : jeton expiré → un rafraîchissement (rotation enregistrée dans le
+  /// trousseau) puis un nouvel essai ; échec de la réponse à la porte → notification locale
+  /// « Réponse non envoyée — touchez pour ouvrir » qui ouvre la visite (X-Request-Id journalisé).
   static Future<void> executerActionFond(String? action, Map<String, String?> p) async {
     if (action == null || !actionsFond.contains(action)) return;
-    final session = await SessionStorage().read();
-    if (session == null) return;
-    final headers = {
-      'Authorization': 'Bearer ${session.accessToken}',
-      'Content-Type': 'application/json',
-      if ((p['copro'] ?? session.coproprieteId) != null) 'X-Copropriete-Id': (p['copro'] ?? session.coproprieteId)!,
-    };
-    final base = AppConfig.apiBaseUrl;
+    final porte = action == 'AUTORISER' || action == 'REFUSER';
     try {
-      if (action == 'MARQUER_LU' && p['notification_id'] != null) {
-        await http.patch(Uri.parse('$base/notifications/${p['notification_id']}/read'), headers: headers).timeout(const Duration(seconds: 10));
-      } else if ((action == 'AUTORISER' || action == 'REFUSER') && p['visite_id'] != null) {
-        await http
-            .patch(Uri.parse('$base/visites/${p['visite_id']}/statut'), headers: headers, body: jsonEncode({'statut': action == 'AUTORISER' ? 'AUTORISE' : 'REFUSE'}))
+      await _executerActionFond(action, p);
+    } catch (e, st) {
+      // Plugin absent dans l'isolate, trousseau illisible, JSON inattendu… : jamais silencieux —
+      // pour la porte, le résident est prévenu que sa réponse n'est pas partie.
+      debugPrint('Action de notification en arrière-plan : exception $e\n$st');
+      if (porte && p['visite_id'] != null) await _signalerEchecPorte(p, null);
+    }
+  }
+
+  static Future<void> _executerActionFond(String action, Map<String, String?> p) async {
+    final storage = SessionStorage();
+    final lue = await storage.read();
+    final porte = action == 'AUTORISER' || action == 'REFUSER';
+    if (lue == null) {
+      if (porte && p['visite_id'] != null) await _signalerEchecPorte(p, null);
+      return;
+    }
+    var session = lue;
+    final base = AppConfig.apiBaseUrl;
+    const uuid = Uuid();
+    Map<String, String> entetes(Session s, String requestId, String? idempotencyKey) => {
+          'Authorization': 'Bearer ${s.accessToken}',
+          'Content-Type': 'application/json',
+          'X-Request-Id': requestId,
+          if (idempotencyKey != null) 'Idempotency-Key': idempotencyKey,
+          if ((p['copro'] ?? s.coproprieteId) != null) 'X-Copropriete-Id': (p['copro'] ?? s.coproprieteId)!,
+        };
+
+    // Rotation des jetons dans l'isolate (pas d'ApiClient ici) ; null si le refresh est refusé.
+    Future<Session?> rafraichir(Session s) async {
+      try {
+        final r = await http
+            .post(Uri.parse('$base/auth/refresh'), headers: {'Content-Type': 'application/json', 'X-Request-Id': uuid.v4()}, body: jsonEncode({'refresh_token': s.refreshToken}))
             .timeout(const Duration(seconds: 10));
-        if (p['notification_id'] != null) {
-          await http.patch(Uri.parse('$base/notifications/${p['notification_id']}/read'), headers: headers).timeout(const Duration(seconds: 10)).catchError((_) => http.Response('', 0));
-        }
+        if (r.statusCode >= 300) return null;
+        final data = (jsonDecode(r.body) as Map)['data'] as Map;
+        final t = SessionTokens.fromJson(data.cast<String, dynamic>());
+        final ns = s.copyWith(accessToken: t.accessToken, refreshToken: t.refreshToken);
+        await storage.write(ns);
+        return ns;
+      } catch (e) {
+        debugPrint('Action de notification : rafraîchissement impossible ($e)');
+        return null;
       }
+    }
+
+    // Un appel avec un rafraîchissement au plus ; renvoie le dernier statut (0 = réseau).
+    Future<(int, String)> appel(Uri uri, {Object? body, String? idempotencyKey}) async {
+      var requestId = uuid.v4();
+      try {
+        var r = await http.patch(uri, headers: entetes(session, requestId, idempotencyKey), body: body == null ? null : jsonEncode(body)).timeout(const Duration(seconds: 10));
+        if (r.statusCode == 401) {
+          final ns = await rafraichir(session);
+          if (ns == null) return (401, requestId);
+          session = ns;
+          requestId = uuid.v4();
+          r = await http.patch(uri, headers: entetes(ns, requestId, idempotencyKey), body: body == null ? null : jsonEncode(body)).timeout(const Duration(seconds: 10));
+        }
+        return (r.statusCode, requestId);
+      } catch (e) {
+        debugPrint('Action de notification en arrière-plan impossible ($requestId) : $e');
+        return (0, requestId);
+      }
+    }
+
+    // Délai dépassé / réseau coupé / 422 « plus en attente » : la décision a peut-être été
+    // enregistrée quand même. On relit l'état de la visite avant d'annoncer un échec.
+    Future<bool> dejaDecidee(String visiteId, String statutVoulu) async {
+      try {
+        final r = await http.get(Uri.parse('$base/visites'), headers: entetes(session, uuid.v4(), null)).timeout(const Duration(seconds: 10));
+        if (r.statusCode >= 300) return false;
+        final data = (jsonDecode(r.body) as Map)['data'];
+        if (data is! List) return false;
+        final v = data.whereType<Map>().where((x) => x['id']?.toString() == visiteId).firstOrNull;
+        return v != null && v['statut']?.toString() == statutVoulu;
+      } catch (e) {
+        debugPrint('Relecture de la visite impossible : $e');
+        return false;
+      }
+    }
+
+    if (action == 'MARQUER_LU' && p['notification_id'] != null) {
+      final (st, rid) = await appel(Uri.parse('$base/notifications/${p['notification_id']}/read'));
+      if (st >= 300 || st == 0) debugPrint('Marquer lu depuis la notification : échec $st ($rid)');
+    } else if (porte && p['visite_id'] != null) {
+      final visiteId = p['visite_id']!;
+      final statutVoulu = action == 'AUTORISER' ? 'AUTORISE' : 'REFUSE';
+      var (st, rid) = await appel(
+        Uri.parse('$base/visites/$visiteId/statut'),
+        body: {'statut': statutVoulu},
+        // Clé envoyée pour la corrélation des journaux ; cet endpoint ne la rejoue pas — la
+        // transition unique EN_ATTENTE → décision (422 ensuite) protège seule du doublon.
+        idempotencyKey: uuid.v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8', 'syndicup:porte:$visiteId:$action'),
+      );
+      if ((st == 0 || st >= 500 || st == 422) && await dejaDecidee(visiteId, statutVoulu)) st = 200;
+      if (st >= 300 || st == 0) {
+        debugPrint('Réponse à la porte non envoyée : statut $st, X-Request-Id $rid');
+        await _signalerEchecPorte(p, rid);
+        return;
+      }
+      if (p['notification_id'] != null) {
+        final (lu, ridLu) = await appel(Uri.parse('$base/notifications/${p['notification_id']}/read'));
+        if (lu >= 300 || lu == 0) debugPrint('Marquer lu après réponse à la porte : échec $lu ($ridLu)');
+      }
+    }
+  }
+
+  /// Notification locale d'échec : la réponse au visiteur n'est pas partie — toucher ouvre la visite.
+  static Future<void> _signalerEchecPorte(Map<String, String?> p, String? requestId) async {
+    final svc = PushService.instance;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      svc._d = MobileDict.of(Locale(prefs.getString('locale') == 'ar' ? 'ar' : 'fr'));
     } catch (e) {
-      debugPrint('Action de notification en arrière-plan impossible : $e');
+      debugPrint('Langue indisponible dans l\'isolate de notification : $e');
+    }
+    try {
+      await svc._initLocal();
+      final visite = p['visite_id'];
+      final ux = svc._d.ux;
+      await svc.afficher(
+        cle: 'porte-echec:$visite:${requestId ?? DateTime.now().millisecondsSinceEpoch}',
+        titre: ux.doorFailTitle,
+        corps: requestId == null ? ux.doorFailBody : '${ux.doorFailBody} (${requestId.substring(0, 8)})',
+        niveau: niveauUrgent,
+        fil: 'visites',
+        path: visite != null ? '/visites/$visite' : '/visites',
+        actions: const ['VOIR'],
+        groupeId: p['copro'],
+      );
+    } catch (e) {
+      // Dernier recours : même la notification d'échec n'a pas pu s'afficher.
+      debugPrint('Notification « réponse non envoyée » impossible : $e');
     }
   }
 }
@@ -601,7 +719,8 @@ Future<void> pushBackgroundHandler(RemoteMessage m) async {
 @pragma('vm:entry-point')
 void pushBackgroundResponse(NotificationResponse r) {
   final p = PushService._payload(r.payload);
-  PushService.executerActionFond(r.actionId, p);
+  // executerActionFond rattrape lui-même toute exception (jamais d'erreur non gérée dans l'isolate).
+  PushService.executerActionFond(r.actionId, p).ignore();
 }
 
 class _Canal {

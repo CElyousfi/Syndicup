@@ -68,7 +68,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           children: [
             // Barre de progression Wise + langue + « Passer ».
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 14, 12, 0),
+              padding: const EdgeInsetsDirectional.fromSTEB(24, 14, 12, 0),
               child: Row(
                 children: [
                   Expanded(

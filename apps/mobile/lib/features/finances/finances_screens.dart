@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -97,13 +99,13 @@ class BudgetsScreen extends ConsumerWidget {
     return SuPage(
       title: d.finances.budgets,
       subtitle: d.finances.budgetsSubtitle,
-      onRefresh: () async => ref.invalidate(budgetsProvider),
+      onRefresh: () => refreshing(ref, [budgetsProvider]),
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => _form(context, ref, null), icon: const Icon(Icons.add_rounded), label: Text(d.finances.creerBudget)) : null,
       children: [
         SuBanner(tone: BannerTone.info, body: d.finances.budgetActifRequis),
         const SizedBox(height: 12),
         AsyncView(budgets, onRetry: () => ref.invalidate(budgetsProvider), data: (list) {
-          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded, illustration: 'empty-appels');
+          if (list.isEmpty) return EmptyState(title: d.finances.aucunBudget, hint: ctx.isGestion ? d.finances.aucunBudgetAide : null, icon: Icons.account_balance_wallet_rounded, illustration: 'empty-appels', actionLabel: ctx.isGestion ? d.finances.creerBudget : null, onAction: () => _form(context, ref, null));
           final sorted = [...list]..sort((a, b) => b.exercice.compareTo(a.exercice));
           final actif = sorted.where((b) => b.statut == 'ACTIF').firstOrNull;
           return Column(
@@ -116,7 +118,7 @@ class BudgetsScreen extends ConsumerWidget {
                   tone: Tone.ok,
                   montant: actif.montantTotal,
                   legende: '${d.finances.exercice} ${actif.exercice}',
-                  badges: [StatusBadge(d.enums.statutBudget[actif.statut] ?? actif.statut, variant: budgetVariant[actif.statut] ?? BadgeVariant.neutral)],
+                  badges: [StatusBadge(d.enums.statutBudget[actif.statut] ?? humanizeCode(actif.statut), variant: budgetVariant[actif.statut] ?? BadgeVariant.neutral)],
                 ),
               CardList([
                 for (final b in sorted)
@@ -127,7 +129,7 @@ class BudgetsScreen extends ConsumerWidget {
                       ListRow(
                         leading: IconCircle(Icons.account_balance_wallet_rounded, tone: b.statut == 'ACTIF' ? Tone.ok : Tone.sand),
                         title: '${d.finances.exercice} ${b.exercice}',
-                        trailing: _MontantFin(b.montantTotal, secondaire: StatusBadge(d.enums.statutBudget[b.statut] ?? b.statut, variant: budgetVariant[b.statut] ?? BadgeVariant.neutral, small: true)),
+                        trailing: _MontantFin(b.montantTotal, secondaire: StatusBadge(d.enums.statutBudget[b.statut] ?? humanizeCode(b.statut), variant: budgetVariant[b.statut] ?? BadgeVariant.neutral, small: true)),
                       ),
                       if (ctx.isGestion && b.statut != 'ACTIF' && b.statut != 'REMPLACE')
                         Padding(
@@ -136,7 +138,7 @@ class BudgetsScreen extends ConsumerWidget {
                             spacing: 14,
                             children: [
                               if (b.statut == 'PROPOSE') LinkButton(d.common.modify, onTap: () => _form(context, ref, b)),
-                              LinkButton(d.finances.activerBudget, onTap: () => _activer(context, ref, b)),
+                              BusyBuilder('budget-activer:${b.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.finances.activerBudget, onTap: () => guardAction('budget-activer:${b.id}', () => _activer(context, ref, b)))),
                             ],
                           ),
                         ),
@@ -154,11 +156,13 @@ class BudgetsScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.finances.activerBudgetTitre, body: fill(d.finances.activerBudgetCorps, {'exercice': b.exercice}), confirmLabel: d.finances.activerBudget, irreversible: true);
     if (!ok) return;
-    final r = await ref.read(apiClientProvider).post<dynamic>('/finances/budgets/${b.id}/activer', idempotent: true);
+    final intent = 'budget-activer:${b.id}';
+    final r = await ref.read(apiClientProvider).post<dynamic>('/finances/budgets/${b.id}/activer', idempotencyKey: IdemKeys.of(intent).value);
     if (!context.mounted) return;
     if (r is ApiFail) {
-      showToast(context, r.error.message, error: true);
+      showApiError(context, r);
     } else {
+      IdemKeys.done(intent);
       ref.invalidate(budgetsProvider);
       showToast(context, d.common.updated);
     }
@@ -261,7 +265,7 @@ class _AppelsScreenState extends ConsumerState<AppelsScreen> {
     final t = Theme.of(context).textTheme;
     final synthese = ref.watch(syntheseProvider);
     final racine = !context.canPop();
-    Future<void> refresh() async => ref.invalidate(syntheseProvider);
+    Future<void> refresh() => refreshing(ref, [syntheseProvider]);
     final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: _generer, icon: const Icon(Icons.add_rounded), label: Text(d.finances.genererAppel)) : null;
     final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
       if (s.appels.isEmpty) return EmptyState(title: d.finances.aucunAppel, hint: ctx.isGestion ? d.finances.aucunAppelAide : null, icon: Icons.request_quote_rounded, illustration: 'empty-appels', actionLabel: ctx.isGestion ? d.finances.genererAppel : null, onAction: _generer);
@@ -284,8 +288,8 @@ class _AppelsScreenState extends ConsumerState<AppelsScreen> {
                 key: ValueKey(a.id),
                 leading: IconCircle(Icons.request_quote_rounded, tone: a.statut == 'CLOTURE' ? Tone.neutral : Tone.sand),
                 title: formatPeriode(a.periode, l),
-                subtitle: '${d.enums.typeAppel[a.type] ?? a.type}\n${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)} · ${formatPourcent(totaux[a.id]?.taux ?? 0)} ${d.finances.paye.toLowerCase()}',
-                trailing: _MontantFin(a.montantTotal, secondaire: StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral, small: true)),
+                subtitle: '${d.enums.typeAppel[a.type] ?? humanizeCode(a.type)}\n${d.finances.echeance} ${formatDateCourte(a.dateEcheance, l)} · ${formatPourcent(totaux[a.id]?.taux ?? 0)} ${d.finances.paye.toLowerCase()}',
+                trailing: _MontantFin(a.montantTotal, secondaire: StatusBadge(d.enums.statutAppel[a.statut] ?? humanizeCode(a.statut), variant: appelVariant[a.statut] ?? BadgeVariant.neutral, small: true)),
                 onTap: () => context.push('/finances/appels-de-fonds/${a.id}'),
               ),
           ]),
@@ -322,10 +326,12 @@ class _GenererForm extends ConsumerStatefulWidget {
 class _GenererFormState extends ConsumerState<_GenererForm> {
   final _periode = TextEditingController(text: '${DateTime.now().year}-${DateTime.now().month.toString().padLeft(2, '0')}');
   final _montant = TextEditingController();
-  final _echeance = TextEditingController(text: DateTime.now().add(const Duration(days: 30)).toIso8601String().substring(0, 10));
+  final _echeance = TextEditingController(text: jourIso(DateTime.now().add(const Duration(days: 30))));
   String _type = 'CHARGES_COURANTES';
   bool _loading = false;
   ApiFail? _fail;
+  /// Même clé d'un essai à l'autre (même contenu) : « Réessayer » n'émet jamais deux appels.
+  final _idem = IdemKey();
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
@@ -340,7 +346,7 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
         const SizedBox(height: 12),
         SuField(label: '${d.finances.montantTotal} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'montant_total')),
         const SizedBox(height: 12),
-        SuField(label: d.finances.echeance, controller: _echeance, hint: 'AAAA-MM-JJ', required: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'date_echeance')),
+        SuDateField(label: d.finances.echeance, controller: _echeance, required: true, firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 730)), error: fieldError(_fail, 'date_echeance')),
         const SizedBox(height: 16),
         FormError(_fail, onSettings: () => context.push('/finances/budgets')),
         if (_fail?.status == 422) Padding(padding: const EdgeInsets.only(top: 8), child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => context.push('/finances/budgets'), label: d.finances.creerBudgetDabord)),
@@ -354,7 +360,9 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
               _loading = true;
               _fail = null;
             });
-            final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotent: true, body: {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()}, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
+            final body = {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()};
+            final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
+            _idem.settle(r);
             if (!mounted) return;
             switch (r) {
               case ApiOk<AppelDeFonds>(:final data):
@@ -367,7 +375,7 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
                 // Succès plein écran, posé au-dessus du détail une fois celui-ci empilé.
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   if (!racine.mounted) return;
-                  showSuccess(racine, title: formatPeriode(data.periode, l), body: '${d.enums.typeAppel[data.type] ?? data.type} · ${formatMAD(data.montantTotal, l)}\n${d.finances.montantReparti}', illustration: 'ok-general', moment: SuMomentKind.sent);
+                  showSuccess(racine, title: formatPeriode(data.periode, l), body: '${d.enums.typeAppel[data.type] ?? humanizeCode(data.type)} · ${formatMAD(data.montantTotal, l)}\n${d.finances.montantReparti}', illustration: 'ok-general', moment: SuMomentKind.sent);
                 });
               case ApiFail<AppelDeFonds>():
                 setState(() {
@@ -398,8 +406,7 @@ class AppelDetailScreen extends ConsumerWidget {
       title: appel.valueOrNull == null ? d.finances.appels : formatPeriode(appel.valueOrNull!.periode, l),
       subtitle: appel.valueOrNull == null ? null : d.enums.typeAppel[appel.valueOrNull!.type],
       onRefresh: () async {
-        ref.invalidate(appelProvider(id));
-        ref.invalidate(syntheseProvider);
+        await refreshing(ref, [appelProvider(id), syntheseProvider]);
       },
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showPaiementSheet(context, ref, appel: appel.valueOrNull), icon: const Icon(Icons.payments_rounded), label: Text(d.finances.enregistrerPaiement)) : null,
       children: [
@@ -414,7 +421,7 @@ class AppelDetailScreen extends ConsumerWidget {
                 tone: Tone.sand,
                 montant: a.montantTotal,
                 legende: '${d.finances.echeance} · ${formatDate(a.dateEcheance, l)}',
-                badges: [StatusBadge(d.enums.statutAppel[a.statut] ?? a.statut, variant: appelVariant[a.statut] ?? BadgeVariant.neutral)],
+                badges: [StatusBadge(d.enums.statutAppel[a.statut] ?? humanizeCode(a.statut), variant: appelVariant[a.statut] ?? BadgeVariant.neutral)],
                 bas: Gauge(ratio(paye, du)),
               ),
               TwoCols([
@@ -433,10 +440,10 @@ class AppelDetailScreen extends ConsumerWidget {
                       title: lot == null ? li.lotId.substring(0, 8) : '${d.enums.typeLot[lot.typeLot]} ${lot.numero}',
                       subtitle: [
                         '${d.finances.paye} ${formatMAD(li.montantPaye, l)}',
-                        if (li.niveauEscalade != 'N0') d.enums.escalade[li.niveauEscalade] ?? li.niveauEscalade,
+                        if (li.niveauEscalade != 'N0') d.enums.escalade[li.niveauEscalade] ?? humanizeCode(li.niveauEscalade),
                         if (li.conteste) d.enums.conteste,
                       ].join(' · '),
-                      trailing: _MontantFin(li.montantDu, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: v, small: true)),
+                      trailing: _MontantFin(li.montantDu, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? humanizeCode(li.statut), variant: v, small: true)),
                       // Gestion : toucher une ligne non soldée ouvre le paiement ciblé sur elle.
                       onTap: payable ? () => showPaiementSheet(context, ref, appel: a, ligneInitiale: li.id) : null,
                     );
@@ -464,6 +471,8 @@ class _PaiementForm extends ConsumerStatefulWidget {
 }
 
 class _PaiementFormState extends ConsumerState<_PaiementForm> {
+  /// Clé d'idempotence stable : « Réessayer » après un délai dépassé ne crée jamais de second paiement.
+  final _idem = IdemKey();
   late String _mode = widget.ligneInitiale != null || widget.lotInitial == null ? 'cible' : 'fifo';
   String? _ligne;
   String? _lot;
@@ -512,7 +521,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         const SizedBox(height: 12),
         Text(d.finances.methode, style: t.labelMedium?.copyWith(color: SuColors.ink)),
         const SizedBox(height: 6),
-        Segmented<String>(value: _methode, options: const ['ESPECES', 'VIREMENT', 'CHEQUE'], labelOf: (m) => d.enums.methodePaiement[m] ?? m, onChanged: (m) => setState(() => _methode = m)),
+        Segmented<String>(value: _methode, options: const ['ESPECES', 'VIREMENT', 'CHEQUE'], labelOf: (m) => d.enums.methodePaiement[m] ?? humanizeCode(m), onChanged: (m) => setState(() => _methode = m)),
         const SizedBox(height: 12),
         SuField(label: d.finances.payeur, controller: _payeur, help: d.finances.payeurAide, optionalLabel: d.common.optional, mono: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'payeur_utilisateur_id')),
         if (_mode == 'cible') ...[const SizedBox(height: 8), SuCheckbox(value: _tropPercu, onChanged: (v) => setState(() => _tropPercu = v), label: d.finances.tropPercu, help: d.finances.tropPercuAide)],
@@ -537,7 +546,8 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
       if (_payeur.text.trim().isNotEmpty) 'payeur_utilisateur_id': _payeur.text.trim(),
       if (_mode == 'fifo') 'lot_id': _lot else ...{'appel_de_fonds_lot_id': _ligne, 'accepter_trop_percu': _tropPercu},
     };
-    final r = await ref.read(apiClientProvider).post<PaiementResult>('/finances/paiements', idempotent: true, body: body, parse: (j) => PaiementResult.fromJson(asMap(j)));
+    final r = await ref.read(apiClientProvider).post<PaiementResult>('/finances/paiements', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => PaiementResult.fromJson(asMap(j)));
+    _idem.settle(r);
     if (!mounted) return;
     switch (r) {
       case ApiOk<PaiementResult>(:final data):
@@ -598,6 +608,7 @@ class QuittanceScreen extends ConsumerWidget {
     final paiements = ref.watch(paiementsProvider).valueOrNull ?? const <Paiement>[];
     return SuPage(
       title: d.finances.quittance,
+      onRefresh: () => refreshing(ref, [quittanceProvider(id), paiementsProvider]),
       children: [
         AsyncView(q, onRetry: () => ref.invalidate(quittanceProvider(id)), data: (qt) {
           final ligne = synthese.lignes.where((x) => x.id == qt.appelDeFondsLotId).firstOrNull;
@@ -636,7 +647,7 @@ class QuittanceScreen extends ConsumerWidget {
                     KeyValueRow(d.invitations.lot, lot == null ? '—' : '${lot.numero} · ${d.enums.typeLot[lot.typeLot]}'),
                     KeyValueRow(d.lots.proprietaire, proprietaire == null || proprietaire.isEmpty ? '—' : proprietaire),
                     KeyValueRow(d.finances.periode, appel == null ? '—' : formatPeriode(appel.periode, l)),
-                    KeyValueRow(d.finances.methode, paiement.isEmpty ? '—' : (d.enums.methodePaiement[paiement.first.methode] ?? paiement.first.methode)),
+                    KeyValueRow(d.finances.methode, paiement.isEmpty ? '—' : (d.enums.methodePaiement[paiement.first.methode] ?? humanizeCode(paiement.first.methode))),
                     KeyValueRow(d.finances.emiseLe, formatDate(qt.dateEmission, l)),
                     KeyValueRow.amount(d.finances.montant, ligne?.montantPaye ?? paiement.firstOrNull?.montant),
                     const SizedBox(height: 10),
@@ -677,7 +688,7 @@ class ContestationsScreen extends ConsumerWidget {
     return SuPage(
       title: d.finances.contestations,
       subtitle: d.finances.contestationsSubtitle,
-      onRefresh: () async => ref.invalidate(contestationsProvider),
+      onRefresh: () => refreshing(ref, [contestationsProvider]),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(contestationsProvider), data: (cs) {
           if (cs.isEmpty) return EmptyState(title: d.finances.aucuneContestation, icon: Icons.balance_rounded, illustration: 'empty-litiges');
@@ -688,7 +699,7 @@ class ContestationsScreen extends ConsumerWidget {
                 final appel = ligne == null ? null : synthese.appels.where((a) => a.id == ligne.appelDeFondsId).firstOrNull;
                 final lot = ligne == null ? null : lots.where((x) => x.id == ligne.lotId).firstOrNull;
                 final v = contestationVariant[c.statut] ?? BadgeVariant.neutral;
-                final badge = StatusBadge(d.enums.statutContestation[c.statut] ?? c.statut, variant: v, small: true);
+                final badge = StatusBadge(d.enums.statutContestation[c.statut] ?? humanizeCode(c.statut), variant: v, small: true);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 8),
                   child: Column(
@@ -745,7 +756,7 @@ class _ReponseFormState extends ConsumerState<_ReponseForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuSelect<String>(label: d.finances.reponseStatut, value: _statut, options: const ['REPONDUE', 'MEDIEE', 'TRIBUNAL'], labelOf: (v) => d.enums.statutContestation[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+        SuSelect<String>(label: d.finances.reponseStatut, value: _statut, options: const ['REPONDUE', 'MEDIEE', 'TRIBUNAL'], labelOf: (v) => d.enums.statutContestation[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
         const SizedBox(height: 12),
         SuField(label: d.finances.votreReponse, controller: _txt, maxLines: 4, required: true, error: fieldError(_fail, 'reponse_syndic')),
         const SizedBox(height: 16),
@@ -804,9 +815,7 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
     final titre = resident ? c.monReleve : c.titre;
     final sousTitre = resident ? c.monReleveSubtitle : c.subtitle;
     Future<void> refresh() async {
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(paiementsProvider);
-      ref.invalidate(budgetsProvider);
+      await refreshing(ref, [syntheseProvider, paiementsProvider, budgetsProvider]);
     }
 
     final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
@@ -889,7 +898,7 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
                 ListRow(
                   key: ValueKey(p.id),
                   leading: IconCircle(p.methode == 'ESPECES' ? Icons.payments_rounded : p.methode == 'CHEQUE' ? Icons.receipt_long_rounded : Icons.account_balance_rounded, tone: Tone.sage),
-                  title: [d.enums.methodePaiement[p.methode] ?? p.methode, if (lotParId[p.lotId] != null) lotParId[p.lotId]!.numero].join(' · '),
+                  title: [d.enums.methodePaiement[p.methode] ?? humanizeCode(p.methode), if (lotParId[p.lotId] != null) lotParId[p.lotId]!.numero].join(' · '),
                   subtitle: formatDateHeure(p.horodatage, l),
                   trailing: _MontantFin(p.montant, secondaire: StatusBadge(p.statut, variant: p.statut == 'VALIDE' ? BadgeVariant.ok : BadgeVariant.neutral, small: true)),
                 ),

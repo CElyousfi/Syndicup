@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -39,9 +40,9 @@ class EspacesScreen extends ConsumerWidget {
     final racine = !context.canPop();
     final peutReserver = ctx.isResident && !(ctx.isLocataire && (ctx.copropriete?.reservationProprietairesSeulement ?? false));
     final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()), icon: const Icon(Icons.add_rounded), label: Text(d.espaces.nouveau)) : null;
-    Future<void> refresh() async => ref.invalidate(espacesProvider);
+    Future<void> refresh() => refreshing(ref, [espacesProvider]);
     final liste = AsyncView(espaces, onRetry: () => ref.invalidate(espacesProvider), skeletonCount: 2, loading: const LoadingList(count: 2, height: 260), data: (list) {
-      if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations');
+      if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations', actionLabel: ctx.isGestion ? d.espaces.nouveau : null, onAction: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()));
       return Column(
         children: [
           for (int k = 0; k < list.length; k++)
@@ -227,7 +228,7 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
         const SizedBox(height: 10),
         Text(md.conflictNote, style: t.bodySmall?.copyWith(color: SuColors.soft)),
         const SizedBox(height: 18),
-        if (_fail != null) (_fail!.status == 409 || _fail!.status == 422) ? SuBanner(tone: BannerTone.warn, title: d.espaces.creneauPris, body: _fail!.error.message) : FormError(_fail),
+        if (_fail != null) (_fail!.status == 409 || _fail!.status == 422) ? SuBanner(tone: BannerTone.warn, title: d.espaces.creneauPris, body: _fail!.text(context).body) : FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
         SubmitButton(
           label: '${d.common.confirm} ${hm(_debut)} – ${hm(_fin)}',
@@ -359,7 +360,7 @@ class ReservationsScreen extends ConsumerWidget {
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Expanded(child: Text(e?.nom ?? d.espaces.titre, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 10),
-                    StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion),
+                    StatusBadge(d.enums.statutReservation[r.statut] ?? humanizeCode(r.statut), variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion),
                   ]),
                   const SizedBox(height: 3),
                   Text('${formatDateHeure(r.dateDebut, l)} → ${formatHeure(r.dateFin, l)} · ${d.invitations.lot} $lot${r.nombreInvites != null ? ' · ${r.nombreInvites} ${d.espaces.nombreInvites.toLowerCase()}' : ''}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35)),
@@ -375,10 +376,10 @@ class ReservationsScreen extends ConsumerWidget {
                         children: [
                           if (gestion && r.statut == 'EN_ATTENTE') ...[
                             // Le thème fixe minimumSize = Size.fromHeight(…) : bornée ici (pill compacte).
-                            SuButton(label: d.espaces.valider, size: SuButtonSize.sm, onPressed: () => _valider(context, ref, r), style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 18))),
+                            BusyBuilder('reservation-valider:${r.id}', builder: (_, busy) => SuButton(label: d.espaces.valider, size: SuButtonSize.sm, loading: busy, onPressed: () => _valider(context, ref, r), style: FilledButton.styleFrom(minimumSize: const Size(0, 40), padding: const EdgeInsets.symmetric(horizontal: 18)))),
                             LinkButton(d.espaces.rejeter, color: SuColors.danger, onTap: () => _rejeter(context, ref, r)),
                           ],
-                          LinkButton(d.espaces.annulerReservation, color: SuColors.soft, onTap: () => _annuler(context, ref, r)),
+                          BusyBuilder('reservation-annuler:${r.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(d.espaces.annulerReservation, color: SuColors.soft, onTap: () => _annuler(context, ref, r))),
                         ],
                       ),
                     ),
@@ -391,7 +392,7 @@ class ReservationsScreen extends ConsumerWidget {
     }
 
     final titre = gestion ? d.espaces.reservations : d.espaces.mesReservations;
-    Future<void> refresh() async => ref.invalidate(reservationsProvider);
+    Future<void> refresh() => refreshing(ref, [reservationsProvider]);
     final liste = AsyncView(resas, onRetry: () => ref.invalidate(reservationsProvider), data: (list) {
       if (list.isEmpty) return EmptyState(title: d.espaces.aucuneReservation, hint: d.espaces.aucuneReservationAide, icon: Icons.calendar_month_rounded, illustration: 'empty-reservations');
       final sorted = [...list]..sort((a, b) => b.dateDebut.compareTo(a.dateDebut));
@@ -416,12 +417,13 @@ class ReservationsScreen extends ConsumerWidget {
   }
 
   Future<void> _valider(BuildContext context, WidgetRef ref, Reservation r) async {
-    final res = await ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/valider');
-    if (!context.mounted) return;
-    if (res is ApiFail) showToast(context, res.error.message, error: true); else {
-      ref.invalidate(reservationsProvider);
-      showToast(context, context.dict.espaces.reservationValidee);
-    }
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/valider'),
+      busyKey: 'reservation-valider:${r.id}',
+      successMsg: context.dict.espaces.reservationValidee,
+      onSuccess: (_) => ref.invalidate(reservationsProvider),
+    );
   }
 
   Future<void> _rejeter(BuildContext context, WidgetRef ref, Reservation r) async {
@@ -432,28 +434,29 @@ class ReservationsScreen extends ConsumerWidget {
       children: [
         SuField(label: d.espaces.motifRejet, controller: ctrl, help: d.espaces.motifRejetAide, maxLines: 3, required: true),
         const SizedBox(height: 16),
-        SubmitButton(label: d.espaces.rejeter, danger: true, onPressed: () async {
-          final res = await ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/rejeter', body: {'motif': ctrl.text.trim()});
-          if (!sheet.mounted) return;
-          if (res is ApiFail) showToast(sheet, res.error.message, error: true); else {
+        BusyBuilder('reservation-rejeter:${r.id}', builder: (_, busy) => SubmitButton(label: d.espaces.rejeter, danger: true, loading: busy, onPressed: () => runAction<dynamic>(
+          sheet,
+          () => ref.read(apiClientProvider).post<dynamic>('/reservations/${r.id}/rejeter', body: {'motif': ctrl.text.trim()}),
+          busyKey: 'reservation-rejeter:${r.id}',
+          onSuccess: (_) {
             ref.invalidate(reservationsProvider);
             Navigator.pop(sheet);
             showToast(context, d.espaces.reservationRejetee);
-          }
-        }),
+          },
+        ))),
       ],
     ));
   }
 
   Future<void> _annuler(BuildContext context, WidgetRef ref, Reservation r) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.espaces.annulerReservation, body: d.espaces.annulerReservationCorps, danger: true);
-    if (!ok) return;
-    final res = await ref.read(apiClientProvider).patch<dynamic>('/reservations/${r.id}', body: {'statut': 'ANNULEE'});
-    if (!context.mounted) return;
-    if (res is ApiFail) showToast(context, res.error.message, error: true); else {
-      ref.invalidate(reservationsProvider);
-      showToast(context, d.espaces.reservationAnnulee);
-    }
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).patch<dynamic>('/reservations/${r.id}', body: {'statut': 'ANNULEE'}),
+      busyKey: 'reservation-annuler:${r.id}',
+      confirm: ActionConfirm(title: d.espaces.annulerReservation, body: d.espaces.annulerReservationCorps, danger: true),
+      successMsg: d.espaces.reservationAnnulee,
+      onSuccess: (_) => ref.invalidate(reservationsProvider),
+    );
   }
 }

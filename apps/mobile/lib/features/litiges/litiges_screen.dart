@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -25,7 +26,7 @@ class LitigesScreen extends ConsumerWidget {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: gestion ? d.litiges.titre : d.litiges.mesLitiges,
-      onRefresh: () async => ref.invalidate(litigesProvider),
+      onRefresh: () => refreshing(ref, [litigesProvider]),
       fab: ctx.isPrestataire || ctx.isGardien ? null : FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.litiges.declarer, builder: (_) => const _LitigeForm()), icon: const Icon(Icons.add_rounded), label: Text(d.litiges.declarer)),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(litigesProvider), data: (ls) {
@@ -62,7 +63,7 @@ class LitigesScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              StatusBadge(d.enums.statutLitige[x.statut] ?? x.statut, variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true),
+                              StatusBadge(d.enums.statutLitige[x.statut] ?? humanizeCode(x.statut), variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -103,19 +104,17 @@ class LitigesScreen extends ConsumerWidget {
         const SizedBox(height: 16),
         SuField(label: d.litiges.escaladeMotif, controller: ctrl, maxLines: 3, required: true),
         const SizedBox(height: 16),
-        SubmitButton(label: d.litiges.escalader, danger: true, onPressed: () async {
-          final ok = await confirmDialog(sheet, title: d.litiges.escalader, body: fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''}), danger: true, irreversible: true);
-          if (!ok) return;
-          final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()});
-          if (!sheet.mounted) return;
-          if (r is ApiFail) {
-            showToast(sheet, r.error.message, error: true);
-          } else {
+        BusyBuilder('litige-escalader:${x.id}', builder: (_, busy) => SubmitButton(label: d.litiges.escalader, danger: true, loading: busy, onPressed: () => runAction<dynamic>(
+          sheet,
+          () => ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/escalade', body: {'motif': ctrl.text.trim()}),
+          busyKey: 'litige-escalader:${x.id}',
+          confirm: ActionConfirm(title: d.litiges.escalader, body: fill(d.litiges.escaladerCorps, {'niveau': d.enums.escaladeLitige['${x.escaladeNiveau + 1}'] ?? ''}), danger: true, irreversible: true),
+          onSuccess: (_) {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.escalade);
-          }
-        }),
+          },
+        ))),
       ],
     ));
   }
@@ -127,23 +126,22 @@ class LitigesScreen extends ConsumerWidget {
     await showFormSheet<void>(context, title: d.litiges.cloturerTitre, builder: (sheet) => StatefulBuilder(builder: (_, setS) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Segmented<String>(value: statut, options: const ['RESOLU', 'CLOS'], labelOf: (v) => d.enums.statutLitige[v] ?? v, onChanged: (v) => setS(() => statut = v)),
+        Segmented<String>(value: statut, options: const ['RESOLU', 'CLOS'], labelOf: (v) => d.enums.statutLitige[v] ?? humanizeCode(v), onChanged: (v) => setS(() => statut = v)),
         const SizedBox(height: 6),
         Text(d.litiges.cloturerAide, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
         SuField(label: d.litiges.cloturerMotif, controller: ctrl, maxLines: 3, required: true),
         const SizedBox(height: 16),
-        SubmitButton(label: d.litiges.cloturer, onPressed: () async {
-          final r = await ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()});
-          if (!sheet.mounted) return;
-          if (r is ApiFail) {
-            showToast(sheet, r.error.message, error: true);
-          } else {
+        BusyBuilder('litige-cloturer:${x.id}', builder: (_, busy) => SubmitButton(label: d.litiges.cloturer, loading: busy, onPressed: () => runAction<dynamic>(
+          sheet,
+          () => ref.read(apiClientProvider).patch<dynamic>('/litiges/${x.id}/statut', body: {'statut': statut, 'motif': ctrl.text.trim()}),
+          busyKey: 'litige-cloturer:${x.id}',
+          onSuccess: (_) {
             ref.invalidate(litigesProvider);
             Navigator.pop(sheet);
             showToast(context, d.litiges.cloture);
-          }
-        }),
+          },
+        ))),
       ],
     )));
   }

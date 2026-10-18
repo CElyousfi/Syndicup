@@ -117,7 +117,7 @@ class VisitesSync extends Notifier<SyncStatus> {
         if (ok == null) {
           final again = await _db.pending();
           // Toujours en attente avec une erreur réseau : on arrête, le réseau est absent.
-          if (again.any((x) => x.id == v.id && (x.derniereErreur?.startsWith('NETWORK') ?? false))) break;
+          if (again.any((x) => x.id == v.id && (x.derniereErreur?.startsWith('NETWORK') ?? false) || (x.derniereErreur?.startsWith('TIMEOUT') ?? false))) break;
         }
       }
     } finally {

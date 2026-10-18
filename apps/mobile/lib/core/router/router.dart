@@ -43,10 +43,13 @@ import '../../features/profil/sensations_section.dart';
 import '../../features/profil/sensations_test_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
+import '../api/refresh.dart';
 import '../auth/app_state.dart';
+import '../auth/session_events.dart';
 import '../deeplinks/deeplinks.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
+import '../widgets/widgets.dart';
 
 /// Écrans racines d'onglet : fondu enchaîné avec léger zoom (« fade through ») à l'arrivée —
 /// changer d'onglet n'est pas avancer dans une pile. Route Material à part entière : quand un
@@ -122,10 +125,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       final sansLangue = DeepLinks.sansLangue(state.uri.path);
       if (sansLangue != state.uri.path) return Uri(path: sansLangue, query: state.uri.hasQuery ? state.uri.query : null).toString();
       final path = state.uri.path;
+      final events = SessionEvents.instance;
+      // Session expirée : l'écran en cours est gardé pour y revenir après la reconnexion.
+      if (events.expiredPending && !_isPublic(path) && path != '/splash') events.rememberReturn(state.uri.toString());
       if (st.isLoading || (st.hasError && !st.hasValue)) return path == '/splash' ? null : '/splash';
       final s = st.valueOrNull;
       switch (s) {
         case AppSignedOut():
+          if (events.takeExpired()) {
+            final retour = events.takeReturn();
+            return Uri(path: '/connexion', queryParameters: {'expire': '1', if (retour != null) 'next': retour}).toString();
+          }
           // Tout premier lancement : l'onboarding avant l'écran d'accueil (une seule fois).
           if (path == '/' && !(ref.read(sharedPrefsProvider).getBool(onboardingSeenKey) ?? false)) return '/bienvenue';
           return _isPublic(path) ? null : '/';
@@ -145,7 +155,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             const ok = ['/cabinet', '/profil'];
             return ok.any((p) => path == p || path.startsWith('$p/')) ? null : '/cabinet';
           }
-          if (_isPublic(path) || path == '/splash') return ctx.isSuperAdmin ? '/admin' : '/tableau-de-bord';
+          if (_isPublic(path) || path == '/splash') {
+            // Reconnexion après expiration (ou `next` de l'écran de connexion) : retour à l'écran quitté.
+            final retour = events.takeReturn();
+            if (retour != null && retour.startsWith('/') && !retour.startsWith('//') && !_isPublic(Uri.parse(retour).path)) return retour;
+            return ctx.isSuperAdmin ? '/admin' : '/tableau-de-bord';
+          }
           if (path == '/choisir-copropriete' && !ctx.multiCopro) return '/tableau-de-bord';
           return null;
         case null:
@@ -160,7 +175,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', pageBuilder: (_, s) => NoTransitionPage<void>(key: s.pageKey, child: const SplashScreen())),
       GoRoute(path: '/', builder: (_, __) => const WelcomeScreen()),
       GoRoute(path: '/bienvenue', pageBuilder: (_, s) => NoTransitionPage<void>(key: s.pageKey, child: const OnboardingScreen())),
-      GoRoute(path: '/connexion', builder: (_, s) => LoginScreen(next: s.uri.queryParameters['next'])),
+      GoRoute(path: '/connexion', builder: (_, s) => LoginScreen(next: s.uri.queryParameters['next'], expired: s.uri.queryParameters['expire'] == '1')),
       GoRoute(path: '/connexion/mot-de-passe-oublie', builder: (_, s) => ForgotPasswordScreen(email: s.uri.queryParameters['email'])),
       GoRoute(path: '/invitation', builder: (_, __) => const InvitationEntryScreen()),
       GoRoute(path: '/invitation/scan', builder: (_, __) => const InvitationScanScreen()),
@@ -255,29 +270,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(context.dict.common.notFoundTitle, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(context.dict.common.notFoundBody, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: () => context.go('/'), child: Text(context.dict.common.backHome)),
-            ],
-          ),
+    // Lien inconnu (ancienne notification, lien web mal formé) : une vraie page, avec retour.
+    errorBuilder: (context, state) => SuPage(
+      title: context.dict.common.notFoundTitle,
+      largeTitle: false,
+      children: [
+        EmptyState(
+          title: context.dict.common.notFoundTitle,
+          hint: context.dict.common.notFoundBody,
+          icon: Icons.explore_off_rounded,
+          illustration: 'empty-search',
+          actionLabel: context.canPop() ? context.dict.common.back : context.dict.common.backHome,
+          onAction: () => context.canPop() ? context.pop() : context.go('/'),
         ),
-      ),
+      ],
     ),
   );
 });
 
-/// Rafraîchit une lecture après une mutation et attend la nouvelle valeur.
-Future<void> refreshAll(WidgetRef ref, List<ProviderOrFamily> providers) async {
-  for (final p in providers) {
-    ref.invalidate(p);
-  }
-}
+/// Rafraîchit des lectures après une mutation et attend VRAIMENT la nouvelle valeur
+/// (voir core/api/refresh.dart) — l'ancienne version invalidait sans attendre.
+Future<void> refreshAll(WidgetRef ref, List<ProviderOrFamily> providers) => refreshing(ref, providers);

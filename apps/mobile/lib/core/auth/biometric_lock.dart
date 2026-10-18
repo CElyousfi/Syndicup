@@ -38,17 +38,34 @@ class BiometricLock {
   }
 
   /// `true` si l'utilisateur s'est authentifié ; `false` si refus, erreur ou annulation.
-  Future<bool> authenticate(String reason) async {
+  Future<bool> authenticate(String reason) async => await authenticateDetailed(reason) == BioResult.ok;
+
+  /// Même chose, avec la raison d'un échec — l'écran de verrouillage explique au lieu de se taire.
+  Future<BioResult> authenticateDetailed(String reason) async {
     try {
-      return await _auth.authenticate(
+      final ok = await _auth.authenticate(
         localizedReason: reason,
         options: const AuthenticationOptions(stickyAuth: true, biometricOnly: false),
       );
-    } on PlatformException {
-      return false;
+      return ok ? BioResult.ok : BioResult.failed;
+    } on PlatformException catch (e) {
+      // Codes de local_auth (auth_strings / error_codes) : verrouillage temporaire ou définitif.
+      switch (e.code) {
+        case 'LockedOut':
+        case 'PermanentlyLockedOut':
+          return BioResult.lockedOut;
+        case 'NotAvailable':
+        case 'NotEnrolled':
+        case 'PasscodeNotSet':
+          return BioResult.unavailable;
+      }
+      return BioResult.failed;
     }
   }
 }
+
+/// Issue d'une demande biométrique.
+enum BioResult { ok, failed, lockedOut, unavailable }
 
 final biometricLockProvider = Provider<BiometricLock>((ref) => BiometricLock(ref.read(sharedPrefsProvider)));
 

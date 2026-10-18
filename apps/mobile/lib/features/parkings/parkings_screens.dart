@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -109,8 +110,7 @@ class _PlanTab extends ConsumerWidget {
     final mes = resident ? ref.watch(attributionsProvider('')) : const AsyncValue<List<AttributionEmplacement>>.data([]);
     return SuRefresh(
       onRefresh: () async {
-        ref.invalidate(planEmplacementsProvider);
-        ref.invalidate(attributionsProvider);
+        await refreshing(ref, [planEmplacementsProvider, attributionsProvider]);
       },
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(resident ? t.subtitleResident : t.subtitle, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
@@ -124,7 +124,7 @@ class _PlanTab extends ConsumerWidget {
                       key: ValueKey(a.id),
                       leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral),
                       title: '${a.emplacementCode} · ${t.lot} ${a.lotNumero ?? '—'}',
-                      subtitle: '${e.typeAttribution[a.type] ?? a.type} · ${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
+                      subtitle: '${e.typeAttribution[a.type] ?? humanizeCode(a.type)} · ${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
                       trailing: StatusBadge(a.active ? t.active : t.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
                     ),
                 ])),
@@ -183,7 +183,7 @@ class CaseEmplacement extends StatelessWidget {
       onTap: resident ? null : () => context.push('/parkings/${x.id}'),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
         Text(x.code, style: tt.titleLarge?.copyWith(fontFamily: 'GeistMono', color: hs ? SuColors.faint : SuColors.ink, decoration: hs ? TextDecoration.lineThrough : null), textDirection: TextDirection.ltr, maxLines: 1, overflow: TextOverflow.ellipsis),
-        Text(e.typeEmplacement[x.type] ?? x.type, style: tt.labelSmall?.copyWith(fontSize: 10.5, color: SuColors.soft), maxLines: 1, overflow: TextOverflow.ellipsis),
+        Text(e.typeEmplacement[x.type] ?? humanizeCode(x.type), style: tt.labelSmall?.copyWith(fontSize: 10.5, color: SuColors.soft), maxLines: 1, overflow: TextOverflow.ellipsis),
         Text(etat, style: tt.bodySmall?.copyWith(color: hs ? SuColors.faint : SuColors.ink, fontSize: 12, fontWeight: FontWeight.w600), maxLines: 2, overflow: TextOverflow.ellipsis),
       ]),
     );
@@ -204,7 +204,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
     final emp = ref.watch(emplacementProvider(id));
     return SuPage(
       title: emp.valueOrNull?.code ?? t.titre,
-      onRefresh: () async => ref.invalidate(emplacementProvider(id)),
+      onRefresh: () => refreshing(ref, [emplacementProvider(id)]),
       children: [
         AsyncView(emp, onRetry: () => ref.invalidate(emplacementProvider(id)), data: (x) {
         final c = x.attributionCourante;
@@ -218,11 +218,11 @@ class EmplacementDetailScreen extends ConsumerWidget {
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 IconCircle(hs ? Icons.block_rounded : Icons.local_parking_rounded, tone: hs ? Tone.warn : x.occupee ? Tone.tosca : Tone.ok, size: 64),
                 const SizedBox(height: 18),
-                Text(e.typeEmplacement[x.type] ?? x.type, style: tt.displaySmall),
+                Text(e.typeEmplacement[x.type] ?? humanizeCode(x.type), style: tt.displaySmall),
                 if (x.niveau != null) Padding(padding: const EdgeInsets.only(top: 4), child: Text('${t.niveau} ${x.niveau}', style: tt.bodyMedium?.copyWith(color: SuColors.soft))),
                 const SizedBox(height: 14),
                 Wrap(spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(e.statutEmplacement[x.statut] ?? x.statut, variant: emplacementVariant[x.statut] ?? BadgeVariant.neutral),
+                  StatusBadge(e.statutEmplacement[x.statut] ?? humanizeCode(x.statut), variant: emplacementVariant[x.statut] ?? BadgeVariant.neutral),
                   if (!x.attribuable) StatusBadge(t.nonAttribuable, variant: BadgeVariant.outline),
                 ]),
               ]),
@@ -233,7 +233,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
               ? Text(t.aucuneAttribution, style: tt.bodyMedium?.copyWith(color: SuColors.soft))
               : SuCard(padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8), child: Column(children: [
                   KeyValueRow(t.lotBeneficiaire, c.lotNumero ?? '—'),
-                  KeyValueRow(t.type, e.typeAttribution[c.type] ?? c.type),
+                  KeyValueRow(t.type, e.typeAttribution[c.type] ?? humanizeCode(c.type)),
                   KeyValueRow(t.periode, '${formatJourAnnee(c.dateDebut, l)} → ${c.dateFin != null ? formatJourAnnee(c.dateFin, l) : t.sansFin}'),
                   c.redevanceMensuelle != null ? KeyValueRow.amount(t.redevance, c.redevanceMensuelle) : KeyValueRow(t.redevance, '—'),
                   if (c.notes != null) KeyValueRow(t.notes, c.notes!),
@@ -246,7 +246,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
                     ListRow(
                       key: ValueKey(a.id),
                       leading: IconCircle(Icons.history_rounded, tone: a.active ? Tone.ok : Tone.neutral),
-                      title: '${t.lot} ${a.lotNumero ?? '—'} · ${e.typeAttribution[a.type] ?? a.type}',
+                      title: '${t.lot} ${a.lotNumero ?? '—'} · ${e.typeAttribution[a.type] ?? humanizeCode(a.type)}',
                       subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : t.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}',
                       trailing: StatusBadge(a.active ? t.active : a.dateDebut.compareTo(aujourdhui) > 0 ? t.aVenir : t.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
                     ),
@@ -289,7 +289,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
     if (!mounted) return;
     if (cache == null) {
       setState(() => _recherche = false);
-      showToast(context, (r as ApiFail).error.message, error: true);
+      showApiError(context, (r as ApiFail));
       return;
     }
     final cle = _normaliser(brut).replaceAll('-', '');
@@ -325,13 +325,14 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
 
   Future<void> _retirer(Vehicule v) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.parkings.retirerVehicule, body: d.parkings.retirerVehiculeCorps, confirmLabel: d.parkings.retirerVehicule, danger: true);
-    if (!ok || !mounted) return;
-    final r = await ref.read(apiClientProvider).delete<dynamic>('/vehicules/${v.id}');
-    if (!mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
-    showToast(context, d.parkings.vehiculeRetire);
-    ref.invalidate(vehiculesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).delete<dynamic>('/vehicules/${v.id}'),
+      busyKey: 'vehicule-retirer:${v.id}',
+      confirm: ActionConfirm(title: d.parkings.retirerVehicule, body: d.parkings.retirerVehiculeCorps, confirmLabel: d.parkings.retirerVehicule, danger: true),
+      successMsg: d.parkings.vehiculeRetire,
+      onSuccess: (_) => ref.invalidate(vehiculesProvider),
+    );
   }
 
   @override
@@ -348,13 +349,13 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
           key: ValueKey(v.id),
           leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : v.type == 'UTILITAIRE' ? Icons.local_shipping_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral),
           title: v.immatriculation,
-          subtitle: '${t.lot} ${v.lotNumero ?? '—'} · ${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}',
+          subtitle: '${t.lot} ${v.lotNumero ?? '—'} · ${e.typeVehicule[v.type] ?? humanizeCode(v.type)}${v.description.isNotEmpty ? ' · ${v.description}' : ''}',
           trailing: actions && peutDeclarer && v.actif
               ? PopupMenuButton<String>(icon: const Icon(Icons.more_vert_rounded, color: SuColors.link), onSelected: (k) => k == 'edit' ? _declarer(v) : _retirer(v), itemBuilder: (_) => [PopupMenuItem(value: 'edit', child: Text(d.common.modify)), PopupMenuItem(value: 'del', child: Text(t.retirerVehicule))])
               : StatusBadge(v.actif ? t.actif : t.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
         );
     return SuRefresh(
-      onRefresh: () async { ref.invalidate(vehiculesProvider); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
+      onRefresh: () async { await refreshing(ref, [vehiculesProvider]); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [
         if (ctx.isGardien || ctx.isGestion) ...[
           // Recherche de plaque : titre de section Wise + tuile greige (champ blanc, pill « Rechercher »).
@@ -446,7 +447,7 @@ class _VehiculeFormState extends ConsumerState<VehiculeForm> {
       ],
       SuField(label: t.immatriculation, controller: _immat, hint: '12345-A-6', help: t.immatriculationAide, error: fieldError(_fail, 'immatriculation'), keyboardType: TextInputType.visiblePassword),
       const SizedBox(height: 12),
-      SuSelect<String>(label: t.typeVehicule, value: _type, options: const ['VOITURE', 'MOTO', 'UTILITAIRE'], labelOf: (v) => e.typeVehicule[v] ?? v, onChanged: (v) => setState(() => _type = v)),
+      SuSelect<String>(label: t.typeVehicule, value: _type, options: const ['VOITURE', 'MOTO', 'UTILITAIRE'], labelOf: (v) => e.typeVehicule[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _type = v)),
       const SizedBox(height: 12),
       SuField(label: t.marque, controller: _marque, optionalLabel: d.common.optional),
       const SizedBox(height: 12),
@@ -466,13 +467,14 @@ class _BadgesTab extends ConsumerWidget {
 
   Future<void> _perdu(BuildContext context, WidgetRef ref, BadgeAcces b) async {
     final d = context.dict;
-    final ok = await confirmDialog(context, title: d.parkings.declarerPerdu, body: d.parkings.declarerPerduCorps, confirmLabel: d.parkings.declarerPerdu, danger: true, irreversible: true);
-    if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<dynamic>('/badges/${b.id}/perdu', body: {'creer_tache': true});
-    if (!context.mounted) return;
-    if (r is ApiFail) { showToast(context, r.error.message, error: true); return; }
-    showToast(context, d.parkings.badgePerdu);
-    ref.invalidate(badgesProvider);
+    await runAction<dynamic>(
+      context,
+      () => ref.read(apiClientProvider).post<dynamic>('/badges/${b.id}/perdu', body: {'creer_tache': true}),
+      busyKey: 'badge-perdu:${b.id}',
+      confirm: ActionConfirm(title: d.parkings.declarerPerdu, body: d.parkings.declarerPerduCorps, confirmLabel: d.parkings.declarerPerdu, danger: true, irreversible: true),
+      successMsg: d.parkings.badgePerdu,
+      onSuccess: (_) => ref.invalidate(badgesProvider),
+    );
   }
 
   @override
@@ -484,7 +486,7 @@ class _BadgesTab extends ConsumerWidget {
     final liste = ref.watch(badgesProvider(''));
     final peutSignaler = ctx.isResident || ctx.isGestion;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(badgesProvider),
+      onRefresh: () => refreshing(ref, [badgesProvider]),
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
         SectionHeader(ctx.isResident ? t.mesBadges : t.badges),
         AsyncView(liste, onRetry: () => ref.invalidate(badgesProvider), data: (rows) => rows.isEmpty
@@ -494,11 +496,11 @@ class _BadgesTab extends ConsumerWidget {
                   ListRow(
                     key: ValueKey(b.id),
                     leading: IconCircle(switch (b.type) { 'TELECOMMANDE_PARKING' => Icons.settings_remote_rounded, 'CLE_CAVE' => Icons.key_rounded, 'CARTE_ASCENSEUR' => Icons.elevator_rounded, _ => Icons.badge_rounded }, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral),
-                    title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}',
+                    title: '${b.identifiant} · ${e.typeBadge[b.type] ?? humanizeCode(b.type)}',
                     subtitle: '${t.lot} ${b.lotNumero ?? '—'} · ${t.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${t.caution} ${formatMAD(b.cautionMontant, l)}' : ''}${b.restitueLe != null ? ' · ${t.restitueLe} ${formatJourAnnee(b.restitueLe, l)}' : ''}',
                     trailing: b.statut == 'ACTIF' && peutSignaler
-                        ? LinkButton(t.declarerPerdu, color: SuColors.danger, onTap: () => _perdu(context, ref, b))
-                        : StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true),
+                        ? BusyBuilder('badge-perdu:${b.id}', builder: (_, busy) => busy ? const LoadingOrb(size: 9) : LinkButton(t.declarerPerdu, color: SuColors.danger, onTap: () => _perdu(context, ref, b)))
+                        : StatusBadge(e.statutBadge[b.statut] ?? humanizeCode(b.statut), variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true),
                   ),
               ])),
       ]),
@@ -517,7 +519,7 @@ class _VisiteursTab extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final jour = ref.watch(visiteursAujourdhuiProvider);
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(visiteursAujourdhuiProvider),
+      onRefresh: () => refreshing(ref, [visiteursAujourdhuiProvider]),
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(t.visiteursJourAide, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         AsyncView(jour, onRetry: () => ref.invalidate(visiteursAujourdhuiProvider), data: (j) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -629,12 +631,14 @@ class _PlaceVisiteurSheetState extends ConsumerState<PlaceVisiteurSheet> {
 /// « Véhicule sur ma place » — le gardien / syndic prévient le lot propriétaire de la plaque signalée.
 Future<void> notifierVehiculeGenant(BuildContext context, WidgetRef ref, Incident i) async {
   final d = context.dict;
-  final ok = await confirmDialog(context, title: d.incidents.notifierVehicule, body: '${i.immatriculationSignalee ?? ''}\n${d.incidents.notifierVehiculeAide}', confirmLabel: d.incidents.notifierVehicule);
-  if (!ok || !context.mounted) return;
-  final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/incidents/${i.id}/notifier-vehicule', body: const {}, parse: asMap);
-  if (!context.mounted) return;
-  if (r is ApiFail<Map<String, dynamic>>) { showToast(context, r.error.message, error: true); return; }
-  final data = (r as ApiOk<Map<String, dynamic>>).data;
-  showToast(context, fill(d.incidents.vehiculeNotifie, {'lot': data['lot'] ?? '—', 'n': data['notifies'] ?? 0}));
-  ref.invalidate(incidentProvider(i.id));
+  await runAction<Map<String, dynamic>>(
+    context,
+    () => ref.read(apiClientProvider).post<Map<String, dynamic>>('/incidents/${i.id}/notifier-vehicule', body: const {}, parse: asMap),
+    busyKey: 'incident-notifier-vehicule:${i.id}',
+    confirm: ActionConfirm(title: d.incidents.notifierVehicule, body: '${i.immatriculationSignalee ?? ''}\n${d.incidents.notifierVehiculeAide}', confirmLabel: d.incidents.notifierVehicule),
+    onSuccess: (data) {
+      showToast(context, fill(d.incidents.vehiculeNotifie, {'lot': data['lot'] ?? '—', 'n': data['notifies'] ?? 0}));
+      ref.invalidate(incidentProvider(i.id));
+    },
+  );
 }
