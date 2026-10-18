@@ -362,10 +362,10 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
             });
             final body = {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()};
             final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
+            _idem.settle(r);
             if (!mounted) return;
             switch (r) {
               case ApiOk<AppelDeFonds>(:final data):
-                _idem.consumed();
                 ref.invalidate(syntheseProvider);
                 ref.invalidate(appelsProvider);
                 final racine = Navigator.of(this.context, rootNavigator: true).context;
@@ -547,10 +547,10 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
       if (_mode == 'fifo') 'lot_id': _lot else ...{'appel_de_fonds_lot_id': _ligne, 'accepter_trop_percu': _tropPercu},
     };
     final r = await ref.read(apiClientProvider).post<PaiementResult>('/finances/paiements', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => PaiementResult.fromJson(asMap(j)));
+    _idem.settle(r);
     if (!mounted) return;
     switch (r) {
       case ApiOk<PaiementResult>(:final data):
-        _idem.consumed();
         ref.invalidate(syntheseProvider);
         ref.invalidate(appelsProvider);
         ref.invalidate(paiementsProvider);

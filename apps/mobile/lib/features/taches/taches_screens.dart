@@ -130,6 +130,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
       // Clé propre à cette intention (cette pièce, ce statut) : chaque nouvelle tentative de
       // l'utilisateur téléverse une nouvelle pièce, donc une nouvelle écriture.
       final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotencyKey: IdemKeys.of('tache-statut:${x.id}:${prep.data['storage_path']}').value, parse: (j) => Tache.fromJson(asMap(j)));
+      IdemKeys.settle('tache-statut:${x.id}:${prep.data['storage_path']}', r);
       if (!mounted) return;
       if (r is ApiFail<Tache>) { showApiError(context, r); return; }
       showToast(context, d.taches.statutChange);

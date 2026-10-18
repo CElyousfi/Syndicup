@@ -279,6 +279,7 @@ class DepenseDetailScreen extends ConsumerWidget {
     final body = {'motif': motif.isEmpty ? null : motif};
     final intent = 'depense-annuler:${x.id}';
     final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => Depense.fromJson(asMap(j)));
+    IdemKeys.settle(intent, r);
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Depense>():

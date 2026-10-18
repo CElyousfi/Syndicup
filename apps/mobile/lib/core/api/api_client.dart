@@ -17,6 +17,10 @@ abstract class TokenSource {
 
   /// Le refresh token est lui-même invalide : la session est terminée.
   Future<void> onSessionExpired();
+
+  /// Le trousseau contient-il des jetons plus récents que [spentRefreshToken] (rotation faite
+  /// ailleurs, ex. l'isolate d'une action de notification) ? Si oui, ils sont adoptés → `true`.
+  Future<bool> adoptStoredTokens(String spentRefreshToken);
 }
 
 typedef Parse<T> = T Function(dynamic json);
@@ -164,9 +168,11 @@ class ApiClient {
     final f = _doRefresh();
     _refreshing = f;
     // Libéré une fois résolu : le prochain 401 (jeton expiré plus tard) relance une rotation.
+    // `.ignore()` : une erreur du trousseau reste portée par `f` (rendu à l'appelant), jamais une
+    // erreur asynchrone non gérée sur ce Future dérivé.
     f.whenComplete(() {
       if (identical(_refreshing, f)) _refreshing = null;
-    });
+    }).ignore();
     return f;
   }
 
@@ -184,6 +190,19 @@ class ApiClient {
       return true;
     }
     if (res is ApiFail<Map<String, dynamic>> && res.status == 401) {
+      // Refresh token déjà consommé par un autre isolate (réponse à la porte depuis la
+      // notification) qui a enregistré les nouveaux jetons : on les adopte et on réessaie une fois.
+      if (await _tokens.adoptStoredTokens(rt)) {
+        final nouveau = _tokens.refreshToken;
+        if (nouveau != null && nouveau != rt) {
+          final again = await post<Map<String, dynamic>>('/auth/refresh', body: {'refresh_token': nouveau}, auth: false, parse: (j) => (j as Map).cast<String, dynamic>());
+          if (again is ApiOk<Map<String, dynamic>>) {
+            await _tokens.onTokensRefreshed(again.data);
+            return true;
+          }
+          if (again is! ApiFail<Map<String, dynamic>> || again.status != 401) return false;
+        }
+      }
       // Fin de session définitive : prévenir AVANT de vider la session (la coque lit encore le chemin).
       onSessionExpired?.call();
       await _tokens.onSessionExpired();

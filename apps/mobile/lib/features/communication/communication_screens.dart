@@ -207,12 +207,13 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
   /// [corps] non nul : action majeure (publication) → écran de succès plein écran.
   Future<void> _action(String path, {Map<String, Object?> body = const {}, bool idempotent = false, String? succes, String? corps}) async {
     final r = await ref.read(apiClientProvider).post<dynamic>(path, body: body, idempotencyKey: idempotent ? IdemKeys.of('annonce:$path').forPayload(body) : null);
+    if (idempotent && r is ApiFail) IdemKeys.settle('annonce:$path', r);
     if (!mounted) return;
     if (r is ApiFail) {
       showApiError(context, r);
       return;
     }
-    if (idempotent) IdemKeys.done('annonce:$path');
+    if (idempotent) IdemKeys.settle('annonce:$path', r);
     if (succes != null) {
       if (corps != null) {
         showSuccess(context, title: succes, body: corps, illustration: 'ok-general', moment: SuMomentKind.sent);
@@ -369,6 +370,7 @@ class _AnnonceComposerState extends ConsumerState<AnnonceComposer> {
     final id = (r as ApiOk<Map<String, dynamic>>).data['id'] as String;
     if (publier) {
       final p = await api.post<dynamic>('/annonces/$id/publier', idempotencyKey: IdemKeys.of('annonce-publier:$id').value, body: {if (_programme != null) 'publie_le': _programme!.toUtc().toIso8601String()});
+      IdemKeys.settle('annonce-publier:$id', p);
       if (!mounted) return;
       if (p is ApiFail) { setState(() { _loading = false; _fail = p; }); return; }
     }
@@ -531,6 +533,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
                   final body = {'choix': _choix.toList()..sort()};
                   final intent = 'sondage-repondre:${s.id}';
                   final r = await ref.read(apiClientProvider).post<dynamic>('/sondages/${s.id}/repondre', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body));
+                  IdemKeys.settle(intent, r);
                   if (!context.mounted) return;
                   setState(() => _envoi = false);
                   if (r is ApiFail) { showApiError(context, r); return; }
@@ -638,6 +641,7 @@ class _SondageComposerState extends ConsumerState<SondageComposer> {
     final id = (r as ApiOk<Map<String, dynamic>>).data['id'] as String;
     if (ouvrir) {
       final o = await api.post<dynamic>('/sondages/$id/ouvrir', idempotencyKey: IdemKeys.of('sondage-ouvrir:$id').value, body: const {});
+      IdemKeys.settle('sondage-ouvrir:$id', o);
       if (!mounted) return;
       if (o is ApiFail) { setState(() { _loading = false; _fail = o; }); return; }
     }

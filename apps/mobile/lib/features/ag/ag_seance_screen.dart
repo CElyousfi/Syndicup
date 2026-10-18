@@ -353,10 +353,10 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
       if (identite.startsWith('proc:')) ...{'procuration_id': identite.substring(5), 'lot_id': null} else 'lot_id': identite.substring(4),
     };
     final res = await ref.read(apiClientProvider).post<AgVote>('/ag/${widget.ag.id}/votes', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AgVote.fromJson(asMap(j)));
+    _idem.settle(res);
     if (!mounted) return;
     switch (res) {
       case ApiOk<AgVote>(:final data):
-        _idem.consumed();
         setState(() {
           _loading = false;
           _votes['${r.id}|$identite'] = data.valeur;

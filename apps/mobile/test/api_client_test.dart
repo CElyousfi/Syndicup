@@ -28,13 +28,26 @@ class _Tokens implements TokenSource {
     access = null;
     refresh = null;
   }
+
+  /// Trousseau simulé : jetons écrits par un autre isolate.
+  String? stockeAccess, stockeRefresh;
+  @override
+  Future<bool> adoptStoredTokens(String spentRefreshToken) async {
+    if (stockeRefresh == null || stockeRefresh == spentRefreshToken) return false;
+    access = stockeAccess;
+    refresh = stockeRefresh;
+    return true;
+  }
 }
 
 /// Serveur factice : `/auth/refresh` répond après un délai (pour que les 401 se chevauchent),
 /// les lectures exigent le nouveau jeton.
 class _Adapter implements HttpClientAdapter {
-  _Adapter({this.refreshOk = true});
+  _Adapter({this.refreshOk = true, this.refreshValide});
   final bool refreshOk;
+
+  /// Seul refresh token accepté (null = tous).
+  final String? refreshValide;
   int refreshCalls = 0;
   final idempotencyKeys = <String>[];
 
@@ -49,7 +62,9 @@ class _Adapter implements HttpClientAdapter {
     if (o.path == '/auth/refresh') {
       refreshCalls++;
       await Future<void>.delayed(const Duration(milliseconds: 30));
-      if (!refreshOk) return _json({'error': {'code': 'UNAUTHENTICATED', 'message': 'Refresh token invalide.'}}, 401);
+      final corps = o.data is String ? jsonDecode(o.data as String) : o.data;
+      final envoye = (corps as Map)['refresh_token'];
+      if (!refreshOk || (refreshValide != null && envoye != refreshValide)) return _json({'error': {'code': 'UNAUTHENTICATED', 'message': 'Refresh token invalide.'}}, 401);
       return _json({'data': {'access_token': 'nouveau', 'refresh_token': 'rt-2', 'expires_in': 3600}, 'meta': {'request_id': 'r'}}, 200);
     }
     if (o.path == '/illisible') return _json({'data': {'x': 1}, 'meta': {'request_id': 'r'}}, 200);
@@ -109,5 +124,20 @@ void main() {
     final f = r as ApiFail<List<String>>;
     expect(f.error.code, 'PARSE_ERROR');
     expect(f.error.message, isEmpty);
+  });
+
+  test('refresh token déjà consommé par l\'isolate de notification : jetons du trousseau adoptés, pas de déconnexion', () async {
+    final t = _Tokens()
+      ..stockeAccess = 'isolate'
+      ..stockeRefresh = 'rt-isolate';
+    final a = _Adapter(refreshValide: 'rt-isolate');
+    final api = _client(t, a);
+    var signale = 0;
+    api.onSessionExpired = () => signale++;
+    final r = await api.get<dynamic>('/lots');
+    expect(r.ok, isTrue);
+    expect(signale, 0);
+    expect(t.expirations, 0);
+    expect(a.refreshCalls, 2);
   });
 }

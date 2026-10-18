@@ -349,6 +349,7 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
     final body = motif == null ? <String, Object?>{} : <String, Object?>{'motif_refus': motif};
     final intent = 'conge-$action:${widget.conge.id}';
     final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/conges/${widget.conge.id}/$action', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body));
+    IdemKeys.settle(intent, r);
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
@@ -471,6 +472,7 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                   });
                   final body = {'type': _type, 'date_debut': jourIso(_debut!), 'date_fin': jourIso(_fin!), if (_motif.text.trim().isNotEmpty) 'motif': _motif.text.trim()};
                   final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/${widget.personnelId}/conges', idempotencyKey: _idem.forPayload(body), body: body);
+                  _idem.settle(r);
                   if (!mounted) return;
                   if (r is ApiFail) {
                     setState(() {
@@ -479,7 +481,6 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                     });
                     return;
                   }
-                  _idem.consumed();
                   widget.onDone();
                   if (!context.mounted) return;
                   // Contexte racine capturé avant de fermer la feuille : l'écran de succès s'y pose.

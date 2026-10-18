@@ -565,6 +565,18 @@ class PushService {
   /// « Réponse non envoyée — touchez pour ouvrir » qui ouvre la visite (X-Request-Id journalisé).
   static Future<void> executerActionFond(String? action, Map<String, String?> p) async {
     if (action == null || !actionsFond.contains(action)) return;
+    final porte = action == 'AUTORISER' || action == 'REFUSER';
+    try {
+      await _executerActionFond(action, p);
+    } catch (e, st) {
+      // Plugin absent dans l'isolate, trousseau illisible, JSON inattendu… : jamais silencieux —
+      // pour la porte, le résident est prévenu que sa réponse n'est pas partie.
+      debugPrint('Action de notification en arrière-plan : exception $e\n$st');
+      if (porte && p['visite_id'] != null) await _signalerEchecPorte(p, null);
+    }
+  }
+
+  static Future<void> _executerActionFond(String action, Map<String, String?> p) async {
     final storage = SessionStorage();
     final lue = await storage.read();
     final porte = action == 'AUTORISER' || action == 'REFUSER';
@@ -620,16 +632,36 @@ class PushService {
       }
     }
 
+    // Délai dépassé / réseau coupé / 422 « plus en attente » : la décision a peut-être été
+    // enregistrée quand même. On relit l'état de la visite avant d'annoncer un échec.
+    Future<bool> dejaDecidee(String visiteId, String statutVoulu) async {
+      try {
+        final r = await http.get(Uri.parse('$base/visites'), headers: entetes(session, uuid.v4(), null)).timeout(const Duration(seconds: 10));
+        if (r.statusCode >= 300) return false;
+        final data = (jsonDecode(r.body) as Map)['data'];
+        if (data is! List) return false;
+        final v = data.whereType<Map>().where((x) => x['id']?.toString() == visiteId).firstOrNull;
+        return v != null && v['statut']?.toString() == statutVoulu;
+      } catch (e) {
+        debugPrint('Relecture de la visite impossible : $e');
+        return false;
+      }
+    }
+
     if (action == 'MARQUER_LU' && p['notification_id'] != null) {
       final (st, rid) = await appel(Uri.parse('$base/notifications/${p['notification_id']}/read'));
       if (st >= 300 || st == 0) debugPrint('Marquer lu depuis la notification : échec $st ($rid)');
     } else if (porte && p['visite_id'] != null) {
-      final (st, rid) = await appel(
-        Uri.parse('$base/visites/${p['visite_id']}/statut'),
-        body: {'statut': action == 'AUTORISER' ? 'AUTORISE' : 'REFUSE'},
-        // Même réponse rejouée (réseau qui revient) = une seule décision côté serveur.
-        idempotencyKey: uuid.v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8', 'syndicup:porte:${p['visite_id']}:$action'),
+      final visiteId = p['visite_id']!;
+      final statutVoulu = action == 'AUTORISER' ? 'AUTORISE' : 'REFUSE';
+      var (st, rid) = await appel(
+        Uri.parse('$base/visites/$visiteId/statut'),
+        body: {'statut': statutVoulu},
+        // Clé envoyée pour la corrélation des journaux ; cet endpoint ne la rejoue pas — la
+        // transition unique EN_ATTENTE → décision (422 ensuite) protège seule du doublon.
+        idempotencyKey: uuid.v5('6ba7b811-9dad-11d1-80b4-00c04fd430c8', 'syndicup:porte:$visiteId:$action'),
       );
+      if ((st == 0 || st >= 500 || st == 422) && await dejaDecidee(visiteId, statutVoulu)) st = 200;
       if (st >= 300 || st == 0) {
         debugPrint('Réponse à la porte non envoyée : statut $st, X-Request-Id $rid');
         await _signalerEchecPorte(p, rid);
@@ -651,19 +683,24 @@ class PushService {
     } catch (e) {
       debugPrint('Langue indisponible dans l\'isolate de notification : $e');
     }
-    await svc._initLocal();
-    final visite = p['visite_id'];
-    final ux = svc._d.ux;
-    await svc.afficher(
-      cle: 'porte-echec:$visite:${requestId ?? DateTime.now().millisecondsSinceEpoch}',
-      titre: ux.doorFailTitle,
-      corps: requestId == null ? ux.doorFailBody : '${ux.doorFailBody} (${requestId.substring(0, 8)})',
-      niveau: niveauUrgent,
-      fil: 'visites',
-      path: visite != null ? '/visites/$visite' : '/visites',
-      actions: const ['VOIR'],
-      groupeId: p['copro'],
-    );
+    try {
+      await svc._initLocal();
+      final visite = p['visite_id'];
+      final ux = svc._d.ux;
+      await svc.afficher(
+        cle: 'porte-echec:$visite:${requestId ?? DateTime.now().millisecondsSinceEpoch}',
+        titre: ux.doorFailTitle,
+        corps: requestId == null ? ux.doorFailBody : '${ux.doorFailBody} (${requestId.substring(0, 8)})',
+        niveau: niveauUrgent,
+        fil: 'visites',
+        path: visite != null ? '/visites/$visite' : '/visites',
+        actions: const ['VOIR'],
+        groupeId: p['copro'],
+      );
+    } catch (e) {
+      // Dernier recours : même la notification d'échec n'a pas pu s'afficher.
+      debugPrint('Notification « réponse non envoyée » impossible : $e');
+    }
   }
 }
 
@@ -682,7 +719,8 @@ Future<void> pushBackgroundHandler(RemoteMessage m) async {
 @pragma('vm:entry-point')
 void pushBackgroundResponse(NotificationResponse r) {
   final p = PushService._payload(r.payload);
-  PushService.executerActionFond(r.actionId, p);
+  // executerActionFond rattrape lui-même toute exception (jamais d'erreur non gérée dans l'isolate).
+  PushService.executerActionFond(r.actionId, p).ignore();
 }
 
 class _Canal {

@@ -598,6 +598,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
     final body = {'motif': motif.isEmpty ? null : motif};
     final intent = 'sejour-annuler:${s.id}';
     final r = await ref.read(apiClientProvider).post<LcdSejour>('/lcd/sejours/${s.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => LcdSejour.fromJson(asMap(j)));
+    IdemKeys.settle(intent, r);
     if (!mounted) return;
     setState(() => _loading = false);
     switch (r) {

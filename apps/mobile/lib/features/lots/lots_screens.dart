@@ -983,10 +983,10 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
               'dette_reprise_acquereur': _dette,
             };
             final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/lots/${widget.lot.id}/transfert-propriete', idempotencyKey: _idem.forPayload(body), body: body, parse: asMap);
+            _idem.settle(r);
             if (!mounted) return;
             switch (r) {
               case ApiOk<Map<String, dynamic>>(:final data):
-                _idem.consumed();
                 widget.onDone();
                 ref.invalidate(lotsProvider);
                 final inv = data['invitation'];
