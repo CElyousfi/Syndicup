@@ -21,6 +21,7 @@ import { LiveList } from "../../../../components/ui/live-list";
 import { annonceVariant, categorieAnnonceVariant, sondageVariant } from "../../../../lib/status";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
+import { DesarchiverBouton } from "./affichage-client";
 
 const CATEGORIES: CategorieAnnonce[] = ["INFORMATION", "TRAVAUX", "COUPURE", "SECURITE", "URGENCE", "AG", "CONVIVIALITE", "REGLEMENT"];
 
@@ -37,6 +38,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
   const c = dict.communication;
   const e = dict.enumsCommunication;
   const gestion = ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"].some((r) => ctx.roles.includes(r as never));
+  const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const categorie = CATEGORIES.includes(sp.categorie as CategorieAnnonce) ? (sp.categorie as CategorieAnnonce) : undefined;
   const statut: StatutAnnonce | undefined = gestion && (sp.statut === "BROUILLON" || sp.statut === "ARCHIVEE") ? sp.statut : undefined;
   const p = (path: string) => `/${locale}${path}`;
@@ -100,9 +102,11 @@ export default async function AffichagePage({ params, searchParams }: { params: 
             <LiveList as="ul" className="-mx-2 space-y-1 sm:-mx-3">
               {annonces.map((a) => {
                 const nonLue = !a.lu && a.statut === "PUBLIEE";
+                // Liste « Archivées » : « Désarchiver » à côté du lien (jamais un bouton dans un lien).
+                const desarchivable = gestion && a.statut === "ARCHIVEE" && (syndic || a.categorie !== "URGENCE");
                 return (
-                  <li key={a.id}>
-                    <Link href={p(`/affichage/${a.id}`)} className="group flex items-start gap-3.5 rounded-2xl px-2 py-3.5 transition-colors hover:bg-wash sm:gap-4 sm:px-3">
+                  <li key={a.id} className={desarchivable ? "flex items-center gap-2" : undefined}>
+                    <Link href={p(`/affichage/${a.id}`)} className={`group flex items-start gap-3.5 rounded-2xl px-2 py-3.5 transition-colors hover:bg-wash sm:gap-4 sm:px-3${desarchivable ? " min-w-0 flex-1" : ""}`}>
                       <span className="relative shrink-0">
                         <IconCircle tone={TON_CATEGORIE[a.categorie]} size={48}>
                           <IconMegaphone width={22} height={22} className="text-ink-strong" />
@@ -127,6 +131,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
                       </div>
                       <IconChevronEnd width={18} height={18} className="mt-3.5 shrink-0 text-link transition-transform group-hover:translate-x-0.5 rtl:group-hover:-translate-x-0.5" />
                     </Link>
+                    {desarchivable ? <DesarchiverBouton dict={dict} locale={ctx.locale} id={a.id} size="sm" /> : null}
                   </li>
                 );
               })}

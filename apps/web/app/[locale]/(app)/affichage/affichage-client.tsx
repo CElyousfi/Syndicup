@@ -166,6 +166,25 @@ export function ArchiverModal({ dict, locale, annonce }: { dict: Dict; locale: L
   return <Button variant="secondary" onClick={archiver} disabled={pending} aria-busy={pending}>{c.archiver}</Button>;
 }
 
+/**
+ * « Désarchiver » sur une annonce ARCHIVEE (détail ou liste « Archivées ») — le retour reste
+ * possible après expiration du toast « Annuler ». Mêmes rôles que l'archivage ; idempotent côté API.
+ */
+export function DesarchiverBouton({ dict, locale, id, size = "md" }: { dict: Dict; locale: Locale; id: string; size?: "sm" | "md" }) {
+  const [pending, startTransition] = useTransition();
+  const c = dict.communication;
+  const desarchiver = () =>
+    startTransition(async () => {
+      const fd = new FormData();
+      fd.set("locale", locale);
+      fd.set("annonce_id", id);
+      const s = await desarchiverAnnonce(IDLE, fd);
+      if (s.status === "success") toast({ titre: c.desarchivee, tone: "ok", duree: 3500 });
+      else if (s.status === "error") toast({ titre: s.title ?? s.message, corps: s.title ? s.message : undefined, tone: "danger" });
+    });
+  return <Button variant="secondary" size={size} onClick={desarchiver} disabled={pending} aria-busy={pending}>{c.desarchiver}</Button>;
+}
+
 export function SupprimerBouton({ dict, locale, id, sondage }: { dict: Dict; locale: Locale; id: string; sondage?: boolean }) {
   const [state, action] = useActionState(sondage ? supprimerSondage : supprimerAnnonce, IDLE);
   const c = dict.communication;

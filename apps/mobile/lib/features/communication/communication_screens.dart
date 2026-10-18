@@ -259,6 +259,20 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     });
   }
 
+  /// « Désarchiver » depuis une annonce ARCHIVEE (après expiration du toast) — idempotent côté API.
+  Future<void> _desarchiver(String id) async {
+    final ux = context.mdict.ux;
+    final r = await ref.read(apiClientProvider).post<dynamic>('/annonces/$id/desarchiver', body: const {});
+    if (!mounted) return;
+    if (r is ApiFail) {
+      showApiError(context, r);
+      return;
+    }
+    ref.invalidate(annonceProvider(id));
+    _rafraichirAffichage(ref);
+    showToast(context, ux.annonceRestauree);
+  }
+
   @override
   Widget build(BuildContext context) {
     final ctx = ref.watch(appContextProvider);
@@ -321,6 +335,12 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
                       if (a.statut == 'PUBLIEE') SuButton(variant: SuButtonVariant.secondary, onPressed: () => _archiver(a.id), icon: Icons.archive_outlined, label: c.archiver),
                     ]),
                   ),
+                  // Retour possible après le toast : « Désarchiver » (mêmes rôles que l'archivage).
+                  if (a.statut == 'ARCHIVEE' && (ctx.isGestion || a.categorie != 'URGENCE'))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16),
+                      child: SuButton(variant: SuButtonVariant.secondary, onPressed: () => _desarchiver(a.id), icon: Icons.unarchive_outlined, label: context.mdict.ux.desarchiver),
+                    ),
                 ],
                 SectionHeader(c.commentaires, subtitle: a.commentaires.isNotEmpty ? '${a.commentaires.length}' : null),
                 if (a.commentaires.isEmpty) Padding(padding: const EdgeInsets.only(bottom: 4), child: Text(c.aucunCommentaire, style: t.bodyMedium?.copyWith(color: SuColors.soft))),

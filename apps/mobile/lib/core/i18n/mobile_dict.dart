@@ -606,6 +606,8 @@ class MobileUx {
     required this.annonceRestauree,
     required this.notifLue,
     required this.notifsLues,
+    required this.dejaEnregistre,
+    required this.desarchiver,
     required this.doorFailTitle,
     required this.doorFailBody,
     required this.emailRequired,
@@ -646,6 +648,12 @@ class MobileUx {
 
   /// Toasts « marquer comme lu » (envoi différé ~6 s, « Annuler » sans requête) ; `{n}` = nombre.
   final String notifLue, notifsLues;
+
+  /// « Annuler » touché après l'envoi différé : la lecture est déjà enregistrée.
+  final String dejaEnregistre;
+
+  /// Action sur une annonce ARCHIVEE (POST /annonces/{id}/desarchiver).
+  final String desarchiver;
   final String emailRequired, emailInvalid, passwordShort;
   final String bioFailed, bioLockedOut, bioUnavailable, bioUsePasswordTitle, bioUsePasswordBody, bioUsePasswordConfirm;
   final String offlineTitle, offlineBody, financeOfflineTitle, financeOfflineBody;
@@ -728,6 +736,8 @@ class MobileUx {
     annonceRestauree: 'Archivage annulé : l\'annonce est de retour sur le tableau.',
     notifLue: 'Notification marquée comme lue.',
     notifsLues: '{n} notifications marquées comme lues.',
+    dejaEnregistre: 'Déjà enregistré.',
+    desarchiver: 'Désarchiver',
     doorFailTitle: 'Réponse non envoyée — touchez pour ouvrir',
     doorFailBody: 'Votre réponse au visiteur n\'est pas partie. Ouvrez l\'application pour répondre.',
     emailRequired: 'Saisissez votre e-mail',
@@ -828,6 +838,8 @@ class MobileUx {
     annonceRestauree: 'تم التراجع عن الأرشفة: عاد الإعلان إلى لوحة الإعلانات.',
     notifLue: 'تم اعتبار الإشعار مقروءًا.',
     notifsLues: 'تم اعتبار {n} إشعارات مقروءة.',
+    dejaEnregistre: 'تم التسجيل مسبقًا.',
+    desarchiver: 'إلغاء الأرشفة',
     doorFailTitle: 'لم يُرسَل الرد — اضغطوا للفتح',
     doorFailBody: 'لم يُرسَل ردّكم على الزائر. افتحوا التطبيق للرد.',
     emailRequired: 'أدخلوا بريدكم الإلكتروني',

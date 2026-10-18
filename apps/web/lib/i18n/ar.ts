@@ -2241,6 +2241,7 @@ export const ar: DeepDict<typeof fr> = {
     archiverCorps: "يغادر الإعلان لوحة الإعلانات؛ يُحتفظ بالسجل والقراءات.",
     archivee: "تمت أرشفة الإعلان.",
     desarchivee: "تم التراجع عن الأرشفة: عاد الإعلان إلى لوحة الإعلانات.",
+    desarchiver: "إلغاء الأرشفة",
     supprimer: "حذف المسودة",
     supprimee: "حُذفت المسودة.",
     enregistree: "تم حفظ الإعلان.",
