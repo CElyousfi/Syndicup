@@ -5,7 +5,7 @@ import { apiFetch } from "../../../../../../lib/api/client";
 import type { BudgetAg, BudgetPoste, BudgetVsRealise } from "../../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../../lib/i18n";
 import { formatMAD } from "../../../../../../lib/format";
-import { versCentimes, versChaine } from "../../../../../../lib/centimes";
+import { ratio, versCentimes, versChaine } from "../../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Banner } from "../../../../../../components/ui/banner";
@@ -118,8 +118,9 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
           <LiveList as="tbody">
             {postes.map((x) => {
               const l = ligneDe(x.id);
-              const part = total > 0n ? Number(versCentimes(x.montantPrevu)) / Number(total) : 0;
-              const ratio = l && l.montant_prevu ? Number(versCentimes(l.consomme)) / Math.max(1, Number(versCentimes(l.montant_prevu))) : 0;
+              // Ratios d'affichage calculés en centimes BigInt (lib/centimes) — jamais de float sur un montant.
+              const part = ratio(versCentimes(x.montantPrevu), total);
+              const consomme = l && l.montant_prevu ? ratio(versCentimes(l.consomme), versCentimes(l.montant_prevu) > 0n ? versCentimes(l.montant_prevu) : 1n) : 0;
               return (
                 <TR key={x.id}>
                   <TD className="font-semibold text-ink">
@@ -132,7 +133,7 @@ export default async function BudgetDetailPage({ params }: { params: Promise<{ l
                   {rapport ? (
                     <TD>
                       <div className="min-w-[120px]">
-                        <ProgressBar ratio={Math.min(1, ratio)} tone={l?.depassement ? "danger" : ratio > 0.85 ? "warn" : "ok"} />
+                        <ProgressBar ratio={Math.min(1, consomme)} tone={l?.depassement ? "danger" : consomme > 0.85 ? "warn" : "ok"} />
                         <span className="tnum mt-1 block text-[12px] text-faint">{l?.pourcentage_consomme ? `${l.pourcentage_consomme} %` : "0 %"}{l?.depassement ? ` · ${d.depassement}` : ""}</span>
                       </div>
                     </TD>

@@ -10,6 +10,7 @@ import { apiFetch } from "../../../../../lib/api/client";
 import type { Transparence } from "../../../../../lib/api/types";
 import { getDict, isLocale, fill } from "../../../../../lib/i18n";
 import { formatDate, formatMAD } from "../../../../../lib/format";
+import { ratio, sommeCentimes, versCentimes } from "../../../../../lib/centimes";
 import { PageHeader } from "../../../../../components/page-header";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Banner } from "../../../../../components/ui/banner";
@@ -51,8 +52,10 @@ export default async function TransparencePage({ params, searchParams }: { param
         const bvr = t.budget_vs_realise;
         const dpc = t.depenses_par_categorie;
         // Parts relatives pour la barre empilée (même lecture que l'anneau : valeurs déjà agrégées par l'API).
-        const totalCat = dpc.categories.reduce((s, c) => s + Math.max(0, Number(c.montant)), 0);
-        const parts = dpc.categories.filter((c) => Number(c.montant) > 0).map((c, i) => ({ ...c, ratio: totalCat > 0 ? Number(c.montant) / totalCat : 0, couleur: TEINTES_AFFICHE[i % TEINTES_AFFICHE.length]! }));
+        // Centimes BigInt (lib/centimes) : sommes et ratios exacts, jamais de float sur un montant.
+        const positives = dpc.categories.filter((c) => versCentimes(c.montant) > 0n);
+        const totalCat = sommeCentimes(positives.map((c) => c.montant));
+        const parts = positives.map((c, i) => ({ ...c, ratio: ratio(versCentimes(c.montant), totalCat), couleur: TEINTES_AFFICHE[i % TEINTES_AFFICHE.length]! }));
         return (
           <>
             {/* Moment « affiche » : où est allé l'argent de l'exercice, d'un coup d'œil. */}
@@ -98,18 +101,19 @@ export default async function TransparencePage({ params, searchParams }: { param
 
             <div className="grid gap-4 lg:grid-cols-3">
               <Card className="lg:col-span-2">
-                <SectionHeader title={r.budget} subtitle={bvr.budget ? `${r.prevu} ${mad(bvr.totaux.montant_prevu)} · ${r.realise} ${mad(bvr.totaux.realise)}${bvr.totaux.pourcentage_realise ? ` · ${bvr.totaux.pourcentage_realise} %` : ""}` : r.aucunBudget} />
+                <SectionHeader title={r.budget} subtitle={bvr.budget ? `${r.prevu} ${mad(bvr.totaux.montant_prevu)} · ${r.realise} ${mad(bvr.totaux.realise)}${bvr.totaux.pourcentage_realise ? ` · ${String(bvr.totaux.pourcentage_realise).replace(".", ",")}\u202f%` : ""}` : r.aucunBudget} />
                 {bvr.postes.length > 0 ? (
                   <ul className="mt-5 divide-y divide-wash-strong rounded-[18px] bg-surface px-4 sm:px-5">
                     {bvr.postes.map((po) => {
-                      const ratio = po.montant_prevu && Number(po.montant_prevu) > 0 ? Number(po.realise) / Number(po.montant_prevu) : 0;
+                      const prevuC = versCentimes(po.montant_prevu);
+                      const ratioPoste = prevuC > 0n ? ratio(versCentimes(po.realise), prevuC) : 0;
                       return (
                         <li key={po.poste_id} className="py-3.5">
                           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
                             <span className="min-w-0 text-[14px] font-semibold text-ink">{po.libelle}<span className="ms-2 text-[12px] font-normal text-soft">{dict.enumsDepenses.categorieDepense[po.categorie]}</span></span>
                             <span className="tnum text-[13px] text-soft"><b className="font-bold text-ink"><Amount value={po.realise} locale={ctx.locale} /></b> / <Amount value={po.montant_prevu} locale={ctx.locale} /></span>
                           </div>
-                          <ProgressBar ratio={Math.min(1, ratio)} tone={po.depassement ? "danger" : ratio > 0.85 ? "warn" : "action"} className="mt-2" />
+                          <ProgressBar ratio={Math.min(1, ratioPoste)} tone={po.depassement ? "danger" : ratioPoste > 0.85 ? "warn" : "action"} className="mt-2" />
                         </li>
                       );
                     })}

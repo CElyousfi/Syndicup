@@ -7,6 +7,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError, fileTooLarge, uploadRefused } from "../../../../lib/forms-server";
 import type { Contrat, ContratEcheance } from "../../../../lib/api/types";
+import { montantSaisi, montantOptionnel } from "../../../../lib/centimes";
 
 const BASE = "/contrats";
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }
@@ -40,11 +41,11 @@ function corpsContrat(fd: FormData, estAssurance: boolean) {
     tacite: champ(fd, "tacite") === "on",
     preavis_jours: preavis ? Number(preavis) : null,
     periodicite: champ(fd, "periodicite"),
-    montant_periode: optionnel(fd, "montant_periode"),
+    montant_periode: montantOptionnel(fd, "montant_periode"),
     budget_poste_id: optionnel(fd, "budget_poste_id"),
     resolution_ag_id: optionnel(fd, "resolution_ag_id"),
     notes: optionnel(fd, "notes"),
-    details_assurance: estAssurance && champ(fd, "assureur") ? { assureur: champ(fd, "assureur"), numero_police: champ(fd, "numero_police"), garanties, franchise: optionnel(fd, "franchise"), capital_assure: optionnel(fd, "capital_assure") } : null,
+    details_assurance: estAssurance && champ(fd, "assureur") ? { assureur: champ(fd, "assureur"), numero_police: champ(fd, "numero_police"), garanties, franchise: montantOptionnel(fd, "franchise"), capital_assure: montantOptionnel(fd, "capital_assure") } : null,
   };
 }
 
@@ -70,7 +71,7 @@ export async function modifierContrat(_prev: FormState, fd: FormData): Promise<F
   const res = await apiFetch<Contrat>(`/contrats/${id}`, { method: "PATCH", body: { ...corpsContrat(fd, type.startsWith("ASSURANCE")), ...(doc ? { document: doc } : {}), ...(att ? { attestation: att } : {}) } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
-  redirect(`/${locale}${BASE}/${id}`);
+  redirect(`/${locale}${BASE}/${id}?maj=1`);
 }
 
 async function transition(fd: FormData, action: "activer" | "suspendre" | "resilier", body?: unknown): Promise<FormState> {
@@ -97,7 +98,7 @@ export async function regenererEcheances(_prev: FormState, fd: FormData): Promis
 export async function ajouterEcheance(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const id = champ(fd, "contrat_id");
-  const res = await apiFetch<ContratEcheance>(`/contrats/${id}/echeances`, { method: "POST", body: { type: champ(fd, "type"), date_echeance: champ(fd, "date_echeance"), montant: optionnel(fd, "montant") } });
+  const res = await apiFetch<ContratEcheance>(`/contrats/${id}/echeances`, { method: "POST", body: { type: champ(fd, "type"), date_echeance: champ(fd, "date_echeance"), montant: montantOptionnel(fd, "montant") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
@@ -117,7 +118,7 @@ export async function genererDepense(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const id = champ(fd, "contrat_id");
   const eid = champ(fd, "echeance_id");
-  const res = await apiFetch<{ depense: { id: string } }>(`/contrats/${id}/echeances/${eid}/generer-depense`, { method: "POST", idempotent: true, body: { source: champ(fd, "source") || "COMPTE_COURANT", ...(optionnel(fd, "montant_ttc") ? { montant_ttc: champ(fd, "montant_ttc") } : {}), ...(optionnel(fd, "date_depense") ? { date_depense: champ(fd, "date_depense") } : {}) } });
+  const res = await apiFetch<{ depense: { id: string } }>(`/contrats/${id}/echeances/${eid}/generer-depense`, { method: "POST", idempotent: true, body: { source: champ(fd, "source") || "COMPTE_COURANT", ...(montantOptionnel(fd, "montant_ttc") ? { montant_ttc: montantSaisi(fd, "montant_ttc") } : {}), ...(optionnel(fd, "date_depense") ? { date_depense: champ(fd, "date_depense") } : {}) } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`, "/finances/depenses");
   return success(undefined, { depense_id: res.data.depense.id });

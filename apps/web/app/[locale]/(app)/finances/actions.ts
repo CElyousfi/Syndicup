@@ -11,6 +11,7 @@ import type {
   PaiementCibleResult,
   PaiementFifoResult,
 } from "../../../../lib/api/types";
+import { montantSaisi } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
@@ -23,7 +24,7 @@ export async function creerBudget(_prev: FormState, fd: FormData): Promise<FormS
     method: "POST",
     body: {
       exercice: champ(fd, "exercice"),
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       ag_id: agId === "" ? null : agId,
     },
   });
@@ -38,7 +39,7 @@ export async function modifierBudget(_prev: FormState, fd: FormData): Promise<Fo
   const res = await apiFetch<BudgetAg>(`/finances/budgets/${champ(fd, "budget_id")}`, {
     method: "PATCH",
     body: {
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       ...(agId !== "" ? { ag_id: agId } : {}),
     },
   });
@@ -67,7 +68,7 @@ export async function genererAppelDeFonds(_prev: FormState, fd: FormData): Promi
     body: {
       periode: champ(fd, "periode"),
       type: champ(fd, "type"),
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       date_echeance: champ(fd, "date_echeance"),
     },
   });
@@ -85,7 +86,7 @@ export async function enregistrerPaiement(_prev: FormState, fd: FormData): Promi
   const mode = champ(fd, "mode");
   const payeur = champ(fd, "payeur_utilisateur_id");
   const commun = {
-    montant: champ(fd, "montant"),
+    montant: montantSaisi(fd, "montant"),
     methode: champ(fd, "methode"),
     ...(payeur ? { payeur_utilisateur_id: payeur } : {}),
   };

@@ -8,6 +8,7 @@ import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError } from "../../../../lib/forms-server";
 import { writeCoproprieteId } from "../../../../lib/session";
 import type { Cabinet, CabinetMandat, CabinetMembre, CabinetPrestataire, Profil } from "../../../../lib/api/types";
+import { montantOptionnel } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }
 function optionnel(fd: FormData, name: string): string | null { const v = champ(fd, name); return v === "" ? null : v; }
@@ -37,7 +38,7 @@ export async function proposerMandat(_prev: FormState, fd: FormData): Promise<Fo
     gestionnaire_principal_id: optionnel(fd, "gestionnaire_principal_id"),
     date_debut_mandat: champ(fd, "date_debut_mandat"),
     date_fin_mandat: optionnel(fd, "date_fin_mandat"),
-    honoraires_mensuels: optionnel(fd, "honoraires_mensuels"),
+    honoraires_mensuels: montantOptionnel(fd, "honoraires_mensuels"),
     resolution_ag_id: optionnel(fd, "resolution_ag_id"),
   } });
   if (!res.ok) return fromApiError(res, fd);
@@ -46,7 +47,7 @@ export async function proposerMandat(_prev: FormState, fd: FormData): Promise<Fo
 }
 export async function modifierMandat(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const res = await apiFetch<CabinetMandat>(`/cabinets/${champ(fd, "cabinet_id")}/coproprietes/${champ(fd, "mandat_id")}`, { method: "PATCH", body: { gestionnaire_principal_id: optionnel(fd, "gestionnaire_principal_id"), date_fin_mandat: optionnel(fd, "date_fin_mandat"), honoraires_mensuels: optionnel(fd, "honoraires_mensuels") } });
+  const res = await apiFetch<CabinetMandat>(`/cabinets/${champ(fd, "cabinet_id")}/coproprietes/${champ(fd, "mandat_id")}`, { method: "PATCH", body: { gestionnaire_principal_id: optionnel(fd, "gestionnaire_principal_id"), date_fin_mandat: optionnel(fd, "date_fin_mandat"), honoraires_mensuels: montantOptionnel(fd, "honoraires_mensuels") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success(undefined, res.data);

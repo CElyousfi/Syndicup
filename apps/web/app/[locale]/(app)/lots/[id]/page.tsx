@@ -119,9 +119,8 @@ export default async function LotDetailPage({
   const indivision = proprietairesActifs.length > 1;
 
   const membres = gestion ? await annuaireMembres() : [];
-  const quoteExistante = Number(
-    (Number(sommeCentimes(proprietairesActifs.map((x) => x.quotePart))) / 100).toFixed(2)
-  );
+  // Somme exacte des quotes-parts (centièmes BigInt), convertie une seule fois pour l'affichage.
+  const quoteExistante = Number(versChaine(sommeCentimes(proprietairesActifs.map((x) => x.quotePart))));
 
   // Contexte des lignes financières (période, type, escalade) — un appel de synthèse partagé.
   const contextLignes =

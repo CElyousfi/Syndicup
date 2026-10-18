@@ -29,7 +29,7 @@ export async function creerImport(_prev: FormState, fd: FormData): Promise<FormS
   const res = await apiFetch<ImportJob>("/import", { method: "POST", body: { type: champ(fd, "type"), storage_path: prep.data.storage_path, nom_fichier: f.name || "import.xlsx", options: { inviter: champ(fd, "inviter") !== "off", ...(canal ? { canal } : {}), ...(optionnel(fd, "date_reference") ? { date_reference: champ(fd, "date_reference") } : {}) } } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
-  redirect(`/${locale}${BASE}/${res.data.id}`);
+  redirect(`/${locale}${BASE}/${res.data.id}?cree=1`);
 }
 
 export async function modifierMapping(_prev: FormState, fd: FormData): Promise<FormState> {

@@ -7,6 +7,7 @@ import { readSession } from "../../../../lib/session";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError, fileTooLarge, uploadRefused } from "../../../../lib/forms-server";
 import type { Conge, FichePaie, PersonnelRh } from "../../../../lib/api/types";
+import { montantOptionnel } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }
 function optionnel(fd: FormData, name: string): string | null { const v = champ(fd, name); return v === "" ? null : v; }
@@ -36,7 +37,7 @@ export async function modifierDossier(_prev: FormState, fd: FormData): Promise<F
     const plages = [1, 2].map((i) => ({ debut: champ(fd, `${j}_debut_${i}`), fin: champ(fd, `${j}_fin_${i}`) })).filter((p) => p.debut && p.fin);
     if (plages.length) horaires[j] = plages;
   }
-  const salaire = optionnel(fd, "salaire_brut_mensuel");
+  const salaire = montantOptionnel(fd, "salaire_brut_mensuel");
   const cnss = optionnel(fd, "numero_cnss");
   const preavis = optionnel(fd, "date_fin_contrat");
   const res = await apiFetch<PersonnelRh>(`/personnel/${id}`, {
@@ -71,7 +72,7 @@ export async function preparerFiche(_prev: FormState, fd: FormData): Promise<For
   const locale = champ(fd, "locale");
   const id = champ(fd, "personnel_id");
   const abs = optionnel(fd, "jours_absence_injustifiee");
-  const res = await apiFetch<FichePaie>(`/personnel/${id}/fiches-paie`, { method: "POST", body: { periode: champ(fd, "periode"), brut: optionnel(fd, "brut") ?? undefined, primes: optionnel(fd, "primes"), retenues: optionnel(fd, "retenues"), ...(abs ? { jours_absence_injustifiee: Number(abs) } : {}) } });
+  const res = await apiFetch<FichePaie>(`/personnel/${id}/fiches-paie`, { method: "POST", body: { periode: champ(fd, "periode"), brut: montantOptionnel(fd, "brut") ?? undefined, primes: montantOptionnel(fd, "primes"), retenues: montantOptionnel(fd, "retenues"), ...(abs ? { jours_absence_injustifiee: Number(abs) } : {}) } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success(undefined, { id: res.data.id });

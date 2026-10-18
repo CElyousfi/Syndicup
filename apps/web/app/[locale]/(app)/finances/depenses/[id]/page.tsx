@@ -29,7 +29,7 @@ export default async function DepenseDetailPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
-  searchParams: Promise<{ creee?: string }>;
+  searchParams: Promise<{ creee?: string; maj?: string }>;
 }) {
   const { locale, id } = await params;
   const sp = await searchParams;
@@ -54,6 +54,7 @@ export default async function DepenseDetailPage({
   return (
     <div className="page-root">
       {sp.creee === "1" ? <Banner variant="ok" className="mb-5" title={d.creee}>{d.creeeAide}</Banner> : null}
+      {sp.maj === "1" ? <Banner variant="ok" className="mb-5">{dict.formulaires.succes.depenseModifiee}</Banner> : null}
 
       <PageHeader
         back={<BackLink href={p("/finances/depenses")} label={d.titre} />}

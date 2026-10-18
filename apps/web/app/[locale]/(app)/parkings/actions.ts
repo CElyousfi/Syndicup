@@ -7,6 +7,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError } from "../../../../lib/forms-server";
 import type { BadgeAcces, Emplacement, EmplacementDetail, RechercheVehicule, Vehicule } from "../../../../lib/api/types";
+import { montantOptionnel } from "../../../../lib/centimes";
 
 const BASE = "/parkings";
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }
@@ -42,7 +43,7 @@ export async function supprimerEmplacement(_prev: FormState, fd: FormData): Prom
 export async function attribuerEmplacement(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const id = champ(fd, "emplacement_id");
-  const res = await apiFetch<EmplacementDetail>(`/emplacements/${id}/attribuer`, { method: "POST", idempotent: true, body: { lot_id: champ(fd, "lot_id"), type: champ(fd, "type"), date_debut: champ(fd, "date_debut"), date_fin: optionnel(fd, "date_fin"), resolution_ag_id: optionnel(fd, "resolution_ag_id"), redevance_mensuelle: optionnel(fd, "redevance_mensuelle"), notes: optionnel(fd, "notes") } });
+  const res = await apiFetch<EmplacementDetail>(`/emplacements/${id}/attribuer`, { method: "POST", idempotent: true, body: { lot_id: champ(fd, "lot_id"), type: champ(fd, "type"), date_debut: champ(fd, "date_debut"), date_fin: optionnel(fd, "date_fin"), resolution_ag_id: optionnel(fd, "resolution_ag_id"), redevance_mensuelle: montantOptionnel(fd, "redevance_mensuelle"), notes: optionnel(fd, "notes") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success(undefined, res.data);
@@ -87,14 +88,14 @@ export async function rechercherVehicule(_prev: FormState, fd: FormData): Promis
 
 export async function creerBadge(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const res = await apiFetch<BadgeAcces>("/badges", { method: "POST", body: { lot_id: champ(fd, "lot_id"), type: champ(fd, "type"), identifiant: champ(fd, "identifiant"), remis_le: champ(fd, "remis_le"), caution_montant: optionnel(fd, "caution_montant"), caution_paiement_id: optionnel(fd, "caution_paiement_id"), notes: optionnel(fd, "notes") } });
+  const res = await apiFetch<BadgeAcces>("/badges", { method: "POST", body: { lot_id: champ(fd, "lot_id"), type: champ(fd, "type"), identifiant: champ(fd, "identifiant"), remis_le: champ(fd, "remis_le"), caution_montant: montantOptionnel(fd, "caution_montant"), caution_paiement_id: optionnel(fd, "caution_paiement_id"), notes: optionnel(fd, "notes") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success(undefined, res.data);
 }
 export async function modifierBadge(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const res = await apiFetch<BadgeAcces>(`/badges/${champ(fd, "badge_id")}`, { method: "PATCH", body: { identifiant: champ(fd, "identifiant"), caution_montant: optionnel(fd, "caution_montant"), caution_paiement_id: optionnel(fd, "caution_paiement_id"), notes: optionnel(fd, "notes") } });
+  const res = await apiFetch<BadgeAcces>(`/badges/${champ(fd, "badge_id")}`, { method: "PATCH", body: { identifiant: champ(fd, "identifiant"), caution_montant: montantOptionnel(fd, "caution_montant"), caution_paiement_id: optionnel(fd, "caution_paiement_id"), notes: optionnel(fd, "notes") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success(undefined, res.data);

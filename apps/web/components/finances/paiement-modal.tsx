@@ -9,7 +9,10 @@ import { FormAlert, SubmitButton } from "../ui/form";
 import { Button, ButtonLink } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Illustration } from "../ui/illustration";
-import { IDLE } from "../../lib/forms";
+import { IDLE, fieldError } from "../../lib/forms";
+import { formChecked, formKey, formValue } from "../../lib/form-values";
+import { parseMontant } from "../../lib/centimes";
+import { MoneyInput } from "../ui/money-input";
 import { celebrate } from "../../lib/success";
 import type { Dict, Locale } from "../../lib/i18n";
 import type { MethodePaiement, StatutLigneAppel } from "../../lib/api/types";
@@ -62,6 +65,59 @@ export function PaiementModal({
   triggerSize?: "sm" | "md";
 }) {
   const [open, setOpen] = useState(false);
+  // Chaque ouverture repart d'un formulaire neuf (jamais l'erreur ni le succès précédent).
+  const [session, setSession] = useState(0);
+  const f = dict.finances;
+  return (
+    <>
+      <Button
+        variant={triggerVariant}
+        size={triggerSize}
+        onClick={() => {
+          setSession((s) => s + 1);
+          setOpen(true);
+        }}
+      >
+        <IconCoins width={16} height={16} />
+        {f.enregistrerPaiement}
+      </Button>
+      <PaiementBody
+        key={session}
+        dict={dict}
+        locale={locale}
+        lignes={lignes}
+        lots={lots}
+        modeInitial={modeInitial}
+        ligneInitiale={ligneInitiale}
+        lotInitial={lotInitial}
+        open={open}
+        setOpen={setOpen}
+      />
+    </>
+  );
+}
+
+function PaiementBody({
+  dict,
+  locale,
+  lignes,
+  lots,
+  modeInitial,
+  ligneInitiale,
+  lotInitial,
+  open,
+  setOpen,
+}: {
+  dict: Dict;
+  locale: Locale;
+  lignes: LigneOption[];
+  lots: LotOption[];
+  modeInitial: "cible" | "fifo";
+  ligneInitiale?: string;
+  lotInitial?: string;
+  open: boolean;
+  setOpen: (v: boolean) => void;
+}) {
   const [mode, setMode] = useState<"cible" | "fifo">(modeInitial);
   const [state, action] = useActionState(enregistrerPaiement, IDLE);
   const [resultat, setResultat] = useState<ResultatPaiement | null>(null);
@@ -86,23 +142,15 @@ export function PaiementModal({
       corps: r.quittanceId ? quittanceGeneree : undefined,
       illustration: "ok-paiement",
       moment: "payment",
-      amount: (formRef.current?.elements.namedItem("montant") as HTMLInputElement | null)?.value?.replace(",", ".") || undefined,
+      amount: parseMontant((formRef.current?.elements.namedItem("montant") as HTMLInputElement | null)?.value) ?? undefined,
       href: r.quittanceId ? `/${locale}/finances/quittances/${r.quittanceId}` : undefined,
       hrefLabel: r.quittanceId ? voirQuittance : undefined,
     });
-  }, [state, locale, paiementEnregistre, quittanceGeneree, voirQuittance]);
+  }, [state, locale, paiementEnregistre, quittanceGeneree, voirQuittance, setOpen]);
 
-  const fermer = () => {
-    setOpen(false);
-    setResultat(null);
-  };
+  const fermer = () => setOpen(false);
 
   return (
-    <>
-      <Button variant={triggerVariant} size={triggerSize} onClick={() => setOpen(true)}>
-        <IconCoins width={16} height={16} />
-        {f.enregistrerPaiement}
-      </Button>
       <Modal
         open={open}
         onClose={fermer}
@@ -161,11 +209,12 @@ export function PaiementModal({
             />
 
             {mode === "cible" ? (
-              <Field label={f.ligneConcernee} htmlFor="appel_de_fonds_lot_id" hint={f.paiementLigneAide} required>
+              <Field label={f.ligneConcernee} htmlFor="appel_de_fonds_lot_id" hint={f.paiementLigneAide} required error={fieldError(state, "appel_de_fonds_lot_id")}>
                 <Select
+                  key={formKey(state, "appel_de_fonds_lot_id")}
                   id="appel_de_fonds_lot_id"
                   name="appel_de_fonds_lot_id"
-                  defaultValue={ligneInitiale ?? ""}
+                  defaultValue={formValue(state, "appel_de_fonds_lot_id", ligneInitiale ?? "")}
                   required
                 >
                   {lignes.map((l) => (
@@ -177,8 +226,8 @@ export function PaiementModal({
                 </Select>
               </Field>
             ) : (
-              <Field label={dict.espaces.pourLot} htmlFor="lot_id" hint={f.paiementFifoAide} required>
-                <Select id="lot_id" name="lot_id" defaultValue={lotInitial ?? ""} required>
+              <Field label={dict.espaces.pourLot} htmlFor="lot_id" hint={f.paiementFifoAide} required error={fieldError(state, "lot_id")}>
+                <Select key={formKey(state, "lot_id")} id="lot_id" name="lot_id" defaultValue={formValue(state, "lot_id", lotInitial ?? "")} required>
                   {lots.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.numero}
@@ -189,20 +238,18 @@ export function PaiementModal({
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label={`${f.montant} (${dict.common.mad})`} htmlFor="montant" required>
-                <Input
+              <Field label={`${f.montant} (${dict.common.mad})`} htmlFor="montant" required hint={dict.formulaires.montantAide} error={fieldError(state, "montant")}>
+                <MoneyInput
                   id="montant"
                   name="montant"
-                  inputMode="decimal"
-                  dir="ltr"
-                  pattern="\d{1,12}([.]\d{1,2})?"
-                  placeholder="0.00"
+                  placeholder="0,00"
                   required
-                  className="tnum text-start"
+                  invalidMessage={dict.formulaires.montantInvalide}
+                  defaultValue={formValue(state, "montant")}
                 />
               </Field>
-              <Field label={f.methode} htmlFor="methode" required>
-                <Select id="methode" name="methode" required defaultValue="VIREMENT">
+              <Field label={f.methode} htmlFor="methode" required error={fieldError(state, "methode")}>
+                <Select key={formKey(state, "methode")} id="methode" name="methode" required defaultValue={formValue(state, "methode", "VIREMENT")}>
                   {(["VIREMENT", "ESPECES", "CHEQUE"] as MethodePaiement[]).map((m) => (
                     <option key={m} value={m}>
                       {dict.enums.methodePaiement[m]}
@@ -217,12 +264,13 @@ export function PaiementModal({
               htmlFor="payeur_utilisateur_id"
               hint={f.payeurAide}
               optionalLabel={dict.common.optional}
+              error={fieldError(state, "payeur_utilisateur_id")}
             >
-              <Input id="payeur_utilisateur_id" name="payeur_utilisateur_id" dir="ltr" className="font-mono text-[13px] text-start" />
+              <Input id="payeur_utilisateur_id" name="payeur_utilisateur_id" dir="ltr" className="font-mono text-[13px] text-start" defaultValue={formValue(state, "payeur_utilisateur_id")} />
             </Field>
 
             {mode === "cible" ? (
-              <Checkbox name="accepter_trop_percu" label={f.tropPercu} hint={f.tropPercuAide} />
+              <Checkbox name="accepter_trop_percu" label={f.tropPercu} hint={f.tropPercuAide} defaultChecked={formChecked(state, "accepter_trop_percu", false)} />
             ) : null}
 
             <FormAlert state={state} />
@@ -236,7 +284,6 @@ export function PaiementModal({
           </form>
         )}
       </Modal>
-    </>
   );
 }
 

@@ -7,6 +7,9 @@ import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { ButtonLink } from "../../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../../lib/forms";
+import { formKey, formValue } from "../../../../../lib/form-values";
+import { parseMontant, versCentimes, versChaine } from "../../../../../lib/centimes";
+import { MoneyInput } from "../../../../../components/ui/money-input";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import type { BudgetPoste, Depense, CategorieDepense, SourceFinancement } from "../../../../../lib/api/types";
 import { postesPourCategorie } from "../../../../../lib/depenses";
@@ -49,18 +52,16 @@ export function DepenseForm({
   const aujourdhui = new Date().toISOString().slice(0, 10);
 
   // Aide à la saisie (jamais un calcul métier) : TVA proposée depuis le HT au taux par défaut.
+  // Centimes BigInt (lib/centimes) : « 1 250,50 » comme « 1250.50 », jamais de float.
+  const htNormalise = parseMontant(ht);
+  const tvaNormalisee = parseMontant(tva);
   const proposerTva = () => {
-    if (!tvaDefaut || !/^\d+(\.\d{1,2})?$/.test(ht)) return;
-    const centimesHt = BigInt(Math.round(Number(ht) * 100));
-    const centimesTva = (centimesHt * BigInt(Math.round(Number(tvaDefaut) * 100))) / 10000n;
-    setTva(`${centimesTva / 100n}.${String(centimesTva % 100n).padStart(2, "0")}`);
+    const taux = parseMontant(tvaDefaut);
+    if (!taux || !htNormalise) return;
+    // taux en pourcentage (« 20 » → 2000 centièmes) : TVA = HT × taux / 100, arrondi au centime inférieur.
+    setTva(versChaine((versCentimes(htNormalise) * versCentimes(taux)) / 10000n));
   };
-  const ttcSuggere = /^\d+(\.\d{1,2})?$/.test(ht) && /^\d+(\.\d{1,2})?$/.test(tva)
-    ? (() => {
-        const c = BigInt(Math.round(Number(ht) * 100)) + BigInt(Math.round(Number(tva) * 100));
-        return `${c / 100n}.${String(c % 100n).padStart(2, "0")}`;
-      })()
-    : undefined;
+  const ttcSuggere = htNormalise && tvaNormalisee ? versChaine(versCentimes(htNormalise) + versCentimes(tvaNormalisee)) : undefined;
 
   return (
     <form action={action} className="space-y-4">
@@ -72,10 +73,10 @@ export function DepenseForm({
         <div className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={d.libelle} htmlFor="libelle" required error={fieldError(state, "libelle")}>
-              <Input id="libelle" name="libelle" required maxLength={200} defaultValue={depense?.libelle ?? ""} />
+              <Input id="libelle" name="libelle" required maxLength={200} defaultValue={formValue(state, "libelle", depense?.libelle ?? "")} />
             </Field>
             <Field label={d.date} htmlFor="date_depense" required error={fieldError(state, "date_depense")}>
-              <Input id="date_depense" name="date_depense" type="date" required dir="ltr" defaultValue={depense?.dateDepense.slice(0, 10) ?? aujourdhui} className="tnum text-start" />
+              <Input id="date_depense" name="date_depense" type="date" required dir="ltr" defaultValue={formValue(state, "date_depense", depense?.dateDepense.slice(0, 10) ?? aujourdhui)} className="tnum text-start" />
             </Field>
             <Field label={d.categorie} htmlFor="categorie" required error={fieldError(state, "categorie")}>
               <Select id="categorie" name="categorie" required value={categorie} onChange={(ev) => setCategorie(ev.target.value as CategorieDepense)}>
@@ -85,7 +86,7 @@ export function DepenseForm({
               </Select>
             </Field>
             <Field label={d.poste} htmlFor="budget_poste_id" hint={d.posteAide} optionalLabel={dict.common.optional} error={fieldError(state, "budget_poste_id")}>
-              <Select id="budget_poste_id" name="budget_poste_id" defaultValue={depense?.budgetPosteId ?? ""}>
+              <Select key={`${categorie}:${formKey(state, "budget_poste_id")}`} id="budget_poste_id" name="budget_poste_id" defaultValue={formValue(state, "budget_poste_id", depense?.budgetPosteId ?? "")}>
                 <option value="">{d.horsPoste}</option>
                 {postesFiltres.map((p) => (
                   <option key={p.id} value={p.id}>{p.libelle}</option>
@@ -94,10 +95,10 @@ export function DepenseForm({
             </Field>
           </div>
           <Field label={d.description} htmlFor="description" optionalLabel={dict.common.optional}>
-            <Textarea id="description" name="description" rows={3} maxLength={2000} defaultValue={depense?.description ?? ""} />
+            <Textarea id="description" name="description" rows={3} maxLength={2000} defaultValue={formValue(state, "description", depense?.description ?? "")} />
           </Field>
           <Field label={d.prestataire} htmlFor="prestataire_id" optionalLabel={dict.common.optional} error={fieldError(state, "prestataire_id")}>
-            <Select id="prestataire_id" name="prestataire_id" defaultValue={depense?.prestataireId ?? ""}>
+            <Select key={formKey(state, "prestataire_id")} id="prestataire_id" name="prestataire_id" defaultValue={formValue(state, "prestataire_id", depense?.prestataireId ?? "")}>
               <option value="">{d.aucunPrestataire}</option>
               {prestataires.map((p) => (
                 <option key={p.id} value={p.id}>{p.libelle}</option>
@@ -111,13 +112,13 @@ export function DepenseForm({
         <SectionHeader title={d.montantTtc} subtitle={d.montantsAide} />
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <Field label={`${d.montantHt} (${dict.common.mad})`} htmlFor="montant_ht" optionalLabel={dict.common.optional} error={fieldError(state, "montant_ht")}>
-            <Input id="montant_ht" name="montant_ht" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" value={ht} onChange={(ev) => setHt(ev.target.value)} onBlur={proposerTva} className="tnum text-start" />
+            <MoneyInput id="montant_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} value={ht} onChange={(ev) => setHt(ev.target.value)} onBlur={proposerTva} />
           </Field>
           <Field label={`${d.tva} (${dict.common.mad})`} htmlFor="tva" hint={tvaDefaut ? fill(d.tvaDefaut, { taux: tvaDefaut }) : undefined} optionalLabel={dict.common.optional} error={fieldError(state, "tva")}>
-            <Input id="tva" name="tva" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" value={tva} onChange={(ev) => setTva(ev.target.value)} className="tnum text-start" />
+            <MoneyInput id="tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} value={tva} onChange={(ev) => setTva(ev.target.value)} />
           </Field>
           <Field label={`${d.montantTtc} (${dict.common.mad})`} htmlFor="montant_ttc" required error={fieldError(state, "montant_ttc")}>
-            <Input id="montant_ttc" name="montant_ttc" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" required key={ttcSuggere ?? "libre"} defaultValue={ttcSuggere ?? depense?.montantTtc ?? ""} className="tnum text-start" />
+            <MoneyInput id="montant_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} key={`${ttcSuggere ?? "libre"}:${formKey(state, "montant_ttc")}`} defaultValue={formValue(state, "montant_ttc", ttcSuggere ?? depense?.montantTtc ?? "")} />
           </Field>
         </div>
       </Card>
@@ -133,7 +134,7 @@ export function DepenseForm({
             </Select>
           </Field>
           <Field label={d.resolutionAg} htmlFor="resolution_ag_id" hint={d.resolutionAgAide} optionalLabel={source === "FONDS_RESERVE" ? undefined : dict.common.optional} error={fieldError(state, "resolution_ag_id")}>
-            <Select id="resolution_ag_id" name="resolution_ag_id" defaultValue={depense?.resolutionAgId ?? ""}>
+            <Select key={formKey(state, "resolution_ag_id")} id="resolution_ag_id" name="resolution_ag_id" defaultValue={formValue(state, "resolution_ag_id", depense?.resolutionAgId ?? "")}>
               <option value="">{dict.common.none}</option>
               {resolutions.map((r) => (
                 <option key={r.id} value={r.id}>{r.libelle}</option>
@@ -151,13 +152,13 @@ export function DepenseForm({
           <SectionHeader title={d.facture} subtitle={d.fichierFacture} />
           <div className="mt-4 grid gap-4 sm:grid-cols-3">
             <Field label={d.numeroFacture} htmlFor="facture_numero" optionalLabel={dict.common.optional}>
-              <Input id="facture_numero" name="facture_numero" dir="ltr" maxLength={80} className="text-start" />
+              <Input id="facture_numero" name="facture_numero" dir="ltr" maxLength={80} className="text-start" defaultValue={formValue(state, "facture_numero")} />
             </Field>
             <Field label={d.dateFacture} htmlFor="facture_date" optionalLabel={dict.common.optional}>
-              <Input id="facture_date" name="facture_date" type="date" dir="ltr" className="tnum text-start" />
+              <Input id="facture_date" name="facture_date" type="date" dir="ltr" className="tnum text-start" defaultValue={formValue(state, "facture_date")} />
             </Field>
             <Field label={d.dateEcheance} htmlFor="facture_echeance" optionalLabel={dict.common.optional}>
-              <Input id="facture_echeance" name="facture_echeance" type="date" dir="ltr" className="tnum text-start" />
+              <Input id="facture_echeance" name="facture_echeance" type="date" dir="ltr" className="tnum text-start" defaultValue={formValue(state, "facture_echeance")} />
             </Field>
           </div>
           <Field label={d.fichierFacture} htmlFor="facture_fichier" optionalLabel={dict.common.optional} error={fieldError(state, "facture_fichier")}>

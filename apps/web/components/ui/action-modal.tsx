@@ -6,7 +6,7 @@ import { Button } from "./button";
 import { IconCheck } from "./icons";
 import { IDLE, type FormState } from "../../lib/forms";
 import { toast } from "../../lib/toast";
-import { celebrate } from "../../lib/success";
+import { celebrate, type SuccessInput } from "../../lib/success";
 
 type Action = (prev: FormState, fd: FormData) => Promise<FormState>;
 
@@ -24,6 +24,10 @@ export interface ActionModalSuccess {
   next?: ReactNode | ((close: () => void) => ReactNode);
   /** Action MAJEURE : écran de succès plein (Wise) puis fermeture — au lieu du panneau. */
   illustration?: string;
+  /** Moment signature joué par l'écran plein (paiement, envoi, vote, justifiée). */
+  moment?: SuccessInput["moment"];
+  /** Corps de l'écran plein. */
+  corps?: string | ((state: Extract<FormState, { status: "success" }>) => string | undefined);
   /** Lien « Voir » de l'écran plein (avec `illustration`). */
   href?: string;
   hrefLabel?: string;
@@ -44,6 +48,7 @@ export function ActionModal({
   wide,
   closeLabel,
   trigger,
+  defaultOpen = false,
   success,
   onSuccess,
   children,
@@ -53,6 +58,8 @@ export function ActionModal({
   subtitle?: ReactNode;
   wide?: boolean;
   closeLabel: string;
+  /** Ouverte au premier rendu (lien profond « ?nouveau=1 »…). */
+  defaultOpen?: boolean;
   /** Déclencheur : reçoit la fonction d'ouverture. */
   trigger: (open: () => void) => ReactNode;
   success: ActionModalSuccess;
@@ -60,7 +67,7 @@ export function ActionModal({
   onSuccess?: (state: Extract<FormState, { status: "success" }>) => void;
   children: (ctx: ActionModalContext) => ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [session, setSession] = useState(0);
   const ouvrir = () => {
     setSession((s) => s + 1);
@@ -121,13 +128,14 @@ function ActionModalBody({
     traite.current = state;
     onSuccess?.(state);
     if (success.illustration) {
-      celebrate({ titre: message, illustration: success.illustration, href: success.href, hrefLabel: success.hrefLabel });
+      const corps = typeof success.corps === "function" ? success.corps(state) : success.corps;
+      celebrate({ titre: message, corps, illustration: success.illustration, moment: success.moment, href: success.href, hrefLabel: success.hrefLabel });
       close();
     } else if (success.closeAndToast) {
       toast({ titre: message, tone: "ok", duree: 4000 });
       close();
     }
-  }, [state, message, success.illustration, success.closeAndToast, success.href, success.hrefLabel, onSuccess, close]);
+  }, [state, message, success.illustration, success.moment, success.corps, success.closeAndToast, success.href, success.hrefLabel, onSuccess, close]);
 
   const montrerPanneau = state.status === "success" && !fermerAuSucces;
   // Succès annoncé ici (toast / écran plein) : le formulaire qui se referme ne l'annonce pas une

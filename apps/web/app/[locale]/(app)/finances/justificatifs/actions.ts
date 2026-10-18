@@ -4,7 +4,8 @@
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../../lib/api/client";
 import { success, type FormState } from "../../../../../lib/forms";
-import { fromApiError, fileTooLarge, uploadRefused } from "../../../../../lib/forms-server";
+import { fromApiError, fileTooLarge, succes, uploadRefused } from "../../../../../lib/forms-server";
+import { montantSaisi } from "../../../../../lib/centimes";
 import type { Justificatif, CompteBancaire } from "../../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }
@@ -37,7 +38,7 @@ export async function declarerJustificatif(_prev: FormState, fd: FormData): Prom
     body: {
       ...(pourLot ? { pour_lot_id: champ(fd, "lot_id") } : { lot_id: champ(fd, "lot_id") }),
       appel_de_fonds_lot_id: appel === "SOLDE" ? null : appel,
-      montant: champ(fd, "montant"),
+      montant: montantSaisi(fd, "montant"),
       methode: champ(fd, "methode"),
       date_paiement: champ(fd, "date_paiement"),
       banque_emettrice: optionnel(fd, "banque_emettrice"),
@@ -66,7 +67,8 @@ export async function rejeterJustificatif(_prev: FormState, fd: FormData): Promi
   return transition(fd, "rejeter", { motif: champ(fd, "motif") });
 }
 export async function annulerJustificatif(_prev: FormState, fd: FormData): Promise<FormState> {
-  return transition(fd, "annuler");
+  const res = await transition(fd, "annuler");
+  return res.status === "success" ? succes((d) => d.justificatifs.annule, res.data) : res;
 }
 
 export async function saisirEspeces(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -77,7 +79,7 @@ export async function saisirEspeces(_prev: FormState, fd: FormData): Promise<For
   const res = await apiFetch<{ type: "JUSTIFICATIF" | "PAIEMENT" }>("/finances/paiements/especes", {
     method: "POST",
     idempotent: true,
-    body: { lot_id: champ(fd, "lot_id"), appel_de_fonds_lot_id: appel === "SOLDE" || !appel ? null : appel, montant: champ(fd, "montant"), date_paiement: optionnel(fd, "date_paiement") ?? undefined, commentaire: optionnel(fd, "commentaire"), preuve },
+    body: { lot_id: champ(fd, "lot_id"), appel_de_fonds_lot_id: appel === "SOLDE" || !appel ? null : appel, montant: montantSaisi(fd, "montant"), date_paiement: optionnel(fd, "date_paiement") ?? undefined, commentaire: optionnel(fd, "commentaire"), preuve },
   });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/lots/${champ(fd, "lot_id")}`);

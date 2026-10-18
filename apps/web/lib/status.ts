@@ -3,8 +3,10 @@
  * couleur raconte toujours la même chose, partout.
  */
 import type { BadgeVariant } from "../components/ui/badge";
+import type { IconTone } from "../components/ui/color-icons";
 
 const map = <T extends string>(m: Record<T, BadgeVariant>) => m;
+const tones = <T extends string>(m: Record<T, IconTone>) => m;
 
 export const ligneAppelVariant = map({ PAYE: "ok", PARTIEL: "warn", IMPAYE: "danger" });
 
@@ -133,6 +135,8 @@ export const factureVariant = map({
 
 // M17 — justificatifs de paiement.
 export const justificatifVariant = map({ EN_ATTENTE: "warn", VALIDE: "ok", REJETE: "danger", ANNULE: "neutral" });
+/** Pastille d'icône d'une ligne de justificatif (même sens que le badge). */
+export const justificatifTone = tones({ EN_ATTENTE: "tosca", VALIDE: "ok", REJETE: "danger", ANNULE: "tosca" });
 
 // M18 — rapports de gestion et ancienneté des impayés.
 export const rapportVariant = map({ BROUILLON: "outline", GENERE: "info", SOUMIS_AG: "warn", APPROUVE: "ok", REJETE: "danger" });
