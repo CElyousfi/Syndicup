@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../../lib/forms";
+import { formKey, formValue } from "../../../../../lib/form-values";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { TypeAg } from "../../../../../lib/api/types";
 import { creerAg } from "../actions";
@@ -15,7 +16,7 @@ export function AgForm({ dict, locale }: { dict: Dict; locale: Locale }) {
     <form action={action} className="card max-w-xl space-y-5 p-5 sm:p-8">
       <input type="hidden" name="locale" value={locale} />
       <Field label={dict.ag.type} htmlFor="type" required>
-        <Select id="type" name="type" defaultValue="ORDINAIRE" required>
+        <Select key={formKey(state, "type")} id="type" name="type" defaultValue={formValue(state, "type", "ORDINAIRE")} required>
           {(Object.keys(dict.enums.typeAg) as TypeAg[]).map((t) => (
             <option key={t} value={t}>
               {dict.enums.typeAg[t]}
@@ -24,7 +25,7 @@ export function AgForm({ dict, locale }: { dict: Dict; locale: Locale }) {
         </Select>
       </Field>
       <Field label={dict.ag.date} htmlFor="date_ag" required error={fieldError(state, "date_ag")}>
-        <Input id="date_ag" name="date_ag" type="datetime-local" required />
+        <Input id="date_ag" name="date_ag" type="datetime-local" required defaultValue={formValue(state, "date_ag")} />
       </Field>
       <p className="text-[13px] leading-relaxed text-soft">{dict.ag.aucuneResolutionAide}</p>
       <FormAlert state={state} />

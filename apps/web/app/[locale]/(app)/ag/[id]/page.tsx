@@ -39,10 +39,13 @@ import { failWith } from "../../../../../lib/api/or-fail";
 
 export default async function AgDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { locale, id } = await params;
+  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   const { dict } = ctx;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
@@ -68,6 +71,12 @@ export default async function AgDetailPage({
   const mesLots = lots.filter((l) =>
     (l.proprietaires ?? []).some((p) => !p.dateFin && p.utilisateurId === ctx.profil.id)
   );
+  // Destinataires de la convocation : copropriétaires actifs distincts. Liste des lots tronquée
+  // (limite 100) → pas de nombre affiché plutôt qu'un nombre faux.
+  const nbCoproprietaires =
+    lots.length > 0 && lots.length < 100
+      ? new Set(lots.flatMap((l) => (l.proprietaires ?? []).filter((p) => !p.dateFin).map((p) => p.utilisateurId))).size
+      : undefined;
 
   // Résultats agrégés pour une AG clôturée.
   // M22 — suivi d'exécution des résolutions adoptées (lisible par tout membre voyant l'AG).
@@ -97,6 +106,7 @@ export default async function AgDetailPage({
 
   return (
     <div className="page-root">
+      {sp.creee === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.assembleeCreee}</Banner> : null}
       <PageHeader
         back={<BackLink href={p("/ag")} label={dict.nav.ag} />}
         title={dict.enums.typeAg[ag.type]}
@@ -291,7 +301,7 @@ export default async function AgDetailPage({
             <Card>
               <SectionHeader title={a.convoquer} subtitle={a.convoquerAide} />
               <div className="mt-4 space-y-3">
-                <ConvoquerForm dict={dict} locale={ctx.locale} agId={id} />
+                <ConvoquerForm dict={dict} locale={ctx.locale} agId={id} dateAg={formatDate(ag.dateAg, ctx.locale)} nbCoproprietaires={nbCoproprietaires} />
                 <AnnulerModal dict={dict} locale={ctx.locale} agId={id} />
               </div>
             </Card>
@@ -348,6 +358,7 @@ export default async function AgDetailPage({
                             locale={ctx.locale}
                             agId={id}
                             procurationId={proc.id}
+                            mandataire={membreParId.get(proc.mandataireId)}
                           />
                         ) : null}
                       </li>

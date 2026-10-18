@@ -2806,6 +2806,8 @@ export const ar: DeepDict<typeof fr> = {
       depenseIncidentCreee: "أُنشئت النفقة ورُبطت بالبلاغ.",
       evaluationEnregistree: "حُفظ التقييم.",
       resolutionFinalisee: "أُنهي القرار — ثُبّتت النتيجة.",
+      seanceOuverte: "افتُتحت الجلسة — عوين النصاب وفُتحت عمليات التصويت.",
+      agCloturee: "اختُتم الجمع العام — أُنشئ المحضر وخُتم.",
     },
     filtres: {
       effacer: "مسح عوامل التصفية",

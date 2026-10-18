@@ -2831,6 +2831,8 @@ export const fr = {
       depenseIncidentCreee: "Dépense créée et rattachée au signalement.",
       evaluationEnregistree: "Évaluation enregistrée.",
       resolutionFinalisee: "Résolution finalisée — résultat figé.",
+      seanceOuverte: "Séance ouverte — le quorum a été constaté et les votes sont ouverts.",
+      agCloturee: "Assemblée clôturée — le procès-verbal est généré et scellé.",
     },
     filtres: {
       effacer: "Effacer les filtres",

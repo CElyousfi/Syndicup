@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError } from "../../../../lib/forms-server";
+import { fromApiError, succes } from "../../../../lib/forms-server";
 import type {
   AgProcuration,
   AgResolution,
@@ -26,9 +26,9 @@ export async function creerAg(_prev: FormState, fd: FormData): Promise<FormState
     method: "POST",
     body: { type: champ(fd, "type"), date_ag: dateAg },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag`);
-  redirect(`/${locale}/ag/${res.data.id}`);
+  redirect(`/${locale}/ag/${res.data.id}?creee=1`);
 }
 
 export async function ajouterResolution(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -43,27 +43,30 @@ export async function ajouterResolution(_prev: FormState, fd: FormData): Promise
       necessite_execution: champ(fd, "necessite_execution") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  return success();
+  return succes((d) => d.formulaires.succes.resolutionAjoutee);
 }
 
 export async function convoquerAg(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const agId = champ(fd, "ag_id");
-  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/convoquer`, { method: "POST" });
-  if (!res.ok) return fromApiError(res);
+  // Envoi probant (convocations horodatées) : une clé d'idempotence par geste — un double clic
+  // ou un renvoi après coupure ne doit jamais convoquer deux fois.
+  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/convoquer`, { method: "POST", idempotent: true });
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  return success();
+  return succes((d) => d.formulaires.confirmer.convoquerSucces);
 }
 
 export async function ouvrirAg(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const agId = champ(fd, "ag_id");
-  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/ouvrir`, { method: "POST" });
-  if (!res.ok) return fromApiError(res);
+  // Ouverture horodatée au PV (quorum constaté) : même protection contre le double envoi.
+  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/ouvrir`, { method: "POST", idempotent: true });
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  redirect(`/${locale}/ag/${agId}/seance`);
+  redirect(`/${locale}/ag/${agId}/seance?ouverte=1`);
 }
 
 export async function annulerAg(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -73,9 +76,9 @@ export async function annulerAg(_prev: FormState, fd: FormData): Promise<FormSta
     method: "POST",
     body: { motif: champ(fd, "motif") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  return success();
+  return succes((d) => d.formulaires.succes.agAnnulee);
 }
 
 export async function finaliserResolution(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -85,9 +88,9 @@ export async function finaliserResolution(_prev: FormState, fd: FormData): Promi
     `/ag/${agId}/resolutions/${champ(fd, "resolution_id")}/finaliser`,
     { method: "POST" }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  return success(undefined, { resultat: res.data.resultat });
+  return succes((d) => d.formulaires.succes.resolutionFinalisee, { resultat: res.data.resultat });
 }
 
 /** Clôture — irréversible : fige les résultats et génère le PV (hash d'intégrité). */
@@ -95,9 +98,9 @@ export async function cloturerAg(_prev: FormState, fd: FormData): Promise<FormSt
   const locale = champ(fd, "locale");
   const agId = champ(fd, "ag_id");
   const res = await apiFetch<ClotureAgResult>(`/ag/${agId}/cloturer`, { method: "POST" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  redirect(`/${locale}/ag/${agId}/pv`);
+  redirect(`/${locale}/ag/${agId}/pv?cloturee=1`);
 }
 
 /** Vote — écriture probante et immuable : Idempotency-Key obligatoire. */
@@ -116,7 +119,7 @@ export async function voter(_prev: FormState, fd: FormData): Promise<FormState> 
         : { lot_id: lotId }),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   return success(undefined, {
     resolutionId: res.data.resolutionId,
     valeur: res.data.valeur,
@@ -136,7 +139,7 @@ export async function donnerProcuration(_prev: FormState, fd: FormData): Promise
       ...(mandantId ? { mandant_id: mandantId } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
   return success();
 }
@@ -148,7 +151,7 @@ export async function revoquerProcuration(_prev: FormState, fd: FormData): Promi
     `/ag/${agId}/procurations/${champ(fd, "procuration_id")}/revoquer`,
     { method: "POST" }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
-  return success();
+  return succes((d) => d.ag.procurationRevoquee);
 }

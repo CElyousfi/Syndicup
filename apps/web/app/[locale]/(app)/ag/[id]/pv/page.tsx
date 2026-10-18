@@ -3,6 +3,7 @@ import { apiFetch } from "../../../../../../lib/api/client";
 import type { AgPv } from "../../../../../../lib/api/types";
 import { formatDateHeure, formatPourcent } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
+import { Banner } from "../../../../../../components/ui/banner";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Brand } from "../../../../../../components/brand";
@@ -16,10 +17,13 @@ import { Figure } from "../../../../../../components/ui/amount";
 /** E7 — procès-verbal : document légal, hash d'intégrité mis en avant (confiance). */
 export default async function PvPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { locale, id } = await params;
+  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   const { dict } = ctx;
   const a = dict.ag;
@@ -43,6 +47,7 @@ export default async function PvPage({
 
   return (
     <div className="page-root">
+      {sp.cloturee === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.agCloturee}</Banner> : null}
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={a.pvTitre}
