@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, fileTooLarge, uploadRefused } from "../../../../lib/forms-server";
+import { fromApiError, fileTooLarge, succes, uploadRefused } from "../../../../lib/forms-server";
 import type { AnnonceDetail, ContactUtile, PreferencesNotification, Sondage } from "../../../../lib/api/types";
 
 const BASE = "/affichage";
@@ -210,7 +210,7 @@ export async function enregistrerContact(_prev: FormState, fd: FormData): Promis
   const res = id ? await apiFetch<ContactUtile>(`/contacts-utiles/${id}`, { method: "PATCH", body }) : await apiFetch<ContactUtile>("/contacts-utiles", { method: "POST", body });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
-  return success();
+  return succes((d) => d.communication.contactEnregistre);
 }
 export async function supprimerContact(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");

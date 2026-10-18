@@ -14,6 +14,9 @@ import { ProgressBar } from "../../../../components/ui/progress";
 import { Figure } from "../../../../components/ui/amount";
 import { IDLE, fieldError, type FormState } from "../../../../lib/forms";
 import { toast } from "../../../../lib/toast";
+import { formChecked, formKey, formValue } from "../../../../lib/form-values";
+import { ActionModal } from "../../../../components/ui/action-modal";
+import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { celebrate } from "../../../../lib/success";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { AnnonceDetail, AudienceCommunication, CategorieAnnonce, ContactUtile, PreferencesNotification, Sondage } from "../../../../lib/api/types";
@@ -51,10 +54,10 @@ export function AnnonceForm({ dict, locale, annonce, syndic, batiments }: { dict
       <Card>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="sm:col-span-2">
-            <Field label={c.titreChamp} htmlFor="titre" required error={fieldError(state, "titre")}><Input id="titre" name="titre" required maxLength={200} defaultValue={annonce?.titre ?? ""} /></Field>
+            <Field label={c.titreChamp} htmlFor="titre" required error={fieldError(state, "titre")}><Input id="titre" name="titre" required maxLength={200} defaultValue={formValue(state, "titre", annonce?.titre ?? "")} /></Field>
           </div>
           <Field label={c.categorie} htmlFor="categorie" required error={fieldError(state, "categorie")}>
-            <Select id="categorie" name="categorie" defaultValue={annonce?.categorie ?? "INFORMATION"}>
+            <Select key={formKey(state, "categorie")} id="categorie" name="categorie" defaultValue={formValue(state, "categorie", annonce?.categorie ?? "INFORMATION")}>
               {CATEGORIES.filter((k) => syndic || k !== "URGENCE").map((k) => <option key={k} value={k}>{e.categorieAnnonce[k]}</option>)}
             </Select>
           </Field>
@@ -65,17 +68,17 @@ export function AnnonceForm({ dict, locale, annonce, syndic, batiments }: { dict
           </Field>
           {audience === "BATIMENT" ? (
             <Field label={c.batiment} htmlFor="batiment" hint={c.batimentAide} required error={fieldError(state, "batiment")}>
-              {batiments.length ? <Select id="batiment" name="batiment" defaultValue={annonce?.batiment ?? batiments[0]}>{batiments.map((b) => <option key={b} value={b}>{b}</option>)}</Select> : <Input id="batiment" name="batiment" required maxLength={40} defaultValue={annonce?.batiment ?? ""} />}
+              {batiments.length ? <Select key={formKey(state, "batiment")} id="batiment" name="batiment" defaultValue={formValue(state, "batiment", annonce?.batiment ?? batiments[0])}>{batiments.map((b) => <option key={b} value={b}>{b}</option>)}</Select> : <Input id="batiment" name="batiment" required maxLength={40} defaultValue={formValue(state, "batiment", annonce?.batiment ?? "")} />}
             </Field>
           ) : null}
-          <Field label={c.expiration} htmlFor="expire_le" hint={c.expirationAide} optionalLabel={dict.common.optional} error={fieldError(state, "expire_le")}><Input id="expire_le" name="expire_le" type="datetime-local" dir="ltr" defaultValue={localInput(annonce?.expireLe)} className="tnum text-start" /></Field>
+          <Field label={c.expiration} htmlFor="expire_le" hint={c.expirationAide} optionalLabel={dict.common.optional} error={fieldError(state, "expire_le")}><Input id="expire_le" name="expire_le" type="datetime-local" dir="ltr" defaultValue={formValue(state, "expire_le", localInput(annonce?.expireLe))} className="tnum text-start" /></Field>
         </div>
         <div className="mt-4">
-          <Field label={c.contenu} htmlFor="contenu" hint={c.contenuAide} required error={fieldError(state, "contenu")}><Textarea id="contenu" name="contenu" rows={8} required maxLength={20000} defaultValue={annonce?.contenu ?? ""} /></Field>
+          <Field label={c.contenu} htmlFor="contenu" hint={c.contenuAide} required error={fieldError(state, "contenu")}><Textarea id="contenu" name="contenu" rows={8} required maxLength={20000} defaultValue={formValue(state, "contenu", annonce?.contenu ?? "")} /></Field>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Checkbox name="epingle" label={c.epingler} defaultChecked={annonce?.epingle ?? false} />
-          <Checkbox name="commentaires_actives" label={c.commentairesActives} defaultChecked={annonce?.commentairesActives ?? true} />
+          <Checkbox name="epingle" label={c.epingler} defaultChecked={formChecked(state, "epingle", annonce?.epingle ?? false)} />
+          <Checkbox name="commentaires_actives" label={c.commentairesActives} defaultChecked={formChecked(state, "commentaires_actives", annonce?.commentairesActives ?? true)} />
         </div>
         <div className="mt-4">
           <Field label={c.piecesJointes} htmlFor="pieces" hint={c.piecesJointesAide} optionalLabel={dict.common.optional} error={fieldError(state, "pieces")}><Input id="pieces" name="pieces" type="file" multiple accept="image/*,application/pdf" /></Field>
@@ -91,23 +94,24 @@ export function AnnonceForm({ dict, locale, annonce, syndic, batiments }: { dict
 }
 
 export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Locale; annonce: AnnonceDetail }) {
-  const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"maintenant" | "programmer">(annonce.publieLe ? "programmer" : "maintenant");
-  const [state, action] = useActionState(publierAnnonce, IDLE);
   const c = dict.communication;
-  const diff = state.status === "success" ? (state.data as { programmee?: boolean; envoyes?: number } | undefined) : undefined;
-  const messageSucces = diff?.programmee ? c.programmee : fill(c.publiee, { n: diff?.envoyes ?? 0 });
+  const diffDe = (s: { data?: unknown }) => s.data as { programmee?: boolean; envoyes?: number } | undefined;
   // Annonce publiée = action majeure : écran de succès plein (la modale disparaît avec le brouillon).
-  useEffect(() => {
-    if (state.status !== "success") return;
-    setOpen(false);
-    celebrate({ titre: messageSucces, illustration: "ok-general", moment: diff?.programmee ? undefined : "sent" });
-  }, [state, messageSucces]);
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>{c.publier}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={c.publierTitre} subtitle={annonce.titre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={messageSucces} onClose={() => setOpen(false)} /> : (
+    <ActionModal
+      action={publierAnnonce}
+      title={c.publierTitre}
+      subtitle={annonce.titre}
+      closeLabel={dict.common.close}
+      success={{
+        message: (s) => (diffDe(s)?.programmee ? c.programmee : fill(c.publiee, { n: diffDe(s)?.envoyes ?? 0 })),
+        illustration: "ok-general",
+        moment: (s) => (diffDe(s)?.programmee ? undefined : "sent"),
+      }}
+      trigger={(open) => <Button onClick={open}>{c.publier}</Button>}
+    >
+      {({ state, formAction: action, close }) => (
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="annonce_id" value={annonce.id} /><input type="hidden" name="mode" value={mode} />
             <p className="text-sm text-body">{c.publierCorps}</p>
@@ -118,13 +122,12 @@ export function PublierModal({ dict, locale, annonce }: { dict: Dict; locale: Lo
                 </Button>
               ))}
             </div>
-            {mode === "programmer" ? <Field label={c.dateProgrammee} htmlFor="publie_le" required error={fieldError(state, "publie_le")}><Input id="publie_le" name="publie_le" type="datetime-local" required dir="ltr" defaultValue={localInput(annonce.publieLe) || localInput(new Date(Date.now() + 3600_000).toISOString())} className="tnum text-start" /></Field> : null}
+            {mode === "programmer" ? <Field label={c.dateProgrammee} htmlFor="publie_le" required error={fieldError(state, "publie_le")}><Input id="publie_le" name="publie_le" type="datetime-local" required dir="ltr" defaultValue={formValue(state, "publie_le", localInput(annonce.publieLe) || localInput(new Date(Date.now() + 3600_000).toISOString()))} className="tnum text-start" /></Field> : null}
             <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={c.publier} />
+            <Pied dict={dict} onCancel={close} label={c.publier} />
           </form>
-        )}
-      </Modal>
-    </>
+      )}
+    </ActionModal>
   );
 }
 
@@ -185,10 +188,25 @@ export function DesarchiverBouton({ dict, locale, id, size = "md" }: { dict: Dic
   return <Button variant="secondary" size={size} onClick={desarchiver} disabled={pending} aria-busy={pending}>{c.desarchiver}</Button>;
 }
 
-export function SupprimerBouton({ dict, locale, id, sondage }: { dict: Dict; locale: Locale; id: string; sondage?: boolean }) {
-  const [state, action] = useActionState(sondage ? supprimerSondage : supprimerAnnonce, IDLE);
+/** Suppression d'un brouillon — définitive : confirmée, nominative. Redirige vers la liste. */
+export function SupprimerBouton({ dict, locale, id, sondage, titre }: { dict: Dict; locale: Locale; id: string; sondage?: boolean; titre: string }) {
   const c = dict.communication;
-  return <form action={action} className="inline-flex flex-col items-end gap-1"><input type="hidden" name="locale" value={locale} /><input type="hidden" name={sondage ? "sondage_id" : "annonce_id"} value={id} /><SubmitButton variant="dangerGhost">{sondage ? c.supprimerSondage : c.supprimer}</SubmitButton>{state.status === "error" ? <FormAlert state={state} /> : null}</form>;
+  const f = dict.formulaires.confirmer;
+  return (
+    <ConfirmAction
+      action={sondage ? supprimerSondage : supprimerAnnonce}
+      fields={{ locale, [sondage ? "sondage_id" : "annonce_id"]: id }}
+      triggerLabel={sondage ? c.supprimerSondage : c.supprimer}
+      triggerSize="md"
+      title={sondage ? f.sondageSupprimerTitre : f.annonceSupprimerTitre}
+      question={fill(sondage ? f.sondageSupprimerQuestion : f.annonceSupprimerQuestion, { titre })}
+      consequence={sondage ? f.sondageSupprimerConsequence : f.annonceSupprimerConsequence}
+      irreversible
+      confirmLabel={sondage ? f.sondageSupprimerConfirmer : f.annonceSupprimerConfirmer}
+      closeLabel={dict.common.close}
+      success={c.supprimee}
+    />
+  );
 }
 
 /** Accusé de lecture silencieux à l'ouverture de l'annonce (idempotent côté API). */
@@ -217,10 +235,21 @@ export function CommentaireForm({ dict, locale, annonceId }: { dict: Dict; local
   );
 }
 
+/** Modération — le commentaire disparaît pour tous : confirmée. */
 export function MasquerBouton({ dict, locale, annonceId, commentaireId }: { dict: Dict; locale: Locale; annonceId: string; commentaireId: string }) {
-  const [state, action] = useActionState(masquerCommentaire, IDLE);
-  if (state.status === "success") return <span className="text-[12px] text-soft">{dict.communication.masque}</span>;
-  return <form action={action}><input type="hidden" name="locale" value={locale} /><input type="hidden" name="annonce_id" value={annonceId} /><input type="hidden" name="commentaire_id" value={commentaireId} /><SubmitButton variant="dangerGhost" size="sm">{dict.communication.masquer}</SubmitButton></form>;
+  const f = dict.formulaires.confirmer;
+  return (
+    <ConfirmAction
+      action={masquerCommentaire}
+      fields={{ locale, annonce_id: annonceId, commentaire_id: commentaireId }}
+      triggerLabel={dict.communication.masquer}
+      title={f.commentaireMasquerTitre}
+      consequence={f.commentaireMasquerConsequence}
+      confirmLabel={f.commentaireMasquerConfirmer}
+      closeLabel={dict.common.close}
+      success={dict.communication.masque}
+    />
+  );
 }
 
 // ── Sondages ─────────────────────────────────────────────────────────────────
@@ -237,24 +266,24 @@ export function SondageForm({ dict, locale, batiments }: { dict: Dict; locale: L
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="ouvrir" value={ouvrir ? "1" : "0"} />
       <Card>
         <Banner variant="info" className="mb-4">{c.mention}</Banner>
-        <Field label={c.question} htmlFor="question" required error={fieldError(state, "question")}><Input id="question" name="question" required maxLength={300} /></Field>
-        <div className="mt-4"><Field label={c.description} htmlFor="description" optionalLabel={dict.common.optional}><Textarea id="description" name="description" rows={3} maxLength={4000} /></Field></div>
+        <Field label={c.question} htmlFor="question" required error={fieldError(state, "question")}><Input id="question" name="question" required maxLength={300} defaultValue={formValue(state, "question")} /></Field>
+        <div className="mt-4"><Field label={c.description} htmlFor="description" optionalLabel={dict.common.optional} error={fieldError(state, "description")}><Textarea id="description" name="description" rows={3} maxLength={4000} defaultValue={formValue(state, "description")} /></Field></div>
         <div className="mt-4">
           <p className="mb-2 text-[13px] font-medium text-ink-strong">{c.options}</p>
           <div className="grid gap-2 sm:grid-cols-2">
-            {Array.from({ length: nb }, (_, i) => <Input key={i} name={`option_${i + 1}`} required={i < 2} maxLength={200} placeholder={fill(c.option, { n: i + 1 })} />)}
+            {Array.from({ length: nb }, (_, i) => <Input key={i} name={`option_${i + 1}`} required={i < 2} maxLength={200} placeholder={fill(c.option, { n: i + 1 })} defaultValue={formValue(state, `option_${i + 1}`)} />)}
           </div>
           {nb < 10 ? <Button type="button" variant="ghost" size="sm" className="mt-2" onClick={() => setNb(nb + 1)}><IconPlus width={14} height={14} />{fill(c.option, { n: nb + 1 })}</Button> : null}
           {fieldError(state, "options") ? <p className="mt-1 text-[12px] text-danger">{fieldError(state, "options")}</p> : null}
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label={c.audience} htmlFor="audience_s" hint={c.audienceAide} required><Select id="audience_s" name="audience" value={audience} onChange={(ev) => setAudience(ev.target.value as AudienceCommunication)}>{AUDIENCES.map((a) => <option key={a} value={a}>{e.audience[a]}</option>)}</Select></Field>
-          {audience === "BATIMENT" ? <Field label={c.batiment} htmlFor="batiment_s" required error={fieldError(state, "batiment")}>{batiments.length ? <Select id="batiment_s" name="batiment" defaultValue={batiments[0]}>{batiments.map((b) => <option key={b} value={b}>{b}</option>)}</Select> : <Input id="batiment_s" name="batiment" required maxLength={40} />}</Field> : null}
-          <Field label={c.dateFin} htmlFor="date_fin" required error={fieldError(state, "date_fin")}><Input id="date_fin" name="date_fin" type="datetime-local" required dir="ltr" defaultValue={localInput(new Date(Date.now() + 7 * 86_400_000).toISOString())} className="tnum text-start" /></Field>
+          {audience === "BATIMENT" ? <Field label={c.batiment} htmlFor="batiment_s" required error={fieldError(state, "batiment")}>{batiments.length ? <Select key={formKey(state, "batiment")} id="batiment_s" name="batiment" defaultValue={formValue(state, "batiment", batiments[0])}>{batiments.map((b) => <option key={b} value={b}>{b}</option>)}</Select> : <Input id="batiment_s" name="batiment" required maxLength={40} defaultValue={formValue(state, "batiment")} />}</Field> : null}
+          <Field label={c.dateFin} htmlFor="date_fin" required error={fieldError(state, "date_fin")}><Input id="date_fin" name="date_fin" type="datetime-local" required dir="ltr" defaultValue={formValue(state, "date_fin", localInput(new Date(Date.now() + 7 * 86_400_000).toISOString()))} className="tnum text-start" /></Field>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <Checkbox name="choix_multiple" label={c.choixMultiple} />
-          <Checkbox name="ponderation_tantiemes" label={c.ponderation} hint={c.ponderationAide} />
+          <Checkbox name="choix_multiple" label={c.choixMultiple} defaultChecked={formChecked(state, "choix_multiple", false)} />
+          <Checkbox name="ponderation_tantiemes" label={c.ponderation} hint={c.ponderationAide} defaultChecked={formChecked(state, "ponderation_tantiemes", false)} />
         </div>
         <p className="mt-4 text-[13px] text-soft">{c.anonymeAide}</p>
       </Card>
@@ -268,31 +297,27 @@ export function SondageForm({ dict, locale, batiments }: { dict: Dict; locale: L
 }
 
 export function SondageTransitionModal({ dict, locale, sondage, action: quoi }: { dict: Dict; locale: Locale; sondage: Sondage; action: "ouvrir" | "clore" }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(quoi === "ouvrir" ? ouvrirSondage : cloreSondage, IDLE);
   const c = dict.communication;
   const label = quoi === "ouvrir" ? c.ouvrir : c.clore;
-  // Ouverture = sondage lancé (majeur, écran de succès) ; clôture = changement d'état (toast-like, inchangé).
-  const ouvert = c.ouvert;
-  useEffect(() => {
-    if (state.status !== "success" || quoi !== "ouvrir") return;
-    setOpen(false);
-    celebrate({ titre: ouvert, illustration: "ok-general" });
-  }, [state, quoi, ouvert]);
+  // Ouverture = sondage lancé (majeur, écran de succès) ; clôture = changement d'état (toast).
   return (
-    <>
-      <Button variant={quoi === "ouvrir" ? "primary" : "secondary"} onClick={() => setOpen(true)}>{label}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={label} subtitle={sondage.question} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={quoi === "ouvrir" ? c.ouvert : c.clos} onClose={() => setOpen(false)} /> : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} /><input type="hidden" name="sondage_id" value={sondage.id} />
-            {quoi === "clore" ? <IrreversibleNotice>{c.cloreCorps}</IrreversibleNotice> : <p className="text-sm text-body">{c.ouvrirCorps}</p>}
-            <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={label} danger={quoi === "clore"} />
-          </form>
-        )}
-      </Modal>
-    </>
+    <ActionModal
+      action={quoi === "ouvrir" ? ouvrirSondage : cloreSondage}
+      title={label}
+      subtitle={sondage.question}
+      closeLabel={dict.common.close}
+      success={quoi === "ouvrir" ? { message: c.ouvert, illustration: "ok-general" } : { message: c.clos, closeAndToast: true }}
+      trigger={(open) => <Button variant={quoi === "ouvrir" ? "primary" : "secondary"} onClick={open}>{label}</Button>}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="locale" value={locale} /><input type="hidden" name="sondage_id" value={sondage.id} />
+          {quoi === "clore" ? <IrreversibleNotice>{c.cloreCorps}</IrreversibleNotice> : <p className="text-sm text-body">{c.ouvrirCorps}</p>}
+          <FormAlert state={state} />
+          <Pied dict={dict} onCancel={close} label={label} danger={quoi === "clore"} />
+        </form>
+      )}
+    </ActionModal>
   );
 }
 
@@ -313,7 +338,7 @@ export function RepondreForm({ dict, locale, sondage }: { dict: Dict; locale: Lo
         {sondage.options.map((o) => (
           <label key={o.id} className="flex min-h-14 cursor-pointer items-center gap-3 rounded-full bg-surface px-5 py-3 text-[15px] transition-colors hover:bg-lime-hover/40 has-[:checked]:bg-cta">
             {/* alive:allow option de sondage en pastille : type checkbox/radio dynamique + required, que Checkbox/RadioGroup n'exposent pas */}
-            <input type={sondage.choixMultiple ? "checkbox" : "radio"} name="choix" value={o.id} required={!sondage.choixMultiple} className="size-5 shrink-0 accent-brand" />
+            <input type={sondage.choixMultiple ? "checkbox" : "radio"} name="choix" value={o.id} required={!sondage.choixMultiple} defaultChecked={formChecked(state, "choix", false, o.id)} className="size-5 shrink-0 accent-brand" />
             <span className="font-semibold text-ink">{o.libelle}</span>
           </label>
         ))}
@@ -354,18 +379,30 @@ export function ContactForm({ dict, locale, contact, onDone }: { dict: Dict; loc
   return (
     <form action={action} className="grid gap-3 sm:grid-cols-[1fr_1fr_90px_auto] sm:items-end">
       <input type="hidden" name="locale" value={locale} />{contact ? <input type="hidden" name="contact_id" value={contact.id} /> : null}
-      <Field label={c.libelle} htmlFor={`lib-${contact?.id ?? "new"}`} required error={fieldError(state, "libelle")}><Input id={`lib-${contact?.id ?? "new"}`} name="libelle" required maxLength={120} defaultValue={contact?.libelle ?? ""} /></Field>
-      <Field label={c.telephone} htmlFor={`tel-${contact?.id ?? "new"}`} required error={fieldError(state, "telephone")}><Input id={`tel-${contact?.id ?? "new"}`} name="telephone" required dir="ltr" defaultValue={contact?.telephone ?? ""} className="tnum text-start" /></Field>
-      <Field label={c.ordre} htmlFor={`ord-${contact?.id ?? "new"}`}><Input id={`ord-${contact?.id ?? "new"}`} name="ordre" type="number" min={0} max={999} dir="ltr" defaultValue={contact?.ordre ?? 0} className="tnum text-start" /></Field>
+      <Field label={c.libelle} htmlFor={`lib-${contact?.id ?? "new"}`} required error={fieldError(state, "libelle")}><Input id={`lib-${contact?.id ?? "new"}`} name="libelle" required maxLength={120} defaultValue={formValue(state, "libelle", contact?.libelle ?? "")} /></Field>
+      <Field label={c.telephone} htmlFor={`tel-${contact?.id ?? "new"}`} required error={fieldError(state, "telephone")}><Input id={`tel-${contact?.id ?? "new"}`} name="telephone" required dir="ltr" defaultValue={formValue(state, "telephone", contact?.telephone ?? "")} className="tnum text-start" /></Field>
+      <Field label={c.ordre} htmlFor={`ord-${contact?.id ?? "new"}`}><Input id={`ord-${contact?.id ?? "new"}`} name="ordre" type="number" min={0} max={999} dir="ltr" defaultValue={formValue(state, "ordre", contact?.ordre ?? 0)} className="tnum text-start" /></Field>
       <div className="flex gap-2"><SubmitButton size="sm">{contact ? dict.common.save : c.nouveauContact}</SubmitButton></div>
-      {state.status === "error" ? <div className="sm:col-span-4"><FormAlert state={state} /></div> : null}
+      <div className="empty:hidden sm:col-span-4"><FormAlert state={state} /></div>
     </form>
   );
 }
-export function SupprimerContactBouton({ dict, locale, id }: { dict: Dict; locale: Locale; id: string }) {
-  const [state, action] = useActionState(supprimerContact, IDLE);
-  if (state.status === "success") return null;
-  return <form action={action}><input type="hidden" name="locale" value={locale} /><input type="hidden" name="contact_id" value={id} /><SubmitButton variant="dangerGhost" size="sm">{dict.communication.supprimerContact}</SubmitButton></form>;
+/** Supprimer un contact utile — confirmé, nominatif (il disparaît pour tous les résidents). */
+export function SupprimerContactBouton({ dict, locale, id, nom }: { dict: Dict; locale: Locale; id: string; nom: string }) {
+  const f = dict.formulaires.confirmer;
+  return (
+    <ConfirmAction
+      action={supprimerContact}
+      fields={{ locale, contact_id: id }}
+      triggerLabel={dict.communication.supprimerContact}
+      title={f.contactSupprimerTitre}
+      question={fill(f.contactSupprimerQuestion, { nom })}
+      consequence={f.contactSupprimerConsequence}
+      confirmLabel={f.contactSupprimerConfirmer}
+      closeLabel={dict.common.close}
+      success={dict.communication.contactSupprime}
+    />
+  );
 }
 export function ContactsGestion({ dict, locale, contacts }: { dict: Dict; locale: Locale; contacts: ContactUtile[] }) {
   const [edition, setEdition] = useState<string | null>(null);
@@ -378,7 +415,7 @@ export function ContactsGestion({ dict, locale, contacts }: { dict: Dict; locale
             {edition === x.id ? <ContactForm dict={dict} locale={locale} contact={x} onDone={() => setEdition(null)} /> : (
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3.5"><IconCircle tone="sage" size={44}><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="text-link" aria-hidden><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2" /></svg></IconCircle><div className="min-w-0"><p className="truncate text-[15px] font-bold text-ink">{x.libelle}</p><p className="tnum text-[13px] text-soft" dir="ltr">{x.telephone}</p></div></div>
-                <div className="flex gap-1.5"><Button variant="secondary" size="sm" onClick={() => setEdition(x.id)}>{dict.common.modify}</Button><SupprimerContactBouton dict={dict} locale={locale} id={x.id} /></div>
+                <div className="flex gap-1.5"><Button variant="secondary" size="sm" onClick={() => setEdition(x.id)}>{dict.common.modify}</Button><SupprimerContactBouton dict={dict} locale={locale} id={x.id} nom={x.libelle} /></div>
               </div>
             )}
           </li>
@@ -398,22 +435,22 @@ export function PreferencesForm({ dict, locale, prefs }: { dict: Dict; locale: L
   return (
     <form action={action} className="space-y-4">
       <input type="hidden" name="locale" value={locale} />
-      <Switch name="digest_hebdo" label={c.digestHebdo} hint={c.digestHebdoAide} defaultChecked={prefs.digest_hebdo} />
-      <Field label={c.canalDigest} htmlFor="canal_digest"><Select id="canal_digest" name="canal_digest" defaultValue={prefs.canal_digest}>{(["EMAIL", "PUSH", "SMS", "AUCUN"] as const).map((k) => <option key={k} value={k}>{e.canalPreference[k]}</option>)}</Select></Field>
-      <Switch name="annonces_push" label={c.annoncesPush} hint={c.annoncesPushAide} defaultChecked={prefs.annonces_push} />
+      <Switch name="digest_hebdo" label={c.digestHebdo} hint={c.digestHebdoAide} defaultChecked={formChecked(state, "digest_hebdo", prefs.digest_hebdo)} />
+      <Field label={c.canalDigest} htmlFor="canal_digest"><Select key={formKey(state, "canal_digest")} id="canal_digest" name="canal_digest" defaultValue={formValue(state, "canal_digest", prefs.canal_digest)}>{(["EMAIL", "PUSH", "SMS", "AUCUN"] as const).map((k) => <option key={k} value={k}>{e.canalPreference[k]}</option>)}</Select></Field>
+      <Switch name="annonces_push" label={c.annoncesPush} hint={c.annoncesPushAide} defaultChecked={formChecked(state, "annonces_push", prefs.annonces_push)} />
       {/* Push sur le téléphone — niveaux (Master Spec 13.4) : bannières, alertes, écran verrouillé. */}
       <div className="rounded-2xl bg-surface p-4">
         <p className="text-[15px] font-bold text-ink">{c.pushTitre}</p>
         <p className="mb-3 text-[12.5px] text-soft">{c.pushAide}</p>
         <div className="space-y-3">
-          <Switch name="push_normal" label={c.pushNormal} hint={c.pushNormalAide} defaultChecked={prefs.push_normal} />
-          <Switch name="push_info" label={c.pushInfo} hint={c.pushInfoAide} defaultChecked={prefs.push_info} />
-          <Switch name="push_son" label={c.pushSon} hint={c.pushSonAide} defaultChecked={prefs.push_son} />
-          <Switch name="resume_matin" label={c.resumeMatin} hint={c.resumeMatinAide} defaultChecked={prefs.resume_matin} />
-          <Switch name="heures_calmes" label={c.heuresCalmes} hint={c.heuresCalmesAide} defaultChecked={prefs.heures_calmes !== null} />
+          <Switch name="push_normal" label={c.pushNormal} hint={c.pushNormalAide} defaultChecked={formChecked(state, "push_normal", prefs.push_normal)} />
+          <Switch name="push_info" label={c.pushInfo} hint={c.pushInfoAide} defaultChecked={formChecked(state, "push_info", prefs.push_info)} />
+          <Switch name="push_son" label={c.pushSon} hint={c.pushSonAide} defaultChecked={formChecked(state, "push_son", prefs.push_son)} />
+          <Switch name="resume_matin" label={c.resumeMatin} hint={c.resumeMatinAide} defaultChecked={formChecked(state, "resume_matin", prefs.resume_matin)} />
+          <Switch name="heures_calmes" label={c.heuresCalmes} hint={c.heuresCalmesAide} defaultChecked={formChecked(state, "heures_calmes", prefs.heures_calmes !== null)} />
           <div className="grid grid-cols-2 gap-3">
-            <Field label={c.heuresCalmesDebut} htmlFor="heures_calmes_debut"><Input id="heures_calmes_debut" name="heures_calmes_debut" type="time" defaultValue={prefs.heures_calmes?.debut ?? "22:00"} /></Field>
-            <Field label={c.heuresCalmesFin} htmlFor="heures_calmes_fin"><Input id="heures_calmes_fin" name="heures_calmes_fin" type="time" defaultValue={prefs.heures_calmes?.fin ?? "07:00"} /></Field>
+            <Field label={c.heuresCalmesDebut} htmlFor="heures_calmes_debut"><Input id="heures_calmes_debut" name="heures_calmes_debut" type="time" dir="ltr" className="tnum text-start" defaultValue={formValue(state, "heures_calmes_debut", prefs.heures_calmes?.debut ?? "22:00")} /></Field>
+            <Field label={c.heuresCalmesFin} htmlFor="heures_calmes_fin"><Input id="heures_calmes_fin" name="heures_calmes_fin" type="time" dir="ltr" className="tnum text-start" defaultValue={formValue(state, "heures_calmes_fin", prefs.heures_calmes?.fin ?? "07:00")} /></Field>
           </div>
         </div>
       </div>

@@ -19,13 +19,13 @@ export interface ActionModalContext {
 
 export interface ActionModalSuccess {
   /** Message du succès (le message renvoyé par l'action, s'il existe, l'emporte). */
-  message: string;
+  message: string | ((state: Extract<FormState, { status: "success" }>) => string);
   /** Prochaines étapes proposées sous le message (ex. « Voir la dépense »). */
   next?: ReactNode | ((close: () => void, state: Extract<FormState, { status: "success" }>) => ReactNode);
   /** Action MAJEURE : écran de succès plein (Wise) puis fermeture — au lieu du panneau. */
   illustration?: string;
   /** Moment signature joué par l'écran plein (paiement, envoi, vote, justifiée). */
-  moment?: SuccessInput["moment"];
+  moment?: SuccessInput["moment"] | ((state: Extract<FormState, { status: "success" }>) => SuccessInput["moment"]);
   /** Corps de l'écran plein. */
   corps?: string | ((state: Extract<FormState, { status: "success" }>) => string | undefined);
   /** Lien « Voir » de l'écran plein (avec `illustration`). */
@@ -118,7 +118,12 @@ function ActionModalBody({
   children: (ctx: ActionModalContext) => ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, IDLE);
-  const message = state.status === "success" ? state.message || success.message : success.message;
+  const message =
+    state.status === "success"
+      ? state.message || (typeof success.message === "function" ? success.message(state) : success.message)
+      : typeof success.message === "string"
+        ? success.message
+        : "";
   const fermerAuSucces = Boolean(success.illustration || success.closeAndToast);
 
   // Un seul effet par succès (l'objet `state` change à chaque réponse).
@@ -129,7 +134,8 @@ function ActionModalBody({
     onSuccess?.(state);
     if (success.illustration) {
       const corps = typeof success.corps === "function" ? success.corps(state) : success.corps;
-      celebrate({ titre: message, corps, illustration: success.illustration, moment: success.moment, href: success.href, hrefLabel: success.hrefLabel });
+      const moment = typeof success.moment === "function" ? success.moment(state) : success.moment;
+      celebrate({ titre: message, corps, illustration: success.illustration, moment, href: success.href, hrefLabel: success.hrefLabel });
       close();
     } else if (success.closeAndToast) {
       toast({ titre: message, tone: "ok", duree: 4000 });
