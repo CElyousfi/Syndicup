@@ -18,7 +18,7 @@ import { IconPlus } from "../../../../components/ui/icons";
 import { modifierDossier, lireCnss, preparerFiche, validerFiche, payerFiche, demanderConge, deciderConge, annulerConge, saisirPresences, pointer, evaluer } from "./rh-actions";
 
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onCancel}>{danger ? dict.common.close : dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 const JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"] as const;
 const POSTES: PostePersonnel[] = ["GARDIEN", "AGENT_ENTRETIEN", "JARDINIER", "AGENT_SECURITE", "AUTRE"];

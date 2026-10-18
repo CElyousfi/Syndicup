@@ -18,7 +18,7 @@ import { soumettreDepense, approuverDepense, rejeterDepense, payerDepense, annul
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
   return (
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-      <Button type="button" variant="secondary" onClick={onCancel}>{danger ? dict.common.close : dict.common.cancel}</Button>
+      <Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button>
       <SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton>
     </div>
   );

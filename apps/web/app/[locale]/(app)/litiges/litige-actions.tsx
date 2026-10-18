@@ -60,7 +60,7 @@ export function DeclarerLitigeModal({ dict, locale }: { dict: Dict; locale: Loca
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{li.declarer}</SubmitButton>
             </div>
@@ -108,7 +108,7 @@ export function EscaladerModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{li.escalader}</SubmitButton>
             </div>
@@ -155,7 +155,7 @@ export function CloturerLitigeModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{li.cloturer}</SubmitButton>
             </div>

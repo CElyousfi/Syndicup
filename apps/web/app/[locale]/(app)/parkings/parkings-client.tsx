@@ -27,7 +27,7 @@ const TYPES_BADGE: TypeBadge[] = ["BADGE_PIETON", "TELECOMMANDE_PARKING", "CLE_C
 const aujourdhui = () => new Date().toISOString().slice(0, 10);
 
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 function LotSelect({ dict, lots, defaultValue, error, state = IDLE }: { dict: Dict; lots: LotOption[]; defaultValue?: string; error?: string; state?: FormState }) {
   const t = dict.parkings;

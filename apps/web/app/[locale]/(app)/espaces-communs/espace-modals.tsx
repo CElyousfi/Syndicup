@@ -52,7 +52,7 @@ export function CreerEspaceModal({ dict, locale }: { dict: Dict; locale: Locale 
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.create}</SubmitButton>
             </div>
@@ -158,7 +158,7 @@ export function ReserverModal({
             )}
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{e.reserver}</SubmitButton>
             </div>
@@ -224,7 +224,7 @@ export function ModifierEspaceModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.save}</SubmitButton>
             </div>

@@ -20,7 +20,7 @@ const PRIORITES: PrioriteTache[] = ["BASSE", "NORMALE", "HAUTE", "CRITIQUE"];
 const STATUTS: StatutTache[] = ["A_FAIRE", "EN_COURS", "BLOQUEE", "TERMINEE", "ANNULEE"];
 
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 
 export function TacheForm({ dict, locale, assignees, tache }: { dict: Dict; locale: Locale; assignees: AssigneeOption[]; tache?: TacheDetail }) {

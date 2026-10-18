@@ -190,7 +190,7 @@ function Pied({
   return (
     <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
       <Button type="button" variant="secondary" onClick={onCancel}>
-        {danger ? dict.common.close : dict.common.cancel}
+        {dict.common.close}
       </Button>
       <SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton>
     </div>

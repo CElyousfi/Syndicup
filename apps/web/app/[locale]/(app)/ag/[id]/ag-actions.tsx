@@ -222,7 +222,7 @@ function ResolutionFields({
       <FormAlert state={state} />
       <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
         <Button type="button" variant="secondary" onClick={close}>
-          {dict.common.cancel}
+          {dict.common.close}
         </Button>
         <SubmitButton>{dict.ag.ajouterResolution}</SubmitButton>
       </div>
@@ -311,7 +311,7 @@ export function ProcurationModal({
           <FormAlert state={state} />
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <Button type="button" variant="secondary" onClick={close}>
-              {dict.common.cancel}
+              {dict.common.close}
             </Button>
             <SubmitButton>{dict.ag.donnerProcuration}</SubmitButton>
           </div>

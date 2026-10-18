@@ -63,7 +63,7 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
           </div>
           <FormAlert state={state} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.cancel}</Button>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button>
             <SubmitButton>{dict.common.create}</SubmitButton>
           </div>
         </form>
@@ -112,7 +112,7 @@ export function EvaluerPrestataireModal({ dict, locale, incidentId, prestataireN
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={close}>{dict.common.cancel}</Button>
+              <Button type="button" variant="secondary" onClick={close}>{dict.common.close}</Button>
               <SubmitButton disabled={note === 0}>{dict.common.send}</SubmitButton>
             </div>
           </form>

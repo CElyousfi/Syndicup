@@ -59,7 +59,7 @@ export function AnonymiserModal({
             <FormAlert state={state} />
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger" disabled={!confirme}>
                 {m.anonymiser}

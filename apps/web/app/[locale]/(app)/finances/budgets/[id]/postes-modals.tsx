@@ -38,7 +38,7 @@ function Champs({ dict, state, prefix, poste }: { dict: Dict; state: FormState; 
 function Pied({ dict, onCancel, label }: { dict: Dict; onCancel: () => void; label: string }) {
   return (
     <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-      <Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button>
+      <Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button>
       <SubmitButton>{label}</SubmitButton>
     </div>
   );

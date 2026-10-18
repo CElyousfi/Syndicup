@@ -16,7 +16,7 @@ import { IconPlus } from "../../../../../components/ui/icons";
 import { validerJustificatif, rejeterJustificatif, annulerJustificatif, remplacerComptes, lireRibCompte } from "./actions";
 
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onCancel}>{danger ? dict.common.close : dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 
 export function ValiderModal({ dict, locale, justificatif }: { dict: Dict; locale: Locale; justificatif: Justificatif }) {

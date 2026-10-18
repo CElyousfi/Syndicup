@@ -16,7 +16,7 @@ import type {
 import { PhotoGallery } from "../../../../../components/incidents/photo-gallery";
 import { fill } from "../../../../../lib/i18n";
 import { formatDate, formatDateHeure, formatMAD, formatTelephone, nomComplet } from "../../../../../lib/format";
-import { BackLink } from "../../../../../components/page-header";
+import { BackLink, PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { CelebrateOnce } from "../../../../../components/ui/celebrate-once";
 import { Banner } from "../../../../../components/ui/banner";
@@ -120,45 +120,45 @@ export default async function IncidentDetailPage({
         />
       ) : null}
 
-      <div className="mb-4 sm:mb-5">
-        <BackLink href={`/${locale}/incidents`} label={dict.nav.incidents} />
-      </div>
-
-      {/* Résumé — pastille de catégorie, titre, statut + urgence, actions */}
-      <section className="mb-6 flex flex-wrap items-start justify-between gap-x-6 gap-y-4 sm:mb-8">
-        <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5">
-          <span className="hidden sm:block">
-            <CategorieIcon categorie={incident.categorie} size={64} />
-          </span>
-          <span className="sm:hidden">
-            <CategorieIcon categorie={incident.categorie} size={52} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="break-words text-[26px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">
-              {incident.sousCategorie}
-            </h1>
-            <p className="mt-1.5 text-sm text-soft sm:text-[15px]">
-              {dict.enums.categorieIncident[incident.categorie]} · {dict.enums.partie[incident.partie]}
-              {" · "}
-              <span className="tnum">{fill(i.creeLe, { date: formatDateHeure(incident.creeLe, ctx.locale) })}</span>
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-1.5">
-              <Badge variant={incidentVariant[incident.statut]}>
-                {dict.enums.statutIncident[incident.statut]}
+      {/* Résumé — pastille de catégorie, titre, statut + urgence, actions (en-tête standard). */}
+      <PageHeader
+        back={<BackLink href={`/${locale}/incidents`} label={dict.nav.incidents} />}
+        icon={
+          <>
+            <span className="hidden sm:block">
+              <CategorieIcon categorie={incident.categorie} size={64} />
+            </span>
+            <span className="sm:hidden">
+              <CategorieIcon categorie={incident.categorie} size={52} />
+            </span>
+          </>
+        }
+        title={incident.sousCategorie}
+        subtitle={
+          <>
+            {dict.enums.categorieIncident[incident.categorie]} · {dict.enums.partie[incident.partie]}
+            {" · "}
+            <span className="tnum">{fill(i.creeLe, { date: formatDateHeure(incident.creeLe, ctx.locale) })}</span>
+          </>
+        }
+        meta={
+          <>
+            <Badge variant={incidentVariant[incident.statut]}>
+              {dict.enums.statutIncident[incident.statut]}
+            </Badge>
+            <Badge variant={urgenceVariant[incident.urgence]}>
+              {dict.enums.urgence[incident.urgence]}
+            </Badge>
+            {enRetard ? (
+              <Badge variant="danger" pulse>
+                {i.slaDepasse}
               </Badge>
-              <Badge variant={urgenceVariant[incident.urgence]}>
-                {dict.enums.urgence[incident.urgence]}
-              </Badge>
-              {enRetard ? (
-                <Badge variant="danger" pulse>
-                  {i.slaDepasse}
-                </Badge>
-              ) : null}
-            </div>
-          </div>
-        </div>
-        {peutChangerStatut || syndic || ctx.roles.includes("GARDIEN") ? (
-          <div className="page-actions flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">
+            ) : null}
+          </>
+        }
+        actions={
+          peutChangerStatut || syndic || ctx.roles.includes("GARDIEN") ? (
+            <>
             {peutChangerStatut ? (
               <ChangerStatutModal
                 dict={dict}
@@ -183,9 +183,10 @@ export default async function IncidentDetailPage({
                 }))}
               />
             ) : null}
-          </div>
-        ) : null}
-      </section>
+            </>
+          ) : undefined
+        }
+      />
 
       {enRetard ? (
         <Banner variant="danger" className="mb-5" title={i.slaDepasse}>

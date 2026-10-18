@@ -277,7 +277,7 @@ function PaiementBody({
 
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="secondary" onClick={fermer}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{f.enregistrerPaiement}</SubmitButton>
             </div>

@@ -125,7 +125,7 @@ export function DeclarerLotModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{l.declarerLot}</SubmitButton>
             </div>
@@ -186,7 +186,7 @@ export function ConfirmerArriveeForm({
           <FormAlert state={state} />
           <div className="flex justify-end gap-2">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              {dict.common.cancel}
+              {dict.common.close}
             </Button>
             <SubmitButton>{dict.common.confirm}</SubmitButton>
           </div>

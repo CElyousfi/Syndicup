@@ -60,7 +60,7 @@ export function RejeterModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{e.rejeter}</SubmitButton>
             </div>
@@ -87,7 +87,7 @@ export function AnnulerModal({
         closeLabel={dict.common.close}
         success={{ message: e.reservationAnnulee }}
         trigger={(open) => <Button variant="dangerGhost" size="sm" onClick={open}>
-        {dict.common.cancel}
+        {dict.common.close}
       </Button>}
       >
         {({ state, formAction, close }) => (
@@ -98,7 +98,7 @@ export function AnnulerModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.back}
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{e.annulerReservation}</SubmitButton>
             </div>

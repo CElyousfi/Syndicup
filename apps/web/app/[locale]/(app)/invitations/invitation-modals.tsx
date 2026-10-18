@@ -205,7 +205,7 @@ export function CreerInvitationModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={fermer}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.create}</SubmitButton>
             </div>
@@ -251,7 +251,7 @@ export function RegenererModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{inv.regenerer}</SubmitButton>
             </div>

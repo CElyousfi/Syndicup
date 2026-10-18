@@ -17,7 +17,7 @@ import { genererRapport, soumettreRapportAg, definirFacturesVisibles } from "./a
 import { formKey, formValue } from "../../../../lib/form-values";
 
 function Pied({ dict, onCancel, label }: { dict: Dict; onCancel: () => void; label: string }) {
-  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton>{label}</SubmitButton></div>;
+  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton>{label}</SubmitButton></div>;
 }
 
 export function GenererModal({ dict, locale, budgets, exerciceDefaut }: { dict: Dict; locale: Locale; budgets: BudgetAg[]; exerciceDefaut: string }) {

@@ -107,7 +107,7 @@ export function InviterSyndicModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{ad.inviterSyndic}</SubmitButton>
             </div>

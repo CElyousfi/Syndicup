@@ -53,7 +53,7 @@ export function RepondreModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="secondary" onClick={close}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.send}</SubmitButton>
             </div>

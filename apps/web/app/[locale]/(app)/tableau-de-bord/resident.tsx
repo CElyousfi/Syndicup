@@ -21,7 +21,7 @@ import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { ButtonLink } from "../../../../components/ui/button";
 import { StatCard } from "../../../../components/ui/stat-card";
-import { incidentVariant, reservationVariant } from "../../../../lib/status";
+import { incidentVariant, reservationVariant, soldeVariant } from "../../../../lib/status";
 import {
   IconBell,
   IconCalendar,
@@ -200,7 +200,7 @@ export async function DashboardResident({
                       <p className="min-w-0 flex-1 truncate text-[15px] font-bold text-ink">
                         {dict.enums.typeLot[lot.typeLot]} {lot.numero}
                       </p>
-                      <Badge variant={aJour ? "ok" : "danger"}>
+                      <Badge variant={soldeVariant(aJour)}>
                         {aJour ? dict.enums.statutLigne.PAYE : dict.enums.statutLigne.IMPAYE}
                       </Badge>
                     </div>

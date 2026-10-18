@@ -5,7 +5,7 @@ import { getAppContext, exigerRole } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
 import type { AttributionEmplacement, BadgeAcces, Emplacement, Lot, PlanEmplacements, StatutBadge, StatutEmplacement, TypeBadge, TypeEmplacement, Vehicule, VisiteursAujourdhui } from "../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../lib/i18n";
-import { formatDate, formatDateHeure, formatMontant } from "../../../../lib/format";
+import { formatDate, formatDateHeure, formatHeure, formatMontant } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
 import { Banner } from "../../../../components/ui/banner";
@@ -17,7 +17,7 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
 import { CBuilding, CDoor, CKey, CAlert } from "../../../../components/ui/color-icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
-import { badgeAccesVariant, emplacementVariant } from "../../../../lib/status";
+import { actifVariant, attributionVariant, badgeAccesVariant, emplacementVariant, etatAttribution, heureLimiteVariant } from "../../../../lib/status";
 import { BadgeDesactiverModal, BadgeModal, BadgePerduModal, BadgeRestituerModal, EmplacementModal, RechercheVehiculeForm, RetirerVehiculeModal, VehiculeModal, type LotOption } from "./parkings-client";
 import { LiveList } from "../../../../components/ui/live-list";
 import { Amount } from "../../../../components/ui/amount";
@@ -133,7 +133,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                     <li key={a.id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
                       <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-brand px-3 font-mono text-[14px] font-bold text-lime" dir="ltr">{a.emplacement?.code ?? "—"}</span>
                       <span className="text-[14px] font-medium text-ink">{a.emplacement ? e.typeEmplacement[a.emplacement.type] : ""}{a.emplacement?.niveau ? ` · ${t.niveau} ${a.emplacement.niveau}` : ""} · {t.lot} {a.lotNumero ?? "—"}</span>
-                      <Badge variant={a.active ? "ok" : a.dateFin && a.dateFin < new Date().toISOString().slice(0, 10) ? "neutral" : "outline"}>{a.active ? t.active : a.dateFin && a.dateFin < new Date().toISOString().slice(0, 10) ? t.terminee : t.aVenir}</Badge>
+                      <Badge variant={attributionVariant[etatAttribution(a)]}>{{ ACTIVE: t.active, TERMINEE: t.terminee, A_VENIR: t.aVenir }[etatAttribution(a)]}</Badge>
                       <span className="tnum w-full text-[12.5px] text-soft sm:ms-auto sm:w-auto">{formatDate(a.dateDebut, ctx.locale)} → {a.dateFin ? formatDate(a.dateFin, ctx.locale) : t.sansFin}{a.redevanceMensuelle ? ` · ${formatMontant(a.redevanceMensuelle)} MAD` : ""}</span>
                     </li>
                   ))}
@@ -190,7 +190,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                   <TD className="text-body">{e.typeVehicule[v.type]}</TD>
                   <TD className="text-body">{v.marque ?? "—"}</TD>
                   <TD className="text-body">{v.couleur ?? "—"}</TD>
-                  <TD><Badge variant={v.actif ? "ok" : "neutral"}>{v.actif ? t.actif : t.inactif}</Badge>{v.utilisateurId ? <span className="ms-1.5 text-[11px] text-faint">{t.declarePar}</span> : null}</TD>
+                  <TD><Badge variant={actifVariant(v.actif)}>{v.actif ? t.actif : t.inactif}</Badge>{v.utilisateurId ? <span className="ms-1.5 text-[11px] text-faint">{t.declarePar}</span> : null}</TD>
                   {gestion || resident ? <TD align="end"><span className="inline-flex gap-1"><VehiculeModal dict={dict} locale={ctx.locale} lots={mesLots} vehicule={v} />{v.actif ? <RetirerVehiculeModal dict={dict} locale={ctx.locale} vehicule={v} /> : null}</span></TD> : null}
                 </TR>
               ))}</LiveList>
@@ -234,7 +234,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
                     <li key={v.visite_id} className="flex flex-wrap items-center gap-3 rounded-[16px] bg-surface px-4 py-3">
                       <span className="flex h-11 min-w-11 items-center justify-center rounded-full bg-cta px-3 font-mono text-[14px] font-bold text-ink" dir="ltr">{v.emplacement?.code ?? "—"}</span>
                       <div className="min-w-0 flex-1"><p className="text-[15px] font-bold text-ink">{v.visiteur_nom} · {t.lot} {v.lot ?? "—"}</p><p className="text-[12px] text-soft tnum" dir="ltr">{v.immatriculation ?? "—"} · {formatDateHeure(v.horodatage, ctx.locale)}</p></div>
-                      {v.heure_limite ? <Badge variant={v.depassee ? "danger" : "outline"}>{t.heureLimite} {new Date(v.heure_limite).toLocaleTimeString(ctx.locale === "ar" ? "ar-MA" : "fr-MA", { hour: "2-digit", minute: "2-digit" })}{v.depassee ? ` · ${t.depassee}` : ""}</Badge> : null}
+                      {v.heure_limite ? <Badge variant={heureLimiteVariant(v.depassee)}>{t.heureLimite} {formatHeure(v.heure_limite, ctx.locale)}{v.depassee ? ` · ${t.depassee}` : ""}</Badge> : null}
                     </li>
                   ))}
                   {visiteurs.sejours.map((s) => (

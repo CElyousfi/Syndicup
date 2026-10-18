@@ -83,7 +83,8 @@ export function TresorerieChart({ points, rtl = false, height = 220, legend }: {
             key={i}
             aria-hidden
             className={`chart-dot pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-ink ${hover === i ? "size-3.5 bg-lime" : "size-2.5 bg-surface"}`}
-            style={{ left: `${xC(i)}%`, top: `${yS(p.solde)}%` }}
+            // Conteneur en dir="ltr" (axe du temps) et `ordre` déjà miroir en arabe : propriété logique.
+            style={{ insetInlineStart: `${xC(i)}%`, top: `${yS(p.solde)}%` }}
           />
         ))}
       </div>

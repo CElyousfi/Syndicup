@@ -94,6 +94,15 @@ export function formatHeure(iso: string | null | undefined, locale: Locale): str
   }).format(d);
 }
 
+/** Jour de la semaine abrégé (« lun. », « الاثنين ») — en-têtes de calendrier. */
+export function formatJourCourt(date: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "short",
+    timeZone: "UTC",
+    numberingSystem: "latn",
+  }).format(date);
+}
+
 /** Période "2026-01" → "janvier 2026". */
 export function formatPeriode(periode: string, locale: Locale): string {
   const [y, m] = periode.split("-");

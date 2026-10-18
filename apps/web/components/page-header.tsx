@@ -11,6 +11,8 @@ export function PageHeader({
   actions,
   back,
   badge,
+  icon,
+  meta,
   reveal = false,
 }: {
   title: ReactNode;
@@ -18,6 +20,10 @@ export function PageHeader({
   actions?: ReactNode;
   back?: ReactNode;
   badge?: ReactNode;
+  /** Pastille en tête (catégorie d'un signalement…), alignée sur le titre. */
+  icon?: ReactNode;
+  /** Rangée sous le sous-titre (badges de statut, urgence…). */
+  meta?: ReactNode;
   /** Titre révélé mot par mot (accueil du tableau de bord) — chaînes uniquement. */
   reveal?: boolean;
 }) {
@@ -25,13 +31,17 @@ export function PageHeader({
     <div className="mb-6 sm:mb-8">
       {back ? <div className="mb-2 sm:mb-3">{back}</div> : null}
       <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4">
-        <div className="min-w-0" data-tour="page-title">
-          <div className="flex items-center gap-3">
-            <h1 className="text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">{reveal && typeof title === "string" ? <RevealText text={title} /> : title}
-            </h1>
-            {badge}
+        <div className="flex min-w-0 flex-1 items-start gap-4 sm:gap-5" data-tour="page-title">
+          {icon ? <div className="shrink-0">{icon}</div> : null}
+          <div className="min-w-0">
+            <div className="flex items-center gap-3">
+              <h1 className="break-words text-[28px] font-bold leading-[1.1] tracking-[-0.02em] text-ink sm:text-[34px]">{reveal && typeof title === "string" ? <RevealText text={title} /> : title}
+              </h1>
+              {badge}
+            </div>
+            {subtitle ? <p className="mt-2 text-sm text-soft sm:text-[15px]">{subtitle}</p> : null}
+            {meta ? <div className="mt-3 flex flex-wrap items-center gap-1.5">{meta}</div> : null}
           </div>
-          {subtitle ? <p className="mt-2 text-sm text-soft sm:text-[15px]">{subtitle}</p> : null}
         </div>
         {actions ? (
           <div className="page-actions flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto sm:shrink-0">

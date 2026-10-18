@@ -151,7 +151,7 @@ export function ExecutionPanel({ dict, locale, job }: { dict: Dict; locale: Loca
         <>
           <Button variant="dangerGhost" size="sm" onClick={() => setConfirm(true)}>{t.annuler}</Button>
           <Modal open={confirm} onClose={() => setConfirm(false)} title={t.annuler} closeLabel={dict.common.close}>
-            <form action={annulerAction} className="space-y-4"><input type="hidden" name="locale" value={locale} /><input type="hidden" name="import_id" value={job.id} /><IrreversibleNotice>{t.annulerCorps}</IrreversibleNotice><FormAlert state={annul} /><div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setConfirm(false)}>{dict.common.cancel}</Button><SubmitButton variant="danger">{t.annuler}</SubmitButton></div></form>
+            <form action={annulerAction} className="space-y-4"><input type="hidden" name="locale" value={locale} /><input type="hidden" name="import_id" value={job.id} /><IrreversibleNotice>{t.annulerCorps}</IrreversibleNotice><FormAlert state={annul} /><div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setConfirm(false)}>{dict.common.close}</Button><SubmitButton variant="danger">{t.annuler}</SubmitButton></div></form>
           </Modal>
         </>
       ) : null}
@@ -213,7 +213,7 @@ export function DemoModal({ dict, locale, coproprieteId }: { dict: Dict; locale:
             <Field label={t.nomDemo} htmlFor="nom_demo" optionalLabel={dict.common.optional}><Input id="nom_demo" name="nom" maxLength={200} defaultValue={formValue(state, "nom")} /></Field>
             <Field label={t.joursDemo} htmlFor="jours_demo"><Input id="jours_demo" name="jours" type="number" min={1} max={90} defaultValue={formValue(state, "jours", 30)} dir="ltr" className="tnum text-start" /></Field>
             <FormAlert state={state} />
-            <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.cancel}</Button><SubmitButton>{t.creerDemo}</SubmitButton></div>
+            <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button><SubmitButton>{t.creerDemo}</SubmitButton></div>
           </form>
         )}
       </Modal>

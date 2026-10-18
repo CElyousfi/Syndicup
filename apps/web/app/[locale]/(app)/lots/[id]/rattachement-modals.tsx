@@ -253,7 +253,7 @@ export function AjouterProprietaireModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2 pt-1">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton disabled={!totalOk}>{dict.common.add}</SubmitButton>
             </div>
@@ -350,7 +350,7 @@ function PiedFormulaire({ dict, onCancel }: { dict: Dict; onCancel: () => void }
   return (
     <div className="flex flex-wrap justify-end gap-2 pt-1">
       <Button type="button" variant="secondary" onClick={onCancel}>
-        {dict.common.cancel}
+        {dict.common.close}
       </Button>
       <SubmitButton>{dict.common.add}</SubmitButton>
     </div>

@@ -19,7 +19,7 @@ import { formKey, formValue } from "../../../../lib/form-values";
 const ROLES: RoleCabinet[] = ["CABINET_ADMIN", "CABINET_GESTIONNAIRE", "CABINET_COMPTABLE"];
 export type GestionnaireOption = { id: string; nom: string };
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 
 export function MembreModal({ dict, locale, cabinetId, membre }: { dict: Dict; locale: Locale; cabinetId: string; membre?: CabinetMembre }) {
