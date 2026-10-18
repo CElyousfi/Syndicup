@@ -11,6 +11,7 @@ import { celebrate } from "../../../../lib/success";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { IconPlus } from "../../../../components/ui/icons";
 import { confirmerArrivee, confirmerDepart, declarerLot } from "./actions";
+import { formKey, formValue } from "../../../../lib/form-values";
 
 /** Déclaration d'un lot en LCD par son propriétaire (ou le syndic au nom d'un propriétaire). */
 export function DeclarerLotModal({
@@ -69,7 +70,7 @@ export function DeclarerLotModal({
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <Field label={l.lot} htmlFor="d_lot" required error={fieldError(state, "lot_id")}>
-              <Select id="d_lot" name="lot_id" required defaultValue={lots[0]?.id ?? ""}>
+              <Select key={formKey(state, "lot_id")} id="d_lot" name="lot_id" required defaultValue={formValue(state, "lot_id", lots[0]?.id ?? "")}>
                 {lots.map((lot) => (
                   <option key={lot.id} value={lot.id}>
                     {lot.numero}
@@ -84,7 +85,7 @@ export function DeclarerLotModal({
               optionalLabel={dict.common.optional}
               error={fieldError(state, "plateformes")}
             >
-              <Input id="d_plateformes" name="plateformes" maxLength={200} placeholder="Airbnb, Booking" />
+              <Input id="d_plateformes" name="plateformes" maxLength={200} placeholder="Airbnb, Booking" defaultValue={formValue(state, "plateformes")} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field
@@ -93,7 +94,7 @@ export function DeclarerLotModal({
                 optionalLabel={dict.common.optional}
                 error={fieldError(state, "contact_urgence_nom")}
               >
-                <Input id="d_cu_nom" name="contact_urgence_nom" maxLength={120} />
+                <Input id="d_cu_nom" name="contact_urgence_nom" maxLength={120} defaultValue={formValue(state, "contact_urgence_nom")} />
               </Field>
               <Field
                 label={l.contactUrgenceTelephone}
@@ -101,7 +102,7 @@ export function DeclarerLotModal({
                 optionalLabel={dict.common.optional}
                 error={fieldError(state, "contact_urgence_telephone")}
               >
-                <Input id="d_cu_tel" name="contact_urgence_telephone" type="tel" dir="ltr" maxLength={20} />
+                <Input id="d_cu_tel" name="contact_urgence_telephone" type="tel" dir="ltr" maxLength={20} defaultValue={formValue(state, "contact_urgence_telephone")} />
               </Field>
             </div>
             <Field
@@ -110,7 +111,7 @@ export function DeclarerLotModal({
               optionalLabel={dict.common.optional}
               error={fieldError(state, "date_debut")}
             >
-              <Input id="d_debut" name="date_debut" type="date" className="tnum" />
+              <Input id="d_debut" name="date_debut" type="date" className="tnum" defaultValue={formValue(state, "date_debut")} />
             </Field>
             <Field
               label={l.gestionnaireId}
@@ -119,7 +120,7 @@ export function DeclarerLotModal({
               optionalLabel={dict.common.optional}
               error={fieldError(state, "gestionnaire_id")}
             >
-              <Input id="d_gest" name="gestionnaire_id" dir="ltr" className="font-mono text-[13px]" />
+              <Input id="d_gest" name="gestionnaire_id" dir="ltr" className="font-mono text-[13px]" defaultValue={formValue(state, "gestionnaire_id")} />
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
@@ -178,7 +179,7 @@ export function ConfirmerArriveeForm({
               type="number"
               min={0}
               max={50}
-              defaultValue={nbVoyageurs}
+              defaultValue={formValue(state, "nb_voyageurs_constate", nbVoyageurs)}
               className="tnum"
             />
           </Field>

@@ -1,13 +1,15 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Modal } from "../../../../../../components/ui/modal";
+import { ActionModal } from "../../../../../../components/ui/action-modal";
+import { ConfirmAction } from "../../../../../../components/ui/confirm-action";
 import { IrreversibleNotice } from "../../../../../../components/ui/irreversible-notice";
 import { Field, Textarea } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Button } from "../../../../../../components/ui/button";
-import { Banner } from "../../../../../../components/ui/banner";
+import { EmptyState } from "../../../../../../components/ui/empty-state";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
+import { formValue } from "../../../../../../lib/form-values";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import { annulerSejour, ajouterPiecesJointes, retirerPieceJointe } from "../../actions";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
@@ -28,44 +30,37 @@ export function AnnulerSejourModal({
   voyageurNom: string;
 }) {
   const l = dict.lcd;
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(annulerSejour, IDLE);
-
   return (
-    <>
-      <Button variant="dangerGhost" onClick={() => setOpen(true)}>
-        {l.annuler}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={l.annuler} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{l.annule}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
+    <ActionModal
+      action={annulerSejour}
+      title={l.annuler}
+      closeLabel={dict.common.close}
+      success={{ message: l.annule, closeAndToast: true }}
+      trigger={(open) => (
+        <Button variant="dangerGhost" onClick={open}>
+          {l.annuler}
+        </Button>
+      )}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="sejour_id" value={sejourId} />
+          <p className="text-[15px] font-semibold text-ink">{fill(l.annulerQuestion, { nom: voyageurNom })}</p>
+          <Field label={l.motifAnnulation} htmlFor="a_motif" optionalLabel={dict.common.optional} error={fieldError(state, "motif")}>
+            <Textarea id="a_motif" name="motif" rows={3} maxLength={500} defaultValue={formValue(state, "motif")} />
+          </Field>
+          <IrreversibleNotice>{l.annulerAide}</IrreversibleNotice>
+          <FormAlert state={state} />
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button type="button" variant="secondary" onClick={close}>
+              {dict.common.close}
+            </Button>
+            <SubmitButton variant="danger">{l.annuler}</SubmitButton>
           </div>
-        ) : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} />
-            <input type="hidden" name="sejour_id" value={sejourId} />
-            <p className="text-[15px] font-semibold text-ink">{fill(l.annulerQuestion, { nom: voyageurNom })}</p>
-            <Field label={l.motifAnnulation} htmlFor="a_motif" optionalLabel={dict.common.optional} error={fieldError(state, "motif")}>
-              <Textarea id="a_motif" name="motif" rows={3} maxLength={500} />
-            </Field>
-            <IrreversibleNotice>{l.annulerAide}</IrreversibleNotice>
-            <FormAlert state={state} />
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
-              </Button>
-              <SubmitButton variant="danger">{l.annuler}</SubmitButton>
-            </div>
-          </form>
-        )}
-      </Modal>
-    </>
+        </form>
+      )}
+    </ActionModal>
   );
 }
 
@@ -90,7 +85,6 @@ export function PiecesJointesCard({
 }) {
   const l = dict.lcd;
   const [state, action] = useActionState(ajouterPiecesJointes, IDLE);
-  const [retraitState, retrait] = useActionState(retirerPieceJointe, IDLE);
   const [nb, setNb] = useState(0);
   const labels = { see: dict.common.see, close: dict.common.close, download: dict.common.download };
 
@@ -98,7 +92,7 @@ export function PiecesJointesCard({
     <Card>
       <SectionHeader title={l.piecesJointes} subtitle={l.piecesJointesAide} />
       {pieces.length === 0 ? (
-        <p className="mt-4 text-[13px] text-soft">{l.aucunePiece}</p>
+        <EmptyState className="py-6" title={l.aucunePiece} illustration="empty-documents" />
       ) : (
         <ul className="mt-4 grid gap-3 sm:grid-cols-2">
           {pieces.map((pj) => (
@@ -117,15 +111,17 @@ export function PiecesJointesCard({
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   <FileViewerButton src={pj.src} nom={pj.nom} labels={labels} size="sm" variant="secondary" tour="lcd-piece" />
                   {peutRetirer ? (
-                    <form action={retrait}>
-                      <input type="hidden" name="locale" value={locale} />
-                      <input type="hidden" name="sejour_id" value={sejourId} />
-                      <input type="hidden" name="chemin" value={pj.path} />
-                      <input type="hidden" name="message_succes" value={l.pieceRetiree} />
-                      <Button type="submit" variant="dangerGhost" size="sm">
-                        {l.retirerPiece}
-                      </Button>
-                    </form>
+                    <ConfirmAction
+                      action={retirerPieceJointe}
+                      fields={{ locale, sejour_id: sejourId, chemin: pj.path }}
+                      triggerLabel={l.retirerPiece}
+                      title={dict.formulaires.confirmer.pieceRetirerTitre}
+                      question={fill(dict.formulaires.confirmer.pieceRetirerQuestion, { nom: pj.nom })}
+                      consequence={dict.formulaires.confirmer.pieceRetirerConsequence}
+                      confirmLabel={dict.formulaires.confirmer.pieceRetirerConfirmer}
+                      closeLabel={dict.common.close}
+                      success={l.pieceRetiree}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -133,12 +129,11 @@ export function PiecesJointesCard({
           ))}
         </ul>
       )}
-      <FormAlert state={retraitState} />
       {peutJoindre && pieces.length < 10 ? (
         <form action={action} className="mt-5 space-y-2 border-t border-wash-strong pt-4">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="sejour_id" value={sejourId} />
-          <input type="hidden" name="message_succes" value={l.pieceAjoutee} />
+
           <div className="flex flex-wrap items-center gap-2">
             <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link hover:bg-action-wash has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-action">
               <IconCamera width={15} height={15} />

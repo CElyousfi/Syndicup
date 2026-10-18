@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
+import { fromApiError, fileTooLarge, uploadRefused, localError, succes } from "../../../../lib/forms-server";
 import type {
   LcdDeclaration,
   LcdGestionnaireResult,
@@ -251,7 +251,7 @@ export async function ajouterPiecesJointes(_prev: FormState, fd: FormData): Prom
   const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
-  return success(champ(fd, "message_succes") || undefined);
+  return succes((d) => d.lcd.pieceAjoutee);
 }
 
 export async function retirerPieceJointe(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -260,7 +260,7 @@ export async function retirerPieceJointe(_prev: FormState, fd: FormData): Promis
   const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "DELETE", body: { chemin: champ(fd, "chemin") } });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
-  return success(champ(fd, "message_succes") || undefined);
+  return succes((d) => d.lcd.pieceRetiree);
 }
 
 export async function annulerSejour(_prev: FormState, fd: FormData): Promise<FormState> {

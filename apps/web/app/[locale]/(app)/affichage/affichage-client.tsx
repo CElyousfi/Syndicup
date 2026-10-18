@@ -228,7 +228,7 @@ export function CommentaireForm({ dict, locale, annonceId }: { dict: Dict; local
   return (
     <form ref={ref} action={action} className="space-y-2">
       <input type="hidden" name="locale" value={locale} /><input type="hidden" name="annonce_id" value={annonceId} />
-      <Field label={c.votreCommentaire} htmlFor="contenu" error={fieldError(state, "contenu")}><Textarea id="contenu" name="contenu" rows={2} required maxLength={2000} /></Field>
+      <Field label={c.votreCommentaire} htmlFor="contenu" error={fieldError(state, "contenu")}><Textarea id="contenu" name="contenu" rows={2} required maxLength={2000} defaultValue={formValue(state, "contenu")} /></Field>
       <FormAlert state={state} />
       <div className="flex items-center justify-end gap-3">{state.status === "success" ? <span className="text-[13px] text-ok">{c.commentaireEnvoye}</span> : null}<SubmitButton size="sm">{c.commenter}</SubmitButton></div>
     </form>
