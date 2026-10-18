@@ -119,7 +119,7 @@ export default async function DepensesPage({
           title={sp.categorie || sp.source || sp.q || statut ? d.aucuneFiltre : d.aucune}
           illustration={sp.categorie || sp.source || sp.q || statut ? "empty-search" : "empty-documents"}
           hint={gestion && !statut ? d.aucuneAide : undefined}
-          action={gestion ? <ButtonLink href={p("/finances/depenses/nouvelle")}>{d.nouvelle}</ButtonLink> : undefined}
+          action={sp.categorie || sp.source || sp.q || statut ? <ButtonLink href={p("/finances/depenses")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink> : gestion ? <ButtonLink href={p("/finances/depenses/nouvelle")}>{d.nouvelle}</ButtonLink> : undefined}
         />
       ) : (
         <>

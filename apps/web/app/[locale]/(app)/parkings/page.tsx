@@ -11,6 +11,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { Banner } from "../../../../components/ui/banner";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { EmptyState } from "../../../../components/ui/empty-state";
+import { ButtonLink } from "../../../../components/ui/button";
 import { LinkTabs } from "../../../../components/ui/link-tabs";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/table";
@@ -140,7 +141,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
               )}
             </Card>
           ) : null}
-          {plan.niveaux.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration="empty-parkings" /> : plan.niveaux.map((n) => (
+          {plan.niveaux.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration="empty-parkings" action={gestion ? <EmplacementModal dict={dict} locale={ctx.locale} grand /> : undefined} /> : plan.niveaux.map((n) => (
             <Card key={n.niveau}>
               <SectionHeader title={n.niveau === "—" ? t.sansNiveau : `${t.niveau} ${n.niveau}`} subtitle={`${n.emplacements.length} · ${n.emplacements.filter((x) => x.statut === "ATTRIBUE" || x.visiteurOccupee).length} ${t.attribues.toLowerCase()}`} />
               <div className="mt-5 grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-6">{n.emplacements.map((x) => <CaseEmplacement key={x.id} x={x} />)}</div>
@@ -157,7 +158,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
             <span aria-hidden className="mx-1 hidden w-px self-stretch bg-hairline-strong sm:block" />
             {STATUTS.map((x) => <Link key={x} href={href("emplacements", { type, statut: x })} className={`${PILL} ${statut === x ? PILL_ON : PILL_OFF}`}>{e.statutEmplacement[x]}<span className={`tnum rounded-full px-1.5 py-0.5 text-[11px] font-bold ${statut === x ? "bg-ink/10" : "bg-wash"}`}>{parStatut[x] ?? 0}</span></Link>)}
           </div>
-          {emplacements.length === 0 ? <EmptyState title={t.aucunEmplacement} hint={gestion ? t.aucunEmplacementAide : undefined} illustration={type || statut ? "empty-search" : "empty-parkings"} /> : (
+          {emplacements.length === 0 ? <EmptyState title={type || statut ? dict.formulaires.filtres.aucunResultat : t.aucunEmplacement} hint={type || statut ? dict.formulaires.filtres.aucunResultatAide : gestion ? t.aucunEmplacementAide : undefined} illustration={type || statut ? "empty-search" : "empty-parkings"} action={type || statut ? <ButtonLink href={href("emplacements")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink> : gestion ? <EmplacementModal dict={dict} locale={ctx.locale} grand /> : undefined} /> : (
             <TableCard><Table>
               <THead><TH>{t.code}</TH><TH>{t.type}</TH><TH>{t.niveau}</TH><TH>{t.statut}</TH><TH>{t.lotBeneficiaire}</TH><TH>{t.periode}</TH><TH align="end">{t.redevance}</TH></THead>
               <LiveList as="tbody">{emplacements.map((x) => (
@@ -179,7 +180,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
       {!erreur && onglet === "vehicules" ? (
         <div className="space-y-4">
           {gestion || gardien ? <Card><RechercheVehiculeForm dict={dict} /></Card> : null}
-          {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} illustration="empty-parkings" /> : (
+          {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} illustration="empty-parkings" action={(gestion || resident) && mesLots.length ? <VehiculeModal dict={dict} locale={ctx.locale} lots={mesLots} grand /> : undefined} /> : (
             <TableCard><Table>
               <THead><TH>{t.immatriculation}</TH><TH>{t.lot}</TH><TH>{t.typeVehicule}</TH><TH>{t.marque}</TH><TH>{t.couleur}</TH><TH>{t.statut}</TH>{gestion || resident ? <TH align="end">{dict.common.actions}</TH> : null}</THead>
               <LiveList as="tbody">{vehicules.map((v) => (
@@ -199,7 +200,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
       ) : null}
 
       {!erreur && onglet === "badges" ? (
-        badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} illustration="empty-parkings" /> : (
+        badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} illustration="empty-parkings" action={gestion ? <BadgeModal dict={dict} locale={ctx.locale} lots={mesLots} grand /> : undefined} /> : (
           <TableCard><Table>
             <THead><TH>{t.identifiant}</TH><TH>{t.type}</TH><TH>{t.lot}</TH><TH>{t.statut}</TH><TH>{t.remisLe}</TH><TH align="end">{t.caution}</TH><TH align="end">{dict.common.actions}</TH></THead>
             <LiveList as="tbody">{badges.map((b) => (

@@ -380,6 +380,11 @@ export default async function LocationCourteDureePage({
                 title={l.aucuneDeclarationResident}
                 hint={regimeOuvert && vue === "resident" ? l.declarerLotAide : undefined}
                 illustration="empty-lcd"
+                action={
+                  regimeOuvert && vue === "resident" && lotsDeclarables.length > 0 ? (
+                    <DeclarerLotModal dict={dict} locale={ctx.locale} lots={lotsDeclarables} variant="primary" />
+                  ) : undefined
+                }
               />
             ) : (
               <Lignes>
@@ -436,6 +441,14 @@ export default async function LocationCourteDureePage({
                 title={l.aucunSejour}
                 hint={aValidee ? l.aucunSejourAide : regimeOuvert ? l.aucunLotValide : undefined}
                 illustration="empty-lcd"
+                action={
+                  peutDeclarerSejour ? (
+                    <ButtonLink href={p("/location-courte-duree/sejours/nouveau")}>
+                      <IconPlus width={16} height={16} />
+                      {l.declarerSejour}
+                    </ButtonLink>
+                  ) : undefined
+                }
               />
             ) : (
               <SejourListe sejours={sejours} dict={dict} locale={ctx.locale} />

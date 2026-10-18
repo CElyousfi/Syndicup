@@ -92,7 +92,7 @@ export default async function TachesPage({ params, searchParams }: { params: Pro
           </div>
         </div>
       ) : null}
-      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} illustration={statut || retard || origine ? "empty-search" : "empty-taches"} action={gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={gardien ? t.aucuneMienne : statut || retard || origine ? t.aucuneFiltre : t.aucune} hint={gestion && !statut && !retard ? t.aucuneAide : undefined} illustration={statut || retard || origine ? "empty-search" : "empty-taches"} action={statut || retard || origine ? <ButtonLink href={p("/taches")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink> : gestion ? <ButtonLink href={p("/taches/nouveau")}>{t.nouvelle}</ButtonLink> : undefined} /> : vue === "kanban" && !gardien ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {COLONNES.map((col) => {
             const items = rows.filter((x) => x.statut === col);

@@ -9,6 +9,7 @@ import { Badge } from "../../../../components/ui/badge";
 import { SectionHeader } from "../../../../components/ui/card";
 import { Ligne, Lignes, type LigneLive } from "../../../../components/espaces/ligne-liste";
 import { EmptyState } from "../../../../components/ui/empty-state";
+import { ButtonLink } from "../../../../components/ui/button";
 import { StatCard } from "../../../../components/ui/stat-card";
 import { CBell, CCalendar, CHandshake } from "../../../../components/ui/color-icons";
 import { reservationVariant } from "../../../../lib/status";
@@ -126,6 +127,7 @@ export default async function ReservationsPage({
           title={e.aucuneReservation}
           hint={e.aucuneReservationAide}
           illustration="empty-reservations"
+          action={<ButtonLink href={`/${ctx.locale}/espaces-communs`} variant="secondary">{e.reserver}</ButtonLink>}
         />
       ) : (
         <div className="space-y-10">

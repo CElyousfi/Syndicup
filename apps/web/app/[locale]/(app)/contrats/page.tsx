@@ -81,7 +81,7 @@ export default async function ContratsPage({ params, searchParams }: { params: P
           <ExportButtons ressource="contrats" filtres={{ type, statut: onglet === "TOUS" || onglet === "A_RENOUVELER" ? undefined : onglet }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx }} size="sm" />
         </div>
       </div>
-      {!listeRes.ok ? <LoadError error={failureOf(listeRes)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} illustration={onglet === "TOUS" && !type ? "empty-documents" : "empty-search"} /> : (
+      {!listeRes.ok ? <LoadError error={failureOf(listeRes)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} illustration={onglet === "TOUS" && !type ? "empty-documents" : "empty-search"} action={onglet === "TOUS" && !type ? (gestion ? <ButtonLink href={p("/contrats/nouveau")}><IconPlus width={16} height={16} />{c.nouveau}</ButtonLink> : undefined) : <ButtonLink href={p("/contrats")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink>} /> : (
         <TableCard>
           <Table>
             <THead><TH>{c.libelle}</TH><TH>{c.type}</TH><TH>{c.prestataire}</TH><TH>{c.periodicite}</TH><TH align="end">{c.montantPeriode}</TH><TH>{c.dateFin}</TH><TH>{c.statut}</TH></THead>

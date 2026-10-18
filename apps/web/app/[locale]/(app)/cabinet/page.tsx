@@ -108,7 +108,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
             <Link href={href("portefeuille", { alerte: "1" })} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${sp.alerte === "1" ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{t.seulementAlertes}</Link>
             {meta.calcule_le ? <span className="ms-auto text-[12px] text-faint">{fill(t.calculeLe, { date: formatDateHeure(meta.calcule_le, ctx.locale) })}</span> : null}
           </div>
-          {!portRes.ok ? <LoadError error={failureOf(portRes)} locale={ctx.locale} /> : lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} /> : (
+          {!portRes.ok ? <LoadError error={failureOf(portRes)} locale={ctx.locale} /> : lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} action={admin ? <MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} /> : undefined} /> : (
             <TableCard><Table>
               <THead>
                 <TH><Link href={href("portefeuille", { sort: sp.sort === "nom:asc" ? "nom:desc" : "nom:asc", alerte: sp.alerte })}>{t.coproprietes}</Link></TH>
@@ -215,7 +215,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
       ) : null}
 
       {onglet === "prestataires" ? (
-        prestaRes?.ok === false ? <LoadError error={failureOf(prestaRes)} locale={ctx.locale} /> : (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} /> : (
+        prestaRes?.ok === false ? <LoadError error={failureOf(prestaRes)} locale={ctx.locale} /> : (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} action={gestion ? <PrestataireModeleModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} /> : undefined} /> : (
           <TableCard><Table>
             <THead><TH>{t.nom}</TH><TH>{t.specialite}</TH><TH>{t.telephone}</TH><TH>{t.email}</TH><TH align="end" /></THead>
             <LiveList as="tbody">{(prestaRes?.ok ? prestaRes.data : []).map((x) => (

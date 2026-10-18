@@ -231,6 +231,11 @@ export default async function AgDetailPage({
               hint={a.aucuneResolutionAide}
               illustration="empty-ag"
               className="py-8"
+              action={
+                peutEditer ? (
+                  <ResolutionModal dict={dict} locale={ctx.locale} agId={id} prochainOrdre={prochainOrdre} />
+                ) : undefined
+              }
             />
           ) : (
             <LiveList as="div" className="space-y-4">

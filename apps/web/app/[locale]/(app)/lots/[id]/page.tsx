@@ -309,6 +309,7 @@ export default async function LotDetailPage({
           {occupantsActifs.length === 0 ? (
             <EmptyState
               title={dict.lots.aucunOccupant}
+              action={gestion ? <AjouterOccupantModal dict={dict} locale={ctx.locale} lotId={id} membres={membres} /> : undefined}
               icon={
                 <IconCircle tone="tosca" size={64}>
                   <CKey width={30} height={30} />
