@@ -11,6 +11,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
+import '../../core/auth/logout.dart';
 import '../../core/auth/session.dart';
 import '../../core/auth/session_events.dart';
 import '../../core/bootstrap.dart';
@@ -607,10 +608,11 @@ class _MenuSheet extends ConsumerWidget {
             label: dict.common.logout,
             color: SuColors.danger,
             onTap: () async {
+              // Le menu se ferme d'abord ; la confirmation se pose sur l'écran (contexte racine).
+              final racine = Navigator.of(context, rootNavigator: true).context;
               Navigator.pop(context);
-              final api = ref.read(apiClientProvider);
-              await PushService.instance.unregisterToken(api);
-              await ref.read(sessionProvider.notifier).signOut();
+              if (!racine.mounted) return;
+              await confirmerDeconnexion(racine);
             },
           ),
         ],
