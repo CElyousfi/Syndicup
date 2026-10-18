@@ -37,7 +37,7 @@ export async function modifierPrestataire(_prev: FormState, fd: FormData): Promi
       ...(rib ? { rib: rib.replace(/\s+/g, "") } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/prestataires`);
   revalidatePath(`/${locale}/prestataires/${id}`);
   return success();
@@ -50,7 +50,7 @@ export async function basculerPrestataire(_prev: FormState, fd: FormData): Promi
     method: "PATCH",
     body: { actif: champ(fd, "actif") === "true" },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/prestataires`);
   return success();
 }
@@ -60,7 +60,7 @@ export async function supprimerPrestataire(_prev: FormState, fd: FormData): Prom
   const res = await apiFetch<{ id: string }>(`/prestataires/${champ(fd, "prestataire_id")}`, {
     method: "DELETE",
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/prestataires`);
   return success();
 }

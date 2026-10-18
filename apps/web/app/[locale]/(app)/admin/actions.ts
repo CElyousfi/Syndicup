@@ -22,7 +22,7 @@ export async function creerCopropriete(_prev: FormState, fd: FormData): Promise<
       nb_lots: Number(champ(fd, "nb_lots")),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/admin`);
   return success(undefined, { id: res.data.id, nom: res.data.nom });
 }
@@ -40,6 +40,6 @@ export async function inviterSyndicAdmin(_prev: FormState, fd: FormData): Promis
     coproprieteId,
     body: { role_cible: "SYNDIC", canal: champ(fd, "canal") || "EMAIL", lot_id: null },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   return success(undefined, { code: res.data.code, expireLe: res.data.expireLe });
 }

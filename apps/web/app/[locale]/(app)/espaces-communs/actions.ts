@@ -23,7 +23,7 @@ export async function creerEspace(_prev: FormState, fd: FormData): Promise<FormS
       validation_automatique: fd.get("validation_automatique") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/espaces-communs`);
   return success();
 }
@@ -41,7 +41,7 @@ export async function reserverEspace(_prev: FormState, fd: FormData): Promise<Fo
       nombre_invites: nombreInvites === "" ? null : Number(nombreInvites),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/reservations`);
   return success(undefined, { statut: res.data.statut });
 }
@@ -51,7 +51,7 @@ export async function annulerReservation(_prev: FormState, fd: FormData): Promis
   const res = await apiFetch<Reservation>(`/reservations/${champ(fd, "reservation_id")}`, {
     method: "PATCH",
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/reservations`);
   return success();
 }
@@ -62,7 +62,7 @@ export async function validerReservation(_prev: FormState, fd: FormData): Promis
     `/reservations/${champ(fd, "reservation_id")}/valider`,
     { method: "POST" }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/reservations`);
   return success();
 }
@@ -73,7 +73,7 @@ export async function rejeterReservation(_prev: FormState, fd: FormData): Promis
     `/reservations/${champ(fd, "reservation_id")}/rejeter`,
     { method: "POST", body: { motif: champ(fd, "motif") } }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/reservations`);
   return success();
 }
@@ -91,7 +91,7 @@ export async function modifierEspace(_prev: FormState, fd: FormData): Promise<Fo
       validation_automatique: fd.get("validation_automatique") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/espaces-communs`);
   return success();
 }
@@ -101,7 +101,7 @@ export async function supprimerEspace(_prev: FormState, fd: FormData): Promise<F
   const res = await apiFetch<{ id: string }>(`/espaces-communs/${champ(fd, "espace_id")}`, {
     method: "DELETE",
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/espaces-communs`);
   return success();
 }

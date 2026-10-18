@@ -31,21 +31,21 @@ async function televerserPiece(fd: FormData, name: string): Promise<{ storage_pa
   const f = fd.get(name);
   if (!(f instanceof File) || f.size === 0) return null;
   if (f.size > 15 * 1024 * 1024) {
-    return { erreur: await fileTooLarge(name, 15) };
+    return { erreur: await fileTooLarge(name, 15, false, fd) };
   }
   const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/depenses/upload-url", {
     method: "POST",
     body: { nom_fichier: f.name || "piece.jpg", content_type: contentType },
   });
-  if (!prep.ok) return { erreur: await fromApiError(prep) };
+  if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
   const upload = await fetch(prep.data.upload_url, {
     method: "PUT",
     headers: { "Content-Type": contentType, "x-upsert": "true" },
     body: await f.arrayBuffer(),
   });
   if (!upload.ok) {
-    return { erreur: await uploadRefused(upload.status) };
+    return { erreur: await uploadRefused(upload.status, fd) };
   }
   return { storage_path: prep.data.storage_path, nom: f.name || "piece.jpg" };
 }
@@ -71,7 +71,7 @@ function corpsDepense(fd: FormData) {
 export async function creerDepense(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch<Depense>("/depenses", { method: "POST", body: corpsDepense(fd) });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   // Facture jointe dès la création (facultatif) : ajoutée juste après, même écran.
   const piece = await televerserPiece(fd, "facture_fichier");
   if (piece && "erreur" in piece) return piece.erreur;
@@ -87,7 +87,7 @@ export async function creerDepense(_prev: FormState, fd: FormData): Promise<Form
         document: piece,
       },
     });
-    if (!f.ok) return fromApiError(f);
+    if (!f.ok) return fromApiError(f, fd);
   }
   revalider(locale);
   redirect(`/${locale}${BASE}/${res.data.id}?creee=1`);
@@ -97,7 +97,7 @@ export async function modifierDepense(_prev: FormState, fd: FormData): Promise<F
   const locale = champ(fd, "locale");
   const id = champ(fd, "depense_id");
   const res = await apiFetch<Depense>(`/depenses/${id}`, { method: "PATCH", body: corpsDepense(fd) });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   redirect(`/${locale}${BASE}/${id}`);
 }
@@ -106,7 +106,7 @@ async function transition(fd: FormData, action: "soumettre" | "approuver" | "rej
   const locale = champ(fd, "locale");
   const id = champ(fd, "depense_id");
   const res = await apiFetch<DepenseDetail>(`/depenses/${id}/${action}`, { method: "POST", idempotent: true, body: body ?? {} });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`, "/tableau-de-bord");
   return success(undefined, { statut: res.data.statut });
 }
@@ -139,7 +139,7 @@ export async function payerDepense(_prev: FormState, fd: FormData): Promise<Form
       justificatif: piece,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`, "/tableau-de-bord", "/finances/budgets");
   return success(undefined, { source: res.data.source });
 }
@@ -148,7 +148,7 @@ export async function ajouterFacture(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const id = champ(fd, "depense_id");
   const piece = await televerserPiece(fd, "fichier");
-  if (!piece) return await localError("VALIDATION_ERROR", (l) => l.factureObligatoire, { field: "fichier" });
+  if (!piece) return await localError("VALIDATION_ERROR", (l) => l.factureObligatoire, { field: "fichier", fd });
   if ("erreur" in piece) return piece.erreur;
   const res = await apiFetch<Facture>(`/depenses/${id}/factures`, {
     method: "POST",
@@ -162,7 +162,7 @@ export async function ajouterFacture(_prev: FormState, fd: FormData): Promise<Fo
       document: piece,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -174,7 +174,7 @@ export async function changerStatutFacture(_prev: FormState, fd: FormData): Prom
     method: "PATCH",
     body: { statut: champ(fd, "statut") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -187,7 +187,7 @@ export async function creerPoste(_prev: FormState, fd: FormData): Promise<FormSt
     method: "POST",
     body: { categorie: champ(fd, "categorie"), libelle: champ(fd, "libelle"), montant_prevu: champ(fd, "montant_prevu") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   revalidatePath(`/${locale}/finances/budgets/${budgetId}`);
   return success();
@@ -200,7 +200,7 @@ export async function modifierPoste(_prev: FormState, fd: FormData): Promise<For
     method: "PATCH",
     body: { categorie: champ(fd, "categorie"), libelle: champ(fd, "libelle"), montant_prevu: champ(fd, "montant_prevu") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   revalidatePath(`/${locale}/finances/budgets/${budgetId}`);
   return success();
@@ -210,7 +210,7 @@ export async function supprimerPoste(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const budgetId = champ(fd, "budget_id");
   const res = await apiFetch<{ id: string }>(`/finances/budgets/${budgetId}/postes/${champ(fd, "poste_id")}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   revalidatePath(`/${locale}/finances/budgets/${budgetId}`);
   return success();
@@ -232,7 +232,7 @@ export async function creerDepenseDepuisIncident(_prev: FormState, fd: FormData)
       source: champ(fd, "source") || "COMPTE_COURANT",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/incidents/${incidentId}`);
   redirect(`/${locale}${BASE}/${res.data.id}?creee=1`);
 }
@@ -244,7 +244,7 @@ export async function evaluerPrestataire(_prev: FormState, fd: FormData): Promis
     method: "POST",
     body: { note: Number(champ(fd, "note")), commentaire: optionnel(fd, "commentaire") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/incidents/${incidentId}`);
   revalidatePath(`/${locale}/prestataires`);
   return success();
@@ -253,6 +253,6 @@ export async function evaluerPrestataire(_prev: FormState, fd: FormData): Promis
 // ── Fournisseur : RIB complet (lecture auditée côté API) ─────────────────────
 export async function lireRib(_prev: FormState, fd: FormData): Promise<FormState> {
   const res = await apiFetch<{ rib: string | null }>(`/prestataires/${champ(fd, "prestataire_id")}/rib`);
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   return success(undefined, { rib: res.data.rib });
 }

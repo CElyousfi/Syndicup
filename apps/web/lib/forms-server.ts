@@ -5,7 +5,7 @@
  */
 import type { ApiError } from "./api/types";
 import { describeError, isLegalGateError } from "./errors";
-import type { FormErrorState, FormState } from "./forms";
+import { success, type FormErrorState, type FormState } from "./forms";
 import { collectValues } from "./form-values";
 import { fill, type Dict } from "./i18n";
 import { loginHref, requestDict, requestLocale } from "./request-info";
@@ -57,6 +57,14 @@ export async function fromApiError(
   const dict = await requestDict();
   const relogin = e.error.code === "UNAUTHENTICATED" ? await loginHref(locale) : undefined;
   return withValues(buildErrorState(e, dict, locale, relogin), fd);
+}
+
+/**
+ * Succès annoncé, dans la langue de la requête : <FormAlert> le montre en toast (et en bandeau
+ * dans un formulaire en ligne), le panneau d'<ActionModal> l'affiche — jamais un succès muet.
+ */
+export async function succes(pick: (d: Dict) => string, data?: unknown): Promise<FormState> {
+  return success(pick(await requestDict()), data);
 }
 
 /** Joint la saisie soumise à un état d'erreur (aucun effet sans FormData). */

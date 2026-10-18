@@ -27,7 +27,7 @@ export async function creerBudget(_prev: FormState, fd: FormData): Promise<FormS
       ag_id: agId === "" ? null : agId,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -42,7 +42,7 @@ export async function modifierBudget(_prev: FormState, fd: FormData): Promise<Fo
       ...(agId !== "" ? { ag_id: agId } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -54,7 +54,7 @@ export async function activerBudget(_prev: FormState, fd: FormData): Promise<For
     method: "POST",
     idempotent: true,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -71,7 +71,7 @@ export async function genererAppelDeFonds(_prev: FormState, fd: FormData): Promi
       date_echeance: champ(fd, "date_echeance"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/appels-de-fonds`);
   return success(undefined, { id: res.data.id });
 }
@@ -103,7 +103,7 @@ export async function enregistrerPaiement(_prev: FormState, fd: FormData): Promi
     idempotent: true,
     body,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/appels-de-fonds`);
   revalidatePath(`/${locale}/lots`);
 
@@ -133,7 +133,7 @@ export async function contesterLigne(_prev: FormState, fd: FormData): Promise<Fo
       motif: champ(fd, "motif"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
   return success();
 }
@@ -150,7 +150,7 @@ export async function repondreContestation(_prev: FormState, fd: FormData): Prom
       },
     }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/contestations`);
   return success();
 }

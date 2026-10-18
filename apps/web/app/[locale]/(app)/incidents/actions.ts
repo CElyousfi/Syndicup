@@ -33,7 +33,7 @@ async function televerserPhotos(fd: FormData): Promise<string[] | { erreur: Form
         },
       }
     );
-    if (!prep.ok) return { erreur: await fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
     const upload = await fetch(prep.data.upload_url, {
       method: "PUT",
       headers: {
@@ -44,7 +44,7 @@ async function televerserPhotos(fd: FormData): Promise<string[] | { erreur: Form
     });
     if (!upload.ok) {
       return {
-        erreur: await uploadRefused(upload.status),
+        erreur: await uploadRefused(upload.status, fd),
       };
     }
     chemins.push(prep.data.storage_path);
@@ -77,7 +77,7 @@ export async function signalerIncident(_prev: FormState, fd: FormData): Promise<
       ...(champ(fd, "immatriculation_signalee") !== "" ? { immatriculation_signalee: champ(fd, "immatriculation_signalee") } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/incidents`);
   redirect(`/${locale}/incidents/${res.data.id}?signale=1`);
 }
@@ -93,7 +93,7 @@ export async function changerStatutIncident(_prev: FormState, fd: FormData): Pro
       commentaire: commentaire === "" ? null : commentaire,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/incidents/${incidentId}`);
   return success();
 }
@@ -105,7 +105,7 @@ export async function assignerIncident(_prev: FormState, fd: FormData): Promise<
     method: "POST",
     body: { prestataire_id: champ(fd, "prestataire_id") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/incidents/${incidentId}`);
   return success();
 }
@@ -130,7 +130,7 @@ export async function creerPrestataire(_prev: FormState, fd: FormData): Promise<
       notes: champ(fd, "notes") || null,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/prestataires`);
   return success();
 }

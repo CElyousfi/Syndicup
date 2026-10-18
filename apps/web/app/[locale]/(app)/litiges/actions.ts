@@ -16,7 +16,7 @@ export async function declarerLitige(_prev: FormState, fd: FormData): Promise<Fo
     method: "POST",
     body: { type: champ(fd, "type"), description: champ(fd, "description") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/litiges`);
   return success();
 }
@@ -28,7 +28,7 @@ export async function escaladerLitige(_prev: FormState, fd: FormData): Promise<F
     method: "PATCH",
     body: { motif: champ(fd, "motif") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/litiges`);
   return success();
 }
@@ -39,7 +39,7 @@ export async function cloturerLitige(_prev: FormState, fd: FormData): Promise<Fo
     method: "PATCH",
     body: { statut: champ(fd, "statut"), motif: champ(fd, "motif") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/litiges`);
   return success();
 }

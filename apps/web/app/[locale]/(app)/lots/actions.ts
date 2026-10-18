@@ -31,7 +31,7 @@ export async function creerLot(_prev: FormState, fd: FormData): Promise<FormStat
       lot_parent_id: champOuNull(fd, "lot_parent_id"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
   redirect(`/${locale}/lots/${res.data.id}`);
 }
@@ -54,7 +54,7 @@ export async function modifierLot(_prev: FormState, fd: FormData): Promise<FormS
       lot_parent_id: champOuNull(fd, "lot_parent_id"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
   redirect(`/${locale}/lots/${lotId}`);
 }
@@ -79,7 +79,7 @@ export async function ajouterProprietaire(_prev: FormState, fd: FormData): Promi
     method: "POST",
     body: proprietaires.length === 1 ? proprietaires[0] : { proprietaires },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success();
 }
@@ -98,7 +98,7 @@ export async function ajouterOccupant(_prev: FormState, fd: FormData): Promise<F
       recoit_convocations: fd.get("recoit_convocations") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success();
 }
@@ -117,7 +117,7 @@ export async function transfererPropriete(_prev: FormState, fd: FormData): Promi
       dette_reprise_acquereur: fd.get("dette_reprise_acquereur") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success(undefined, { code: res.data.code, expireLe: res.data.expireLe });
 }
@@ -125,7 +125,7 @@ export async function transfererPropriete(_prev: FormState, fd: FormData): Promi
 export async function supprimerLot(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch<{ id: string }>(`/lots/${champ(fd, "lot_id")}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
   redirect(`/${locale}/lots`);
 }

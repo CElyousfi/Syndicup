@@ -21,7 +21,7 @@ export async function creerInvitation(_prev: FormState, fd: FormData): Promise<F
       lot_id: lotId === "" ? null : lotId,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/invitations`);
   return success(undefined, { code: res.data.code, expireLe: res.data.expireLe });
 }
@@ -32,7 +32,7 @@ export async function regenererInvitation(_prev: FormState, fd: FormData): Promi
     `/invitations/${champ(fd, "invitation_id")}/regenerer`,
     { method: "POST" }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/invitations`);
   return success(undefined, { code: res.data.code });
 }
@@ -42,7 +42,7 @@ export async function annulerInvitation(_prev: FormState, fd: FormData): Promise
   const res = await apiFetch<Invitation>(`/invitations/${champ(fd, "invitation_id")}`, {
     method: "DELETE",
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/invitations`);
   return success();
 }

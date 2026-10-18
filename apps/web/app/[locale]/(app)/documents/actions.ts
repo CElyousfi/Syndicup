@@ -56,7 +56,7 @@ export async function televerserFichierDocument(
   const locale = champ(fd, "locale");
   const fichier = fd.get("fichier");
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return await localError("VALIDATION_ERROR", (l) => l.fichierManquant, { field: "fichier" });
+    return await localError("VALIDATION_ERROR", (l) => l.fichierManquant, { field: "fichier", fd });
   }
 
   const contentType = fichier.type || typeDepuisExtension(fichier.name);
@@ -70,7 +70,7 @@ export async function televerserFichierDocument(
       },
     }
   );
-  if (!prep.ok) return fromApiError(prep);
+  if (!prep.ok) return fromApiError(prep, fd);
 
   const contenu = await fichier.arrayBuffer();
   const upload = await fetch(prep.data.upload_url, {
@@ -82,7 +82,7 @@ export async function televerserFichierDocument(
     body: contenu,
   });
   if (!upload.ok) {
-    return await uploadRefused(upload.status);
+    return await uploadRefused(upload.status, fd);
   }
 
   const res = await apiFetch<DocumentCopro>("/documents", {
@@ -94,7 +94,7 @@ export async function televerserFichierDocument(
       storage_path: prep.data.storage_path,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/documents`);
   return success();
 }
@@ -119,7 +119,7 @@ export async function supprimerDocument(_prev: FormState, fd: FormData): Promise
   const res = await apiFetch<{ id: string }>(`/documents/${champ(fd, "document_id")}`, {
     method: "DELETE",
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/documents`);
   return success();
 }

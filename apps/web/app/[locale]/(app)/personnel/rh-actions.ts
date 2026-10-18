@@ -16,12 +16,12 @@ function revalider(locale: string, ...paths: string[]) {
 async function televerser(fd: FormData, name: string): Promise<{ storage_path: string; nom: string } | null | { erreur: FormState }> {
   const f = fd.get(name);
   if (!(f instanceof File) || f.size === 0) return null;
-  if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15) };
+  if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15, false, fd) };
   const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/personnel/upload-url", { method: "POST", body: { nom_fichier: f.name || "piece.pdf", content_type: contentType } });
-  if (!prep.ok) return { erreur: await fromApiError(prep) };
+  if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
   const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-  if (!up.ok) return { erreur: await uploadRefused(up.status) };
+  if (!up.ok) return { erreur: await uploadRefused(up.status, fd) };
   return { storage_path: prep.data.storage_path, nom: f.name || "piece.pdf" };
 }
 
@@ -56,14 +56,14 @@ export async function modifierDossier(_prev: FormState, fd: FormData): Promise<F
       ...(contrat ? { contrat_travail: contrat } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success();
 }
 
 export async function lireCnss(_prev: FormState, fd: FormData): Promise<FormState> {
   const res = await apiFetch<{ numero_cnss: string | null }>(`/personnel/${champ(fd, "personnel_id")}/cnss`);
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   return success(undefined, { numero_cnss: res.data.numero_cnss });
 }
 
@@ -72,7 +72,7 @@ export async function preparerFiche(_prev: FormState, fd: FormData): Promise<For
   const id = champ(fd, "personnel_id");
   const abs = optionnel(fd, "jours_absence_injustifiee");
   const res = await apiFetch<FichePaie>(`/personnel/${id}/fiches-paie`, { method: "POST", body: { periode: champ(fd, "periode"), brut: optionnel(fd, "brut") ?? undefined, primes: optionnel(fd, "primes"), retenues: optionnel(fd, "retenues"), ...(abs ? { jours_absence_injustifiee: Number(abs) } : {}) } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success(undefined, { id: res.data.id });
 }
@@ -81,7 +81,7 @@ export async function validerFiche(_prev: FormState, fd: FormData): Promise<Form
   const locale = champ(fd, "locale");
   const id = champ(fd, "personnel_id");
   const res = await apiFetch<FichePaie>(`/personnel/${id}/fiches-paie/${champ(fd, "fiche_id")}/valider`, { method: "POST", idempotent: true, body: {} });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success(undefined, { depense_id: res.data.depenseId });
 }
@@ -103,7 +103,7 @@ export async function payerFiche(_prev: FormState, fd: FormData): Promise<FormSt
     }
   }
   const res = await apiFetch<{ fiche_id: string }>(`/personnel/${id}/fiches-paie/${champ(fd, "fiche_id")}/payer`, { method: "POST", idempotent: true, body: { methode: champ(fd, "methode"), reference: optionnel(fd, "reference"), date_paiement: champ(fd, "date_paiement"), justificatif } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success();
 }
@@ -114,7 +114,7 @@ export async function demanderConge(_prev: FormState, fd: FormData): Promise<For
   const certificat = await televerser(fd, "certificat");
   if (certificat && "erreur" in certificat) return certificat.erreur;
   const res = await apiFetch<Conge>(id ? `/personnel/${id}/conges` : "/personnel/conges", { method: "POST", idempotent: true, body: { type: champ(fd, "type"), date_debut: champ(fd, "date_debut"), date_fin: champ(fd, "date_fin"), nb_jours: optionnel(fd, "nb_jours") ?? undefined, motif: optionnel(fd, "motif"), certificat, remplacant_personnel_id: optionnel(fd, "remplacant_personnel_id") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, ...(id ? [`/personnel/${id}`] : []));
   return success();
 }
@@ -123,7 +123,7 @@ export async function deciderConge(_prev: FormState, fd: FormData): Promise<Form
   const locale = champ(fd, "locale");
   const decision = champ(fd, "decision") === "refuser" ? "refuser" : "approuver";
   const res = await apiFetch<Conge>(`/personnel/conges/${champ(fd, "conge_id")}/${decision}`, { method: "POST", idempotent: true, body: decision === "refuser" ? { motif_refus: champ(fd, "motif_refus") } : { remplacant_personnel_id: optionnel(fd, "remplacant_personnel_id") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${res.data.personnelId}`);
   return success(undefined, { statut: res.data.statut });
 }
@@ -131,7 +131,7 @@ export async function deciderConge(_prev: FormState, fd: FormData): Promise<Form
 export async function annulerConge(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch<Conge>(`/personnel/conges/${champ(fd, "conge_id")}/annuler`, { method: "POST", body: {} });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${res.data.personnelId}`);
   return success();
 }
@@ -145,7 +145,7 @@ export async function saisirPresences(_prev: FormState, fd: FormData): Promise<F
   }
   if (presences.length === 0) return success();
   const res = await apiFetch(`/personnel/${id}/presences`, { method: "POST", body: { presences } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success();
 }
@@ -153,7 +153,7 @@ export async function saisirPresences(_prev: FormState, fd: FormData): Promise<F
 export async function pointer(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch("/personnel/me/presence", { method: "POST", idempotent: true, body: { statut: "PRESENT" } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   const session = await readSession();
   void session;
   revalider(locale, `/personnel/${champ(fd, "personnel_id")}`);
@@ -164,7 +164,7 @@ export async function evaluer(_prev: FormState, fd: FormData): Promise<FormState
   const locale = champ(fd, "locale");
   const id = champ(fd, "personnel_id");
   const res = await apiFetch(`/personnel/${id}/evaluations`, { method: "POST", body: { periode: champ(fd, "periode"), note: Number(champ(fd, "note")), commentaire: optionnel(fd, "commentaire") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/personnel/${id}`);
   return success();
 }

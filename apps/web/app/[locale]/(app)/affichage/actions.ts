@@ -24,12 +24,12 @@ async function televerserPieces(fd: FormData): Promise<{ storage_path: string; n
   const fichiers = fd.getAll("pieces").filter((f): f is File => f instanceof File && f.size > 0);
   const out: { storage_path: string; nom: string }[] = [];
   for (const f of fichiers) {
-    if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge("pieces", 15) };
+    if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge("pieces", 15, false, fd) };
     const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
     const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/annonces/upload-url", { method: "POST", body: { nom_fichier: f.name || "piece.pdf", content_type: contentType } });
-    if (!prep.ok) return { erreur: await fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
     const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-    if (!up.ok) return { erreur: await uploadRefused(up.status) };
+    if (!up.ok) return { erreur: await uploadRefused(up.status, fd) };
     out.push({ storage_path: prep.data.storage_path, nom: f.name || "piece.pdf" });
   }
   return out;
@@ -54,10 +54,10 @@ export async function creerAnnonce(_prev: FormState, fd: FormData): Promise<Form
   const pieces = await televerserPieces(fd);
   if ("erreur" in pieces) return pieces.erreur;
   const res = await apiFetch<AnnonceDetail>("/annonces", { method: "POST", body: { ...corpsAnnonce(fd), pieces_jointes: pieces } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   if (champ(fd, "publier") === "1") {
     const pub = await apiFetch<AnnonceDetail>(`/annonces/${res.data.id}/publier`, { method: "POST", body: {}, idempotent: true });
-    if (!pub.ok) return fromApiError(pub);
+    if (!pub.ok) return fromApiError(pub, fd);
   }
   revalider(locale);
   redirect(`/${locale}${BASE}/${res.data.id}?cree=1`);
@@ -69,7 +69,7 @@ export async function modifierAnnonce(_prev: FormState, fd: FormData): Promise<F
   const pieces = await televerserPieces(fd);
   if ("erreur" in pieces) return pieces.erreur;
   const res = await apiFetch<AnnonceDetail>(`/annonces/${id}`, { method: "PATCH", body: { ...corpsAnnonce(fd), ...(pieces.length ? { pieces_jointes: pieces } : {}) } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   redirect(`/${locale}${BASE}/${id}?maj=1`);
 }
@@ -79,7 +79,7 @@ export async function publierAnnonce(_prev: FormState, fd: FormData): Promise<Fo
   const id = champ(fd, "annonce_id");
   const quand = champ(fd, "mode") === "programmer" ? isoLocal(optionnel(fd, "publie_le")) : null;
   const res = await apiFetch<AnnonceDetail>(`/annonces/${id}/publier`, { method: "POST", body: { publie_le: quand }, idempotent: true });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success(undefined, res.data.diffusion);
 }
@@ -88,7 +88,7 @@ export async function archiverAnnonce(_prev: FormState, fd: FormData): Promise<F
   const locale = champ(fd, "locale");
   const id = champ(fd, "annonce_id");
   const res = await apiFetch<AnnonceDetail>(`/annonces/${id}/archiver`, { method: "POST", body: {} });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -107,7 +107,7 @@ export async function supprimerAnnonce(_prev: FormState, fd: FormData): Promise<
   const locale = champ(fd, "locale");
   const id = champ(fd, "annonce_id");
   const res = await apiFetch<{ id: string }>(`/annonces/${id}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   redirect(`/${locale}${BASE}?supprimee=1`);
 }
@@ -122,7 +122,7 @@ export async function commenter(_prev: FormState, fd: FormData): Promise<FormSta
   const locale = champ(fd, "locale");
   const id = champ(fd, "annonce_id");
   const res = await apiFetch(`/annonces/${id}/commentaires`, { method: "POST", body: { contenu: champ(fd, "contenu") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -132,7 +132,7 @@ export async function masquerCommentaire(_prev: FormState, fd: FormData): Promis
   const id = champ(fd, "annonce_id");
   const cid = champ(fd, "commentaire_id");
   const res = await apiFetch(`/annonces/${id}/commentaires/${cid}/masquer`, { method: "POST", body: {} });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -158,10 +158,10 @@ function corpsSondage(fd: FormData) {
 export async function creerSondage(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch<Sondage>("/sondages", { method: "POST", body: corpsSondage(fd) });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   if (champ(fd, "ouvrir") === "1") {
     const o = await apiFetch<Sondage>(`/sondages/${res.data.id}/ouvrir`, { method: "POST", body: {}, idempotent: true });
-    if (!o.ok) return fromApiError(o);
+    if (!o.ok) return fromApiError(o, fd);
   }
   revalider(locale);
   redirect(`/${locale}${BASE}/sondages/${res.data.id}?cree=1`);
@@ -171,7 +171,7 @@ export async function ouvrirSondage(_prev: FormState, fd: FormData): Promise<For
   const locale = champ(fd, "locale");
   const id = champ(fd, "sondage_id");
   const res = await apiFetch<Sondage>(`/sondages/${id}/ouvrir`, { method: "POST", body: {}, idempotent: true });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/sondages/${id}`);
   return success();
 }
@@ -179,7 +179,7 @@ export async function cloreSondage(_prev: FormState, fd: FormData): Promise<Form
   const locale = champ(fd, "locale");
   const id = champ(fd, "sondage_id");
   const res = await apiFetch<Sondage>(`/sondages/${id}/clore`, { method: "POST", body: {}, idempotent: true });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/sondages/${id}`);
   return success();
 }
@@ -187,7 +187,7 @@ export async function supprimerSondage(_prev: FormState, fd: FormData): Promise<
   const locale = champ(fd, "locale");
   const id = champ(fd, "sondage_id");
   const res = await apiFetch(`/sondages/${id}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   redirect(`/${locale}${BASE}?supprimee=1`);
 }
@@ -196,7 +196,7 @@ export async function repondreSondage(_prev: FormState, fd: FormData): Promise<F
   const id = champ(fd, "sondage_id");
   const choix = fd.getAll("choix").map(String).filter(Boolean);
   const res = await apiFetch<Sondage>(`/sondages/${id}/repondre`, { method: "POST", body: { choix }, idempotent: true });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/sondages/${id}`);
   return success();
 }
@@ -208,14 +208,14 @@ export async function enregistrerContact(_prev: FormState, fd: FormData): Promis
   const id = optionnel(fd, "contact_id");
   const body = { libelle: champ(fd, "libelle"), telephone: champ(fd, "telephone"), ordre: Number(champ(fd, "ordre") || "0") };
   const res = id ? await apiFetch<ContactUtile>(`/contacts-utiles/${id}`, { method: "PATCH", body }) : await apiFetch<ContactUtile>("/contacts-utiles", { method: "POST", body });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success();
 }
 export async function supprimerContact(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch(`/contacts-utiles/${champ(fd, "contact_id")}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success();
 }
@@ -236,7 +236,7 @@ export async function enregistrerPreferences(_prev: FormState, fd: FormData): Pr
     resume_matin: champ(fd, "resume_matin") === "on",
   };
   const res = await apiFetch<PreferencesNotification>("/users/me/preferences-notification", { method: "PUT", body });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success();
 }

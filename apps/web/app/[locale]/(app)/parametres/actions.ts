@@ -12,25 +12,26 @@ function champ(fd: FormData, name: string): string {
 }
 
 async function patchCopro(
+  fd: FormData,
   locale: string,
   body: Record<string, unknown>,
   coproIdExplicite?: string
 ): Promise<FormState> {
   const coproprieteId = coproIdExplicite || (await readSession()).coproprieteId;
   if (!coproprieteId) {
-    return await sessionExpired();
+    return await sessionExpired(fd);
   }
   const res = await apiFetch<Copropriete>(`/coproprietes/${coproprieteId}`, {
     method: "PATCH",
     body,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/parametres`);
   return success();
 }
 
 export async function modifierIdentite(_prev: FormState, fd: FormData): Promise<FormState> {
-  return patchCopro(champ(fd, "locale"), {
+  return patchCopro(fd, champ(fd, "locale"), {
     nom: champ(fd, "nom"),
     adresse: champ(fd, "adresse"),
     ville: champ(fd, "ville"),
@@ -40,13 +41,13 @@ export async function modifierIdentite(_prev: FormState, fd: FormData): Promise<
 
 export async function modifierReglement(_prev: FormState, fd: FormData): Promise<FormState> {
   const total = champ(fd, "total_tantiemes");
-  return patchCopro(champ(fd, "locale"), {
+  return patchCopro(fd, champ(fd, "locale"), {
     total_tantiemes: total === "" ? null : total,
   });
 }
 
 export async function modifierOptions(_prev: FormState, fd: FormData): Promise<FormState> {
-  return patchCopro(champ(fd, "locale"), {
+  return patchCopro(fd, champ(fd, "locale"), {
     config_json: {
       locataire_voit_pv: fd.get("locataire_voit_pv") === "on",
       reservation_espaces_proprietaires_only:
@@ -64,7 +65,7 @@ export async function modifierRecouvrement(_prev: FormState, fd: FormData): Prom
       politique[niveau] = Number(v);
     }
   }
-  return patchCopro(champ(fd, "locale"), { politique_recouvrement_json: politique });
+  return patchCopro(fd, champ(fd, "locale"), { politique_recouvrement_json: politique });
 }
 
 /**
@@ -77,7 +78,7 @@ export async function modifierLegaux(_prev: FormState, fd: FormData): Promise<Fo
   const limite = champ(fd, "limite_procurations_mandataire");
   const retention = champ(fd, "retention_desactivation_mois");
   const delaiExec = champ(fd, "delai_execution_resolution_jours");
-  return patchCopro(champ(fd, "locale"), {
+  return patchCopro(fd, champ(fd, "locale"), {
     delai_execution_resolution_jours: delaiExec === "" ? null : Number(delaiExec),
     delai_convocation_jours: delai === "" ? null : Number(delai),
     quorum_premiere_convocation: quorum === "" ? null : quorum,
@@ -91,28 +92,28 @@ export async function televerserLogo(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const fichier = fd.get("fichier");
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier" });
+    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier", fd });
   }
   if (fichier.size > 2 * 1024 * 1024) {
-    return await fileTooLarge("fichier", 2, true);
+    return await fileTooLarge("fichier", 2, true, fd);
   }
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return await sessionExpired();
+  if (!coproprieteId) return await sessionExpired(fd);
 
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>(`/coproprietes/${coproprieteId}/logo/upload-url`, {
     method: "POST",
     body: { nom_fichier: fichier.name, content_type: fichier.type || "image/png" },
   });
-  if (!prep.ok) return fromApiError(prep);
+  if (!prep.ok) return fromApiError(prep, fd);
   const upload = await fetch(prep.data.upload_url, {
     method: "PUT",
     headers: { "Content-Type": fichier.type || "image/png", "x-upsert": "true" },
     body: await fichier.arrayBuffer(),
   });
   if (!upload.ok) {
-    return await uploadRefused(upload.status);
+    return await uploadRefused(upload.status, fd);
   }
-  const res = await patchCopro(locale, { logo_storage_path: prep.data.storage_path }, coproprieteId);
+  const res = await patchCopro(fd, locale, { logo_storage_path: prep.data.storage_path }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
@@ -120,7 +121,7 @@ export async function televerserLogo(_prev: FormState, fd: FormData): Promise<Fo
 
 export async function retirerLogo(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const res = await patchCopro(locale, { logo_storage_path: null }, champ(fd, "copro_id") || undefined);
+  const res = await patchCopro(fd, locale, { logo_storage_path: null }, champ(fd, "copro_id") || undefined);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
@@ -140,32 +141,32 @@ export async function televerserPhoto(_prev: FormState, fd: FormData): Promise<F
   const cle = champ(fd, "cle");
   const fichier = fd.get("fichier");
   if (!/^(accueil|entree|cour|salle|piscine|espace:[0-9a-f-]{36})$/i.test(cle)) {
-    return await localError("VALIDATION_ERROR", (l) => l.emplacementInconnu);
+    return await localError("VALIDATION_ERROR", (l) => l.emplacementInconnu, { fd });
   }
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier" });
+    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier", fd });
   }
   if (fichier.size > 5 * 1024 * 1024) {
-    return await fileTooLarge("fichier", 5, true);
+    return await fileTooLarge("fichier", 5, true, fd);
   }
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return await sessionExpired();
+  if (!coproprieteId) return await sessionExpired(fd);
 
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>(`/coproprietes/${coproprieteId}/photos/upload-url`, {
     method: "POST",
     body: { cle, nom_fichier: fichier.name, content_type: fichier.type || "image/jpeg" },
   });
-  if (!prep.ok) return fromApiError(prep);
+  if (!prep.ok) return fromApiError(prep, fd);
   const upload = await fetch(prep.data.upload_url, {
     method: "PUT",
     headers: { "Content-Type": fichier.type || "image/jpeg", "x-upsert": "true" },
     body: await fichier.arrayBuffer(),
   });
   if (!upload.ok) {
-    return await uploadRefused(upload.status);
+    return await uploadRefused(upload.status, fd);
   }
   const photos = { ...(await photosActuelles(coproprieteId)), [cle]: prep.data.storage_path };
-  const res = await patchCopro(locale, { photos_json: photos }, coproprieteId);
+  const res = await patchCopro(fd, locale, { photos_json: photos }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
@@ -175,10 +176,10 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
   const locale = champ(fd, "locale");
   const cle = champ(fd, "cle");
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return await sessionExpired();
+  if (!coproprieteId) return await sessionExpired(fd);
   const photos = await photosActuelles(coproprieteId);
   delete photos[cle];
-  const res = await patchCopro(locale, { photos_json: Object.keys(photos).length ? photos : null }, coproprieteId);
+  const res = await patchCopro(fd, locale, { photos_json: Object.keys(photos).length ? photos : null }, coproprieteId);
   if (res.status !== "success") return res;
   revalidatePath(`/${locale}`, "layout");
   return success(champ(fd, "message_succes") || undefined);
@@ -188,7 +189,7 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
 export async function modifierParametresPaie(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const coproprieteId = (await readSession()).coproprieteId;
-  if (!coproprieteId) return await sessionExpired();
+  if (!coproprieteId) return await sessionExpired(fd);
   let body: Record<string, unknown> | null = null;
   if (fd.get("effacer") !== "1") {
     const tranches: { jusqua: string | null; taux: string; deduction: string }[] = [];
@@ -212,7 +213,7 @@ export async function modifierParametresPaie(_prev: FormState, fd: FormData): Pr
     };
   }
   const res = await apiFetch(`/coproprietes/${coproprieteId}/parametres-paie`, { method: "PATCH", body: { parametres_paie: body } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/parametres`);
   return success();
 }

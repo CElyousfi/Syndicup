@@ -22,7 +22,7 @@ export async function modifierProfil(_prev: FormState, fd: FormData): Promise<Fo
       langue_preferee: langue || undefined,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
 
   // La langue choisie change TOUTE l'interface, y compris le sens de lecture (J1).
   const nouvelleLocale = langue === "AR" ? "ar" : "fr";
@@ -40,7 +40,7 @@ export async function anonymiserCompte(_prev: FormState, fd: FormData): Promise<
     `/users/${utilisateurId}/anonymize`,
     { method: "POST", idempotent: true }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/membres/${utilisateurId}`);
   return success();
 }
