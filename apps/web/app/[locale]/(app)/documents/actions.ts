@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { apiFetch } from "../../../../lib/api/client";
-import { success, type FormState } from "../../../../lib/forms";
-import { cleIdempotence, fromApiError, uploadRefused, localError } from "../../../../lib/forms-server";
+import { success, type FichierEnvoye, type FormState } from "../../../../lib/forms";
+import { cleIdempotence, echecIdempotent, fichiersDejaEnvoyes, fromApiError, uploadRefused, localError } from "../../../../lib/forms-server";
 import type { DocumentCopro, Notification } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -55,34 +55,42 @@ export async function televerserFichierDocument(
 ): Promise<FormState> {
   const locale = champ(fd, "locale");
   const fichier = fd.get("fichier");
-  if (!(fichier instanceof File) || fichier.size === 0) {
-    return await localError("VALIDATION_ERROR", (l) => l.fichierManquant, { field: "fichier", fd });
-  }
+  const nouveauFichier = fichier instanceof File && fichier.size > 0 ? fichier : null;
 
-  const contentType = fichier.type || typeDepuisExtension(fichier.name);
-  const prep = await apiFetch<{ storage_path: string; upload_url: string; token: string }>(
-    "/documents/upload-url",
-    {
-      method: "POST",
-      body: {
-        nom_fichier: fichier.name,
-        content_type: contentType,
+  // Essai précédent à l'issue inconnue : le fichier est déjà dans le Storage (chemin revalidé) —
+  // on le réutilise, sans re-téléverser, pour rejouer le même contenu sous la même clé.
+  let envoye: FichierEnvoye;
+  if (nouveauFichier) {
+    const contentType = nouveauFichier.type || typeDepuisExtension(nouveauFichier.name);
+    const prep = await apiFetch<{ storage_path: string; upload_url: string; token: string }>(
+      "/documents/upload-url",
+      {
+        method: "POST",
+        body: {
+          nom_fichier: nouveauFichier.name,
+          content_type: contentType,
+        },
+      }
+    );
+    if (!prep.ok) return fromApiError(prep, fd);
+
+    const contenu = await nouveauFichier.arrayBuffer();
+    const upload = await fetch(prep.data.upload_url, {
+      method: "PUT",
+      headers: {
+        "Content-Type": contentType,
+        "x-upsert": "true",
       },
+      body: contenu,
+    });
+    if (!upload.ok) {
+      return await uploadRefused(upload.status, fd);
     }
-  );
-  if (!prep.ok) return fromApiError(prep, fd);
-
-  const contenu = await fichier.arrayBuffer();
-  const upload = await fetch(prep.data.upload_url, {
-    method: "PUT",
-    headers: {
-      "Content-Type": contentType,
-      "x-upsert": "true",
-    },
-    body: contenu,
-  });
-  if (!upload.ok) {
-    return await uploadRefused(upload.status, fd);
+    envoye = { chemin: prep.data.storage_path, nom: nouveauFichier.name };
+  } else {
+    const [deja] = await fichiersDejaEnvoyes(fd, "documents", 1);
+    if (!deja) return await localError("VALIDATION_ERROR", (l) => l.fichierManquant, { field: "fichier", fd });
+    envoye = deja;
   }
 
   // Une clé par ouverture de la modale (<IdempotencyField>) : jamais deux documents pour un geste.
@@ -91,12 +99,12 @@ export async function televerserFichierDocument(
     idempotencyKey: cleIdempotence(fd),
     body: {
       type: champ(fd, "type"),
-      nom: champ(fd, "nom") || fichier.name,
+      nom: champ(fd, "nom") || envoye.nom,
       visibilite: champ(fd, "visibilite"),
-      storage_path: prep.data.storage_path,
+      storage_path: envoye.chemin,
     },
   });
-  if (!res.ok) return fromApiError(res, fd);
+  if (!res.ok) return echecIdempotent(res, fd, [envoye]);
   revalidatePath(`/${locale}/documents`);
   return success();
 }

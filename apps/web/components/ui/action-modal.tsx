@@ -148,7 +148,8 @@ function ActionModalBody({
   // seconde fois via son <FormAlert>.
   const etatFormulaire = state.status === "success" && fermerAuSucces ? IDLE : state;
   return (
-    <Modal open={open} onClose={close} title={title} subtitle={subtitle} wide={wide} closeLabel={closeLabel}>
+    // Pendant l'envoi, rien ne ferme la modale (Échap, fond, croix, glisser) : le résultat doit rester visible.
+    <Modal open={open} onClose={close} dismissible={!pending} title={title} subtitle={subtitle} wide={wide} closeLabel={closeLabel}>
       {montrerPanneau ? (
         <SuccessPanel
           message={message}

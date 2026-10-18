@@ -2720,6 +2720,16 @@ export const ar: DeepDict<typeof fr> = {
     montantAide: "تُقبل الفاصلة أو النقطة: 1 250,50",
     montantAmbigu: "مبلغ ملتبس: {choix}؟",
     ou: " أو ",
+    peutEtreEnregistre: {
+      titre: "نتيجة غير مؤكدة",
+      message: "ربما سُجّل هذا الإجراء من قبل — حدِّث الصفحة للتحقق.",
+    },
+    envoyes: {
+      un: "أُرسل الملف من قبل — {nom}",
+      plusieurs: "أُرسلت {n} ملفات من قبل — {noms}",
+      aide: "ستُستعمل كما هي إذا أعدت المحاولة.",
+      remplacer: "استبدال",
+    },
     fait: "تمّ ذلك.",
     confirmer: {
       justificatifAnnulerTitre: "إلغاء التصريح بالأداء",

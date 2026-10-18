@@ -7,6 +7,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { IdempotencyField } from "../../../../components/ui/idempotency-field";
+import { FichiersEnvoyes } from "../../../../components/ui/fichiers-envoyes";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { VisibiliteDocument } from "../../../../lib/api/types";
 import { televerserFichierDocument } from "./actions";
@@ -19,6 +20,8 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
   const [visibilite, setVisibilite] = useState<VisibiliteDocument>("PUBLIC_COPROPRIETE");
   const [nomFichier, setNomFichier] = useState<string | null>(null);
   const [state, action] = useActionState(televerserFichierDocument, IDLE);
+  // « Remplacer » un fichier déjà envoyé : contenu différent, donc clé d'idempotence neuve.
+  const [remplacements, setRemplacements] = useState(0);
   const d = dict.documents;
 
   return (
@@ -39,10 +42,18 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
           </div>
         ) : (
           <form action={action} className="space-y-4">
-            <IdempotencyField state={state} />
+            <IdempotencyField state={state} renouveler={remplacements} />
             <input type="hidden" name="locale" value={locale} />
 
-            {/* Fichier — zone de dépôt cliquable */}
+            {/* Fichier — zone de dépôt cliquable (ou fichier déjà envoyé lors d'un essai à l'issue inconnue). */}
+            <FichiersEnvoyes
+              state={state}
+              labels={dict.formulaires.envoyes}
+              onRemplacer={() => {
+                setNomFichier(null);
+                setRemplacements((n) => n + 1);
+              }}
+            >
             <div>
               <span className="mb-1.5 block text-[13px] font-medium text-ink-strong">
                 {d.fichier}
@@ -67,6 +78,7 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
                 <p className="mt-1.5 text-[13px] text-danger">{fieldError(state, "fichier")}</p>
               ) : null}
             </div>
+            </FichiersEnvoyes>
 
             <Field label={d.nom} htmlFor="d_nom" error={fieldError(state, "nom")}>
               <Input

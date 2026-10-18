@@ -64,9 +64,11 @@ export default async function LotsPage({
   const page = Math.max(1, Number(sp.page) || 1);
   // Filtres appliqués PAR L'API (q, type, statut) : meta.total est filtré, la pagination suit
   // l'URL. Le compteur « Lots » reste le total de la copropriété (requête sans filtre, 1 ligne).
-  const filtre = Boolean(sp.q || sp.type || sp.statut);
+  // Recherche bornée (100 caractères, espaces retirés) : la même valeur sert à la requête et à l'affichage.
+  const q = sp.q?.trim().slice(0, 100) || undefined;
+  const filtre = Boolean(q || sp.type || sp.statut);
   const [res, totalRes] = await Promise.all([
-    apiFetch<Lot[]>("/lots", { searchParams: { page, limit: 50, q: sp.q || undefined, type: sp.type || undefined, statut: sp.statut || undefined } }),
+    apiFetch<Lot[]>("/lots", { searchParams: { page, limit: 50, q, type: sp.type || undefined, statut: sp.statut || undefined } }),
     filtre ? apiFetch<Lot[]>("/lots", { searchParams: { page: 1, limit: 1 } }) : Promise.resolve(null),
   ]);
   const lots = res.ok ? res.data : [];
@@ -150,7 +152,8 @@ export default async function LotsPage({
             />
             <Input
               name="q"
-              defaultValue={sp.q ?? ""}
+              defaultValue={q ?? ""}
+              maxLength={100}
               placeholder={dict.common.search}
               className="h-10 w-56 ps-9"
             />
@@ -293,7 +296,7 @@ export default async function LotsPage({
             <Pagination
               meta={res.meta}
               basePath={p("/lots")}
-              searchParams={{ q: sp.q, type: sp.type, statut: sp.statut }}
+              searchParams={{ q, type: sp.type, statut: sp.statut }}
               dict={dict}
             />
           ) : null}

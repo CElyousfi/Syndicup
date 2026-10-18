@@ -7,6 +7,7 @@ import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import { IdempotencyField } from "../../../../../components/ui/idempotency-field";
+import { FichiersEnvoyes } from "../../../../../components/ui/fichiers-envoyes";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import { PhotoPicker } from "../../../../../components/incidents/photo-picker";
 import { CategorieGlyphe } from "../../../../../components/incidents/categorie-icon";
@@ -34,6 +35,8 @@ export function IncidentForm({
 }) {
   const i = dict.incidents;
   const [state, action] = useActionState(signalerIncident, IDLE);
+  // « Remplacer » des photos déjà envoyées : contenu différent, donc clé d'idempotence neuve.
+  const [remplacements, setRemplacements] = useState(0);
   const [sejourId, setSejourId] = useState(
     sejourInitial && sejours.some((s) => s.id === sejourInitial) ? sejourInitial : ""
   );
@@ -52,7 +55,7 @@ export function IncidentForm({
 
   return (
     <form action={action} className="max-w-2xl space-y-8">
-      <IdempotencyField state={state} />
+      <IdempotencyField state={state} renouveler={remplacements} />
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="categorie" value={categorie} />
       <input type="hidden" name="partie" value={partie} />
@@ -163,7 +166,9 @@ export function IncidentForm({
         <Textarea id="description" name="description" rows={4} maxLength={5000} defaultValue={formValue(state, "description")} />
       </Field>
 
-      {/* Photos — caméra directe ou galerie, compressées côté client. */}
+      {/* Photos — caméra directe ou galerie, compressées côté client (ou photos déjà envoyées lors
+          d'un essai à l'issue inconnue : réutilisées telles quelles). */}
+      <FichiersEnvoyes state={state} labels={dict.formulaires.envoyes} onRemplacer={() => setRemplacements((n) => n + 1)}>
       <PhotoPicker
         name="photos"
         labels={{
@@ -174,6 +179,7 @@ export function IncidentForm({
           retirer: (n) => fill(i.retirerPhoto, { n }),
         }}
       />
+      </FichiersEnvoyes>
 
       {lots.length > 0 ? (
         <Field

@@ -2745,6 +2745,16 @@ export const fr = {
     montantAide: "Virgule ou point acceptés : 1 250,50",
     montantAmbigu: "Montant ambigu : {choix} ?",
     ou: " ou ",
+    peutEtreEnregistre: {
+      titre: "Résultat incertain",
+      message: "Cette action a peut-être déjà été enregistrée — actualisez la page pour vérifier.",
+    },
+    envoyes: {
+      un: "Fichier déjà envoyé — {nom}",
+      plusieurs: "{n} fichiers déjà envoyés — {noms}",
+      aide: "Ils seront réutilisés tels quels si vous réessayez.",
+      remplacer: "Remplacer",
+    },
     fait: "C'est fait.",
     confirmer: {
       justificatifAnnulerTitre: "Annuler la déclaration de paiement",

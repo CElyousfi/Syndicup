@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { cleIdempotence, fromApiError, succes } from "../../../../lib/forms-server";
+import { cleIdempotence, echecIdempotent, fromApiError, succes } from "../../../../lib/forms-server";
 import type {
   AgProcuration,
   AgResolution,
@@ -58,7 +58,7 @@ export async function convoquerAg(_prev: FormState, fd: FormData): Promise<FormS
   // ouverture de la modale (champ caché) — « Réessayer » rejoue la même clé, l'API (#18) ne
   // convoque donc jamais deux fois ; à défaut de clé valide, une clé neuve par appel.
   const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/convoquer`, { method: "POST", idempotencyKey: cleIdempotence(fd) });
-  if (!res.ok) return fromApiError(res, fd);
+  if (!res.ok) return echecIdempotent(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
   return succes((d) => d.formulaires.confirmer.convoquerSucces);
 }
@@ -68,7 +68,7 @@ export async function ouvrirAg(_prev: FormState, fd: FormData): Promise<FormStat
   const agId = champ(fd, "ag_id");
   // Ouverture horodatée au PV (quorum constaté) : même clé par ouverture de modale.
   const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/ouvrir`, { method: "POST", idempotencyKey: cleIdempotence(fd) });
-  if (!res.ok) return fromApiError(res, fd);
+  if (!res.ok) return echecIdempotent(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
   redirect(`/${locale}/ag/${agId}/seance?ouverte=1`);
 }

@@ -6,10 +6,11 @@
 import { randomUUID } from "node:crypto";
 import type { ApiError } from "./api/types";
 import { describeError, isLegalGateError } from "./errors";
-import { success, type FormErrorState, type FormState } from "./forms";
+import { ISSUES_INCONNUES, success, type FichierEnvoye, type FormErrorState, type FormState } from "./forms";
 import { collectValues } from "./form-values";
 import { fill, type Dict } from "./i18n";
 import { loginHref, requestDict, requestLocale } from "./request-info";
+import { readSession } from "./session";
 
 export function buildErrorState(
   e: { error: ApiError; status?: number; requestId?: string; retryAfter?: number },
@@ -75,6 +76,53 @@ export async function succes(pick: (d: Dict) => string, data?: unknown): Promise
 export function cleIdempotence(fd: FormData): string {
   const cle = String(fd.get("idempotency_key") ?? "").trim();
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cle) ? cle : randomUUID();
+}
+
+/**
+ * Échec d'une écriture idempotente (même clé rejouée tant que l'issue est inconnue) :
+ *  - issue inconnue (ISSUES_INCONNUES) : les fichiers déjà téléversés sont joints à l'état
+ *    (`envoyes`) — le formulaire les renvoie au lieu de re-téléverser (nouveau chemin = autre
+ *    contenu sous la même clé = 409) ;
+ *  - 409 CONFLICT : présenté comme une issue incertaine, jamais comme un refus — « peut-être déjà
+ *    enregistrée, actualisez ».
+ */
+export async function echecIdempotent(
+  e: { error: ApiError; status?: number; requestId?: string; retryAfter?: number },
+  fd: FormData,
+  envoyes: FichierEnvoye[] = []
+): Promise<FormState> {
+  const etat = await fromApiError(e, fd);
+  if (etat.status !== "error" || !ISSUES_INCONNUES.has(etat.code)) return etat;
+  const avecFichiers = envoyes.length > 0 ? { ...etat, envoyes } : etat;
+  if (etat.code !== "CONFLICT") return avecFichiers;
+  const dict = await requestDict();
+  const t = dict.formulaires.peutEtreEnregistre;
+  return { ...avecFichiers, title: t.titre, message: t.message, action: "refresh", actionLabel: dict.errors.actions.refresh };
+}
+
+/** Dernier segment d'un chemin délivré par l'API : `<uuid>-<nom assaini [a-zA-Z0-9._-], ≤ 120>`. */
+const CHEMIN_FICHIER = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}-[a-zA-Z0-9._-]{1,120}$/i;
+
+/**
+ * Fichiers déjà téléversés renvoyés par le formulaire (`envoye_chemin` / `envoye_nom`, champs
+ * cachés issus de `envoyes`) — jamais pris tels quels : seul un chemin de la forme exacte que
+ * l'API délivre pour CETTE copropriété et CE module (`<copropriete>/<module>/<uuid>-<nom>`, sans
+ * `..`) est retenu ; tout le reste est ignoré (le fichier devra être choisi à nouveau).
+ */
+export async function fichiersDejaEnvoyes(fd: FormData, module: "documents" | "incidents", max: number): Promise<FichierEnvoye[]> {
+  const { coproprieteId } = await readSession();
+  if (!coproprieteId) return [];
+  const prefixe = `${coproprieteId}/${module}/`;
+  const chemins = fd.getAll("envoye_chemin").map(String);
+  const noms = fd.getAll("envoye_nom").map(String);
+  const retenus: FichierEnvoye[] = [];
+  for (const [i, chemin] of chemins.entries()) {
+    if (retenus.length >= max) break;
+    if (!chemin.startsWith(prefixe) || chemin.includes("..")) continue;
+    if (!CHEMIN_FICHIER.test(chemin.slice(prefixe.length))) continue;
+    retenus.push({ chemin, nom: (noms[i] ?? "").slice(0, 200) || chemin.slice(prefixe.length + 37) });
+  }
+  return retenus;
 }
 
 /** Joint la saisie soumise à un état d'erreur (aucun effet sans FormData). */
