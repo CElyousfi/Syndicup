@@ -131,4 +131,13 @@ describe("GET /lots — filtres serveur", () => {
     expect((await listerLots(S(), 1, 50, { q: "_" })).total).toBe(1); // seul « P_7 » contient « _ »
     expect((await listerLots(S(), 1, 50, { q: "zzz" })).total).toBe(0);
   });
+  it("beaucoup de correspondances : total exact, page bornée par `limit`, ordre par numéro, combinée avec type", async () => {
+    await admin.lot.createMany({ data: Array.from({ length: 30 }, (_, i) => ({ coproprieteId: copro, typeLot: "CAVE" as const, numero: `M-${String(i + 1).padStart(2, "0")}`, tantiemes: "1.00" })) });
+    const p2 = await listerLots(S(), 2, 10, { q: "m-" });
+    expect(p2.total).toBe(30);
+    expect(p2.rows.map((l) => l.numero)).toEqual(Array.from({ length: 10 }, (_, i) => `M-${String(i + 11).padStart(2, "0")}`));
+    expect((await listerLots(S(), 4, 10, { q: "m-" })).rows).toHaveLength(0);
+    expect((await listerLots(S(), 1, 50, { q: "m-", type: "PARKING" })).total).toBe(0);
+    expect((await listerLots(S(), 1, 50, { q: "m-", type: "CAVE", statut: "VACANT" })).total).toBe(30);
+  });
 });

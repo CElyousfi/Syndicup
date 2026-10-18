@@ -27,7 +27,7 @@ import type {
 import type { IncidentEvaluationInput } from "../depenses/schemas";
 import { STATUTS_INCIDENT, type IncidentsFiltres } from "./schemas";
 import { motifContient } from "../http/recherche";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 export class PermissionRefuseeError extends Error {}
 export class IncidentIntrouvableError extends Error {}
@@ -197,13 +197,15 @@ async function notifierNouveauSignalement(
 }
 
 
+type FiltresIncidents = { sejourId?: string } & Partial<IncidentsFiltres>;
+
 /**
  * Filtres serveur (Zod en amont : incidentsFiltresSchema) — la RLS reste la seule source de
  * visibilité (un résident ne filtre que ses signalements, un prestataire ses tickets) ; les
  * filtres ne font que restreindre, `total` compte le résultat filtré.
  */
-async function whereIncidents(db: TenantDb, ctx: TenantContext, filtres: { sejourId?: string } & Partial<IncidentsFiltres>): Promise<Prisma.IncidentWhereInput> {
-  const where: Prisma.IncidentWhereInput = {
+function whereIncidents(ctx: TenantContext, filtres: FiltresIncidents): Prisma.IncidentWhereInput {
+  return {
     coproprieteId: ctx.coproprieteId,
     ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}),
     ...(filtres.statut?.length ? { statut: { in: filtres.statut } } : {}),
@@ -211,34 +213,51 @@ async function whereIncidents(db: TenantDb, ctx: TenantContext, filtres: { sejou
     ...(filtres.categorie ? { categorie: filtres.categorie } : {}),
     ...(filtres.lot_id ? { lotId: filtres.lot_id } : {}),
   };
-  if (filtres.q) {
-    // ILIKE explicite (jokers échappés, ESCAPE '!') — requête sous la même transaction RLS.
-    const motif = motifContient(filtres.q);
-    const ids = await db.$queryRaw<{ id: string }[]>`
-      SELECT id FROM incident
-      WHERE copropriete_id = ${ctx.coproprieteId}::uuid
-        AND (sous_categorie ILIKE ${motif} ESCAPE '!' OR description ILIKE ${motif} ESCAPE '!')`;
-    where.id = { in: ids.map((r) => r.id) };
-  }
-  return where;
 }
 
-export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: { sejourId?: string } & Partial<IncidentsFiltres> = {}) {
+/**
+ * Même prédicat en SQL, avec la recherche `q` (ILIKE, jokers échappés, ESCAPE '!') DANS la
+ * requête principale — jamais une liste d'identifiants non bornée. Exécuté sous la même
+ * transaction RLS que le reste.
+ */
+function predicatSqlIncidents(ctx: TenantContext, filtres: FiltresIncidents, motif: string): Prisma.Sql {
+  const conds: Prisma.Sql[] = [
+    Prisma.sql`copropriete_id = ${ctx.coproprieteId}::uuid`,
+    Prisma.sql`(sous_categorie ILIKE ${motif} ESCAPE '!' OR description ILIKE ${motif} ESCAPE '!')`,
+  ];
+  if (filtres.sejourId) conds.push(Prisma.sql`sejour_id = ${filtres.sejourId}::uuid`);
+  if (filtres.statut?.length) conds.push(Prisma.sql`statut::text = ANY(${filtres.statut}::text[])`);
+  if (filtres.urgence) conds.push(Prisma.sql`urgence::text = ${filtres.urgence}`);
+  if (filtres.categorie) conds.push(Prisma.sql`categorie::text = ${filtres.categorie}`);
+  if (filtres.lot_id) conds.push(Prisma.sql`lot_id = ${filtres.lot_id}::uuid`);
+  return Prisma.join(conds, " AND ");
+}
+
+export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: FiltresIncidents = {}) {
   if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
   }
+  const skip = (page - 1) * limit;
   return withTenant(ctx, async (db) => {
-    const where = await whereIncidents(db, ctx, filtres);
-    const [total, rows] = await Promise.all([
-      db.incident.count({ where }),
-      db.incident.findMany({
-        where,
-        orderBy: { creeLe: "desc" },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
+    if (!filtres.q) {
+      const where = whereIncidents(ctx, filtres);
+      const [total, rows] = await Promise.all([
+        db.incident.count({ where }),
+        db.incident.findMany({ where, orderBy: { creeLe: "desc" }, skip, take: limit }),
+      ]);
+      return { total, rows };
+    }
+    // Recherche : total + identifiants de LA page en SQL (bornés par `limit`), puis lecture
+    // Prisma de ces lignes seulement, réordonnées comme la page.
+    const predicat = predicatSqlIncidents(ctx, filtres, motifContient(filtres.q));
+    const [compte, pageIds] = await Promise.all([
+      db.$queryRaw<{ n: bigint }[]>`SELECT count(*) AS n FROM incident WHERE ${predicat}`,
+      db.$queryRaw<{ id: string }[]>`SELECT id FROM incident WHERE ${predicat} ORDER BY cree_le DESC, id DESC LIMIT ${limit} OFFSET ${skip}`,
     ]);
-    return { total, rows };
+    const ids = pageIds.map((r) => r.id);
+    const lignes = ids.length ? await db.incident.findMany({ where: { id: { in: ids } } }) : [];
+    const parId = new Map(lignes.map((l) => [l.id, l]));
+    return { total: Number(compte[0]?.n ?? 0), rows: ids.map((id) => parId.get(id)).filter((l): l is NonNullable<typeof l> => Boolean(l)) };
   });
 }
 
