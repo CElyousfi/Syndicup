@@ -37,8 +37,17 @@ export type FormState =
       copiedLabel?: string;
       /** Message brut du serveur (FR) — repli texte pour les rares tests de contenu. */
       serverMessage?: string;
+      /**
+       * Saisie renvoyée telle quelle (chaînes uniquement — jamais un fichier, un mot de passe ni
+       * un RIB) : React 19 réinitialise un formulaire après son action, les champs la relisent
+       * via `formValue(state, nom, initial)` (lib/form-values.ts) pour ne rien perdre.
+       */
+      values?: FormValues;
     }
   | { status: "success"; message?: string; data?: unknown };
+
+/** Valeurs soumises : une chaîne, ou la liste des valeurs d'un nom répété (cases multiples). */
+export type FormValues = Record<string, string | string[]>;
 
 export type FormErrorState = Extract<FormState, { status: "error" }>;
 
