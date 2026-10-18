@@ -7,6 +7,8 @@ import '../../core/i18n/i18n.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 
+export '../../core/i18n/mobile_dict.dart' show DariDict, DariDictContext;
+
 /// Dari — la mascotte de l'assistant SyndicUp (une maison-bulle avec son casque), animée.
 ///
 /// Boucles WebP transparentes (assets/dari), image fixe en mouvement réduit. Mêmes dessins que
@@ -131,113 +133,7 @@ final assistantEtatProvider = FutureProvider<AssistantEtat>((ref) async {
   return unwrap(await ref.watch(apiClientProvider).get('/assistant', query: {'langue': langue}, parse: (j) => AssistantEtat.fromJson(asMap(j))));
 });
 
-// ── Textes (FR/AR) ──────────────────────────────────────────────────────────────────────────
-
-class DariDict {
-  const DariDict({
-    required this.nom,
-    required this.sousTitre,
-    required this.ouvrir,
-    required this.nouvelle,
-    required this.bonjour,
-    required this.intro,
-    required this.rienAFaire,
-    required this.suggestionsTitre,
-    required this.placeholder,
-    required this.envoyer,
-    required this.reflechit,
-    required this.ecrit,
-    required this.indisponible,
-    required this.sature,
-    required this.trop,
-    required this.erreur,
-    required this.reessayer,
-    required this.avertissement,
-    required this.webSeulement,
-    required this.carteTitre,
-    required this.carteVide,
-    required this.carteQuestion,
-    required this.obBulle,
-    required this.retour,
-    required this.introMoi,
-  });
-  final String nom, sousTitre, ouvrir, nouvelle, bonjour, intro, introMoi, rienAFaire, suggestionsTitre, placeholder, envoyer, reflechit, ecrit, indisponible, sature, trop, erreur, reessayer, avertissement, webSeulement, carteTitre, carteVide, carteQuestion, retour;
-
-  /// Bulles de Dari sur les écrans d'onboarding (une par étape).
-  final List<String> obBulle;
-
-  static const fr = DariDict(
-    nom: 'Dari',
-    sousTitre: 'Votre assistant SyndicUp',
-    ouvrir: 'Demander à Dari',
-    nouvelle: 'Nouvelle conversation',
-    bonjour: 'Bonjour {prenom} ! Je suis Dari.',
-    intro: 'Je connais votre résidence et l\'application. Voici ce qui compte aujourd\'hui :',
-    rienAFaire: 'Rien d\'urgent pour le moment — tout est en ordre.',
-    suggestionsTitre: 'Vous pouvez me demander',
-    placeholder: 'Posez votre question…',
-    envoyer: 'Envoyer',
-    reflechit: 'Dari réfléchit…',
-    ecrit: 'Dari écrit…',
-    indisponible: 'La conversation n\'est pas encore activée sur cet espace. Les repères ci-dessus restent à jour.',
-    sature: 'Je suis très sollicité en ce moment — réessayez dans quelques secondes.',
-    trop: 'Vous m\'avez posé beaucoup de questions : faisons une petite pause de quelques minutes.',
-    erreur: 'Je n\'ai pas pu répondre. Vérifiez votre connexion et réessayez.',
-    reessayer: 'Réessayer',
-    avertissement: 'Dari peut se tromper : vérifiez les montants dans l\'écran concerné.',
-    webSeulement: 'Sur ordinateur',
-    carteTitre: 'Dari a regardé votre résidence',
-    carteVide: 'Rien d\'urgent aujourd\'hui. Une question ? Je suis là.',
-    carteQuestion: 'Poser une question',
-    retour: 'Retour',
-    introMoi: '{role} · {residence} ({lots}). Je connais votre dossier et chaque écran de l\'application — voici ce qui compte aujourd\'hui :',
-    obBulle: [
-      'Bonjour, je suis Dari ! Je vous accompagne partout dans l\'application.',
-      'Une question sur vos charges ? Demandez-moi, je vous réponds au dirham près.',
-      'Je vous emmène directement au bon écran pour signaler un problème.',
-      'Le jour de l\'AG, je vous rappelle où voter. On y va ?',
-    ],
-  );
-
-  static const ar = DariDict(
-    nom: 'داري',
-    sousTitre: 'مساعدكم في SyndicUp',
-    ouvrir: 'اسألوا داري',
-    nouvelle: 'محادثة جديدة',
-    bonjour: 'مرحبًا {prenom}! أنا داري.',
-    intro: 'أعرف إقامتكم والتطبيق. إليكم ما يهم اليوم:',
-    rienAFaire: 'لا شيء مستعجل حاليًا — كل شيء على ما يرام.',
-    suggestionsTitre: 'يمكنكم أن تسألوني',
-    placeholder: 'اكتبوا سؤالكم…',
-    envoyer: 'إرسال',
-    reflechit: 'داري يفكر…',
-    ecrit: 'داري يكتب…',
-    indisponible: 'المحادثة غير مفعّلة بعد في هذا الفضاء. تبقى المؤشرات أعلاه محيَّنة.',
-    sature: 'أنا مشغول جدًا الآن — أعيدوا المحاولة بعد ثوانٍ.',
-    trop: 'طرحتم عليّ أسئلة كثيرة: لنأخذ استراحة قصيرة لبضع دقائق.',
-    erreur: 'تعذر عليّ الرد. تحققوا من اتصالكم وأعيدوا المحاولة.',
-    reessayer: 'إعادة المحاولة',
-    avertissement: 'قد يخطئ داري: تحققوا من المبالغ في الشاشة المعنية.',
-    webSeulement: 'على الحاسوب',
-    carteTitre: 'اطّلع داري على إقامتكم',
-    carteVide: 'لا شيء مستعجل اليوم. لديكم سؤال؟ أنا هنا.',
-    carteQuestion: 'طرح سؤال',
-    retour: 'رجوع',
-    introMoi: '{role} · {residence} ({lots}). أعرف ملفكم وكل شاشة في التطبيق — إليكم ما يهم اليوم:',
-    obBulle: [
-      'مرحبًا، أنا داري! أرافقكم في كل أنحاء التطبيق.',
-      'سؤال عن رسومكم؟ اسألوني، أجيبكم حتى آخر درهم.',
-      'آخذكم مباشرة إلى الشاشة المناسبة للإبلاغ عن مشكلة.',
-      'يوم الجمع العام، أذكّركم أين تصوّتون. هيا بنا؟',
-    ],
-  );
-
-  static DariDict of(Locale l) => l.languageCode == 'ar' ? ar : fr;
-}
-
-extension DariDictContext on BuildContext {
-  DariDict get dari => DariDict.of(Localizations.localeOf(this));
-}
+// Textes (FR/AR) : DariDict / context.dari vivent dans core/i18n/mobile_dict.dart (réexportés).
 
 /// Couleur du point d'un repère.
 Color couleurNiveau(String niveau) => switch (niveau) {

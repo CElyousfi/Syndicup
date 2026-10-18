@@ -1,9 +1,5 @@
-import 'dart:io';
-
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -238,13 +234,16 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
   final _nb = TextEditingController(text: '1');
   final _nom = TextEditingController();
   final _tel = TextEditingController();
+  /// Téléphone du voyageur illisible : signalé avant l'étape suivante.
+  String? _telErr;
   final _nat = TextEditingController();
   final _fin = TextEditingController();
   final _plaque = TextEditingController();
   bool _loading = false, _prefilled = false;
   ApiFail? _fail;
-  /// Pièces jointes choisies (photo prise, galerie, fichier) — téléversées à l'envoi.
-  final List<PieceLocale> _pieces = [];
+  /// Pièces jointes choisies (photo prise, galerie, fichier) — envoyées à la validation, avec
+  /// progression ; un nouvel essai ne renvoie pas celles déjà parties.
+  late final UploadQueue _pieces = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.lcd, max: 10);
   /// Parcours Wise en trois étapes : séjour → voyageur → pièces et récapitulatif.
   int _etape = 0;
   static const _nbEtapes = 3;
@@ -273,6 +272,12 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
   void initState() {
     super.initState();
     _lot = widget.lotId;
+  }
+
+  @override
+  void dispose() {
+    _pieces.dispose();
+    super.dispose();
   }
 
   void _prefill(LcdSejour s) {
@@ -335,6 +340,13 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
       _ => _lot != null && _arrivee != null && _depart != null,
     };
     final titresEtapes = [d.lcd.sejour, d.lcd.voyageurPrincipal, d.lcd.piecesJointes];
+    // Ce qui manque pour continuer, dit en clair sous le bouton désactivé.
+    final manque = [
+      if (_etape != 1 && _lot == null) d.lcd.lot,
+      if (_etape != 1 && _arrivee == null) d.lcd.dateArrivee,
+      if (_etape != 1 && _depart == null) d.lcd.dateDepart,
+      if (_etape == 1 && _nom.text.trim().isEmpty) d.lcd.voyageurNom,
+    ];
 
     final List<Widget> champs = switch (_etape) {
       // 1 · Le séjour : lot, dates, heure, voyageurs.
@@ -372,7 +384,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
       1 => [
           SuField(label: d.lcd.voyageurNom, controller: _nom, required: true, textInputAction: TextInputAction.next, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'voyageur_principal_nom')),
           const SizedBox(height: 16),
-          SuField(label: d.lcd.voyageurTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, error: fieldError(_fail, 'voyageur_telephone')),
+          SuField(label: d.lcd.voyageurTelephone, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, onChanged: (_) => setState(() => _telErr = null), error: _telErr ?? fieldError(_fail, 'voyageur_telephone')),
           const SizedBox(height: 16),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -389,7 +401,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
         ],
       // 3 · Pièces jointes, puis récapitulatif avant l'envoi.
       _ => [
-          PiecesPicker(pieces: _pieces, onChanged: () => setState(() {}), titre: false),
+          PiecesPicker(queue: _pieces, enabled: !_loading, titre: false),
           const SizedBox(height: 20),
           SuCard(
             child: Column(
@@ -444,9 +456,23 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
                   ...champs,
                   const SizedBox(height: 28),
                   if (_etape < _nbEtapes - 1)
-                    SuButton(label: md.obNext, size: SuButtonSize.lg, expand: true, onPressed: etapeValide ? () => setState(() => _etape++) : null)
+                    SuButton(
+                      label: md.obNext,
+                      size: SuButtonSize.lg,
+                      expand: true,
+                      onPressed: etapeValide
+                          ? () {
+                              final telErr = _etape == 1 ? SuValidators.telephone(context)(_tel.text) : null;
+                              setState(() {
+                                _telErr = telErr;
+                                if (telErr == null) _etape++;
+                              });
+                            }
+                          : null,
+                    )
                   else
-                    SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, onPressed: etapeValide ? _submit : null, fail: _fail),
+                    SubmitButton(label: _edition ? d.common.save : d.lcd.declarerSejour, loading: _loading, missing: manque, onPressed: etapeValide && !_pieces.busy ? _submit : null, fail: _fail),
+                  if (_etape < _nbEtapes - 1 && !etapeValide) MissingHint(manque),
                 ],
               ),
             ),
@@ -473,15 +499,17 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
       _fail = null;
     });
     final api = ref.read(apiClientProvider);
-    final chemins = await televerserPieces(api, _pieces);
+    // Seules les pièces pas encore envoyées partent (un nouvel essai ne renvoie rien en double).
+    final echec = await _pieces.sendAll();
     if (!mounted) return;
-    if (chemins == null) {
+    if (echec != null) {
       setState(() {
         _loading = false;
-        _fail = ApiFail(const ApiError(code: 'INTERNAL_ERROR', message: 'Téléversement impossible.'), 502);
+        _fail = echec.code == UploadError.cancelled ? null : echec.toApiFail();
       });
       return;
     }
+    final chemins = _pieces.paths;
     final body = <String, Object?>{
       if (!_edition) 'lot_id': _lot,
       if (!_edition && chemins.isNotEmpty) 'pieces_jointes': chemins,
@@ -805,87 +833,25 @@ List<LcdSejour> trierSejours(List<LcdSejour> list) {
 }
 
 // ── Pièces jointes (photo prise, galerie, fichier) ─────────────────────────
+// PieceLocale, choisirPiece et l'envoi avec progression vivent dans core (upload.dart,
+// upload_tile.dart) : mêmes règles pour tous les formulaires.
 
-/// Fichier choisi localement avant téléversement.
-class PieceLocale {
-  const PieceLocale({required this.nom, required this.chemin, required this.contentType});
-  final String nom, chemin, contentType;
-  bool get estImage => contentType.startsWith('image/');
-}
-
-String _contentTypeDe(String nom, String? mime) {
-  if (mime != null && mime.isNotEmpty) return mime;
-  final n = nom.toLowerCase();
-  if (n.endsWith('.pdf')) return 'application/pdf';
-  if (n.endsWith('.png')) return 'image/png';
-  if (n.endsWith('.webp')) return 'image/webp';
-  if (n.endsWith('.heic')) return 'image/heic';
-  return 'image/jpeg';
-}
-
-/// Sélection : caméra, galerie ou fichier (image / PDF). 10 pièces au plus.
-Future<PieceLocale?> choisirPiece(BuildContext context) async {
-  final d = context.dict;
-  final choix = await showSuSheet<String>(
-    context,
-    isScrollControlled: false,
-    useSafeArea: false,
-    builder: (ctx) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Lignes Wise : pastille 48, libellé gras.
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            child: CardList([
-              ListRow(leading: const IconCircle(Icons.photo_camera_rounded), title: d.lcd.prendrePhoto, onTap: () => Navigator.pop(ctx, 'camera')),
-              ListRow(leading: const IconCircle(Icons.photo_library_rounded), title: d.incidents.choisirGalerie, onTap: () => Navigator.pop(ctx, 'galerie')),
-              ListRow(leading: const IconCircle(Icons.attach_file_rounded), title: d.lcd.choisirFichier, onTap: () => Navigator.pop(ctx, 'fichier')),
-            ]),
-          ),
-        ],
-      ),
-    ),
-  );
-  if (choix == null) return null;
-  if (choix == 'fichier') {
-    final r = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'], withData: false);
-    final f = r?.files.single;
-    if (f == null || f.path == null) return null;
-    return PieceLocale(nom: f.name, chemin: f.path!, contentType: _contentTypeDe(f.name, null));
-  }
-  final x = await ImagePicker().pickImage(source: choix == 'camera' ? ImageSource.camera : ImageSource.gallery, imageQuality: 82, maxWidth: 2000);
-  if (x == null) return null;
-  return PieceLocale(nom: x.name, chemin: x.path, contentType: _contentTypeDe(x.name, x.mimeType));
-}
-
-/// URL signée par pièce → PUT direct → chemins ; null si un téléversement a échoué.
-Future<List<String>?> televerserPieces(ApiClient api, List<PieceLocale> pieces) async {
-  final chemins = <String>[];
-  for (final p in pieces) {
-    final prep = await api.post<Map<String, dynamic>>('/lcd/sejours/upload-url', body: {'nom_fichier': p.nom, 'content_type': p.contentType}, parse: asMap);
-    if (prep is! ApiOk<Map<String, dynamic>>) return null;
-    final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(p.chemin).readAsBytes(), p.contentType);
-    if (!ok) return null;
-    chemins.add(prep.data['storage_path'] as String);
-  }
-  return chemins;
-}
-
-/// Bloc « Pièces jointes » du formulaire : liste des fichiers choisis + bouton d'ajout.
+/// Bloc « Pièces jointes » du formulaire : fichiers choisis (taille, progression, renvoi d'un
+/// fichier en échec) + bouton d'ajout. 10 pièces au plus.
 class PiecesPicker extends StatelessWidget {
-  const PiecesPicker({super.key, required this.pieces, required this.onChanged, this.titre = true});
-  final List<PieceLocale> pieces;
-  final VoidCallback onChanged;
+  const PiecesPicker({super.key, required this.queue, this.titre = true, this.enabled = true});
+  final UploadQueue queue;
+
   /// Libellé + aide au-dessus (masqués quand l'étape du parcours les porte déjà).
   final bool titre;
+  final bool enabled;
 
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (titre) ...[
           Text(d.lcd.piecesJointes, style: t.labelMedium?.copyWith(color: SuColors.ink)),
@@ -893,31 +859,16 @@ class PiecesPicker extends StatelessWidget {
           Text(d.lcd.piecesJointesAide, style: t.bodySmall),
           const SizedBox(height: 8),
         ],
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final p in pieces)
-              Chip(
-                avatar: Icon(p.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link),
-                label: Text(p.nom, overflow: TextOverflow.ellipsis),
-                onDeleted: () {
-                  pieces.remove(p);
-                  onChanged();
-                },
-              ),
-            if (pieces.length < 10)
-              ActionChip(
-                avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link),
-                label: Text(d.lcd.ajouterPieces),
-                onPressed: () async {
-                  final p = await choisirPiece(context);
-                  if (p == null) return;
-                  pieces.add(p);
-                  onChanged();
-                },
-              ),
-          ],
+        SuUploadList(
+          queue: queue,
+          enabled: enabled,
+          addLabel: d.lcd.ajouterPieces,
+          onAdd: () async {
+            final p = await choisirPiece(context, target: queue.target);
+            if (p == null || !context.mounted) return;
+            final refus = queue.add(p);
+            if (refus != null) showToast(context, uploadErrorLine(context, refus), error: true);
+          },
         ),
       ],
     );
@@ -937,25 +888,55 @@ class PiecesJointesSection extends ConsumerStatefulWidget {
 class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
   bool _busy = false;
 
+  /// Fichier arrivé au stockage mais rattachement au séjour refusé / interrompu : « Réessayer »
+  /// relance le rattachement (sans renvoyer le fichier).
+  bool _rattachementEchoue = false;
+
+  /// Pièce en cours d'ajout : progression visible, « Renvoyer » en cas d'échec (le fichier déjà
+  /// arrivé au stockage n'est pas renvoyé si seul le rattachement a échoué).
+  late final UploadQueue _envoi = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.lcd, max: 1);
+
+  @override
+  void dispose() {
+    _envoi.dispose();
+    super.dispose();
+  }
+
   Future<void> _ajouter() async {
-    final p = await choisirPiece(context);
+    final p = await choisirPiece(context, target: UploadTarget.lcd);
     if (p == null || !mounted) return;
-    setState(() => _busy = true);
-    final api = ref.read(apiClientProvider);
-    final chemins = await televerserPieces(api, [p]);
-    if (!mounted) return;
-    if (chemins == null) {
-      setState(() => _busy = false);
-      showToast(context, context.mdict.networkError, error: true);
+    final refus = _envoi.replace(p);
+    if (refus != null) {
+      showToast(context, uploadErrorLine(context, refus), error: true);
       return;
     }
-    final r = await api.post<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemins': chemins});
+    await _envoyer();
+  }
+
+  Future<void> _envoyer() async {
+    if (_busy) return;
+    setState(() {
+      _busy = true;
+      _rattachementEchoue = false;
+    });
+    final echec = await _envoi.sendAll();
     if (!mounted) return;
-    setState(() => _busy = false);
+    if (echec != null) {
+      setState(() => _busy = false);
+      if (echec.code != UploadError.cancelled) showApiError(context, echec.toApiFail());
+      return;
+    }
+    final r = await ref.read(apiClientProvider).post<dynamic>('/lcd/sejours/${widget.sejourId}/pieces-jointes', body: {'chemins': _envoi.paths});
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      _rattachementEchoue = r is ApiFail;
+    });
     if (r is ApiFail) {
       showApiError(context, r);
       return;
     }
+    _envoi.clear();
     ref.invalidate(lcdPiecesJointesProvider(widget.sejourId));
     ref.invalidate(lcdSejourProvider(widget.sejourId));
     showToast(context, context.dict.lcd.pieceAjoutee);
@@ -986,6 +967,9 @@ class _PiecesJointesSectionState extends ConsumerState<PiecesJointesSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         SectionHeader(d.lcd.piecesJointes, subtitle: d.lcd.piecesJointesAide, actionLabel: widget.peutJoindre && liste.length < 10 ? d.lcd.ajouterPieces : null, onAction: widget.peutJoindre && liste.length < 10 && !_busy ? _ajouter : null),
+        SuUploadList(queue: _envoi, enabled: !_busy, onRetry: (_) => _envoyer()),
+        if (_rattachementEchoue && _envoi.isNotEmpty)
+          Align(alignment: AlignmentDirectional.centerStart, child: SuButton(label: context.mdict.ux.actRetry, icon: Icons.refresh_rounded, variant: SuButtonVariant.secondary, size: SuButtonSize.sm, loading: _busy, onPressed: _envoyer)),
         liste.isEmpty
             ? Text(pieces.isLoading ? context.mdict.loading : d.lcd.aucunePiece, style: t.bodyMedium?.copyWith(color: SuColors.soft))
             : GridView.count(

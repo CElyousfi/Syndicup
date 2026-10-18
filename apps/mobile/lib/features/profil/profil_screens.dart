@@ -9,12 +9,12 @@ import 'package:share_plus/share_plus.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
 import '../../core/auth/app_state.dart';
+import '../../core/auth/logout.dart';
 import '../../core/auth/session.dart';
 import '../../core/config/app_config.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
 import '../../core/i18n/mobile_dict.dart';
-import '../../core/push/push_service.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
@@ -162,10 +162,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
             title: d.common.logout,
             // Pas de chevron : action immédiate, pas une page.
             trailing: const SizedBox.shrink(),
-            onTap: () async {
-              await PushService.instance.unregisterToken(ref.read(apiClientProvider));
-              await ref.read(sessionProvider.notifier).signOut();
-            },
+            // Confirmation, puis déconnexion qui n'attend jamais le réseau plus de 3 s.
+            onTap: () => confirmerDeconnexion(context),
           ),
         ]),
         const SizedBox(height: 24),

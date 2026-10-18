@@ -36,6 +36,10 @@ String formatMAD(String? value, Locale locale) {
   return locale.languageCode == 'ar' ? '$m د.م.' : '$m MAD';
 }
 
+/// Deux montants côte à côte (« réalisé / prévu », « payé / total ») : la devise une seule
+/// fois, sur le DERNIER chiffre — « 1 250,00 / 5 000,00 MAD » (même règle partout).
+String formatMontantSur(String? a, String? b, Locale locale) => '${formatMontant(a)} / ${formatMAD(b, locale)}';
+
 /// Entier "1000" → "1 000" (tantièmes, compteurs).
 String formatEntier(Object? value) {
   if (value == null || value.toString().isEmpty) return '—';
@@ -179,3 +183,54 @@ String? normaliserTelephone(String brut) {
   if (RegExp(r'^\+2126\d{8}$').hasMatch(t) || RegExp(r'^\+2127\d{8}$').hasMatch(t)) return t;
   return null;
 }
+
+/// Téléphone plausible : mobile marocain (normaliserTelephone), fixe marocain (05…), ou
+/// numéro international complet (+33…, propriétaire MRE).
+bool telephonePlausible(String brut) {
+  if (normaliserTelephone(brut) != null) return true;
+  final t = brut.replaceAll(RegExp(r'[\s.\-() ‎‏]'), '');
+  return RegExp(r'^0[5-8]\d{8}$').hasMatch(t) || RegExp(r'^(\+|00)[1-9]\d{7,14}$').hasMatch(t);
+}
+
+/// Montant SAISI (« 1 250,50 », « 1.250,50 », « 1,250.50 », « 12,5 ») → chaîne décimale de
+/// l'API (« 1250.50 », « 12.5 ») ; `null` si ce n'est pas un montant valide (12 chiffres
+/// entiers, 2 décimales au plus, jamais négatif). Normalisation de TEXTE seulement, aucune
+/// arithmétique (CLAUDE.md §1.1).
+String? parseMontant(String? brut) {
+  if (brut == null) return null;
+  var s = brut.replaceAll(RegExp('[\\s  \'_]'), '');
+  if (s.isEmpty) return null;
+  final virgule = s.lastIndexOf(',');
+  final point = s.lastIndexOf('.');
+  if (virgule >= 0 && point >= 0) {
+    // Les deux : le dernier séparateur est la décimale, l'autre groupe les milliers.
+    final dec = virgule > point ? ',' : '.';
+    final mil = dec == ',' ? '.' : ',';
+    final i = s.lastIndexOf(dec);
+    final entier = s.substring(0, i);
+    if (!RegExp('^\\d{1,3}(${RegExp.escape(mil)}\\d{3})*\$').hasMatch(entier)) return null;
+    s = '${entier.replaceAll(mil, '')}.${s.substring(i + 1)}';
+  } else if (virgule >= 0 || point >= 0) {
+    final sep = virgule >= 0 ? ',' : '.';
+    if (sep.allMatches(s).length > 1) {
+      // « 1,250,000 » : séparateurs de milliers seulement.
+      if (!RegExp('^\\d{1,3}(${RegExp.escape(sep)}\\d{3})+\$').hasMatch(s)) return null;
+      s = s.replaceAll(sep, '');
+    } else {
+      s = s.replaceAll(sep, '.');
+    }
+  }
+  if (s.endsWith('.')) s = s.substring(0, s.length - 1);
+  final m = RegExp(r'^(\d{1,12})(?:\.(\d{1,2}))?$').firstMatch(s);
+  if (m == null) return null;
+  final entier = m.group(1)!.replaceFirst(RegExp(r'^0+(?=\d)'), '');
+  final dec = m.group(2);
+  return dec == null ? entier : '$entier.$dec';
+}
+
+/// « 1.250 » / « 1,250 » seuls : milliers ou décimales ? Illisible sans contexte — l'écran
+/// demande de lever le doute au lieu de deviner.
+bool montantAmbigu(String brut) => RegExp(r'^\d{1,3}[.,]\d{3}$').hasMatch(brut.replaceAll(RegExp('[\\s  ]'), ''));
+
+/// Montant normalisé strictement positif (« 0 », « 0.00 » refusés).
+bool montantPositif(String normalise) => RegExp(r'[1-9]').hasMatch(normalise);

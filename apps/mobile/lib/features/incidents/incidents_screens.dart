@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api/api_client.dart';
 import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -57,6 +58,8 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
     Future<void> refresh() => refreshing(ref, [incidentsProvider]);
     final contenu = <Widget>[
+      // Copie du téléphone affichée faute de serveur : on le dit (swr.dart).
+      StaleBanner(const ['/incidents'], onRetry: refresh),
       FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 16),
       AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
@@ -130,21 +133,46 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
   final _plaque = TextEditingController();
   final _sous = TextEditingController();
   final _desc = TextEditingController();
-  final List<XFile> _photos = [];
+  /// Photos (5 au plus) : état par photo (envoi %, envoyée, échec + renvoi de celle-ci) ; un
+  /// nouvel essai du signalement ne renvoie pas les photos déjà au stockage.
+  late final UploadQueue _photos = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.incidents, max: 5);
   bool _loading = false;
   ApiFail? _fail;
 
   @override
   void initState() {
     super.initState();
-    if (widget.photoInitiale != null && widget.photoInitiale!.isNotEmpty) _photos.add(XFile(widget.photoInitiale!));
+    final initiale = widget.photoInitiale;
+    if (initiale != null && initiale.isNotEmpty) {
+      final nom = initiale.split(RegExp(r'[/\\]')).last;
+      // La cible de partage ne reçoit que des images : sans extension lisible, c'est une photo.
+      final type = contentTypeFor(nom);
+      _photos.add(PieceLocale(nom: nom, chemin: initiale, contentType: type == 'application/octet-stream' ? 'image/jpeg' : type));
+    }
     _sejour = widget.sejourId;
+    _photos.addListener(_redessiner);
+  }
+
+  void _redessiner() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _photos
+      ..removeListener(_redessiner)
+      ..dispose();
+    super.dispose();
   }
 
   Future<void> _pick(ImageSource src) async {
-    if (_photos.length >= 5) return;
+    if (_photos.isFull) return;
     final f = await ImagePicker().pickImage(source: src, imageQuality: 78, maxWidth: 1600);
-    if (f != null) setState(() => _photos.add(f));
+    if (f == null || !mounted) return;
+    final p = await pieceControlee(context, PieceLocale(nom: f.name, chemin: f.path, contentType: contentTypeFor(f.name, mime: f.mimeType)), UploadTarget.incidents);
+    if (p == null || !mounted) return;
+    final refus = _photos.add(p);
+    if (refus != null) showToast(context, uploadErrorLine(context, refus), error: true);
   }
 
   @override
@@ -178,7 +206,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         ),
         if (fieldError(_fail, 'categorie') != null) Padding(padding: const EdgeInsets.only(top: 6), child: Text(fieldError(_fail, 'categorie')!, style: t.bodySmall?.copyWith(color: SuColors.danger))),
         const SizedBox(height: 18),
-        SuField(label: d.incidents.sousCategorie, controller: _sous, hint: d.incidents.sousCategorieHint, required: true, error: fieldError(_fail, 'sous_categorie')),
+        SuField(label: d.incidents.sousCategorie, controller: _sous, hint: d.incidents.sousCategorieHint, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'sous_categorie')),
         SectionHeader('2 · ${d.incidents.partie}', subtitle: d.incidents.partieAide),
         Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _partie = v)),
         SectionHeader('3 · ${d.incidents.urgence}'),
@@ -225,19 +253,15 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
           spacing: 10,
           runSpacing: 10,
           children: [
-            for (final p in _photos)
-              Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  ClipRRect(borderRadius: BorderRadius.circular(18), child: SuImage.file(File(p.path), width: 96, height: 96, fit: BoxFit.cover)),
-                  PositionedDirectional(
-                    end: 6,
-                    top: 6,
-                    child: CircleIconButton(icon: Icons.close_rounded, size: 28, color: SuColors.surface, iconColor: SuColors.ink, tooltip: fill(d.incidents.retirerPhoto, {'n': _photos.indexOf(p) + 1}), onTap: () => setState(() => _photos.remove(p))),
-                  ),
-                ],
+            for (final (i, s) in _photos.slots.indexed)
+              _PhotoEnvoi(
+                key: ObjectKey(s),
+                slot: s,
+                retirerLabel: fill(d.incidents.retirerPhoto, {'n': i + 1}),
+                onRemove: _loading || s.uploading ? null : () => _photos.remove(s),
+                onRetry: () => _photos.send(s),
               ),
-            if (_photos.length < 5) ...[
+            if (!_photos.isFull && !_loading) ...[
               _PhotoBtn(icon: Icons.photo_camera_rounded, label: d.incidents.prendrePhoto, onTap: () => _pick(ImageSource.camera)),
               _PhotoBtn(icon: Icons.photo_library_rounded, label: d.incidents.choisirGalerie, onTap: () => _pick(ImageSource.gallery)),
             ],
@@ -246,7 +270,16 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         const SizedBox(height: 28),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.send, loading: _loading, onPressed: _categorie == null ? null : _submit, fail: _fail),
+        SubmitButton(
+          label: d.common.send,
+          loading: _loading,
+          missing: [
+            if (_categorie == null) context.mup.missingCategory,
+            if (_sous.text.trim().isEmpty) d.incidents.sousCategorie,
+          ],
+          onPressed: _categorie == null || _sous.text.trim().isEmpty || _photos.busy ? null : _submit,
+          fail: _fail,
+        ),
       ],
     );
   }
@@ -257,28 +290,17 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
       _fail = null;
     });
     final api = ref.read(apiClientProvider);
-    final chemins = <String>[];
-    for (final p in _photos) {
-      final ct = p.mimeType ?? 'image/jpeg';
-      final prep = await api.post<Map<String, dynamic>>('/incidents/upload-url', body: {'nom_fichier': p.name, 'content_type': ct}, parse: asMap);
-      if (prep is ApiFail<Map<String, dynamic>>) {
-        setState(() {
-          _loading = false;
-          _fail = prep;
-        });
-        return;
-      }
-      final pd = (prep as ApiOk<Map<String, dynamic>>).data;
-      final ok = await api.uploadSigned(pd['upload_url'] as String, await File(p.path).readAsBytes(), ct);
-      if (!ok) {
-        setState(() {
-          _loading = false;
-          _fail = const ApiFail(ApiError(code: 'INTERNAL_ERROR', message: 'Téléversement de la photo refusé par le stockage.'), 500);
-        });
-        return;
-      }
-      chemins.add(pd['storage_path'] as String);
+    // Photos : seules celles pas encore au stockage partent (un nouvel essai ne double rien).
+    final echec = await _photos.sendAll();
+    if (!mounted) return;
+    if (echec != null) {
+      setState(() {
+        _loading = false;
+        _fail = echec.code == UploadError.cancelled ? null : echec.toApiFail();
+      });
+      return;
     }
+    final chemins = _photos.paths;
     final r = await api.post<Incident>('/incidents', body: {
       'lot_id': _lot,
       'categorie': _categorie,
@@ -308,11 +330,68 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         context.pushReplacement('/incidents/${data.id}');
         if (racine.mounted) showSuccess(racine, title: titre, body: corps, illustration: 'ok-incident');
       case ApiFail<Incident>():
+        // POST /incidents n'a pas de clé d'idempotence : après un échec ambigu, le signalement
+        // existe peut-être déjà — le prochain essai envoie des photos neuves (jamais deux lignes
+        // sur les mêmes fichiers). Après un refus certain (4xx), les photos envoyées sont gardées.
+        if (IdemKey.isAmbiguous(r.status, r.error.code)) _photos.forgetUploads();
         setState(() {
           _loading = false;
           _fail = r;
         });
     }
+  }
+}
+
+/// Vignette d'une photo du signalement et son envoi : anneau de progression (%), coche une fois
+/// envoyée, voile rouge + « Renvoyer » sur un échec (seule cette photo repart), retrait.
+class _PhotoEnvoi extends StatelessWidget {
+  const _PhotoEnvoi({super.key, required this.slot, required this.retirerLabel, required this.onRemove, required this.onRetry});
+  final UploadSlot slot;
+  final String retirerLabel;
+  final VoidCallback? onRemove;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final up = context.mup;
+    final t = Theme.of(context).textTheme;
+    final pct = (slot.progress * 100).round();
+    return Semantics(
+      label: switch (slot.status) {
+        UploadStatus.uploading => fill(up.uploading, {'pct': pct}),
+        UploadStatus.done => up.done,
+        UploadStatus.failed => slot.failure == null ? up.failed : uploadErrorLine(context, slot.failure!),
+        UploadStatus.waiting => up.waiting,
+      },
+      liveRegion: slot.failed,
+      child: SizedBox(
+        width: 96,
+        height: 96,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            ClipRRect(borderRadius: BorderRadius.circular(18), child: SuImage.file(File(slot.piece.chemin), width: 96, height: 96, fit: BoxFit.cover)),
+            if (slot.uploading || slot.failed)
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(color: (slot.failed ? SuColors.danger : SuColors.ink).withValues(alpha: 0.45), borderRadius: BorderRadius.circular(18)),
+                  child: Center(
+                    child: slot.uploading
+                        ? SuRing(slot.progress, size: 48, stroke: 4, color: SuColors.surface, track: SuColors.surface.withValues(alpha: 0.3), child: Text('$pct', style: t.labelSmall?.copyWith(color: SuColors.surface, fontWeight: FontWeight.w700)))
+                        : CircleIconButton(icon: Icons.refresh_rounded, size: 40, color: SuColors.surface, iconColor: SuColors.danger, tooltip: up.retryOne, onTap: onRetry),
+                  ),
+                ),
+              ),
+            if (slot.done)
+              const PositionedDirectional(start: 6, bottom: 6, child: IconCircle(Icons.check_rounded, tone: Tone.ok, size: 26, iconSize: 16)),
+            if (slot.uploading)
+              PositionedDirectional(end: 6, top: 6, child: CircleIconButton(icon: Icons.close_rounded, size: 28, color: SuColors.surface, iconColor: SuColors.ink, tooltip: up.cancel, onTap: slot.cancel))
+            else if (onRemove != null)
+              PositionedDirectional(end: 6, top: 6, child: CircleIconButton(icon: Icons.close_rounded, size: 28, color: SuColors.surface, iconColor: SuColors.ink, tooltip: retirerLabel, onTap: onRemove)),
+          ],
+        ),
+      ),
+    );
   }
 }
 

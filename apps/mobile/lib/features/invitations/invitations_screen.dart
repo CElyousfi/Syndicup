@@ -221,6 +221,7 @@ class _InvitationFormState extends ConsumerState<_InvitationForm> {
           label: d.common.create,
           loading: _loading,
           fail: _fail,
+          missing: [if (!_sansLot.contains(_role) && _lot == null) d.invitations.lot],
           onPressed: (!_sansLot.contains(_role) && _lot == null)
               ? null
               : () async {

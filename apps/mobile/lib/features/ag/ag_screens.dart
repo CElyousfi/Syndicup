@@ -33,6 +33,7 @@ class AgListScreen extends ConsumerWidget {
     return SuPage(
       title: d.ag.titre,
       onRefresh: () => refreshing(ref, [agListProvider]),
+      staleKeys: const ['/ag'],
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/ag/nouvelle'), icon: const Icon(Icons.add_rounded), label: Text(d.ag.creer)) : null,
       children: [
         PhotoBanner('salle', title: ctx.copropriete?.nom),
@@ -508,9 +509,9 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuField(label: d.ag.ordre, controller: _ordre, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], required: true, error: fieldError(_fail, 'ordre'), textDirection: TextDirection.ltr),
+        SuField(label: d.ag.ordre, controller: _ordre, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'ordre'), textDirection: TextDirection.ltr),
         const SizedBox(height: 12),
-        SuField(label: d.ag.texteResolution, controller: _texte, maxLines: 4, required: true, error: fieldError(_fail, 'texte')),
+        SuField(label: d.ag.texteResolution, controller: _texte, maxLines: 4, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'texte')),
         const SizedBox(height: 12),
         SuSelect<String>(label: d.ag.typeMajorite, value: _maj, options: const ['SIMPLE', 'DOUBLE', 'UNANIMITE'], labelOf: (v) => d.enums.typeMajorite[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _maj = v), help: d.enums.typeMajoriteAide[_maj]),
         const SizedBox(height: 8),
@@ -522,7 +523,13 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
           label: d.common.add,
           loading: _loading,
           fail: _fail,
-          onPressed: () async {
+          missing: [
+            if ((int.tryParse(_ordre.text.trim()) ?? 0) < 1) d.ag.ordre,
+            if (_texte.text.trim().isEmpty) d.ag.texteResolution,
+          ],
+          onPressed: (int.tryParse(_ordre.text.trim()) ?? 0) < 1 || _texte.text.trim().isEmpty
+              ? null
+              : () async {
             setState(() {
               _loading = true;
               _fail = null;

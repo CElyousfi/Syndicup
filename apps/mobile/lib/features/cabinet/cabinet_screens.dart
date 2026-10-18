@@ -34,9 +34,7 @@ class _CabinetScreenState extends ConsumerState<CabinetScreen> with SingleTicker
     final cabinets = ref.watch(cabinetsProvider);
     final racine = !context.canPop();
     final bar = TabBar(controller: _tabs, tabs: [Tab(text: t.onglets.portefeuille), Tab(text: t.onglets.alertes), Tab(text: t.onglets.agenda)]);
-    return Scaffold(
-      appBar: racine ? ShellHeaderWithBottom(title: t.titre, bottom: bar) : AppBar(title: Text(t.titre), bottom: bar),
-      body: AsyncView(cabinets, onRetry: () => ref.invalidate(cabinetsProvider), data: (liste) {
+    final vues = AsyncView(cabinets, onRetry: () => ref.invalidate(cabinetsProvider), data: (liste) {
         if (liste.isEmpty) return Padding(padding: const EdgeInsets.all(16), child: EmptyState(title: t.aucunCabinet, hint: t.aucunCabinetAide, icon: Icons.business_center_rounded));
         final cabinet = liste.where((c) => c.id == (_cabinetId ?? widget.cabinetId)).firstOrNull ?? liste.first;
         return Column(children: [
@@ -44,8 +42,11 @@ class _CabinetScreenState extends ConsumerState<CabinetScreen> with SingleTicker
             Padding(padding: const EdgeInsets.fromLTRB(16, 10, 16, 0), child: FilterChips<String>(value: cabinet.id, options: liste.map((c) => c.id).toList(), labelOf: (id) => liste.firstWhere((c) => c.id == id).nom, onChanged: (id) => setState(() => _cabinetId = id))),
           Expanded(child: SuFadeSwitch(value: cabinet.id, child: TabBarView(controller: _tabs, children: [_PortefeuilleTab(cabinet: cabinet), _AlertesTab(cabinetId: cabinet.id), _AgendaTab(cabinetId: cabinet.id)]))),
         ]);
-      }),
-    );
+      });
+    // Hors racine : page standard (retour rond, titre compact, onglets dessous) ; racine :
+    // en-tête du shell à onglets.
+    if (!racine) return SuPage(title: t.titre, bottom: bar, body: vues);
+    return Scaffold(appBar: ShellHeaderWithBottom(title: t.titre, bottom: bar), body: vues);
   }
 }
 

@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import '../api/api_result.dart';
 import '../api/error_text.dart';
 import '../feel/feel.dart';
+import '../format/format.dart';
 import '../i18n/i18n.dart';
+import '../i18n/mobile_dict.dart';
 import '../theme/motion.dart';
 import '../theme/tokens.dart';
 import 'alive.dart';
@@ -584,7 +586,7 @@ String? fieldError(ApiFail? f, String name) => f?.error.fields[name];
 /// Bouton principal avec état de chargement — délègue à [SuButton] : indicateur DANS le bouton,
 /// coche à la fin d'un envoi réussi, secousse + `warning()` quand [fail] change.
 class SubmitButton extends StatelessWidget {
-  const SubmitButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon, this.danger = false, this.secondary = false, this.fail, this.expand = false});
+  const SubmitButton({super.key, required this.label, required this.onPressed, this.loading = false, this.icon, this.danger = false, this.secondary = false, this.fail, this.expand = false, this.missing = const []});
   final String label;
   final VoidCallback? onPressed;
   final bool loading, danger, secondary, expand;
@@ -593,16 +595,24 @@ class SubmitButton extends StatelessWidget {
   /// Échec de la dernière tentative (ex. `_fail` de l'écran) : chaque nouvel échec secoue.
   final Object? fail;
 
+  /// Libellés de ce qui manque encore : affichés sous le bouton quand il est désactivé
+  /// (« À compléter : lot, montant ») — jamais un bouton grisé sans explication.
+  final List<String> missing;
+
   @override
-  Widget build(BuildContext context) => SuButton(
-        label: label,
-        icon: icon,
-        onPressed: onPressed,
-        loading: loading,
-        fail: fail,
-        expand: expand,
-        variant: secondary ? SuButtonVariant.secondary : (danger ? SuButtonVariant.danger : SuButtonVariant.primary),
-      );
+  Widget build(BuildContext context) {
+    final button = SuButton(
+      label: label,
+      icon: icon,
+      onPressed: onPressed,
+      loading: loading,
+      fail: fail,
+      expand: expand,
+      variant: secondary ? SuButtonVariant.secondary : (danger ? SuButtonVariant.danger : SuButtonVariant.primary),
+    );
+    if (missing.isEmpty || onPressed != null || loading) return button;
+    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, mainAxisSize: MainAxisSize.min, children: [button, MissingHint(missing)]);
+  }
 }
 
 /// Feuille du bas de formulaire (poignée, zone sûre, clavier).
@@ -664,15 +674,101 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
   return r ?? false;
 }
 
-/// Formateur : montant décimal "1234.56" (point, 2 décimales max).
-final List<TextInputFormatter> montantFormatters = [FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')), _DecimalNormalizer()];
+/// Formateur de saisie d'un montant : chiffres, séparateurs (« . », « , ») et espaces. Le texte
+/// tapé est GARDÉ tel quel (« 1.250,50 » reste « 1.250,50 » touche après touche) : c'est
+/// [parseMontant] qui le lit à l'envoi et [SuValidators.montant] qui signale une saisie
+/// illisible ou ambiguë (« 1.250 » seul : 1 250 ou 1,25 ?). Jamais de troncature silencieuse.
+final List<TextInputFormatter> montantFormatters = [FilteringTextInputFormatter.allow(RegExp('[0-9.,\\s  ]')), _MontantSaisie()];
 
-class _DecimalNormalizer extends TextInputFormatter {
+class _MontantSaisie extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final s = newValue.text.replaceAll(',', '.');
-    final m = RegExp(r'^\d{0,12}(\.\d{0,2})?$').hasMatch(s);
-    if (!m) return oldValue;
-    return newValue.copyWith(text: s, selection: TextSelection.collapsed(offset: s.length));
+    final t = newValue.text;
+    final chiffres = t.replaceAll(RegExp(r'[^0-9]'), '').length;
+    // Bornes larges : 14 chiffres (12 entiers + 2 décimales), pas deux séparateurs collés.
+    if (chiffres > 14 || RegExp(r'[.,][.,]').hasMatch(t) || t.length > 24) return oldValue;
+    return newValue;
+  }
+}
+
+/// Validateurs de champ (SuField `validator:`), messages dans la langue de l'utilisateur.
+/// Utilisés dans un `Form` : `_form.currentState!.validate()` avant l'envoi — l'erreur s'affiche
+/// sous le champ (secousse + `warning()`) au lieu d'un aller-retour serveur.
+class SuValidators {
+  SuValidators._();
+
+  static String? Function(String?) required(BuildContext context) {
+    final msg = context.mup.fieldRequired;
+    return (v) => (v == null || v.trim().isEmpty) ? msg : null;
+  }
+
+  /// Montant : virgule acceptée (« 1 250,50 ») ; `positive` refuse 0 ; `optional` laisse vide.
+  static String? Function(String?) montant(BuildContext context, {bool positive = true, bool optional = false}) {
+    final up = context.mup;
+    return (v) {
+      if (v == null || v.trim().isEmpty) return optional ? null : up.fieldRequired;
+      final n = parseMontant(v);
+      if (n == null) return montantAmbigu(v) ? up.ambiguite(v) : up.amountInvalid;
+      if (positive && !montantPositif(n)) return up.amountPositive;
+      return null;
+    };
+  }
+
+  /// Nombre décimal non monétaire (tantièmes, superficie) : même lecture que [montant].
+  static String? Function(String?) nombre(BuildContext context, {bool positive = true, bool optional = false}) {
+    final up = context.mup;
+    return (v) {
+      if (v == null || v.trim().isEmpty) return optional ? null : up.fieldRequired;
+      final n = parseMontant(v);
+      if (n == null) return up.numberInvalid;
+      if (positive && !montantPositif(n)) return up.valuePositive;
+      return null;
+    };
+  }
+
+  static String? Function(String?) email(BuildContext context, {bool optional = false}) {
+    final ux = context.mdict.ux;
+    return (v) {
+      final s = v?.trim() ?? '';
+      if (s.isEmpty) return optional ? null : ux.emailRequired;
+      return RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$').hasMatch(s) ? null : ux.emailInvalid;
+    };
+  }
+
+  static String? Function(String?) telephone(BuildContext context, {bool optional = true}) {
+    final up = context.mup;
+    return (v) {
+      final s = v?.trim() ?? '';
+      if (s.isEmpty) return optional ? null : up.fieldRequired;
+      return telephonePlausible(s) ? null : up.phoneInvalid;
+    };
+  }
+
+  static String? Function(String?) entier(BuildContext context, {int min = 0, bool optional = false}) {
+    final up = context.mup;
+    return (v) {
+      final s = v?.trim() ?? '';
+      if (s.isEmpty) return optional ? null : up.fieldRequired;
+      final n = int.tryParse(s);
+      return n == null || n < min ? up.integerInvalid : null;
+    };
+  }
+}
+
+/// Aide sous un bouton d'envoi désactivé : ce qui manque, en clair (« À compléter : lot,
+/// montant »), au lieu d'un bouton grisé muet. Rien quand la liste est vide.
+class MissingHint extends StatelessWidget {
+  const MissingHint(this.missing, {super.key});
+  final List<String> missing;
+  @override
+  Widget build(BuildContext context) {
+    if (missing.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Semantics(
+        liveRegion: true,
+        child: Text(context.mup.missingList(missing), textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: SuColors.soft)),
+      ),
+    );
   }
 }

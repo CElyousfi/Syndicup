@@ -183,6 +183,8 @@ class _BudgetForm extends ConsumerStatefulWidget {
 class _BudgetFormState extends ConsumerState<_BudgetForm> {
   late final _exercice = TextEditingController(text: widget.budget?.exercice ?? DateTime.now().year.toString());
   late final _montant = TextEditingController(text: widget.budget?.montantTotal ?? '');
+  /// Erreur de saisie posée avant l'envoi (format du montant) — l'API n'est pas appelée.
+  String? _montantErr;
   String? _agId;
   bool _loading = false;
   ApiFail? _fail;
@@ -199,9 +201,9 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuField(label: d.finances.exercice, controller: _exercice, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)], enabled: widget.budget == null, required: true, error: fieldError(_fail, 'exercice'), textDirection: TextDirection.ltr),
+        SuField(label: d.finances.exercice, controller: _exercice, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(4)], enabled: widget.budget == null, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'exercice'), textDirection: TextDirection.ltr),
         const SizedBox(height: 12),
-        SuField(label: '${d.finances.montantVote} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: d.finances.montantAide, error: fieldError(_fail, 'montant_total'), textDirection: TextDirection.ltr, mono: true),
+        SuField(label: '${d.finances.montantVote} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: d.finances.montantAide, error: _montantErr ?? fieldError(_fail, 'montant_total'), onChanged: (_) => setState(() => _montantErr = null), textDirection: TextDirection.ltr, mono: true),
         const SizedBox(height: 12),
         SuSelect<String?>(label: d.finances.agLiee, value: _agId, options: [null, ...ags.map((a) => a.id)], labelOf: (v) => v == null ? d.common.none : ags.where((a) => a.id == v).map((a) => '${d.enums.typeAg[a.type]} · ${formatDateCourte(a.dateAg, context.locale)}').firstOrNull ?? v, onChanged: (v) => setState(() => _agId = v)),
         const SizedBox(height: 16),
@@ -211,15 +213,28 @@ class _BudgetFormState extends ConsumerState<_BudgetForm> {
           label: d.common.save,
           loading: _loading,
           fail: _fail,
-          onPressed: () async {
+          missing: [
+            if (_exercice.text.trim().length != 4) d.finances.exercice,
+            if (_montant.text.trim().isEmpty) d.finances.montantVote,
+          ],
+          onPressed: _exercice.text.trim().length != 4 || _montant.text.trim().isEmpty
+              ? null
+              : () async {
+            // « 1 250,50 » accepté ; un montant illisible est signalé sous le champ, sans envoi.
+            final err = SuValidators.montant(context)(_montant.text);
+            if (err != null) {
+              setState(() => _montantErr = err);
+              return;
+            }
+            final montant = parseMontant(_montant.text)!;
             setState(() {
               _loading = true;
               _fail = null;
             });
             final api = ref.read(apiClientProvider);
             final r = widget.budget == null
-                ? await api.post<dynamic>('/finances/budgets', body: {'exercice': _exercice.text.trim(), 'montant_total': _montant.text.trim(), 'ag_id': _agId})
-                : await api.patch<dynamic>('/finances/budgets/${widget.budget!.id}', body: {'montant_total': _montant.text.trim(), if (_agId != null) 'ag_id': _agId});
+                ? await api.post<dynamic>('/finances/budgets', body: {'exercice': _exercice.text.trim(), 'montant_total': montant, 'ag_id': _agId})
+                : await api.patch<dynamic>('/finances/budgets/${widget.budget!.id}', body: {'montant_total': montant, if (_agId != null) 'ag_id': _agId});
             if (!mounted) return;
             if (r is ApiFail) {
               setState(() {
@@ -332,6 +347,8 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
   ApiFail? _fail;
   /// Même clé d'un essai à l'autre (même contenu) : « Réessayer » n'émet jamais deux appels.
   final _idem = IdemKey();
+  /// Erreurs de saisie posées avant l'envoi (format) — l'API n'est pas appelée.
+  String? _montantErr, _periodeErr;
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
@@ -340,13 +357,13 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
       children: [
         Text(d.finances.montantReparti, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
-        SuField(label: d.finances.periode, controller: _periode, hint: 'AAAA-MM', help: d.finances.periodeAide, required: true, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'periode')),
+        SuField(label: d.finances.periode, controller: _periode, hint: 'AAAA-MM', help: d.finances.periodeAide, required: true, textDirection: TextDirection.ltr, mono: true, onChanged: (_) => setState(() => _periodeErr = null), error: _periodeErr ?? fieldError(_fail, 'periode')),
         const SizedBox(height: 12),
         SuSelect<String>(label: d.finances.typeAppel, value: _type, options: d.enums.typeAppel.keys.toList(), labelOf: (v) => d.enums.typeAppel[v]!, onChanged: (v) => setState(() => _type = v), required: true),
         const SizedBox(height: 12),
-        SuField(label: '${d.finances.montantTotal} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'montant_total')),
+        SuField(label: '${d.finances.montantTotal} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, textDirection: TextDirection.ltr, mono: true, onChanged: (_) => setState(() => _montantErr = null), error: _montantErr ?? fieldError(_fail, 'montant_total')),
         const SizedBox(height: 12),
-        SuDateField(label: d.finances.echeance, controller: _echeance, required: true, firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 730)), error: fieldError(_fail, 'date_echeance')),
+        SuDateField(label: d.finances.echeance, controller: _echeance, required: true, onChanged: (_) => setState(() {}), firstDate: DateTime.now().subtract(const Duration(days: 365)), lastDate: DateTime.now().add(const Duration(days: 730)), error: fieldError(_fail, 'date_echeance')),
         const SizedBox(height: 16),
         FormError(_fail, onSettings: () => context.push('/finances/budgets')),
         if (_fail?.status == 422) Padding(padding: const EdgeInsets.only(top: 8), child: SuButton(variant: SuButtonVariant.ghost, onPressed: () => context.push('/finances/budgets'), label: d.finances.creerBudgetDabord)),
@@ -355,12 +372,30 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
           label: d.finances.genererAppel,
           loading: _loading,
           fail: _fail,
-          onPressed: () async {
+          missing: [
+            if (_periode.text.trim().isEmpty) d.finances.periode,
+            if (_montant.text.trim().isEmpty) d.finances.montantTotal,
+            if (_echeance.text.trim().isEmpty) d.finances.echeance,
+          ],
+          onPressed: _periode.text.trim().isEmpty || _montant.text.trim().isEmpty || _echeance.text.trim().isEmpty
+              ? null
+              : () async {
+            // Vérifications locales d'abord : période AAAA-MM, montant lisible (virgule acceptée).
+            final up = context.mup;
+            final periodeOk = RegExp(r'^\d{4}-(0[1-9]|1[0-2])$').hasMatch(_periode.text.trim());
+            final montantErr = SuValidators.montant(context)(_montant.text);
+            if (!periodeOk || montantErr != null) {
+              setState(() {
+                _periodeErr = periodeOk ? null : up.periodInvalid;
+                _montantErr = montantErr;
+              });
+              return;
+            }
             setState(() {
               _loading = true;
               _fail = null;
             });
-            final body = {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()};
+            final body = {'periode': _periode.text.trim(), 'type': _type, 'montant_total': parseMontant(_montant.text)!, 'date_echeance': _echeance.text.trim()};
             final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
             _idem.settle(r);
             if (!mounted) return;
@@ -481,6 +516,8 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
   final _payeur = TextEditingController();
   bool _tropPercu = false, _loading = false;
   ApiFail? _fail;
+  /// Erreur de format du montant, posée avant l'envoi.
+  String? _montantErr;
 
   @override
   void initState() {
@@ -517,7 +554,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         else
           SuSelect<String>(label: d.espaces.pourLot, value: _lot, options: lots.map((x) => x.id).toList(), labelOf: (id) => '${d.enums.typeLot[lotParId[id]!.typeLot]} ${lotParId[id]!.numero}', onChanged: (v) => setState(() => _lot = v), help: d.finances.paiementFifoAide, required: true, placeholder: md.selectLot),
         const SizedBox(height: 12),
-        SuField(label: '${d.finances.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'montant')),
+        SuField(label: '${d.finances.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, textDirection: TextDirection.ltr, mono: true, onChanged: (_) => setState(() => _montantErr = null), error: _montantErr ?? fieldError(_fail, 'montant')),
         const SizedBox(height: 12),
         Text(d.finances.methode, style: t.labelMedium?.copyWith(color: SuColors.ink)),
         const SizedBox(height: 6),
@@ -530,18 +567,34 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         const SizedBox(height: 12),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.finances.enregistrerPaiement, loading: _loading, fail: _fail, onPressed: (_mode == 'cible' ? _ligne == null : _lot == null) ? null : _submit),
+        SubmitButton(
+          label: d.finances.enregistrerPaiement,
+          loading: _loading,
+          fail: _fail,
+          missing: [
+            if (_mode == 'cible' && _ligne == null) d.finances.ligneConcernee,
+            if (_mode == 'fifo' && _lot == null) d.espaces.pourLot,
+            if (_montant.text.trim().isEmpty) d.finances.montant,
+          ],
+          onPressed: (_mode == 'cible' ? _ligne == null : _lot == null) || _montant.text.trim().isEmpty ? null : _submit,
+        ),
       ],
     );
   }
 
   Future<void> _submit() async {
+    // Montant lisible d'abord (« 1 250,50 » accepté) ; sinon l'erreur reste sous le champ.
+    final err = SuValidators.montant(context)(_montant.text);
+    if (err != null) {
+      setState(() => _montantErr = err);
+      return;
+    }
     setState(() {
       _loading = true;
       _fail = null;
     });
     final body = <String, dynamic>{
-      'montant': _montant.text.trim(),
+      'montant': parseMontant(_montant.text)!,
       'methode': _methode,
       if (_payeur.text.trim().isNotEmpty) 'payeur_utilisateur_id': _payeur.text.trim(),
       if (_mode == 'fifo') 'lot_id': _lot else ...{'appel_de_fonds_lot_id': _ligne, 'accepter_trop_percu': _tropPercu},
@@ -871,7 +924,7 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
                   leading: IconCircle(Icons.calendar_month_rounded, tone: pp >= pd ? Tone.ok : Tone.sand),
                   title: formatPeriode(p, l),
                   subtitle: '${c.colAppels}: ${appels.where((a) => a.periode == p).length} · ${formatPourcent(ratio(pp, pd))}',
-                  trailing: _MontantFin(versChaine(pd), secondaire: _sousMontant(context, '${resident ? c.regle : c.encaisse} ${formatMontant(versChaine(pp))}')),
+                  trailing: _MontantFin(versChaine(pd), secondaire: _sousMontant(context, '${resident ? c.regle : c.encaisse} ${formatMAD(versChaine(pp), l)}')),
                 );
               }),
           ]),

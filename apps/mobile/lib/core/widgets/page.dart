@@ -7,13 +7,14 @@ import '../feel/feel.dart';
 import 'alive.dart';
 import 'cards.dart';
 import 'motion.dart';
+import 'stale_banner.dart';
 
 /// Page standard Wise : bouton rond de retour en haut à gauche, GRAND titre gras dans le corps
 /// (« Connect your U.S. bank account to Wise »), qui se replie en petit titre dans la barre dès
 /// qu'on fait défiler. Corps défilant avec pull-to-refresh. Une page à `body` personnalisé
 /// (onglets…) garde le titre compact dans la barre.
 class SuPage extends StatefulWidget {
-  const SuPage({super.key, required this.title, this.subtitle, this.children, this.body, this.actions, this.onRefresh, this.fab, this.padding = const EdgeInsets.fromLTRB(16, 0, 16, 40), this.leading, this.bottom, this.largeTitle = true});
+  const SuPage({super.key, required this.title, this.subtitle, this.children, this.body, this.actions, this.onRefresh, this.fab, this.padding = const EdgeInsets.fromLTRB(16, 0, 16, 40), this.leading, this.bottom, this.largeTitle = true, this.staleKeys});
   final String title;
   final String? subtitle;
   final List<Widget>? children;
@@ -26,6 +27,11 @@ class SuPage extends StatefulWidget {
   final PreferredSizeWidget? bottom;
   /// Grand titre dans le corps (par défaut pour toute page à `children`).
   final bool largeTitle;
+
+  /// Chemins de l'API lus en stale-while-revalidate (swr.dart) : si le serveur est injoignable
+  /// et que la page montre la copie du téléphone, un bandeau fin le dit en tête de page
+  /// (« Données de 14:02 — serveur injoignable · Réessayer » → [onRefresh]).
+  final List<String>? staleKeys;
 
   /// En-tête des écrans racines d'onglet (avatar, résidence, cloche), fourni par la coque :
   /// une page qu'on ne peut pas « dépiler » est une racine et le porte, comme dans Wise.
@@ -77,6 +83,7 @@ class _SuPageState extends State<SuPage> {
                   ),
                 ),
               ),
+            if (widget.staleKeys != null && widget.staleKeys!.isNotEmpty) StaleBanner(widget.staleKeys!, onRetry: widget.onRefresh),
             ...?widget.children,
           ],
         ));

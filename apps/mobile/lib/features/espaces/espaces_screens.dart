@@ -186,6 +186,8 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
     final lots = (ref.watch(lotsProvider).valueOrNull ?? const <Lot>[]).where((x) => x.concerne(ctx.profil.id)).toList();
     _lot ??= lots.firstOrNull?.id;
     String hm(TimeOfDay x) => '${x.hour.toString().padLeft(2, '0')}:${x.minute.toString().padLeft(2, '0')}';
+    // Créneau incohérent signalé tout de suite, sans aller-retour serveur.
+    final ordreOk = _fin.hour * 60 + _fin.minute > _debut.hour * 60 + _debut.minute;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -219,6 +221,7 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
             ),
           ],
         ),
+        if (!ordreOk) Padding(padding: const EdgeInsets.only(top: 6), child: Text(context.mup.endAfterStart, style: t.bodySmall?.copyWith(color: SuColors.danger))),
         const SizedBox(height: 16),
         if (lots.length > 1) ...[
           SuSelect<String>(label: d.espaces.pourLot, value: _lot, options: lots.map((x) => x.id).toList(), labelOf: (id) => lots.firstWhere((x) => x.id == id).numero, onChanged: (v) => setState(() => _lot = v), required: true),
@@ -233,7 +236,8 @@ class _ReservationFormState extends ConsumerState<ReservationForm> {
         SubmitButton(
           label: '${d.common.confirm} ${hm(_debut)} – ${hm(_fin)}',
           loading: _loading,
-          onPressed: _lot == null
+          missing: [if (_lot == null) d.espaces.pourLot],
+          onPressed: _lot == null || !ordreOk
               ? null
               : () async {
                   setState(() {

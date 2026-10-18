@@ -836,3 +836,278 @@ class MobileUx {
     chooseDate: 'اختيار تاريخ',
   );
 }
+
+/// Textes de Dari, l'assistant (FR/AR) — `context.dari`. Déplacés de features/assistant/dari.dart
+/// (comportement identique) pour que toutes les chaînes du mobile vivent dans ce fichier.
+class DariDict {
+  const DariDict({
+    required this.nom,
+    required this.sousTitre,
+    required this.ouvrir,
+    required this.nouvelle,
+    required this.bonjour,
+    required this.intro,
+    required this.rienAFaire,
+    required this.suggestionsTitre,
+    required this.placeholder,
+    required this.envoyer,
+    required this.reflechit,
+    required this.ecrit,
+    required this.indisponible,
+    required this.sature,
+    required this.trop,
+    required this.erreur,
+    required this.reessayer,
+    required this.avertissement,
+    required this.webSeulement,
+    required this.carteTitre,
+    required this.carteVide,
+    required this.carteQuestion,
+    required this.obBulle,
+    required this.retour,
+    required this.introMoi,
+  });
+  final String nom, sousTitre, ouvrir, nouvelle, bonjour, intro, introMoi, rienAFaire, suggestionsTitre, placeholder, envoyer, reflechit, ecrit, indisponible, sature, trop, erreur, reessayer, avertissement, webSeulement, carteTitre, carteVide, carteQuestion, retour;
+
+  /// Bulles de Dari sur les écrans d'onboarding (une par étape).
+  final List<String> obBulle;
+
+  static const fr = DariDict(
+    nom: 'Dari',
+    sousTitre: 'Votre assistant SyndicUp',
+    ouvrir: 'Demander à Dari',
+    nouvelle: 'Nouvelle conversation',
+    bonjour: 'Bonjour {prenom} ! Je suis Dari.',
+    intro: 'Je connais votre résidence et l\'application. Voici ce qui compte aujourd\'hui :',
+    rienAFaire: 'Rien d\'urgent pour le moment — tout est en ordre.',
+    suggestionsTitre: 'Vous pouvez me demander',
+    placeholder: 'Posez votre question…',
+    envoyer: 'Envoyer',
+    reflechit: 'Dari réfléchit…',
+    ecrit: 'Dari écrit…',
+    indisponible: 'La conversation n\'est pas encore activée sur cet espace. Les repères ci-dessus restent à jour.',
+    sature: 'Je suis très sollicité en ce moment — réessayez dans quelques secondes.',
+    trop: 'Vous m\'avez posé beaucoup de questions : faisons une petite pause de quelques minutes.',
+    erreur: 'Je n\'ai pas pu répondre. Vérifiez votre connexion et réessayez.',
+    reessayer: 'Réessayer',
+    avertissement: 'Dari peut se tromper : vérifiez les montants dans l\'écran concerné.',
+    webSeulement: 'Sur ordinateur',
+    carteTitre: 'Dari a regardé votre résidence',
+    carteVide: 'Rien d\'urgent aujourd\'hui. Une question ? Je suis là.',
+    carteQuestion: 'Poser une question',
+    retour: 'Retour',
+    introMoi: '{role} · {residence} ({lots}). Je connais votre dossier et chaque écran de l\'application — voici ce qui compte aujourd\'hui :',
+    obBulle: [
+      'Bonjour, je suis Dari ! Je vous accompagne partout dans l\'application.',
+      'Une question sur vos charges ? Demandez-moi, je vous réponds au dirham près.',
+      'Je vous emmène directement au bon écran pour signaler un problème.',
+      'Le jour de l\'AG, je vous rappelle où voter. On y va ?',
+    ],
+  );
+
+  static const ar = DariDict(
+    nom: 'داري',
+    sousTitre: 'مساعدكم في SyndicUp',
+    ouvrir: 'اسألوا داري',
+    nouvelle: 'محادثة جديدة',
+    bonjour: 'مرحبًا {prenom}! أنا داري.',
+    intro: 'أعرف إقامتكم والتطبيق. إليكم ما يهم اليوم:',
+    rienAFaire: 'لا شيء مستعجل حاليًا — كل شيء على ما يرام.',
+    suggestionsTitre: 'يمكنكم أن تسألوني',
+    placeholder: 'اكتبوا سؤالكم…',
+    envoyer: 'إرسال',
+    reflechit: 'داري يفكر…',
+    ecrit: 'داري يكتب…',
+    indisponible: 'المحادثة غير مفعّلة بعد في هذا الفضاء. تبقى المؤشرات أعلاه محيَّنة.',
+    sature: 'أنا مشغول جدًا الآن — أعيدوا المحاولة بعد ثوانٍ.',
+    trop: 'طرحتم عليّ أسئلة كثيرة: لنأخذ استراحة قصيرة لبضع دقائق.',
+    erreur: 'تعذر عليّ الرد. تحققوا من اتصالكم وأعيدوا المحاولة.',
+    reessayer: 'إعادة المحاولة',
+    avertissement: 'قد يخطئ داري: تحققوا من المبالغ في الشاشة المعنية.',
+    webSeulement: 'على الحاسوب',
+    carteTitre: 'اطّلع داري على إقامتكم',
+    carteVide: 'لا شيء مستعجل اليوم. لديكم سؤال؟ أنا هنا.',
+    carteQuestion: 'طرح سؤال',
+    retour: 'رجوع',
+    introMoi: '{role} · {residence} ({lots}). أعرف ملفكم وكل شاشة في التطبيق — إليكم ما يهم اليوم:',
+    obBulle: [
+      'مرحبًا، أنا داري! أرافقكم في كل أنحاء التطبيق.',
+      'سؤال عن رسومكم؟ اسألوني، أجيبكم حتى آخر درهم.',
+      'آخذكم مباشرة إلى الشاشة المناسبة للإبلاغ عن مشكلة.',
+      'يوم الجمع العام، أذكّركم أين تصوّتون. هيا بنا؟',
+    ],
+  );
+
+  static DariDict of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+}
+
+extension DariDictContext on BuildContext {
+  DariDict get dari => DariDict.of(Localizations.localeOf(this));
+}
+
+/// Envois de fichiers, validation avant envoi, données périmées, déconnexion — `context.mup`.
+/// Classe à part (et non un champ de [MobileDict]) : ajout sans toucher aux constructeurs.
+class MobileUp {
+  const MobileUp({
+    required this.tooLargeTitle,
+    required this.tooLarge,
+    required this.badTypeTitle,
+    required this.badTypeImages,
+    required this.badTypeImagesPdf,
+    required this.badTypeDocuments,
+    required this.storageTitle,
+    required this.storage,
+    required this.networkTitle,
+    required this.network,
+    required this.cancelledTitle,
+    required this.cancelled,
+    required this.waiting,
+    required this.uploading,
+    required this.done,
+    required this.failed,
+    required this.retryOne,
+    required this.cancel,
+    required this.remove,
+    required this.sizeMo,
+    required this.sizeKo,
+    required this.photoVideo,
+    required this.fichier,
+    required this.fieldRequired,
+    required this.amountInvalid,
+    required this.amountPositive,
+    required this.phoneInvalid,
+    required this.integerInvalid,
+    required this.periodInvalid,
+    required this.numberInvalid,
+    required this.valuePositive,
+    required this.endAfterStart,
+    required this.amountAmbiguous,
+    required this.or,
+    required this.missing,
+    required this.missingSep,
+    required this.missingProof,
+    required this.missingFile,
+    required this.missingCategory,
+    required this.staleAt,
+    required this.staleOn,
+    required this.logoutTitle,
+    required this.logoutBody,
+  });
+
+  final String tooLargeTitle, tooLarge, badTypeTitle, badTypeImages, badTypeImagesPdf, badTypeDocuments, storageTitle, storage, networkTitle, network, cancelledTitle, cancelled;
+  final String waiting, uploading, done, failed, retryOne, cancel, remove, sizeMo, sizeKo, photoVideo, fichier;
+  final String fieldRequired, amountInvalid, amountPositive, phoneInvalid, integerInvalid, periodInvalid, numberInvalid, valuePositive, endAfterStart, amountAmbiguous, or, missing, missingSep, missingProof, missingFile, missingCategory;
+  final String staleAt, staleOn, logoutTitle, logoutBody;
+
+  /// « À compléter : lot, montant » — texte d'aide sous un bouton d'envoi désactivé.
+  String missingList(List<String> champs) => fill(missing, {'champs': champs.join(missingSep)});
+
+  /// « 1.250 » seul : « Montant ambigu : 1 250 ou 1,25 ? » (la lecture décimale n'est proposée
+  /// que si elle tient en 2 décimales). Chiffres isolés en sens gauche-droite pour l'arabe.
+  String ambiguite(String brut) {
+    final t = brut.replaceAll(RegExp(r'\s| | '), '');
+    final i = t.indexOf(RegExp('[.,]'));
+    final entier = t.substring(0, i), reste = t.substring(i + 1);
+    final mille = '$entier $reste';
+    final choix = [mille, if (reste.endsWith('0')) '$entier,${reste.substring(0, 2)}'].map((x) => '\u2066$x\u2069').join(or);
+    return fill(amountAmbiguous, {'choix': choix});
+  }
+
+  static const fr = MobileUp(
+    tooLargeTitle: 'Fichier trop lourd',
+    tooLarge: 'Fichier trop lourd (max {max} Mo).',
+    badTypeTitle: 'Format non accepté',
+    badTypeImages: 'Format non accepté : photo uniquement (JPEG, PNG, WebP ou HEIC).',
+    badTypeImagesPdf: 'Format non accepté : PDF ou photo.',
+    badTypeDocuments: 'Format non accepté : PDF, photo, vidéo (MP4, MOV, WebM), Word, Excel, PowerPoint, OpenDocument, RTF, texte ou ZIP.',
+    storageTitle: 'Envoi du fichier refusé',
+    storage: 'Le stockage n\'a pas accepté le fichier. Réessayez dans un instant.',
+    networkTitle: 'Envoi interrompu',
+    network: 'La connexion a coupé pendant l\'envoi. Réessayez : les fichiers déjà envoyés ne repartiront pas.',
+    cancelledTitle: 'Envoi annulé',
+    cancelled: 'L\'envoi du fichier a été annulé.',
+    waiting: 'Prêt à envoyer',
+    uploading: 'Envoi… {pct} %',
+    done: 'Envoyé',
+    failed: 'Échec de l\'envoi',
+    retryOne: 'Renvoyer ce fichier',
+    cancel: 'Annuler l\'envoi',
+    remove: 'Retirer le fichier',
+    sizeMo: '{n} Mo',
+    sizeKo: '{n} Ko',
+    photoVideo: 'Photo ou vidéo',
+    fichier: 'Fichier (PDF, Word, Excel…)',
+    fieldRequired: 'Champ obligatoire',
+    amountInvalid: 'Montant invalide — exemple : 1 250,50',
+    amountPositive: 'Le montant doit être supérieur à 0',
+    phoneInvalid: 'Numéro invalide — exemple : +212 6 12 34 56 78',
+    integerInvalid: 'Saisissez un nombre entier',
+    periodInvalid: 'Format attendu : AAAA-MM (ex. 2026-10)',
+    numberInvalid: 'Nombre invalide — exemple : 125,5',
+    valuePositive: 'La valeur doit être supérieure à 0',
+    endAfterStart: 'L\'heure de fin doit être après l\'heure de début',
+    amountAmbiguous: 'Montant ambigu : {choix} ?',
+    or: ' ou ',
+    missing: 'À compléter : {champs}',
+    missingSep: ', ',
+    missingProof: 'preuve de paiement',
+    missingFile: 'fichier',
+    missingCategory: 'catégorie',
+    staleAt: 'Données de {heure} — serveur injoignable',
+    staleOn: 'Données du {date} à {heure} — serveur injoignable',
+    logoutTitle: 'Se déconnecter ?',
+    logoutBody: 'Vous devrez vous reconnecter pour accéder à votre résidence. Les pages gardées sur ce téléphone seront effacées.',
+  );
+
+  static const ar = MobileUp(
+    tooLargeTitle: 'الملف كبير جدًا',
+    tooLarge: 'الملف كبير جدًا (الحد الأقصى {max} ميغابايت).',
+    badTypeTitle: 'صيغة غير مقبولة',
+    badTypeImages: 'صيغة غير مقبولة: الصور فقط (JPEG أو PNG أو WebP أو HEIC).',
+    badTypeImagesPdf: 'صيغة غير مقبولة: ملف PDF أو صورة.',
+    badTypeDocuments: 'صيغة غير مقبولة: PDF أو صورة أو فيديو (MP4 أو MOV أو WebM) أو Word أو Excel أو PowerPoint أو OpenDocument أو RTF أو نص أو ZIP.',
+    storageTitle: 'رُفض إرسال الملف',
+    storage: 'لم يقبل التخزين الملف. أعيدوا المحاولة بعد لحظات.',
+    networkTitle: 'انقطع الإرسال',
+    network: 'انقطع الاتصال أثناء الإرسال. أعيدوا المحاولة: الملفات المُرسَلة لن تُرسَل مرة أخرى.',
+    cancelledTitle: 'أُلغي الإرسال',
+    cancelled: 'أُلغي إرسال الملف.',
+    waiting: 'جاهز للإرسال',
+    uploading: 'جارٍ الإرسال… {pct}٪',
+    done: 'أُرسل',
+    failed: 'فشل الإرسال',
+    retryOne: 'إعادة إرسال هذا الملف',
+    cancel: 'إلغاء الإرسال',
+    remove: 'إزالة الملف',
+    sizeMo: '{n} ميغابايت',
+    sizeKo: '{n} كيلوبايت',
+    photoVideo: 'صورة أو فيديو',
+    fichier: 'ملف (PDF أو Word أو Excel…)',
+    fieldRequired: 'حقل إلزامي',
+    amountInvalid: 'مبلغ غير صالح — مثال: \u20661 250,50\u2069',
+    amountPositive: 'يجب أن يكون المبلغ أكبر من 0',
+    phoneInvalid: 'رقم غير صالح — مثال: \u2066+212 6 12 34 56 78\u2069',
+    integerInvalid: 'أدخلوا عددًا صحيحًا',
+    periodInvalid: 'الصيغة المطلوبة: \u2066YYYY-MM\u2069 (مثال: \u20662026-10\u2069)',
+    numberInvalid: 'عدد غير صالح — مثال: \u2066125,5\u2069',
+    valuePositive: 'يجب أن تكون القيمة أكبر من 0',
+    endAfterStart: 'يجب أن تكون ساعة النهاية بعد ساعة البداية',
+    amountAmbiguous: 'مبلغ ملتبس: {choix}؟',
+    or: ' أو ',
+    missing: 'يجب إكمال: {champs}',
+    missingSep: '، ',
+    missingProof: 'إثبات الأداء',
+    missingFile: 'الملف',
+    missingCategory: 'الفئة',
+    staleAt: 'معطيات الساعة {heure} — تعذّر الوصول إلى الخادم',
+    staleOn: 'معطيات {date} على الساعة {heure} — تعذّر الوصول إلى الخادم',
+    logoutTitle: 'تسجيل الخروج؟',
+    logoutBody: 'سيتعيّن عليكم تسجيل الدخول من جديد للوصول إلى إقامتكم. ستُمحى الصفحات المحفوظة على هذا الهاتف.',
+  );
+
+  static MobileUp of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+}
+
+extension MobileUpContext on BuildContext {
+  MobileUp get mup => MobileUp.of(Localizations.localeOf(this));
+}

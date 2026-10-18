@@ -43,16 +43,12 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
     final synthese = ctx.voitFinancesGlobales || ctx.isProprietaire ? ref.watch(syntheseProvider) : null;
     final soldes = synthese?.valueOrNull == null ? <String, BigInt>{} : soldeParLot(synthese!.valueOrNull!);
     final racine = !context.canPop();
-    return Scaffold(
-      appBar: racine ? ShellHeader(title: ctx.isResident ? d.lots.mesLots : d.lots.title) : AppBar(title: Text(ctx.isResident ? d.lots.mesLots : d.lots.title)),
-      floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null,
-      body: SuRefresh(
-        onRefresh: () async {
-          await refreshing(ref, [lotsProvider, syntheseProvider]);
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-          children: [
+    final titre = ctx.isResident ? d.lots.mesLots : d.lots.title;
+    final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null;
+    Future<void> refresh() => refreshing(ref, [lotsProvider, syntheseProvider]);
+    final contenu = <Widget>[
+            // Copie du téléphone affichée faute de serveur : on le dit (swr.dart).
+            StaleBanner(const ['/lots'], onRetry: refresh),
             PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: ctx.copropriete?.adresse),
             if (ctx.copropriete != null && !ctx.isResident) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(fill(d.lots.subtitle, {'count': lots.valueOrNull?.length ?? '…', 'tantiemes': formatEntier(ctx.copropriete!.totalTantiemes)}), style: t.bodyMedium?.copyWith(color: SuColors.soft))),
             SuSearchField(hint: d.common.search, onChanged: (v) => setState(() => _q = v.toLowerCase())),
@@ -85,8 +81,16 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
                   ),
               ]);
             })),
-          ],
-        ),
+    ];
+    // Ouverte depuis « Plus » / un lien : page standard (grand titre, retour rond) ; racine
+    // d'onglet : en-tête du shell (avatar, résidence, cloche) avec le titre de l'onglet.
+    if (!racine) return SuPage(title: titre, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: contenu);
+    return Scaffold(
+      appBar: ShellHeader(title: titre),
+      floatingActionButton: fab,
+      body: SuRefresh(
+        onRefresh: refresh,
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 96), children: contenu),
       ),
     );
   }
@@ -133,9 +137,9 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
     final ctx = ref.watch(appContextProvider);
     final d = context.dict;
     final lot = ref.watch(lotProvider(widget.id));
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(lot.valueOrNull == null ? d.lots.title : '${d.enums.typeLot[lot.valueOrNull!.typeLot] ?? ''} ${lot.valueOrNull!.numero}'),
+    // Page standard (retour rond, titre compact) : les onglets passent en `bottom`, le corps en `body`.
+    return SuPage(
+        title: lot.valueOrNull == null ? d.lots.title : '${d.enums.typeLot[lot.valueOrNull!.typeLot] ?? ''} ${lot.valueOrNull!.numero}',
         actions: [
           if (ctx.isGestion)
             PopupMenuButton<String>(
@@ -157,7 +161,6 @@ class _LotDetailScreenState extends ConsumerState<LotDetailScreen> with SingleTi
             ),
         ],
         bottom: TabBar(controller: _tabs, isScrollable: true, tabAlignment: TabAlignment.start, tabs: [Tab(text: d.lots.onglets.propriete), Tab(text: d.lots.onglets.occupation), Tab(text: d.lots.onglets.finances), Tab(text: d.lots.onglets.parkings), Tab(text: d.lots.onglets.historique)]),
-      ),
       body: AsyncView(
         lot,
         onRetry: () => ref.invalidate(lotProvider(widget.id)),
@@ -396,7 +399,7 @@ class _Finances extends ConsumerWidget {
                                           crossAxisAlignment: CrossAxisAlignment.end,
                                           children: [
                                             AnimatedAmount(li.montantDu, currency: false, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
-                                            Padding(padding: const EdgeInsets.only(top: 3), child: Text('${d.finances.paye.toLowerCase()} ${formatMontant(li.montantPaye)}', style: t.bodySmall)),
+                                            Padding(padding: const EdgeInsets.only(top: 3), child: Text('${d.finances.paye.toLowerCase()} ${formatMAD(li.montantPaye, l)}', style: t.bodySmall)),
                                           ],
                                         ),
                                       ],
@@ -599,6 +602,8 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
   bool _loading = false;
   bool _init = false;
   ApiFail? _fail;
+  /// Erreurs de saisie posées avant l'envoi (format des nombres) — l'API n'est pas appelée.
+  String? _tantiemesErr, _superficieErr;
 
   @override
   Widget build(BuildContext context) {
@@ -622,13 +627,13 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
       children: [
         SuSelect<String>(label: d.lots.type, value: _type, options: d.enums.typeLot.keys.toList(), labelOf: (v) => d.enums.typeLot[v]!, onChanged: (v) => setState(() => _type = v), required: true),
         const SizedBox(height: 12),
-        SuField(label: d.lots.numero, controller: _numero, required: true, error: fieldError(_fail, 'numero')),
+        SuField(label: d.lots.numero, controller: _numero, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'numero')),
         const SizedBox(height: 12),
         SuField(label: d.lots.etage, controller: _etage, keyboardType: const TextInputType.numberWithOptions(signed: true), inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[-0-9]'))], error: fieldError(_fail, 'etage'), optionalLabel: d.common.optional),
         const SizedBox(height: 12),
-        SuField(label: d.lots.tantiemes, controller: _tantiemes, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: fill(d.lots.tantiemesSur, {'total': formatEntier(ref.read(appContextProvider).copropriete?.totalTantiemes)}), error: fieldError(_fail, 'tantiemes')),
+        SuField(label: d.lots.tantiemes, controller: _tantiemes, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, required: true, help: fill(d.lots.tantiemesSur, {'total': formatEntier(ref.read(appContextProvider).copropriete?.totalTantiemes)}), onChanged: (_) => setState(() => _tantiemesErr = null), error: _tantiemesErr ?? fieldError(_fail, 'tantiemes')),
         const SizedBox(height: 12),
-        SuField(label: d.lots.superficie, controller: _superficie, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, optionalLabel: d.common.optional, error: fieldError(_fail, 'superficie')),
+        SuField(label: d.lots.superficie, controller: _superficie, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, optionalLabel: d.common.optional, onChanged: (_) => setState(() => _superficieErr = null), error: _superficieErr ?? fieldError(_fail, 'superficie')),
         const SizedBox(height: 12),
         SuSelect<String?>(label: d.lots.typeUsage, value: _usage, options: [null, ...d.lots.usages.keys], labelOf: (v) => v == null ? d.common.none : d.lots.usages[v]!, onChanged: (v) => setState(() => _usage = v)),
         const SizedBox(height: 12),
@@ -636,12 +641,31 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
         const SizedBox(height: 18),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(label: d.common.save, loading: _loading, fail: _fail, onPressed: _submit),
+        SubmitButton(
+          label: d.common.save,
+          loading: _loading,
+          fail: _fail,
+          missing: [
+            if (_numero.text.trim().isEmpty) d.lots.numero,
+            if (_tantiemes.text.trim().isEmpty) d.lots.tantiemes,
+          ],
+          onPressed: _numero.text.trim().isEmpty || _tantiemes.text.trim().isEmpty ? null : _submit,
+        ),
       ],
     );
   }
 
   Future<void> _submit() async {
+    // Nombres lisibles d'abord (virgule acceptée) ; une erreur reste sous le champ, sans envoi.
+    final tErr = SuValidators.nombre(context)(_tantiemes.text);
+    final sErr = SuValidators.nombre(context, optional: true)(_superficie.text);
+    if (tErr != null || sErr != null) {
+      setState(() {
+        _tantiemesErr = tErr;
+        _superficieErr = sErr;
+      });
+      return;
+    }
     setState(() {
       _loading = true;
       _fail = null;
@@ -651,8 +675,8 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
       'type_usage': _usage,
       'numero': _numero.text.trim(),
       'etage': _etage.text.trim().isEmpty ? null : int.tryParse(_etage.text.trim()),
-      'tantiemes': _tantiemes.text.trim(),
-      'superficie': _superficie.text.trim().isEmpty ? null : _superficie.text.trim(),
+      'tantiemes': parseMontant(_tantiemes.text)!,
+      'superficie': _superficie.text.trim().isEmpty ? null : parseMontant(_superficie.text),
       'lot_parent_id': _parent,
     };
     final api = ref.read(apiClientProvider);
@@ -702,7 +726,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
     final membres = annuaireDepuisLots(ref.watch(lotsProvider).valueOrNull ?? const []);
-    final total = _rows.fold(BigInt.zero, (a, r) => a + versCentimes(r.quote.text.trim().isEmpty ? '0' : r.quote.text.trim()));
+    final total = _rows.fold(BigInt.zero, (a, r) => a + versCentimes(parseMontant(r.quote.text) ?? '0'));
     final ratio100 = total.toInt() / 10000;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -759,7 +783,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
     });
     Map<String, dynamic> row(_Copro r) => {
           'utilisateur_id': r.user.text.trim(),
-          'quote_part': r.quote.text.trim(),
+          'quote_part': parseMontant(r.quote.text) ?? r.quote.text.trim(),
           'type_propriete': _type,
           'est_representant_indivision': _type == 'INDIVISION' ? r.rep : false,
           'date_debut': _date.text.trim(),
@@ -908,6 +932,8 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
   final _idem = IdemKey();
   final _email = TextEditingController();
   final _tel = TextEditingController();
+  /// Erreurs de saisie (format) posées avant la confirmation — l'API n'est pas appelée.
+  String? _emailErr, _telErr;
   bool _dette = false, _loading = false;
   ApiFail? _fail;
   String? _code;
@@ -959,9 +985,9 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
         const SizedBox(height: 4),
         Text(d.lots.transfertCoordonneesAide, style: t.bodySmall),
         const SizedBox(height: 10),
-        SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, error: fieldError(_fail, 'nouveau_proprietaire.email') ?? fieldError(_fail, 'nouveau_proprietaire')),
+        SuField(label: d.auth.emailLabel, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, onChanged: (_) => setState(() => _emailErr = null), error: _emailErr ?? fieldError(_fail, 'nouveau_proprietaire.email') ?? fieldError(_fail, 'nouveau_proprietaire')),
         const SizedBox(height: 10),
-        SuField(label: d.auth.phoneLabel, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, error: fieldError(_fail, 'nouveau_proprietaire.telephone')),
+        SuField(label: d.auth.phoneLabel, controller: _tel, keyboardType: TextInputType.phone, textDirection: TextDirection.ltr, onChanged: (_) => setState(() => _telErr = null), error: _telErr ?? fieldError(_fail, 'nouveau_proprietaire.telephone')),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
@@ -970,7 +996,18 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
           loading: _loading,
           fail: _fail,
           danger: true,
+          missing: [if (du > BigInt.zero && !_dette) d.lots.transfertDetteReprise],
           onPressed: (du > BigInt.zero && !_dette) ? null : () async {
+            // Formats vérifiés AVANT la confirmation d'un transfert irréversible.
+            final emailErr = SuValidators.email(context, optional: true)(_email.text);
+            final telErr = SuValidators.telephone(context)(_tel.text);
+            if (emailErr != null || telErr != null) {
+              setState(() {
+                _emailErr = emailErr;
+                _telErr = telErr;
+              });
+              return;
+            }
             final ok = await confirmDialog(context, title: d.lots.transfertEtape3, body: d.lots.transfertConfirmeAide, confirmLabel: d.lots.transfertConfirme, danger: true, irreversible: true);
             if (!ok) return;
             setState(() {

@@ -24,6 +24,33 @@ class ReadCache {
   static final ReadCache instance = ReadCache._();
 
   final _memoire = <String, String>{};
+
+  /// Date de la copie connue, par clé (écriture, ou date du fichier lu sur le disque).
+  final _quand = <String, DateTime>{};
+
+  /// Lectures servies depuis la copie parce que le serveur n'a pas répondu : chemin de l'API
+  /// (`/annonces`) → date de la copie affichée. Vidé dès que le serveur répond, et à la
+  /// déconnexion. Lu par [staleProvider] (bandeau « Données du 14:02 — serveur injoignable »).
+  final ValueNotifier<Map<String, DateTime>> stale = ValueNotifier(const {});
+
+  DateTime? savedAt(String cle) => _quand[cle];
+
+  /// Le serveur vient de confirmer la copie (réponse identique) : elle date de maintenant.
+  void confirm(String cle) {
+    if (_memoire.containsKey(cle)) _quand[cle] = DateTime.now();
+  }
+
+  void markStale(String path, DateTime since) {
+    final cur = stale.value[path];
+    // On garde la plus ancienne : le bandeau ne doit jamais rajeunir des données.
+    if (cur != null && !since.isBefore(cur)) return;
+    stale.value = Map.unmodifiable({...stale.value, path: since});
+  }
+
+  void clearStale(String path) {
+    if (!stale.value.containsKey(path)) return;
+    stale.value = Map.unmodifiable({...stale.value}..remove(path));
+  }
   Directory? _dir;
   Future<Directory?>? _ouverture;
 
@@ -58,6 +85,7 @@ class ReadCache {
       if (!await f.exists()) return null;
       final raw = await f.readAsString();
       _memoire[cle] = raw;
+      _quand[cle] = await f.lastModified();
       return raw;
     } catch (_) {
       return null;
@@ -66,6 +94,7 @@ class ReadCache {
 
   Future<void> write(String cle, String raw, {required bool disque}) async {
     _memoire[cle] = raw;
+    _quand[cle] = DateTime.now();
     if (!disque) return;
     final d = await _dossier();
     if (d == null) return;
@@ -77,6 +106,8 @@ class ReadCache {
   /// Déconnexion / changement de compte : plus rien de l'ancien utilisateur sur le téléphone.
   Future<void> clear() async {
     _memoire.clear();
+    _quand.clear();
+    stale.value = const {};
     final d = await _dossier();
     if (d == null) return;
     try {
@@ -102,12 +133,23 @@ Future<T> swr<T>(Ref ref, String path, {Map<String, Object?>? query, required T 
   if (connu != null) {
     // Revalidation silencieuse : l'écran ne bouge que si le serveur dit autre chose.
     unawaited(api.get<dynamic>(path, query: query, coproprieteId: coproprieteId).then((r) async {
-      if (r is! ApiOk<dynamic>) return;
-      final raw = jsonEncode(r.data);
-      if (raw == connu) return;
+      if (r is ApiFail<dynamic>) {
+        // Serveur injoignable (Wi-Fi sans internet, API en panne) : la copie reste affichée, mais
+        // l'écran le DIT (bandeau « Données du … — serveur injoignable »).
+        if (unreachable(r)) cache.markStale(path, cache.savedAt(cle) ?? DateTime.now());
+        return;
+      }
+      cache.clearStale(path);
+      final raw = jsonEncode((r as ApiOk<dynamic>).data);
+      if (raw == connu) {
+        cache.confirm(cle);
+        return;
+      }
       await cache.write(cle, raw, disque: disque);
       if (vivant) ref.invalidateSelf();
-    }).catchError((_) {}));
+    }).catchError((Object e) {
+      debugPrint('swr $path : revalidation impossible ($e)');
+    }));
     try {
       return parse(jsonDecode(connu));
     } catch (_) {
@@ -116,11 +158,30 @@ Future<T> swr<T>(Ref ref, String path, {Map<String, Object?>? query, required T 
   }
   final r = await api.get<dynamic>(path, query: query, coproprieteId: coproprieteId);
   if (r is ApiOk<dynamic>) {
+    cache.clearStale(path);
     unawaited(cache.write(cle, jsonEncode(r.data), disque: disque));
     return parse(r.data);
   }
-  // Réseau tombé mais une copie existe (même illisible partiellement) : mieux vaut l'ancienne page.
-  if (connu != null) return parse(jsonDecode(connu));
   final f = r as ApiFail<dynamic>;
+  // Réseau tombé mais une copie existe (même illisible partiellement) : mieux vaut l'ancienne page.
+  if (connu != null) {
+    final quand = cache.savedAt(cle) ?? DateTime.now();
+    // Après la construction du fournisseur : on ne modifie pas un état partagé pendant un build.
+    if (unreachable(f)) scheduleMicrotask(() => cache.markStale(path, quand));
+    return parse(jsonDecode(connu));
+  }
   throw ApiException(f.error, f.status, requestId: f.requestId);
 }
+
+/// Le serveur n'a pas répondu (réseau, délai, 5xx) — par opposition à un refus (4xx).
+bool unreachable(ApiFail<dynamic> f) => f.status == 0 || f.status >= 500 || f.error.code == 'NETWORK' || f.error.code == 'TIMEOUT';
+
+/// Date de la copie servie pour [path] quand le serveur est injoignable ; `null` = à jour.
+/// Les écrans l'affichent via `StaleBanner` (SuPage `staleKeys:`).
+final staleProvider = Provider.autoDispose.family<DateTime?, String>((ref, path) {
+  final n = ReadCache.instance.stale;
+  void changed() => ref.invalidateSelf();
+  n.addListener(changed);
+  ref.onDispose(() => n.removeListener(changed));
+  return n.value[path];
+});

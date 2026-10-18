@@ -136,6 +136,9 @@ class _DocumentViewerScreenState extends State<DocumentViewerScreen> {
     final d = context.dict;
     final md = context.mdict;
     final t = Theme.of(context).textTheme;
+    // Barre propre (pas SuPage) : la visionneuse est une feuille plein écran sur toile greige,
+    // fermée par « × » (pas un retour) avec le partage en action — SuPage imposerait la flèche
+    // de retour, le fond blanc et un grand titre au-dessus des pages.
     // Visionneuse de relevé Wise : pages blanches posées sur la toile greige, fermeture et
     // partage en boutons ronds blancs, compteur de pages en pill encre flottante.
     return Scaffold(
