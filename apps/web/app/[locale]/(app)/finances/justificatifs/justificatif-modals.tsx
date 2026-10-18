@@ -1,126 +1,138 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { Modal } from "../../../../../components/ui/modal";
+import { useActionState, useState } from "react";
+import { ActionModal } from "../../../../../components/ui/action-modal";
+import { ConfirmAction } from "../../../../../components/ui/confirm-action";
 import { IrreversibleNotice } from "../../../../../components/ui/irreversible-notice";
 import { Field, Input, Textarea } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import { formValue } from "../../../../../lib/form-values";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import type { CompteBancaire, Justificatif } from "../../../../../lib/api/types";
 import { formatMAD } from "../../../../../lib/format";
 import { IconPlus } from "../../../../../components/ui/icons";
-import { celebrate } from "../../../../../lib/success";
 import { validerJustificatif, rejeterJustificatif, annulerJustificatif, remplacerComptes, lireRibCompte } from "./actions";
 
-function Succes({ dict, message, onClose }: { dict: Dict; message: string; onClose: () => void }) {
-  return <div className="space-y-4"><p className="text-sm text-ink-strong">{message}</p><div className="flex justify-end"><Button variant="secondary" onClick={onClose}>{dict.common.close}</Button></div></div>;
-}
 function Pied({ dict, onCancel, label, danger }: { dict: Dict; onCancel: () => void; label: string; danger?: boolean }) {
-  return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
+  return <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.close}</Button><SubmitButton variant={danger ? "danger" : "primary"}>{label}</SubmitButton></div>;
 }
 
 export function ValiderModal({ dict, locale, justificatif }: { dict: Dict; locale: Locale; justificatif: Justificatif }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(validerJustificatif, IDLE);
   const j = dict.justificatifs;
   // Validation = paiement encaissé : écran de succès plein (Wise), la modale se referme.
-  const titreValide = j.valide;
-  useEffect(() => {
-    if (state.status !== "success") return;
-    setOpen(false);
-    celebrate({ titre: titreValide, illustration: "ok-paiement", moment: "payment" });
-  }, [state, titreValide]);
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>{j.valider}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={j.validerTitre} subtitle={`${justificatif.lot?.numero ?? ""} · ${formatMAD(justificatif.montant, locale)}`} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={j.valide} onClose={() => setOpen(false)} /> : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
-            <p className="text-sm text-body">{j.validerCorps}</p>
-            <Field label={j.dateValeur} htmlFor="date_valeur" hint={j.dateValeurAide} optionalLabel={dict.common.optional} error={fieldError(state, "date_valeur")}>
-              <Input id="date_valeur" name="date_valeur" type="date" dir="ltr" defaultValue={justificatif.datePaiementDeclaree.slice(0, 10)} className="tnum text-start" />
-            </Field>
-            <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={j.valider} />
-          </form>
-        )}
-      </Modal>
-    </>
+    <ActionModal
+      action={validerJustificatif}
+      title={j.validerTitre}
+      subtitle={`${justificatif.lot?.numero ?? ""} · ${formatMAD(justificatif.montant, locale)}`}
+      closeLabel={dict.common.close}
+      success={{ message: j.valide, illustration: "ok-paiement", moment: "payment" }}
+      trigger={(open) => <Button onClick={open}>{j.valider}</Button>}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
+          <p className="text-sm text-body">{j.validerCorps}</p>
+          <Field label={j.dateValeur} htmlFor="date_valeur" hint={j.dateValeurAide} optionalLabel={dict.common.optional} error={fieldError(state, "date_valeur")}>
+            <Input id="date_valeur" name="date_valeur" type="date" dir="ltr" defaultValue={formValue(state, "date_valeur", justificatif.datePaiementDeclaree.slice(0, 10))} className="tnum text-start" />
+          </Field>
+          <FormAlert state={state} />
+          <Pied dict={dict} onCancel={close} label={j.valider} />
+        </form>
+      )}
+    </ActionModal>
   );
 }
 
+/** Rejet — décision probante (horodatée au dossier) : motif obligatoire + avertissement. */
 export function RejeterModal({ dict, locale, justificatif }: { dict: Dict; locale: Locale; justificatif: Justificatif }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(rejeterJustificatif, IDLE);
   const j = dict.justificatifs;
   return (
-    <>
-      <Button variant="dangerGhost" onClick={() => setOpen(true)}>{j.rejeter}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={j.rejeterTitre} closeLabel={dict.common.close}>
-        {state.status === "success" ? <Succes dict={dict} message={j.rejete} onClose={() => setOpen(false)} /> : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
-            <Field label={j.rejeterMotif} htmlFor="motif" hint={j.rejeterMotifAide} required error={fieldError(state, "motif")}>
-              <Textarea id="motif" name="motif" rows={3} required maxLength={1000} />
-            </Field>
-            <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={j.rejeter} danger />
-          </form>
-        )}
-      </Modal>
-    </>
+    <ActionModal
+      action={rejeterJustificatif}
+      title={j.rejeterTitre}
+      subtitle={`${justificatif.lot?.numero ?? ""} · ${formatMAD(justificatif.montant, locale)}`}
+      closeLabel={dict.common.close}
+      success={{ message: j.rejete, closeAndToast: true }}
+      trigger={(open) => <Button variant="dangerGhost" onClick={open}>{j.rejeter}</Button>}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
+          <Field label={j.rejeterMotif} htmlFor="motif" hint={j.rejeterMotifAide} required error={fieldError(state, "motif")}>
+            <Textarea id="motif" name="motif" rows={3} required maxLength={1000} defaultValue={formValue(state, "motif")} />
+          </Field>
+          <IrreversibleNotice>{dict.formulaires.confirmer.justificatifRejeterConsequence}</IrreversibleNotice>
+          <FormAlert state={state} />
+          <Pied dict={dict} onCancel={close} label={j.rejeterTitre} danger />
+        </form>
+      )}
+    </ActionModal>
   );
 }
 
+/** Annulation par le déclarant — jamais en un clic : la déclaration ne se rétablit pas. */
 export function AnnulerBouton({ dict, locale, justificatif }: { dict: Dict; locale: Locale; justificatif: Justificatif }) {
-  const [state, action] = useActionState(annulerJustificatif, IDLE);
   const j = dict.justificatifs;
-  if (state.status === "success") return <span className="text-[13px] font-medium text-soft">{j.annule}</span>;
+  const f = dict.formulaires.confirmer;
   return (
-    <form action={action} className="inline-flex flex-col items-end gap-1">
-      <input type="hidden" name="locale" value={locale} /><input type="hidden" name="justificatif_id" value={justificatif.id} />
-      <SubmitButton variant="dangerGhost" size="sm">{j.annuler}</SubmitButton>
-      {state.status === "error" ? <FormAlert state={state} /> : null}
-    </form>
+    <ConfirmAction
+      action={annulerJustificatif}
+      fields={{ locale, justificatif_id: justificatif.id }}
+      triggerLabel={j.annuler}
+      title={f.justificatifAnnulerTitre}
+      question={fill(f.justificatifAnnulerQuestion, { montant: formatMAD(justificatif.montant, locale) })}
+      consequence={f.justificatifAnnulerConsequence}
+      irreversible
+      confirmLabel={f.justificatifAnnulerConfirmer}
+      closeLabel={dict.common.close}
+      success={j.annule}
+    />
   );
 }
 
 /** Syndic : gestion des comptes bancaires (RIB complet saisi, jamais ré-affiché sans action explicite). */
 export function ComptesModal({ dict, locale, coproprieteId, comptes }: { dict: Dict; locale: Locale; coproprieteId: string; comptes: CompteBancaire[] }) {
-  const [open, setOpen] = useState(false);
   const [n, setN] = useState(Math.max(1, comptes.length));
-  const [state, action] = useActionState(remplacerComptes, IDLE);
   const j = dict.justificatifs;
   return (
-    <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>{j.gererComptes}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={j.comptes} subtitle={j.aucunCompteAide} closeLabel={dict.common.close} wide>
-        {state.status === "success" ? <Succes dict={dict} message={dict.common.updated} onClose={() => setOpen(false)} /> : (
-          <form action={action} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproprieteId} />
-            <IrreversibleNotice>{j.ribAfficher} : {dict.depenses.ribAfficherAide}</IrreversibleNotice>
-            {Array.from({ length: n }).map((_, i) => {
-              const c = comptes[i];
-              return (
-                <div key={i} className="grid gap-3 rounded-[20px] bg-tile p-4 sm:grid-cols-3">
-                  <Field label={j.libelle} htmlFor={`lib_${i}`} required><Input id={`lib_${i}`} name="libelle" required maxLength={120} defaultValue={c?.libelle ?? ""} /></Field>
-                  <Field label={j.banque} htmlFor={`bq_${i}`} required><Input id={`bq_${i}`} name="banque" required maxLength={120} defaultValue={c?.banque ?? ""} /></Field>
-                  <Field label={c ? `${j.rib} · ${c.rib_masque}` : j.rib} htmlFor={`rib_${i}`} required={!c} error={fieldError(state, `comptes.${i}.rib`)}>
-                    <Input id={`rib_${i}`} name="rib" dir="ltr" inputMode="numeric" pattern="[0-9 ]{24,30}" required autoComplete="off" placeholder="007 780 …" className="tnum text-start" />
-                  </Field>
-                </div>
-              );
-            })}
-            <Button type="button" variant="ghost" size="sm" onClick={() => setN(n + 1)}><IconPlus width={16} height={16} />{j.ajouterCompte}</Button>
-            <FormAlert state={state} />
-            <Pied dict={dict} onCancel={() => setOpen(false)} label={dict.common.save} />
-          </form>
-        )}
-      </Modal>
-    </>
+    <ActionModal
+      action={remplacerComptes}
+      title={j.comptes}
+      subtitle={j.aucunCompteAide}
+      closeLabel={dict.common.close}
+      wide
+      success={{ message: dict.common.updated }}
+      trigger={(open) => <Button variant="secondary" onClick={open}>{j.gererComptes}</Button>}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
+          <input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproprieteId} />
+          <IrreversibleNotice>{j.ribAfficher} : {dict.depenses.ribAfficherAide}</IrreversibleNotice>
+          {Array.from({ length: n }).map((_, i) => {
+            const c = comptes[i];
+            const libelles = state.status === "error" ? state.values?.libelle : undefined;
+            const banques = state.status === "error" ? state.values?.banque : undefined;
+            const saisi = (v: string | string[] | undefined) => (Array.isArray(v) ? v[i] : i === 0 ? v : undefined);
+            return (
+              <div key={i} className="grid gap-3 rounded-[20px] bg-tile p-4 sm:grid-cols-3">
+                <Field label={j.libelle} htmlFor={`lib_${i}`} required><Input id={`lib_${i}`} name="libelle" required maxLength={120} defaultValue={saisi(libelles) ?? c?.libelle ?? ""} /></Field>
+                <Field label={j.banque} htmlFor={`bq_${i}`} required><Input id={`bq_${i}`} name="banque" required maxLength={120} defaultValue={saisi(banques) ?? c?.banque ?? ""} /></Field>
+                {/* RIB : jamais renvoyé au navigateur après un échec (donnée bancaire) — à ressaisir. */}
+                <Field label={c ? `${j.rib} · ${c.rib_masque}` : j.rib} htmlFor={`rib_${i}`} required={!c} error={fieldError(state, `comptes.${i}.rib`)}>
+                  <Input id={`rib_${i}`} name="rib" dir="ltr" inputMode="numeric" pattern="[0-9 ]{24,30}" required autoComplete="off" placeholder="007 780 …" className="tnum text-start" />
+                </Field>
+              </div>
+            );
+          })}
+          <Button type="button" variant="ghost" size="sm" onClick={() => setN(n + 1)}><IconPlus width={16} height={16} />{j.ajouterCompte}</Button>
+          <FormAlert state={state} />
+          <Pied dict={dict} onCancel={close} label={dict.common.save} />
+        </form>
+      )}
+    </ActionModal>
   );
 }
 

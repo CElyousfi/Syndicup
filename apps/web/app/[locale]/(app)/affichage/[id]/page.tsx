@@ -54,7 +54,7 @@ export default async function AnnoncePage({ params, searchParams }: { params: Pr
           {peutModifier ? <ButtonLink href={p(`/affichage/${a.id}/modifier`)} variant="secondary">{dict.common.modify}</ButtonLink> : null}
           {a.statut === "BROUILLON" && peutModifier ? <PublierModal dict={dict} locale={ctx.locale} annonce={a} /> : null}
           {a.statut === "PUBLIEE" && peutModifier ? <ArchiverModal dict={dict} locale={ctx.locale} annonce={a} /> : null}
-          {a.statut === "BROUILLON" && peutModifier ? <SupprimerBouton dict={dict} locale={ctx.locale} id={a.id} /> : null}
+          {a.statut === "BROUILLON" && peutModifier ? <SupprimerBouton dict={dict} locale={ctx.locale} id={a.id} titre={a.titre} /> : null}
           {a.statut === "ARCHIVEE" && (syndic || a.categorie !== "URGENCE") ? <DesarchiverBouton dict={dict} locale={ctx.locale} id={a.id} /> : null}
         </div> : undefined}
       />

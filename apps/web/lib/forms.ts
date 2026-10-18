@@ -37,8 +37,42 @@ export type FormState =
       copiedLabel?: string;
       /** Message brut du serveur (FR) — repli texte pour les rares tests de contenu. */
       serverMessage?: string;
+      /**
+       * Saisie renvoyée telle quelle (chaînes uniquement — jamais un fichier, un mot de passe ni
+       * un RIB) : React 19 réinitialise un formulaire après son action, les champs la relisent
+       * via `formValue(state, nom, initial)` (lib/form-values.ts) pour ne rien perdre.
+       */
+      values?: FormValues;
+      /**
+       * Fichiers déjà téléversés dans le Storage avant une écriture idempotente dont l'issue est
+       * inconnue : le formulaire les renvoie tels quels (champs cachés) au lieu de re-téléverser,
+       * pour que le rejeu porte le MÊME contenu sous la même clé (<FichiersEnvoyes>).
+       */
+      envoyes?: FichierEnvoye[];
     }
   | { status: "success"; message?: string; data?: unknown };
+
+/** Valeurs soumises : une chaîne, ou la liste des valeurs d'un nom répété (cases multiples). */
+export type FormValues = Record<string, string | string[]>;
+
+/** Fichier déjà présent dans le Storage : chemin renvoyé par l'API (`storage_path`) + nom affiché. */
+export interface FichierEnvoye {
+  chemin: string;
+  nom: string;
+}
+
+/**
+ * Codes d'échec où l'on NE SAIT PAS si l'écriture a eu lieu : la même clé d'idempotence doit être
+ * rejouée. 409 CONFLICT en fait partie — même clé déjà traitée avec un autre contenu, ou encore en
+ * cours : le geste a peut-être déjà été enregistré, tirer une clé neuve risquerait un doublon.
+ */
+export const ISSUES_INCONNUES: ReadonlySet<string> = new Set([
+  "NETWORK",
+  "INTERNAL_ERROR",
+  "SERVICE_UNAVAILABLE",
+  "UNEXPECTED",
+  "CONFLICT",
+]);
 
 export type FormErrorState = Extract<FormState, { status: "error" }>;
 

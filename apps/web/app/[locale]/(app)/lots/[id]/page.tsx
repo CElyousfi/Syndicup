@@ -87,7 +87,7 @@ export default async function LotDetailPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
-  searchParams: Promise<{ onglet?: string }>;
+  searchParams: Promise<{ onglet?: string; cree?: string; maj?: string }>;
 }) {
   const { locale, id } = await params;
   const sp = await searchParams;
@@ -119,9 +119,8 @@ export default async function LotDetailPage({
   const indivision = proprietairesActifs.length > 1;
 
   const membres = gestion ? await annuaireMembres() : [];
-  const quoteExistante = Number(
-    (Number(sommeCentimes(proprietairesActifs.map((x) => x.quotePart))) / 100).toFixed(2)
-  );
+  // Somme exacte des quotes-parts (centièmes BigInt), convertie une seule fois pour l'affichage.
+  const quoteExistante = Number(versChaine(sommeCentimes(proprietairesActifs.map((x) => x.quotePart))));
 
   // Contexte des lignes financières (période, type, escalade) — un appel de synthèse partagé.
   const contextLignes =
@@ -145,6 +144,7 @@ export default async function LotDetailPage({
 
   return (
     <div className="page-root">
+      {sp.cree === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.lotCree}</Banner> : sp.maj === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.lotModifie}</Banner> : null}
       <PageHeader
         back={<BackLink href={p("/lots")} label={dict.nav.lots} />}
         title={`${dict.enums.typeLot[lot.typeLot]} ${lot.numero}`}
@@ -309,6 +309,7 @@ export default async function LotDetailPage({
           {occupantsActifs.length === 0 ? (
             <EmptyState
               title={dict.lots.aucunOccupant}
+              action={gestion ? <AjouterOccupantModal dict={dict} locale={ctx.locale} lotId={id} membres={membres} /> : undefined}
               icon={
                 <IconCircle tone="tosca" size={64}>
                   <CKey width={30} height={30} />

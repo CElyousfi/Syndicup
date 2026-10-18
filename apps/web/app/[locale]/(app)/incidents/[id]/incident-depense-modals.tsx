@@ -11,6 +11,9 @@ import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { BudgetPoste } from "../../../../../lib/api/types";
 import { IconPlus } from "../../../../../components/ui/icons";
 import { creerDepenseDepuisIncident, evaluerPrestataire } from "../../finances/depenses/actions";
+import { ActionModal } from "../../../../../components/ui/action-modal";
+import { formKey, formValue } from "../../../../../lib/form-values";
+import { MoneyInput } from "../../../../../components/ui/money-input";
 
 export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: { dict: Dict; locale: Locale; incidentId: string; postes: BudgetPoste[] }) {
   const [open, setOpen] = useState(false);
@@ -28,22 +31,22 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="incident_id" value={incidentId} />
           <Field label={d.libelle} htmlFor="di_libelle" optionalLabel={dict.common.optional}>
-            <Input id="di_libelle" name="libelle" maxLength={200} />
+            <Input id="di_libelle" name="libelle" maxLength={200} defaultValue={formValue(state, "libelle")} />
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={`${d.montantHt} (${dict.common.mad})`} htmlFor="di_ht" optionalLabel={dict.common.optional} error={fieldError(state, "montant_ht")}>
-              <Input id="di_ht" name="montant_ht" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" className="tnum text-start" />
+              <MoneyInput id="di_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_ht")} />
             </Field>
             <Field label={`${d.tva} (${dict.common.mad})`} htmlFor="di_tva" optionalLabel={dict.common.optional} error={fieldError(state, "tva")}>
-              <Input id="di_tva" name="tva" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" className="tnum text-start" />
+              <MoneyInput id="di_tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "tva")} />
             </Field>
             <Field label={`${d.montantTtc} (${dict.common.mad})`} htmlFor="di_ttc" required error={fieldError(state, "montant_ttc")}>
-              <Input id="di_ttc" name="montant_ttc" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" required className="tnum text-start" />
+              <MoneyInput id="di_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_ttc")} />
             </Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={d.poste} htmlFor="di_poste" optionalLabel={dict.common.optional} error={fieldError(state, "budget_poste_id")}>
-              <Select id="di_poste" name="budget_poste_id" defaultValue="">
+              <Select key={formKey(state, "budget_poste_id")} id="di_poste" name="budget_poste_id" defaultValue={formValue(state, "budget_poste_id", "")}>
                 <option value="">{d.horsPoste}</option>
                 {postes.map((p) => (
                   <option key={p.id} value={p.id}>{p.libelle} · {e.categorieDepense[p.categorie]}</option>
@@ -51,7 +54,7 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
               </Select>
             </Field>
             <Field label={d.source} htmlFor="di_source" required>
-              <Select id="di_source" name="source" defaultValue="COMPTE_COURANT">
+              <Select key={formKey(state, "source")} id="di_source" name="source" defaultValue={formValue(state, "source", "COMPTE_COURANT")}>
                 {(Object.keys(e.sourceFinancement) as Array<keyof typeof e.sourceFinancement>).map((s) => (
                   <option key={s} value={s}>{e.sourceFinancement[s]}</option>
                 ))}
@@ -60,7 +63,7 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
           </div>
           <FormAlert state={state} />
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.cancel}</Button>
+            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button>
             <SubmitButton>{dict.common.create}</SubmitButton>
           </div>
         </form>
@@ -70,21 +73,19 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
 }
 
 export function EvaluerPrestataireModal({ dict, locale, incidentId, prestataireNom }: { dict: Dict; locale: Locale; incidentId: string; prestataireNom: string }) {
-  const [open, setOpen] = useState(false);
   const [note, setNote] = useState(0);
-  const [state, action] = useActionState(evaluerPrestataire, IDLE);
   const d = dict.depenses;
   return (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>{d.evaluer}</Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={d.evaluerTitre} subtitle={prestataireNom} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <p className="text-sm text-ink-strong">{d.evalue}</p>
-            <div className="flex justify-end"><Button variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button></div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+    <ActionModal
+        action={evaluerPrestataire}
+        title={d.evaluerTitre}
+        subtitle={prestataireNom}
+        closeLabel={dict.common.close}
+        success={{ message: d.evalue }}
+        trigger={(open) => <Button variant="secondary" size="sm" onClick={open}>{d.evaluer}</Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="incident_id" value={incidentId} />
             <input type="hidden" name="note" value={note} />
@@ -107,16 +108,15 @@ export function EvaluerPrestataireModal({ dict, locale, incidentId, prestataireN
               </div>
             </Field>
             <Field label={d.commentaire} htmlFor="note_commentaire" optionalLabel={dict.common.optional}>
-              <Textarea id="note_commentaire" name="commentaire" rows={3} maxLength={1000} />
+              <Textarea id="note_commentaire" name="commentaire" rows={3} maxLength={1000} defaultValue={formValue(state, "commentaire")} />
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.cancel}</Button>
+              <Button type="button" variant="secondary" onClick={close}>{dict.common.close}</Button>
               <SubmitButton disabled={note === 0}>{dict.common.send}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }

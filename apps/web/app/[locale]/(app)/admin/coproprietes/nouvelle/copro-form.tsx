@@ -22,6 +22,7 @@ import type { CanalInvitation, TypeResidence } from "../../../../../../lib/api/t
 import { creerCopropriete, inviterSyndicAdmin } from "../../actions";
 import { CodeInvitation } from "../../../invitations/invitation-modals";
 import { celebrate } from "../../../../../../lib/success";
+import { formKey, formValue } from "../../../../../../lib/form-values";
 
 export function CoproForm({ dict, locale }: { dict: Dict; locale: Locale }) {
   const ad = dict.admin;
@@ -98,21 +99,21 @@ function EtapeInfos({
     <form action={action} className="card space-y-4 p-6 sm:p-7">
       <input type="hidden" name="locale" value={locale} />
       <Field label={pa.nom} htmlFor="n_nom" required error={fieldError(state, "nom")}>
-        <Input id="n_nom" name="nom" required maxLength={200} />
+        <Input id="n_nom" name="nom" required maxLength={200} defaultValue={formValue(state, "nom")} />
       </Field>
       <Field label={pa.adresse} htmlFor="n_adresse" required error={fieldError(state, "adresse")}>
-        <Input id="n_adresse" name="adresse" required maxLength={500} />
+        <Input id="n_adresse" name="adresse" required maxLength={500} defaultValue={formValue(state, "adresse")} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={pa.ville} htmlFor="n_ville" required error={fieldError(state, "ville")}>
-          <Input id="n_ville" name="ville" required maxLength={100} />
+          <Input id="n_ville" name="ville" required maxLength={100} defaultValue={formValue(state, "ville")} />
         </Field>
         <Field label={pa.nbLots} htmlFor="n_nb" required error={fieldError(state, "nb_lots")}>
-          <Input id="n_nb" name="nb_lots" type="number" min={1} max={10000} required className="tnum" />
+          <Input id="n_nb" name="nb_lots" type="number" min={1} max={10000} required className="tnum" defaultValue={formValue(state, "nb_lots")} />
         </Field>
       </div>
       <Field label={pa.typeResidence} htmlFor="n_type" required>
-        <Select id="n_type" name="type_residence" defaultValue="IMMEUBLE_COLLECTIF" required>
+        <Select key={formKey(state, "type_residence")} id="n_type" name="type_residence" defaultValue={formValue(state, "type_residence", "IMMEUBLE_COLLECTIF")} required>
           {(Object.keys(dict.enums.typeResidence) as TypeResidence[]).map((t) => (
             <option key={t} value={t}>
               {dict.enums.typeResidence[t]}
@@ -201,7 +202,7 @@ function EtapeSyndic({
         </div>
       </div>
       <Field label={dict.invitations.canal} htmlFor="w_canal" required>
-        <Select id="w_canal" name="canal" defaultValue="WHATSAPP" required>
+        <Select key={formKey(state, "canal")} id="w_canal" name="canal" defaultValue={formValue(state, "canal", "WHATSAPP")} required>
           {canaux.map((c) => (
             <option key={c} value={c}>
               {dict.enums.canal[c]}

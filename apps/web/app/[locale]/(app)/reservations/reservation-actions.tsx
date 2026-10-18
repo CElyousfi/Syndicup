@@ -1,18 +1,14 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Modal } from "../../../../components/ui/modal";
+import { useActionState } from "react";
 import { Field, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
-import { Banner } from "../../../../components/ui/banner";
 import { IDLE } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
-import {
-  annulerReservation,
-  rejeterReservation,
-  validerReservation,
-} from "../espaces-communs/actions";
+import { annulerReservation, rejeterReservation, validerReservation } from "../espaces-communs/actions";
+import { ActionModal } from "../../../../components/ui/action-modal";
+import { formValue } from "../../../../lib/form-values";
 
 export function ValiderForm({
   dict,
@@ -43,42 +39,34 @@ export function RejeterModal({
   locale: Locale;
   reservationId: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(rejeterReservation, IDLE);
   const e = dict.espaces;
   return (
-    <>
-      <Button variant="dangerGhost" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={rejeterReservation}
+        title={e.rejeter}
+        closeLabel={dict.common.close}
+        success={{ message: e.reservationRejetee }}
+        trigger={(open) => <Button variant="dangerGhost" size="sm" onClick={open}>
         {e.rejeter}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={e.rejeter} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{e.reservationRejetee}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="reservation_id" value={reservationId} />
             <Field label={e.motifRejet} htmlFor="motif" hint={e.motifRejetAide} required>
-              <Textarea id="motif" name="motif" required minLength={3} rows={3} />
+              <Textarea id="motif" name="motif" required minLength={3} rows={3} defaultValue={formValue(state, "motif")} />
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+              <Button type="button" variant="secondary" onClick={close}>
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{e.rejeter}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }
 
@@ -91,39 +79,31 @@ export function AnnulerModal({
   locale: Locale;
   reservationId: string;
 }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(annulerReservation, IDLE);
   const e = dict.espaces;
   return (
-    <>
-      <Button variant="dangerGhost" size="sm" onClick={() => setOpen(true)}>
-        {dict.common.cancel}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={e.annulerReservation} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{e.reservationAnnulee}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+    <ActionModal
+        action={annulerReservation}
+        title={e.annulerReservation}
+        closeLabel={dict.common.close}
+        success={{ message: e.reservationAnnulee }}
+        trigger={(open) => <Button variant="dangerGhost" size="sm" onClick={open}>
+        {dict.common.close}
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="reservation_id" value={reservationId} />
             <p className="text-sm text-body">{e.annulerReservationCorps}</p>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.back}
+              <Button type="button" variant="secondary" onClick={close}>
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{e.annulerReservation}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }

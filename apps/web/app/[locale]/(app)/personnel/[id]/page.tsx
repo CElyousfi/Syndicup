@@ -148,7 +148,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
         <Card>
           <SectionHeader title={pe.fichesPaie} action={gestion ? <PreparerFicheModal dict={dict} locale={ctx.locale} personnel={x} periodeDefaut={mois} /> : undefined} />
           {gestion && x.paie && !x.paie.parametres_configures ? <Banner variant="warn" className="mb-3"><span className="font-medium">{pe.paieNonConfiguree}.</span> {pe.paieNonConfigureeCorps} <a href={p("/parametres#paie")} className="link">{dict.nav.parametres}</a></Banner> : null}
-          {fichesRes.data.length === 0 ? <EmptyState title={pe.aucuneFichePaie} illustration="empty-personnel" /> : (
+          {fichesRes.data.length === 0 ? <EmptyState title={pe.aucuneFichePaie} illustration="empty-personnel" action={gestion ? <PreparerFicheModal dict={dict} locale={ctx.locale} personnel={x} periodeDefaut={mois} /> : undefined} /> : (
             <div className="mt-4"><Table>
               <THead><TH>{pe.periode}</TH><TH align="end">{pe.brut}</TH><TH align="end">{pe.cotisationsSalariales}</TH><TH align="end">{pe.net}</TH>{gestion ? <TH align="end">{pe.coutEmployeur}</TH> : null}<TH>{dict.incidents.statut}</TH><TH></TH></THead>
               <LiveList as="tbody">
@@ -178,7 +178,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
         <Card>
           <SectionHeader title={pe.conges} action={(gestion || soi) && x.statut !== "PARTI" ? <DemanderCongeModal dict={dict} locale={ctx.locale} personnelId={x.id} remplacants={remplacants} auNom={gestion} /> : undefined} />
           {x.solde_conges ? <p className="mt-2 mb-1 text-[13px] text-soft">{pe.soldeConges} {x.solde_conges.annee} : {pe.acquis} <b className="tnum text-ink-strong">{x.solde_conges.acquis ?? "—"}</b> · {pe.pris} <b className="tnum text-ink-strong">{x.solde_conges.pris}</b> · {pe.solde} <b className="tnum text-ink-strong">{x.solde_conges.solde ?? "—"}</b></p> : null}
-          {congesRes.data.length === 0 ? <EmptyState title={pe.aucunConge} illustration="empty-reservations" /> : (
+          {congesRes.data.length === 0 ? <EmptyState title={pe.aucunConge} illustration="empty-reservations" action={(gestion || soi) && x.statut !== "PARTI" ? <DemanderCongeModal dict={dict} locale={ctx.locale} personnelId={x.id} remplacants={remplacants} auNom={gestion} /> : undefined} /> : (
             <div className="mt-4"><Table>
               <THead><TH>{pe.typeConge}</TH><TH>{pe.dateDebut}</TH><TH>{pe.dateFin}</TH><TH align="end">{pe.nbJours}</TH><TH>{pe.remplacant}</TH><TH>{dict.incidents.statut}</TH><TH></TH></THead>
               <LiveList as="tbody">
@@ -190,7 +190,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
                     <TD className="text-end tnum">{c.nbJours}</TD>
                     <TD>{c.remplacant?.nom ?? "—"}</TD>
                     <TD><div className="flex items-center gap-1"><Badge variant={congeVariant[c.statut]}>{en.statutConge[c.statut]}</Badge>{c.document && gestion ? <DocumentViewerButton documentId={c.document.id} nom={c.document.nom} labels={viewer} iconOnly /> : null}</div></TD>
-                    <TD className="text-end">{c.statut === "DEMANDE" ? (gestion ? <DeciderCongeButtons dict={dict} locale={ctx.locale} conge={c} remplacants={remplacants} /> : soi ? <AnnulerCongeBouton dict={dict} locale={ctx.locale} congeId={c.id} /> : null) : null}</TD>
+                    <TD className="text-end">{c.statut === "DEMANDE" ? (gestion ? <DeciderCongeButtons dict={dict} locale={ctx.locale} conge={c} remplacants={remplacants} /> : soi ? <AnnulerCongeBouton dict={dict} locale={ctx.locale} congeId={c.id} debut={c.dateDebut} fin={c.dateFin} /> : null) : null}</TD>
                   </TR>
                 ))}
               </LiveList>
@@ -225,7 +225,7 @@ export default async function DossierPage({ params, searchParams }: { params: Pr
         <Card>
           <SectionHeader title={pe.evaluations} action={(gestion || conseil) && x.statut !== "PARTI" ? <EvaluerModal dict={dict} locale={ctx.locale} personnelId={x.id} periodeDefaut={mois} /> : undefined} />
           <p className="mt-2 mb-2 text-[13px] text-soft">{pe.moyenne} : <b className="tnum text-ink-strong">{evalsRes.data.moyenne ?? "—"}</b> / 5 · {evalsRes.data.evaluations.length}</p>
-          {evalsRes.data.evaluations.length === 0 ? <EmptyState title={pe.aucuneEvaluation} illustration="empty-taches" /> : (
+          {evalsRes.data.evaluations.length === 0 ? <EmptyState title={pe.aucuneEvaluation} illustration="empty-taches" action={(gestion || conseil) && x.statut !== "PARTI" ? <EvaluerModal dict={dict} locale={ctx.locale} personnelId={x.id} periodeDefaut={mois} /> : undefined} /> : (
             <LiveList as="ul" className="mt-3 divide-y divide-wash-strong rounded-[16px] bg-surface px-4">
               {evalsRes.data.evaluations.map((ev) => (
                 <li key={ev.id} className="flex flex-wrap items-start justify-between gap-2 py-3.5 text-[13.5px]">

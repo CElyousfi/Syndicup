@@ -6,6 +6,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError } from "../../../../lib/forms-server";
 import type { Invitation, Lot, LotOccupant, LotProprietaire } from "../../../../lib/api/types";
+import { montantOptionnel, montantSaisi } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
@@ -26,14 +27,14 @@ export async function creerLot(_prev: FormState, fd: FormData): Promise<FormStat
       numero: champ(fd, "numero"),
       etage: etage === "" ? null : Number(etage),
       batiment: champ(fd, "batiment") === "" ? null : champ(fd, "batiment"),
-      tantiemes: champ(fd, "tantiemes"),
-      superficie: champOuNull(fd, "superficie"),
+      tantiemes: montantSaisi(fd, "tantiemes"),
+      superficie: montantOptionnel(fd, "superficie"),
       lot_parent_id: champOuNull(fd, "lot_parent_id"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
-  redirect(`/${locale}/lots/${res.data.id}`);
+  redirect(`/${locale}/lots/${res.data.id}?cree=1`);
 }
 
 export async function modifierLot(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -48,15 +49,15 @@ export async function modifierLot(_prev: FormState, fd: FormData): Promise<FormS
       numero: champ(fd, "numero"),
       etage: etage === "" ? null : Number(etage),
       batiment: champ(fd, "batiment") === "" ? null : champ(fd, "batiment"),
-      tantiemes: champ(fd, "tantiemes"),
-      superficie: champOuNull(fd, "superficie"),
+      tantiemes: montantSaisi(fd, "tantiemes"),
+      superficie: montantOptionnel(fd, "superficie"),
       statut: champ(fd, "statut") || undefined,
       lot_parent_id: champOuNull(fd, "lot_parent_id"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
-  redirect(`/${locale}/lots/${lotId}`);
+  redirect(`/${locale}/lots/${lotId}?maj=1`);
 }
 
 export async function ajouterProprietaire(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -66,7 +67,7 @@ export async function ajouterProprietaire(_prev: FormState, fd: FormData): Promi
   const dateDebut = champ(fd, "date_debut");
   const representant = champ(fd, "representant_index");
   const ids = fd.getAll("utilisateur_id").map((v) => String(v).trim());
-  const quotes = fd.getAll("quote_part").map((v) => String(v).trim());
+  const quotes = fd.getAll("quote_part").map((v) => String(v).trim().replace(",", "."));
   const proprietaires = ids.map((utilisateur_id, i) => ({
     utilisateur_id,
     quote_part: quotes[i] ?? "0",
@@ -79,7 +80,7 @@ export async function ajouterProprietaire(_prev: FormState, fd: FormData): Promi
     method: "POST",
     body: proprietaires.length === 1 ? proprietaires[0] : { proprietaires },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success();
 }
@@ -98,7 +99,7 @@ export async function ajouterOccupant(_prev: FormState, fd: FormData): Promise<F
       recoit_convocations: fd.get("recoit_convocations") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success();
 }
@@ -117,7 +118,7 @@ export async function transfererPropriete(_prev: FormState, fd: FormData): Promi
       dette_reprise_acquereur: fd.get("dette_reprise_acquereur") === "on",
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots/${lotId}`);
   return success(undefined, { code: res.data.code, expireLe: res.data.expireLe });
 }
@@ -125,7 +126,7 @@ export async function transfererPropriete(_prev: FormState, fd: FormData): Promi
 export async function supprimerLot(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const res = await apiFetch<{ id: string }>(`/lots/${champ(fd, "lot_id")}`, { method: "DELETE" });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
-  redirect(`/${locale}/lots`);
+  redirect(`/${locale}/lots?supprime=1`);
 }

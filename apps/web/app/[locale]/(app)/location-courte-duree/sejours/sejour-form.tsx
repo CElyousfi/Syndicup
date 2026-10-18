@@ -10,6 +10,7 @@ import type { LcdSejour, TypePieceIdentite } from "../../../../../lib/api/types"
 import { dateInput } from "../../../../../lib/lcd";
 import { declarerSejour, modifierSejour } from "../actions";
 import { IconCamera, IconFile } from "../../../../../components/ui/icons";
+import { formKey, formValue } from "../../../../../lib/form-values";
 
 const PIECES: TypePieceIdentite[] = ["CIN", "PASSEPORT", "TITRE_SEJOUR", "AUTRE"];
 
@@ -48,7 +49,7 @@ export function SejourForm({
         </div>
       ) : (
         <Field label={l.lotSejour} htmlFor="s_lot" hint={l.lotSejourAide} required error={fieldError(state, "lot_id")}>
-          <Select id="s_lot" name="lot_id" required defaultValue={lotChoisi ?? ""}>
+          <Select key={formKey(state, "lot_id")} id="s_lot" name="lot_id" required defaultValue={formValue(state, "lot_id", lotChoisi ?? "")}>
             {lots.map((lot) => (
               <option key={lot.id} value={lot.id}>
                 {lot.numero}
@@ -60,13 +61,13 @@ export function SejourForm({
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Field label={l.dateArrivee} htmlFor="s_arrivee" required error={fieldError(state, "date_arrivee")}>
-          <Input id="s_arrivee" name="date_arrivee" type="date" required className="tnum" defaultValue={dateInput(sejour?.dateArrivee)} />
+          <Input id="s_arrivee" name="date_arrivee" type="date" required className="tnum" defaultValue={formValue(state, "date_arrivee", dateInput(sejour?.dateArrivee))} />
         </Field>
         <Field label={l.dateDepart} htmlFor="s_depart" required error={fieldError(state, "date_depart")}>
-          <Input id="s_depart" name="date_depart" type="date" required className="tnum" defaultValue={dateInput(sejour?.dateDepart)} />
+          <Input id="s_depart" name="date_depart" type="date" required className="tnum" defaultValue={formValue(state, "date_depart", dateInput(sejour?.dateDepart))} />
         </Field>
         <Field label={l.heureArrivee} htmlFor="s_heure" optionalLabel={dict.common.optional} error={fieldError(state, "heure_arrivee_prevue")}>
-          <Input id="s_heure" name="heure_arrivee_prevue" type="time" className="tnum" defaultValue={sejour?.heureArriveePrevue ?? ""} />
+          <Input id="s_heure" name="heure_arrivee_prevue" type="time" className="tnum" defaultValue={formValue(state, "heure_arrivee_prevue", sejour?.heureArriveePrevue ?? "")} />
         </Field>
       </div>
 
@@ -74,18 +75,18 @@ export function SejourForm({
         <legend className="text-[17px] font-bold text-ink">{l.voyageurPrincipal}</legend>
         <div className="grid gap-4 sm:grid-cols-[1fr_9rem]">
           <Field label={l.voyageurNom} htmlFor="s_nom" required error={fieldError(state, "voyageur_principal_nom")}>
-            <Input id="s_nom" name="voyageur_principal_nom" required maxLength={120} defaultValue={sejour?.voyageurPrincipalNom ?? ""} />
+            <Input id="s_nom" name="voyageur_principal_nom" required maxLength={120} defaultValue={formValue(state, "voyageur_principal_nom", sejour?.voyageurPrincipalNom ?? "")} />
           </Field>
           <Field label={l.nbVoyageurs} htmlFor="s_nb" required error={fieldError(state, "nb_voyageurs")}>
-            <Input id="s_nb" name="nb_voyageurs" type="number" min={1} max={50} required className="tnum" defaultValue={sejour?.nbVoyageurs ?? 1} />
+            <Input id="s_nb" name="nb_voyageurs" type="number" min={1} max={50} required className="tnum" defaultValue={formValue(state, "nb_voyageurs", sejour?.nbVoyageurs ?? 1)} />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={l.voyageurTelephone} htmlFor="s_tel" optionalLabel={dict.common.optional} error={fieldError(state, "voyageur_telephone")}>
-            <Input id="s_tel" name="voyageur_telephone" type="tel" dir="ltr" maxLength={20} defaultValue={sejour?.voyageurTelephone ?? ""} />
+            <Input id="s_tel" name="voyageur_telephone" type="tel" dir="ltr" maxLength={20} defaultValue={formValue(state, "voyageur_telephone", sejour?.voyageurTelephone ?? "")} />
           </Field>
           <Field label={l.voyageurNationalite} htmlFor="s_nat" hint={l.voyageurNationaliteAide} optionalLabel={dict.common.optional} error={fieldError(state, "voyageur_nationalite")}>
-            <Input id="s_nat" name="voyageur_nationalite" dir="ltr" maxLength={3} className="uppercase" placeholder="MA" defaultValue={sejour?.voyageurNationalite ?? ""} />
+            <Input id="s_nat" name="voyageur_nationalite" dir="ltr" maxLength={3} className="uppercase" placeholder="MA" defaultValue={formValue(state, "voyageur_nationalite", sejour?.voyageurNationalite ?? "")} />
           </Field>
         </div>
       </fieldset>
@@ -109,7 +110,7 @@ export function SejourForm({
           </Field>
         </div>
         <Field label={l.plaqueVehicule} htmlFor="s_plaque" optionalLabel={dict.common.optional} error={fieldError(state, "plaque_vehicule")}>
-          <Input id="s_plaque" name="plaque_vehicule" dir="ltr" maxLength={20} className="uppercase" defaultValue={sejour?.plaqueVehicule ?? ""} />
+          <Input id="s_plaque" name="plaque_vehicule" dir="ltr" maxLength={20} className="uppercase" defaultValue={formValue(state, "plaque_vehicule", sejour?.plaqueVehicule ?? "")} />
         </Field>
       </fieldset>
 

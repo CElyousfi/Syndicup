@@ -19,6 +19,7 @@ import { IDLE, fieldError } from "../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import type { ImportJob, TypeImport } from "../../../../lib/api/types";
 import { annulerImport, creerDemo, creerImport, envoyerInvitationsMasse, etatImport, executerImport, modifierMapping } from "./actions";
+import { formChecked, formKey, formValue } from "../../../../lib/form-values";
 
 const TYPES: TypeImport[] = ["LOTS_PROPRIETAIRES", "SOLDES_OUVERTURE", "PRESTATAIRES", "CONTRATS", "VEHICULES_BADGES", "PERSONNEL"];
 
@@ -60,10 +61,10 @@ export function ImportForm({ dict, locale, typeInitial }: { dict: Dict; locale: 
           <Field label={t.typeImport} htmlFor="type" required hint={t.typesImportAide[type]}><Select id="type" name="type" value={type} onChange={(e) => setType(e.target.value as TypeImport)}>{TYPES.map((x) => <option key={x} value={x}>{t.typesImport[x]}</option>)}</Select></Field>
           <Field label={t.fichier} htmlFor="fichier" required hint={t.fichierAide} error={fieldError(state, "fichier")}><Input id="fichier" name="fichier" type="file" accept=".xlsx,.xls,.csv,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" required /></Field>
           {type === "LOTS_PROPRIETAIRES" || type === "PERSONNEL" ? <>
-            <Field label={t.canal} htmlFor="canal"><Select id="canal" name="canal" defaultValue="SMS"><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option><option value="WHATSAPP">WhatsApp</option></Select></Field>
-            <div className="pt-6"><Checkbox name="inviter" label={t.inviter} hint={t.inviterAide} defaultChecked /></div>
+            <Field label={t.canal} htmlFor="canal"><Select key={formKey(state, "canal")} id="canal" name="canal" defaultValue={formValue(state, "canal", "SMS")}><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option><option value="WHATSAPP">WhatsApp</option></Select></Field>
+            <div className="pt-6"><Checkbox name="inviter" label={t.inviter} hint={t.inviterAide} defaultChecked={formChecked(state, "inviter", true)} /></div>
           </> : null}
-          {type === "SOLDES_OUVERTURE" ? <Field label={t.dateReference} htmlFor="date_reference" hint={t.dateReferenceAide} optionalLabel={dict.common.optional}><Input id="date_reference" name="date_reference" type="date" dir="ltr" className="tnum text-start" /></Field> : null}
+          {type === "SOLDES_OUVERTURE" ? <Field label={t.dateReference} htmlFor="date_reference" hint={t.dateReferenceAide} optionalLabel={dict.common.optional}><Input id="date_reference" name="date_reference" type="date" dir="ltr" className="tnum text-start" defaultValue={formValue(state, "date_reference")} /></Field> : null}
         </div>
         <p className="mt-5 text-[13px] text-soft">{t.modelesAide} <a className="link" href={`/api/import-fichier?kind=modele&type=${type}&langue=fr`}>{t.modeleFr}</a> · <a className="link" href={`/api/import-fichier?kind=modele&type=${type}&langue=ar`}>{t.modeleAr}</a></p>
       </Card>
@@ -89,7 +90,7 @@ export function MappingForm({ dict, locale, job }: { dict: Dict; locale: Locale;
           const courant = apercu.colonnes.find((c) => c.index === i)?.champ ?? "";
           return (
             <Field key={i} label={h || `${t.colonneFichier} ${i + 1}`} htmlFor={`colonne_${i}`}>
-              <Select id={`colonne_${i}`} name={`colonne_${i}`} defaultValue={courant} disabled={verrouille}>
+              <Select key={formKey(state, `colonne_${i}`)} id={`colonne_${i}`} name={`colonne_${i}`} defaultValue={formValue(state, `colonne_${i}`, courant)} disabled={verrouille}>
                 <option value="">{t.ignorer}</option>
                 {apercu.champs.map((c) => <option key={c.cle} value={c.cle}>{c.libelle[locale === "ar" ? "AR" : "FR"]}{c.requis ? ` (${t.requis})` : ""}</option>)}
               </Select>
@@ -100,8 +101,8 @@ export function MappingForm({ dict, locale, job }: { dict: Dict; locale: Locale;
       {!verrouille ? (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            {job.type === "LOTS_PROPRIETAIRES" || job.type === "PERSONNEL" ? <><Field label={t.canal} htmlFor="canal_map"><Select id="canal_map" name="canal" defaultValue={options.canal ?? "SMS"}><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option><option value="WHATSAPP">WhatsApp</option></Select></Field><div className="pt-6"><Checkbox name="inviter" label={t.inviter} defaultChecked={options.inviter !== false} /></div></> : <input type="hidden" name="inviter" value="on" />}
-            {job.type === "SOLDES_OUVERTURE" ? <Field label={t.dateReference} htmlFor="date_reference_map" hint={t.dateReferenceAide} optionalLabel={dict.common.optional}><Input id="date_reference_map" name="date_reference" type="date" defaultValue={options.date_reference ?? ""} dir="ltr" className="tnum text-start" /></Field> : null}
+            {job.type === "LOTS_PROPRIETAIRES" || job.type === "PERSONNEL" ? <><Field label={t.canal} htmlFor="canal_map"><Select key={formKey(state, "canal")} id="canal_map" name="canal" defaultValue={formValue(state, "canal", options.canal ?? "SMS")}><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option><option value="WHATSAPP">WhatsApp</option></Select></Field><div className="pt-6"><Checkbox name="inviter" label={t.inviter} defaultChecked={formChecked(state, "inviter", options.inviter !== false)} /></div></> : <input type="hidden" name="inviter" value="on" />}
+            {job.type === "SOLDES_OUVERTURE" ? <Field label={t.dateReference} htmlFor="date_reference_map" hint={t.dateReferenceAide} optionalLabel={dict.common.optional}><Input id="date_reference_map" name="date_reference" type="date" defaultValue={formValue(state, "date_reference", options.date_reference ?? "")} dir="ltr" className="tnum text-start" /></Field> : null}
           </div>
           <FormAlert state={state} />
           <div className="flex justify-end"><SubmitButton variant="secondary">{t.enregistrerMapping}</SubmitButton></div>
@@ -128,7 +129,7 @@ export function ExecutionPanel({ dict, locale, job }: { dict: Dict; locale: Loca
     }, 2000);
     return () => clearInterval(timer);
   }, [enCours, job.id, router]);
-  useEffect(() => { if (state.status === "success" || annul.status === "success") router.refresh(); }, [state.status, annul.status, router]);
+  useEffect(() => { if (state.status === "success" || annul.status === "success") router.refresh(); if (annul.status === "success") setConfirm(false); }, [state.status, annul.status, router]);
   const ratio = live.nbLignes > 0 ? live.nbTraitees / live.nbLignes : 0;
   return (
     <div className="space-y-3">
@@ -150,7 +151,7 @@ export function ExecutionPanel({ dict, locale, job }: { dict: Dict; locale: Loca
         <>
           <Button variant="dangerGhost" size="sm" onClick={() => setConfirm(true)}>{t.annuler}</Button>
           <Modal open={confirm} onClose={() => setConfirm(false)} title={t.annuler} closeLabel={dict.common.close}>
-            <form action={annulerAction} className="space-y-4"><input type="hidden" name="locale" value={locale} /><input type="hidden" name="import_id" value={job.id} /><IrreversibleNotice>{t.annulerCorps}</IrreversibleNotice><FormAlert state={annul} /><div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setConfirm(false)}>{dict.common.cancel}</Button><SubmitButton variant="danger">{t.annuler}</SubmitButton></div></form>
+            <form action={annulerAction} className="space-y-4"><input type="hidden" name="locale" value={locale} /><input type="hidden" name="import_id" value={job.id} /><IrreversibleNotice>{t.annulerCorps}</IrreversibleNotice><FormAlert state={annul} /><div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setConfirm(false)}>{dict.common.close}</Button><SubmitButton variant="danger">{t.annuler}</SubmitButton></div></form>
           </Modal>
         </>
       ) : null}
@@ -180,7 +181,7 @@ export function InvitationsMasseModal({ dict, locale, importJobId, nb }: { dict:
             <p className="text-sm text-body">{t.invitationsMasseAide}</p>
             <form action={action} className="space-y-3">
               <input type="hidden" name="locale" value={locale} />{importJobId ? <input type="hidden" name="import_job_id" value={importJobId} /> : null}
-              <Field label={t.canal} htmlFor="canal_masse"><Select id="canal_masse" name="canal" defaultValue="SMS"><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option></Select></Field>
+              <Field label={t.canal} htmlFor="canal_masse"><Select key={formKey(state, "canal")} id="canal_masse" name="canal" defaultValue={formValue(state, "canal", "SMS")}><option value="SMS">{t.canalSms}</option><option value="EMAIL">{t.canalEmail}</option></Select></Field>
               <FormAlert state={state} />
               <div className="flex flex-wrap justify-end gap-2">
                 <a className={lienCls} href={`/api/import-fichier?kind=invitations&canal=WHATSAPP${qs}`}>{t.canalWhatsapp}</a>
@@ -209,10 +210,10 @@ export function DemoModal({ dict, locale, coproprieteId }: { dict: Dict; locale:
           <form action={action} className="space-y-4">
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="copropriete_id" value={coproprieteId} />
             <p className="text-sm text-body">{t.creerDemoAide}</p>
-            <Field label={t.nomDemo} htmlFor="nom_demo" optionalLabel={dict.common.optional}><Input id="nom_demo" name="nom" maxLength={200} /></Field>
-            <Field label={t.joursDemo} htmlFor="jours_demo"><Input id="jours_demo" name="jours" type="number" min={1} max={90} defaultValue={30} dir="ltr" className="tnum text-start" /></Field>
+            <Field label={t.nomDemo} htmlFor="nom_demo" optionalLabel={dict.common.optional}><Input id="nom_demo" name="nom" maxLength={200} defaultValue={formValue(state, "nom")} /></Field>
+            <Field label={t.joursDemo} htmlFor="jours_demo"><Input id="jours_demo" name="jours" type="number" min={1} max={90} defaultValue={formValue(state, "jours", 30)} dir="ltr" className="tnum text-start" /></Field>
             <FormAlert state={state} />
-            <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.cancel}</Button><SubmitButton>{t.creerDemo}</SubmitButton></div>
+            <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={() => setOpen(false)}>{dict.common.close}</Button><SubmitButton>{t.creerDemo}</SubmitButton></div>
           </form>
         )}
       </Modal>

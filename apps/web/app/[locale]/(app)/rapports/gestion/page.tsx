@@ -37,7 +37,7 @@ export default async function RapportsGestionPage({ params }: { params: Promise<
     <div className="page-root">
       <PageHeader title={r.gestionTitre} subtitle={r.gestionSubtitle} actions={gestion ? <GenererModal dict={dict} locale={ctx.locale} budgets={budgetsRes?.ok ? budgetsRes.data : []} exerciceDefaut={String(new Date().getFullYear() - 1)} /> : undefined} />
       <RapportsTabs dict={dict} locale={ctx.locale} active="gestion" />
-      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} illustration="empty-documents" /> : (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={r.aucunRapport} hint={r.aucunRapportAide} illustration="empty-documents" action={gestion ? <GenererModal dict={dict} locale={ctx.locale} budgets={budgetsRes?.ok ? budgetsRes.data : []} exerciceDefaut={String(new Date().getFullYear() - 1)} /> : undefined} /> : (
         <TableCard>
           <Table>
             <THead><TH>{r.exercice}</TH><TH>{r.statut}</TH><TH align="end">{r.compteCourant}</TH><TH align="end">{r.recouvrement}</TH><TH align="end">{r.impayes}</TH><TH align="end">{r.depenses}</TH><TH>{r.generePar}</TH></THead>

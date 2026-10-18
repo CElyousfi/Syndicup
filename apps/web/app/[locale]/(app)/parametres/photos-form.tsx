@@ -2,10 +2,10 @@
 
 import { useActionState, useState } from "react";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
-import { Button } from "../../../../components/ui/button";
+import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { Badge } from "../../../../components/ui/badge";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import { CLES_PHOTO, PHOTOS_DEFAUT, type ClePhoto } from "../../../../lib/photos";
 import { retirerPhoto, televerserPhoto } from "./actions";
 import { FadeImg } from "../../../../components/ui/motion/fade-img";
@@ -111,7 +111,7 @@ function PhotoSlot({
 }) {
   const pa = dict.parametres;
   const [state, action] = useActionState(televerserPhoto, IDLE);
-  const [retraitState, retrait] = useActionState(retirerPhoto, IDLE);
+
   const [apercu, setApercu] = useState<string | null>(null);
   const [nomFichier, setNomFichier] = useState<string | null>(null);
 
@@ -130,7 +130,7 @@ function PhotoSlot({
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="copro_id" value={coproId} />
           <input type="hidden" name="cle" value={cle} />
-          <input type="hidden" name="message_succes" value={pa.photoMiseAJour} />
+          <input type="hidden" name="succes" value="photoEnregistree" />
           <div className="flex flex-wrap items-center gap-2">
             <label className="su-btn inline-flex h-9 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[13px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
@@ -155,16 +155,17 @@ function PhotoSlot({
           <FormAlert state={state} />
         </form>
         {personnalisee ? (
-          <form action={retrait}>
-            <input type="hidden" name="locale" value={locale} />
-            <input type="hidden" name="copro_id" value={coproId} />
-            <input type="hidden" name="cle" value={cle} />
-            <input type="hidden" name="message_succes" value={pa.photoRetiree} />
-            <FormAlert state={retraitState} />
-            <Button type="submit" variant="dangerGhost" size="sm">
-              {pa.photoRetirer}
-            </Button>
-          </form>
+          <ConfirmAction
+            action={retirerPhoto}
+            fields={{ locale, copro_id: coproId, cle, succes: "photoRetiree" }}
+            triggerLabel={pa.photoRetirer}
+            title={dict.formulaires.confirmer.photoRetirerTitre}
+            question={fill(dict.formulaires.confirmer.photoRetirerQuestion, { emplacement: titre })}
+            consequence={dict.formulaires.confirmer.photoRetirerConsequence}
+            confirmLabel={dict.formulaires.confirmer.photoRetirerConfirmer}
+            closeLabel={dict.common.close}
+            success={pa.photoRetiree}
+          />
         ) : null}
       </div>
     </div>

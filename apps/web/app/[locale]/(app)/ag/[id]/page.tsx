@@ -39,10 +39,13 @@ import { failWith } from "../../../../../lib/api/or-fail";
 
 export default async function AgDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { locale, id } = await params;
+  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   const { dict } = ctx;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
@@ -68,6 +71,7 @@ export default async function AgDetailPage({
   const mesLots = lots.filter((l) =>
     (l.proprietaires ?? []).some((p) => !p.dateFin && p.utilisateurId === ctx.profil.id)
   );
+
 
   // Résultats agrégés pour une AG clôturée.
   // M22 — suivi d'exécution des résolutions adoptées (lisible par tout membre voyant l'AG).
@@ -97,6 +101,7 @@ export default async function AgDetailPage({
 
   return (
     <div className="page-root">
+      {sp.creee === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.assembleeCreee}</Banner> : null}
       <PageHeader
         back={<BackLink href={p("/ag")} label={dict.nav.ag} />}
         title={dict.enums.typeAg[ag.type]}
@@ -221,6 +226,11 @@ export default async function AgDetailPage({
               hint={a.aucuneResolutionAide}
               illustration="empty-ag"
               className="py-8"
+              action={
+                peutEditer ? (
+                  <ResolutionModal dict={dict} locale={ctx.locale} agId={id} prochainOrdre={prochainOrdre} />
+                ) : undefined
+              }
             />
           ) : (
             <LiveList as="div" className="space-y-4">
@@ -291,7 +301,7 @@ export default async function AgDetailPage({
             <Card>
               <SectionHeader title={a.convoquer} subtitle={a.convoquerAide} />
               <div className="mt-4 space-y-3">
-                <ConvoquerForm dict={dict} locale={ctx.locale} agId={id} />
+                <ConvoquerForm dict={dict} locale={ctx.locale} agId={id} dateAg={formatDate(ag.dateAg, ctx.locale)} />
                 <AnnulerModal dict={dict} locale={ctx.locale} agId={id} />
               </div>
             </Card>
@@ -348,6 +358,7 @@ export default async function AgDetailPage({
                             locale={ctx.locale}
                             agId={id}
                             procurationId={proc.id}
+                            mandataire={membreParId.get(proc.mandataireId)}
                           />
                         ) : null}
                       </li>

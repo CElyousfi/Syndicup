@@ -11,6 +11,7 @@ import type {
   PaiementCibleResult,
   PaiementFifoResult,
 } from "../../../../lib/api/types";
+import { montantSaisi } from "../../../../lib/centimes";
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
@@ -23,11 +24,11 @@ export async function creerBudget(_prev: FormState, fd: FormData): Promise<FormS
     method: "POST",
     body: {
       exercice: champ(fd, "exercice"),
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       ag_id: agId === "" ? null : agId,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -38,11 +39,11 @@ export async function modifierBudget(_prev: FormState, fd: FormData): Promise<Fo
   const res = await apiFetch<BudgetAg>(`/finances/budgets/${champ(fd, "budget_id")}`, {
     method: "PATCH",
     body: {
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       ...(agId !== "" ? { ag_id: agId } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -54,7 +55,7 @@ export async function activerBudget(_prev: FormState, fd: FormData): Promise<For
     method: "POST",
     idempotent: true,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/budgets`);
   return success();
 }
@@ -67,11 +68,11 @@ export async function genererAppelDeFonds(_prev: FormState, fd: FormData): Promi
     body: {
       periode: champ(fd, "periode"),
       type: champ(fd, "type"),
-      montant_total: champ(fd, "montant_total"),
+      montant_total: montantSaisi(fd, "montant_total"),
       date_echeance: champ(fd, "date_echeance"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/appels-de-fonds`);
   return success(undefined, { id: res.data.id });
 }
@@ -85,7 +86,7 @@ export async function enregistrerPaiement(_prev: FormState, fd: FormData): Promi
   const mode = champ(fd, "mode");
   const payeur = champ(fd, "payeur_utilisateur_id");
   const commun = {
-    montant: champ(fd, "montant"),
+    montant: montantSaisi(fd, "montant"),
     methode: champ(fd, "methode"),
     ...(payeur ? { payeur_utilisateur_id: payeur } : {}),
   };
@@ -103,7 +104,7 @@ export async function enregistrerPaiement(_prev: FormState, fd: FormData): Promi
     idempotent: true,
     body,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/appels-de-fonds`);
   revalidatePath(`/${locale}/lots`);
 
@@ -133,7 +134,7 @@ export async function contesterLigne(_prev: FormState, fd: FormData): Promise<Fo
       motif: champ(fd, "motif"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/lots`);
   return success();
 }
@@ -150,7 +151,7 @@ export async function repondreContestation(_prev: FormState, fd: FormData): Prom
       },
     }
   );
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/finances/contestations`);
   return success();
 }

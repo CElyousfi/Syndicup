@@ -7,9 +7,11 @@ import { PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { Banner } from "../../../../../components/ui/banner";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
+import { ButtonLink } from "../../../../../components/ui/button";
 import { CCoins, CMoneyBag, CWallet, CBuilding, IconCircle } from "../../../../../components/ui/color-icons";
 import { IconChevronEnd } from "../../../../../components/ui/icons";
-import { justificatifVariant } from "../../../../../lib/status";
+import { justificatifTone, justificatifVariant } from "../../../../../lib/status";
+import { EmptyState } from "../../../../../components/ui/empty-state";
 import { DeclarerForm } from "../justificatifs/declarer-form";
 import { AnnulerBouton } from "../justificatifs/justificatif-modals";
 import { comptesBancaires, justificatifs, lotsEtLignesOuvertes, soldesLots } from "../justificatifs/data";
@@ -89,7 +91,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
         <div className="min-w-0 space-y-4 lg:col-span-2">
           <Card>
             <SectionHeader title={j.virement} subtitle={j.virementAide} />
-            {!comptesRes.ok && comptesRes.error.status !== 403 ? <LoadError error={comptesRes.error} locale={ctx.locale} variant="inline" className="mt-4" /> : comptes.length === 0 ? <p className="mt-4 text-sm text-soft">{j.aucunCompte}</p> : (
+            {!comptesRes.ok && comptesRes.error.status !== 403 ? <LoadError error={comptesRes.error} locale={ctx.locale} variant="inline" className="mt-4" /> : comptes.length === 0 ? <EmptyState className="py-8" title={j.aucunCompte} hint={dict.formulaires.vides.payerAucunCompteAide} illustration="empty-appels" /> : (
               <ul className="mt-4 space-y-2">
                 {comptes.map((c) => (
                   <li key={c.index} className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-surface px-4 py-3.5">
@@ -103,7 +105,7 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
               </ul>
             )}
           </Card>
-          {lots.length > 0 ? <DeclarerForm dict={dict} locale={ctx.locale} lots={lots} lignes={lignes} comptes={comptes} mode="declarer" /> : null}
+          {lots.length > 0 ? <div id="declarer" className="scroll-mt-24"><DeclarerForm dict={dict} locale={ctx.locale} lots={lots} lignes={lignes} comptes={comptes} mode="declarer" /></div> : null}
         </div>
         <div className="min-w-0 space-y-6">
           <Card>
@@ -113,12 +115,20 @@ export default async function PayerPage({ params }: { params: Promise<{ locale: 
           {enAttente > 0n ? <Banner variant="info">{fill(j.enAttenteValidation, { montant: mad(enAttente) })}</Banner> : null}
           <section>
             <SectionHeader title={j.mesDeclarations} className="mb-2" />
-            {mes.erreur ? <LoadError error={mes.erreur} locale={ctx.locale} variant="inline" className="mt-3" /> : mes.rows.length === 0 ? <p className="mt-3 text-sm text-soft">{j.aucuneDeclaration}</p> : (
+            {mes.erreur ? <LoadError error={mes.erreur} locale={ctx.locale} variant="inline" className="mt-3" /> : mes.rows.length === 0 ? (
+              <EmptyState
+                className="py-8"
+                title={j.aucuneDeclaration}
+                hint={dict.formulaires.vides.payerAucuneDeclarationAide}
+                illustration="empty-appels"
+                action={lots.length > 0 ? <ButtonLink href="#declarer" variant="secondary" size="sm">{j.declarer}</ButtonLink> : undefined}
+              />
+            ) : (
               <LiveList as="ul" className="-mx-2">
                 {mes.rows.map((x) => (
                   <li key={x.id}>
                     <Link href={`/${locale}/finances/justificatifs/${x.id}`} className="group flex items-center gap-3 rounded-[18px] px-2 py-3 transition-colors hover:bg-wash">
-                      <IconCircle tone={x.statut === "REJETE" ? "danger" : x.statut === "VALIDE" ? "ok" : "tosca"} size={44}><CCoins width={22} height={22} /></IconCircle>
+                      <IconCircle tone={justificatifTone[x.statut]} size={44}><CCoins width={22} height={22} /></IconCircle>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-[15px] font-bold text-ink">{x.lot?.numero} · {e.methode[x.methode]}</p>
                         <p className="tnum truncate text-[13px] text-soft">{formatDate(x.datePaiementDeclaree, ctx.locale)}{x.reference ? ` · ${x.reference}` : ""}</p>

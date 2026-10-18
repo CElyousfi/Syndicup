@@ -30,12 +30,12 @@ export function formatEntier(value: string | number | null | undefined): string 
   return s.replace(/\B(?=(\d{3})+(?!\d))/g, "\u202f");
 }
 
-/** Ratio "0.5" → "50 %". */
+/** Ratio "0.5" → "50 %", "0.125" → "12,5 %" (virgule décimale, comme les montants). */
 export function formatPourcent(ratio: string | number | null | undefined): string {
   if (ratio === null || ratio === undefined || ratio === "") return "—";
   const n = typeof ratio === "number" ? ratio : Number.parseFloat(ratio);
   if (Number.isNaN(n)) return "—";
-  return `${Math.round(n * 1000) / 10}\u202f%`;
+  return `${String(Math.round(n * 1000) / 10).replace(".", ",")}\u202f%`;
 }
 
 const INTL_LOCALE: Record<Locale, string> = { fr: "fr-MA", ar: "ar-MA" };
@@ -92,6 +92,15 @@ export function formatHeure(iso: string | null | undefined, locale: Locale): str
     minute: "2-digit",
     numberingSystem: "latn",
   }).format(d);
+}
+
+/** Jour de la semaine abrégé (« lun. », « الاثنين ») — en-têtes de calendrier. */
+export function formatJourCourt(date: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "short",
+    timeZone: "UTC",
+    numberingSystem: "latn",
+  }).format(date);
 }
 
 /** Période "2026-01" → "janvier 2026". */

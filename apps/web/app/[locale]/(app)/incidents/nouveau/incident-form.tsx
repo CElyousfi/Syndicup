@@ -6,11 +6,14 @@ import { Field, Input, Select, Textarea } from "../../../../../components/ui/fie
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
+import { IdempotencyField } from "../../../../../components/ui/idempotency-field";
+import { FichiersEnvoyes } from "../../../../../components/ui/fichiers-envoyes";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import { PhotoPicker } from "../../../../../components/incidents/photo-picker";
 import { CategorieGlyphe } from "../../../../../components/incidents/categorie-icon";
 import type { CategorieIncident, PartieIncident, UrgenceIncident } from "../../../../../lib/api/types";
 import { signalerIncident } from "../actions";
+import { formKey, formValue } from "../../../../../lib/form-values";
 
 /** F2 — formulaire guidé : catégories illustrées, aide commune/privative, garde-fou urgence. */
 export function IncidentForm({
@@ -32,6 +35,8 @@ export function IncidentForm({
 }) {
   const i = dict.incidents;
   const [state, action] = useActionState(signalerIncident, IDLE);
+  // « Remplacer » des photos déjà envoyées : contenu différent, donc clé d'idempotence neuve.
+  const [remplacements, setRemplacements] = useState(0);
   const [sejourId, setSejourId] = useState(
     sejourInitial && sejours.some((s) => s.id === sejourInitial) ? sejourInitial : ""
   );
@@ -50,6 +55,7 @@ export function IncidentForm({
 
   return (
     <form action={action} className="max-w-2xl space-y-8">
+      <IdempotencyField state={state} renouveler={remplacements} />
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="categorie" value={categorie} />
       <input type="hidden" name="partie" value={partie} />
@@ -83,7 +89,7 @@ export function IncidentForm({
         required
         error={fieldError(state, "sous_categorie")}
       >
-        <Input id="sous_categorie" name="sous_categorie" required maxLength={120} />
+        <Input id="sous_categorie" name="sous_categorie" required maxLength={120} defaultValue={formValue(state, "sous_categorie")} />
       </Field>
 
       {/* Partie commune / privative */}
@@ -157,10 +163,12 @@ export function IncidentForm({
         hint={i.descriptionHint}
         optionalLabel={dict.common.optional}
       >
-        <Textarea id="description" name="description" rows={4} maxLength={5000} />
+        <Textarea id="description" name="description" rows={4} maxLength={5000} defaultValue={formValue(state, "description")} />
       </Field>
 
-      {/* Photos — caméra directe ou galerie, compressées côté client. */}
+      {/* Photos — caméra directe ou galerie, compressées côté client (ou photos déjà envoyées lors
+          d'un essai à l'issue inconnue : réutilisées telles quelles). */}
+      <FichiersEnvoyes state={state} labels={dict.formulaires.envoyes} onRemplacer={() => setRemplacements((n) => n + 1)}>
       <PhotoPicker
         name="photos"
         labels={{
@@ -171,6 +179,7 @@ export function IncidentForm({
           retirer: (n) => fill(i.retirerPhoto, { n }),
         }}
       />
+      </FichiersEnvoyes>
 
       {lots.length > 0 ? (
         <Field
@@ -183,7 +192,7 @@ export function IncidentForm({
             id="lot_id"
             name="lot_id"
             key={sejourChoisi?.lotId ?? "libre"}
-            defaultValue={sejourChoisi?.lotId ?? ""}
+            defaultValue={formValue(state, "lot_id", sejourChoisi?.lotId ?? "")}
           >
             <option value="">{dict.common.none}</option>
             {lots.map((l) => (
@@ -216,7 +225,7 @@ export function IncidentForm({
 
       {categorie === "PARKING" && emplacements.length > 0 ? (
         <Field label={i.emplacementConcerne} htmlFor="emplacement_id" hint={i.emplacementConcerneAide} optionalLabel={dict.common.optional} error={fieldError(state, "emplacement_id")}>
-          <Select id="emplacement_id" name="emplacement_id" defaultValue="">
+          <Select key={formKey(state, "emplacement_id")} id="emplacement_id" name="emplacement_id" defaultValue={formValue(state, "emplacement_id", "")}>
             <option value="">{dict.common.none}</option>
             {emplacements.map((x) => (
               <option key={x.id} value={x.id}>
@@ -228,7 +237,7 @@ export function IncidentForm({
       ) : null}
       {categorie === "PARKING" ? (
         <Field label={i.immatriculationSignalee} htmlFor="immatriculation_signalee" hint={i.immatriculationSignaleeAide} optionalLabel={dict.common.optional} error={fieldError(state, "immatriculation_signalee")}>
-          <Input id="immatriculation_signalee" name="immatriculation_signalee" maxLength={24} placeholder="12345-A-6" dir="ltr" className="font-mono uppercase text-start" />
+          <Input id="immatriculation_signalee" name="immatriculation_signalee" maxLength={24} placeholder="12345-A-6" dir="ltr" className="font-mono uppercase text-start" defaultValue={formValue(state, "immatriculation_signalee")} />
         </Field>
       ) : null}
 

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
-import { Button } from "../../../../components/ui/button";
+import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { IconCircle, CBuilding } from "../../../../components/ui/color-icons";
@@ -16,7 +16,7 @@ import { FadeImg } from "../../../../components/ui/motion/fade-img";
 export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; locale: Locale; coproId: string; logoActuel: string | null }) {
   const pa = dict.parametres;
   const [state, action] = useActionState(televerserLogo, IDLE);
-  const [retraitState, retrait] = useActionState(retirerLogo, IDLE);
+
   const [apercu, setApercu] = useState<string | null>(null);
   const [nomFichier, setNomFichier] = useState<string | null>(null);
   const src = apercu ?? (logoActuel ? `/api/copro-logo?id=${coproId}&v=${encodeURIComponent(logoActuel)}` : null);
@@ -37,7 +37,7 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
         <form action={action} className="space-y-3">
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="copro_id" value={coproId} />
-          <input type="hidden" name="message_succes" value={pa.logoMisAJour} />
+          <input type="hidden" name="succes" value="logoEnregistre" />
           <div className="flex flex-wrap items-center gap-2">
             <label className="su-btn inline-flex h-10 cursor-pointer items-center gap-2 rounded-btn border-[1.5px] border-link px-4 text-[14px] font-semibold text-link transition-colors hover:bg-action-wash">
               {pa.logoChoisir}
@@ -64,15 +64,17 @@ export function LogoForm({ dict, locale, coproId, logoActuel }: { dict: Dict; lo
           </div>
         </form>
         {logoActuel ? (
-          <form action={retrait}>
-            <input type="hidden" name="locale" value={locale} />
-            <input type="hidden" name="copro_id" value={coproId} />
-            <input type="hidden" name="message_succes" value={pa.logoRetire} />
-            <FormAlert state={retraitState} />
-            <Button type="submit" variant="dangerGhost" size="sm">
-              {pa.logoRetirer}
-            </Button>
-          </form>
+          <ConfirmAction
+            action={retirerLogo}
+            fields={{ locale, copro_id: coproId, succes: "logoRetire" }}
+            triggerLabel={pa.logoRetirer}
+            title={pa.logoRetirer}
+            question={dict.formulaires.confirmer.logoRetirerQuestion}
+            consequence={dict.formulaires.confirmer.logoRetirerConsequence}
+            confirmLabel={dict.formulaires.confirmer.logoRetirerConfirmer}
+            closeLabel={dict.common.close}
+            success={pa.logoRetire}
+          />
         ) : null}
       </div>
     </div>

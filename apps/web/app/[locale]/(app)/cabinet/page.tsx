@@ -19,7 +19,7 @@ import { Table, TableCard, TD, TH, THead, TR } from "../../../../components/ui/t
 import { IconCircle, CBuilding, CCoins, CAlert, CWallet, CCalendar } from "../../../../components/ui/color-icons";
 import { Avatar } from "../../../../components/ui/avatar";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
-import { alerteVariant, mandatVariant } from "../../../../lib/status";
+import { actifVariant, alerteVariant, assuranceVariant, evenementCabinetVariant, mandatVariant } from "../../../../lib/status";
 import { CopierPrestataireModal, MandatModal, MembreModal, ParametresCabinetForm, PrestataireModeleModal, RetirerMembreModal, TerminerMandatModal } from "./cabinet-client";
 import { ouvrirCopropriete } from "./actions";
 import { Amount, Figure } from "../../../../components/ui/amount";
@@ -108,7 +108,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
             <Link href={href("portefeuille", { alerte: "1" })} className={`inline-flex h-9 items-center rounded-full border px-4 text-[13px] font-semibold transition-colors ${sp.alerte === "1" ? "border-cta bg-cta text-ink" : "border-hairline-strong bg-surface text-ink-strong hover:bg-wash"}`}>{t.seulementAlertes}</Link>
             {meta.calcule_le ? <span className="ms-auto text-[12px] text-faint">{fill(t.calculeLe, { date: formatDateHeure(meta.calcule_le, ctx.locale) })}</span> : null}
           </div>
-          {!portRes.ok ? <LoadError error={failureOf(portRes)} locale={ctx.locale} /> : lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} /> : (
+          {!portRes.ok ? <LoadError error={failureOf(portRes)} locale={ctx.locale} /> : lignes.length === 0 ? <EmptyState title={t.aucuneCopropriete} hint={admin ? t.aucuneCoproprieteAide : undefined} action={admin ? <MandatModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} gestionnaires={gestionnaires} /> : undefined} /> : (
             <TableCard><Table>
               <THead>
                 <TH><Link href={href("portefeuille", { sort: sp.sort === "nom:asc" ? "nom:desc" : "nom:asc", alerte: sp.alerte })}>{t.coproprietes}</Link></TH>
@@ -141,7 +141,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
                   <TD align="end" className="tnum">{l.incidents_ouverts}{l.incidents_urgents ? <span className="block text-[11px] text-danger">{fill(t.incidentsUrgents, { n: l.incidents_urgents })}</span> : null}</TD>
                   <TD align="end" className={`tnum ${l.taches_retard ? "text-danger" : ""}`}>{l.taches_retard}</TD>
                   <TD className="text-body tnum">{l.prochaine_ag ? formatDate(l.prochaine_ag, ctx.locale) : "—"}</TD>
-                  <TD><Badge variant={l.assurance_active ? "ok" : "danger"}>{l.assurance_active ? t.assuranceOk : t.assuranceAbsente}</Badge>{l.contrats_expirant_30j ? <span className="block text-[11px] text-warn">{t.contrats30}: {l.contrats_expirant_30j}</span> : null}</TD>
+                  <TD><Badge variant={assuranceVariant(l.assurance_active)}>{l.assurance_active ? t.assuranceOk : t.assuranceAbsente}</Badge>{l.contrats_expirant_30j ? <span className="block text-[11px] text-warn">{t.contrats30}: {l.contrats_expirant_30j}</span> : null}</TD>
                   <TD className="text-[12.5px] text-body">{nomMembre(l.gestionnaire_principal_id)}</TD>
                   <TD align="end"><Ouvrir coproId={l.copropriete_id} /></TD>
                 </TR>
@@ -172,7 +172,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
               <li key={`${e.type}-${e.id}`} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                 <IconCircle tone={e.retard ? "danger" : e.type === "AG" ? "lilac" : "sand"} size={44}><CCalendar width={20} height={20} /></IconCircle>
                 <div className="min-w-0 flex-1 basis-48"><p className="text-[15px] font-bold text-ink">{e.titre}</p><p className="text-[13px] text-soft"><span className="tnum">{formatDate(e.date, ctx.locale)}</span> · {e.copropriete}</p></div>
-                <Badge variant={e.retard ? "danger" : e.type === "AG" ? "info" : "outline"}>{t.typesEvenement[e.type]}{e.retard ? ` · ${t.enRetard}` : ""}</Badge>
+                <Badge variant={evenementCabinetVariant(e)}>{t.typesEvenement[e.type]}{e.retard ? ` · ${t.enRetard}` : ""}</Badge>
                 <Ouvrir coproId={e.copropriete_id} next={e.lien} />
               </li>
             ))}</ul>
@@ -189,7 +189,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
               <li key={m.id} className="flex flex-wrap items-center gap-x-3.5 gap-y-2 rounded-2xl px-3 py-3 transition-colors hover:bg-wash">
                 <Avatar nom={`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId} size={44} />
                 <div className="min-w-0 flex-1 basis-40"><p className="truncate text-[15px] font-bold text-ink">{`${m.prenom ?? ""} ${m.nom ?? ""}`.trim() || m.utilisateurId.slice(0, 8)}</p><p className="text-[13px] text-soft">{t.roles[m.role]}{m.nbCoproprietes ? ` · ${fill(t.nbCoproprietes, { n: m.nbCoproprietes })}` : ""}</p></div>
-                <Badge variant={m.actif ? "ok" : "neutral"}>{m.actif ? t.actif : t.inactif}</Badge>
+                <Badge variant={actifVariant(m.actif)}>{m.actif ? t.actif : t.inactif}</Badge>
                 {admin && m.actif ? <span className="inline-flex gap-1"><MembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /><RetirerMembreModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} membre={m} /></span> : null}
               </li>
             ))}</LiveList>
@@ -215,7 +215,7 @@ export default async function CabinetPage({ params, searchParams }: { params: Pr
       ) : null}
 
       {onglet === "prestataires" ? (
-        prestaRes?.ok === false ? <LoadError error={failureOf(prestaRes)} locale={ctx.locale} /> : (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} /> : (
+        prestaRes?.ok === false ? <LoadError error={failureOf(prestaRes)} locale={ctx.locale} /> : (prestaRes?.ok ? prestaRes.data : []).length === 0 ? <EmptyState title={t.aucunPrestataire} hint={t.prestatairesAide} action={gestion ? <PrestataireModeleModal dict={dict} locale={ctx.locale} cabinetId={cabinet.id} /> : undefined} /> : (
           <TableCard><Table>
             <THead><TH>{t.nom}</TH><TH>{t.specialite}</TH><TH>{t.telephone}</TH><TH>{t.email}</TH><TH align="end" /></THead>
             <LiveList as="tbody">{(prestaRes?.ok ? prestaRes.data : []).map((x) => (

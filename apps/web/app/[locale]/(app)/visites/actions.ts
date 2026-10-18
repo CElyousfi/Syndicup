@@ -21,7 +21,7 @@ export async function enregistrerVisite(_prev: FormState, fd: FormData): Promise
       visiteur_nom: champ(fd, "visiteur_nom"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/visites`);
   return success();
 }
@@ -33,7 +33,7 @@ export async function repondreVisite(_prev: FormState, fd: FormData): Promise<Fo
     method: "PATCH",
     body: { statut: champ(fd, "statut") },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/visites`);
   return success();
 }
@@ -49,7 +49,7 @@ export async function creerPersonnel(_prev: FormState, fd: FormData): Promise<Fo
       logement_lot_id: logement === "" ? null : logement,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/personnel`);
   return success();
 }
@@ -64,7 +64,7 @@ export async function changerStatutPersonnel(_prev: FormState, fd: FormData): Pr
       logement_lot_id: logement === "" ? null : logement,
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/personnel`);
   return success();
 }

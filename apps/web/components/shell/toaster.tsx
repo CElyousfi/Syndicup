@@ -30,7 +30,7 @@ const PASTILLE: Record<NonNullable<ToastInput["tone"]>, string> = {
  * l'extrémité sur desktop. Même langage que les cartes de l'app (blanc, liseré, rayon 20).
  * Un clic ouvre la page cible ET marque la notification lue ; la croix ferme seulement.
  */
-export function Toaster() {
+export function Toaster({ closeLabel }: { closeLabel: string }) {
   const [items, setItems] = useState<ToastItem[]>([]);
   const router = useRouter();
   const seq = useRef(0);
@@ -139,7 +139,8 @@ export function Toaster() {
                 e.stopPropagation();
                 fermer(t.id);
               }}
-              aria-label="×"
+              aria-label={closeLabel}
+              title={closeLabel}
               className="su-btn shrink-0 rounded-full p-1 text-white/60 hover:rotate-90 hover:bg-white/10 hover:text-white"
             >
               <IconX width={14} height={14} />

@@ -3,8 +3,10 @@
  * couleur raconte toujours la même chose, partout.
  */
 import type { BadgeVariant } from "../components/ui/badge";
+import type { IconTone } from "../components/ui/color-icons";
 
 const map = <T extends string>(m: Record<T, BadgeVariant>) => m;
+const tones = <T extends string>(m: Record<T, IconTone>) => m;
 
 export const ligneAppelVariant = map({ PAYE: "ok", PARTIEL: "warn", IMPAYE: "danger" });
 
@@ -133,6 +135,8 @@ export const factureVariant = map({
 
 // M17 — justificatifs de paiement.
 export const justificatifVariant = map({ EN_ATTENTE: "warn", VALIDE: "ok", REJETE: "danger", ANNULE: "neutral" });
+/** Pastille d'icône d'une ligne de justificatif (même sens que le badge). */
+export const justificatifTone = tones({ EN_ATTENTE: "tosca", VALIDE: "ok", REJETE: "danger", ANNULE: "tosca" });
 
 // M18 — rapports de gestion et ancienneté des impayés.
 export const rapportVariant = map({ BROUILLON: "outline", GENERE: "info", SOUMIS_AG: "warn", APPROUVE: "ok", REJETE: "danger" });
@@ -162,3 +166,22 @@ export const importVariant = map({ TELEVERSE: "neutral", ANALYSE: "warn", PRET: 
 // M25 — cabinet.
 export const mandatVariant = map({ EN_ATTENTE: "warn", ACTIF: "ok", TERMINE: "neutral" });
 export const alerteVariant = map({ danger: "danger", warn: "warn", info: "info" });
+
+// États booléens et dérivés — même couleur pour le même sens, partout.
+/** Actif / inactif (membre de cabinet, véhicule, prestataire…). */
+export const actifVariant = (actif: boolean): BadgeVariant => (actif ? "ok" : "neutral");
+/** Assurance immeuble en cours / absente. */
+export const assuranceVariant = (active: boolean): BadgeVariant => (active ? "ok" : "danger");
+/** Solde à jour / impayé. */
+export const soldeVariant = (aJour: boolean): BadgeVariant => (aJour ? "ok" : "danger");
+/** Heure limite d'une place visiteur : dépassée = danger. */
+export const heureLimiteVariant = (depassee: boolean): BadgeVariant => (depassee ? "danger" : "outline");
+/** Événement d'agenda cabinet : en retard > AG > autre. */
+export const evenementCabinetVariant = (e: { retard?: boolean; type: string }): BadgeVariant =>
+  e.retard ? "danger" : e.type === "AG" ? "info" : "outline";
+/** Attribution d'emplacement : active, terminée, à venir. */
+export const attributionVariant = map({ ACTIVE: "ok", TERMINEE: "neutral", A_VENIR: "outline" });
+export function etatAttribution(a: { active: boolean; dateFin?: string | null }, aujourdhui = new Date().toISOString().slice(0, 10)): "ACTIVE" | "TERMINEE" | "A_VENIR" {
+  if (a.active) return "ACTIVE";
+  return a.dateFin && a.dateFin < aujourdhui ? "TERMINEE" : "A_VENIR";
+}

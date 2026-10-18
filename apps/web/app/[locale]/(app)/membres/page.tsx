@@ -136,7 +136,11 @@ export default async function MembresPage({
               <ButtonLink href={p("/invitations")} variant="primary">
                 {m.inviter}
               </ButtonLink>
-            ) : undefined
+            ) : (
+              <ButtonLink href={p("/membres")} variant="secondary">
+                {dict.formulaires.filtres.effacer}
+              </ButtonLink>
+            )
           }
         />
       ) : (

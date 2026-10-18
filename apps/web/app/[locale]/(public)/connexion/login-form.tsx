@@ -32,6 +32,9 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
     state.status === "error" && state.code === "VALIDATION_ERROR" && !erreurEmail && !erreurMdp
       ? dict.errors.codes.VALIDATION_ERROR.body
       : undefined;
+  // E-mail renvoyé par le serveur après un échec (React réinitialise le formulaire) ; le mot de
+  // passe, lui, n'est jamais renvoyé.
+  const emailSaisi = state.status === "error" && typeof state.values?.email === "string" ? state.values.email : undefined;
 
   return (
     <div>
@@ -53,6 +56,7 @@ export function LoginForm({ dict, locale, next }: { dict: Dict; locale: Locale; 
             spellCheck={false}
             placeholder="nom@exemple.ma"
             className="h-12 text-start"
+            defaultValue={emailSaisi}
             autoFocus
             required
           />

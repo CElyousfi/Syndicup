@@ -98,7 +98,7 @@ export default async function AffichagePage({ params, searchParams }: { params: 
               <Puce href={qs({ categorie, statut: "ARCHIVEE" })} actif={statut === "ARCHIVEE"} petite>{c.archivees}</Puce>
             </div>
           ) : null}
-          {!annRes.ok ? <LoadError error={failureOf(annRes)} locale={ctx.locale} /> : annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={gestion && !categorie && !statut ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
+          {!annRes.ok ? <LoadError error={failureOf(annRes)} locale={ctx.locale} /> : annonces.length === 0 ? <EmptyState title={categorie || statut ? c.aucuneFiltre : c.aucune} hint={!categorie && !statut && gestion ? c.aucuneAide : undefined} illustration={categorie || statut ? "empty-search" : "empty-annonces"} action={categorie || statut ? <ButtonLink href={p("/affichage")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink> : gestion ? <ButtonLink href={p("/affichage/nouveau")}><IconPlus width={16} height={16} />{c.nouvelle}</ButtonLink> : undefined} /> : (
             <LiveList as="ul" className="-mx-2 space-y-1 sm:-mx-3">
               {annonces.map((a) => {
                 const nonLue = !a.lu && a.statut === "PUBLIEE";

@@ -15,48 +15,69 @@ TextEditingValue _tape(String avant, String apres) {
 }
 
 void main() {
-  group('parseMontant — saisie française acceptée', () {
-    test('virgule décimale et espaces de milliers', () {
-      expect(parseMontant('1 250,50'), '1250.50');
-      expect(parseMontant('1 250,50'), '1250.50');
-      expect(parseMontant('1 250,5'), '1250.5');
-      expect(parseMontant('12,5'), '12.5');
-      expect(parseMontant('1250'), '1250');
-      expect(parseMontant('1250.00'), '1250.00');
-      expect(parseMontant(' 300 '), '300');
-    });
+  /// Table PARTAGÉE avec le web (apps/web/lib/__tests__/formulaires.test.ts, `CAS_MONTANT`) :
+  /// mêmes entrées, mêmes sorties. Toute modification se fait des deux côtés.
+  /// (saisie, attendu) — attendu = montant normalisé, 'AMBIGU' ou null (refusé).
+  const cas = <(String, String?)>[
+    ('1250', '1250.00'),
+    ('12,5', '12.50'),
+    ('12.5', '12.50'),
+    ('1250.50', '1250.50'),
+    ('1250,50', '1250.50'),
+    ('0,99', '0.99'),
+    ('  42 ', '42.00'),
+    ('007', '7.00'),
+    ('1 250,50', '1250.50'),
+    ('1 250,50', '1250.50'),
+    ('1 250 000,00', '1250000.00'),
+    ('1.250,50', '1250.50'),
+    ('1,250.50', '1250.50'),
+    ('1 250 000', '1250000.00'),
+    ('1.250.000,75', '1250000.75'),
+    ('1,250,000', '1250000.00'),
+    ('1 250', '1250.00'),
+    ('1.250', 'AMBIGU'),
+    ('1,250', 'AMBIGU'),
+    ('12.500', 'AMBIGU'),
+    ('999,000', 'AMBIGU'),
+    ('12 50', null),
+    ('1 250.000,5', null),
+    ('1.250 000', null),
+    ('1.250.50', null),
+    ('1,25.50', null),
+    ('1.2.3', null),
+    ('1250,505', null),
+    ('1 250,505', null),
+    ('12,', null),
+    (',50', null),
+    ('-50', null),
+    ('+50', null),
+    ('abc', null),
+    ('1e3', null),
+    ('1234567890123', null),
+    ('', null),
+    ('   ', null),
+  ];
 
-    test('séparateurs de milliers des deux usages', () {
-      expect(parseMontant('1.250,50'), '1250.50');
-      expect(parseMontant('1,250.50'), '1250.50');
-      expect(parseMontant('1.250.000,75'), '1250000.75');
-      expect(parseMontant('1,250,000'), '1250000');
-    });
+  group('parseMontant — une seule spécification web + mobile', () {
+    for (final (saisie, attendu) in cas) {
+      test('« $saisie » → $attendu', () {
+        if (attendu == 'AMBIGU') {
+          expect(parseMontant(saisie), isNull);
+          expect(montantAmbigu(saisie), isTrue);
+        } else {
+          expect(parseMontant(saisie), attendu);
+          expect(montantAmbigu(saisie), isFalse);
+        }
+      });
+    }
 
-    test('formes tolérées : virgule finale, zéros de tête', () {
-      expect(parseMontant('12,'), '12');
-      expect(parseMontant('007,5'), '7.5');
-      expect(parseMontant('0,00'), '0.00');
-    });
-
-    test('refus explicites (jamais un montant deviné)', () {
-      expect(parseMontant(null), isNull);
-      expect(parseMontant(''), isNull);
-      expect(parseMontant('   '), isNull);
-      expect(parseMontant('abc'), isNull);
-      expect(parseMontant('-12'), isNull);
-      expect(parseMontant('12,345'), isNull); // 3 décimales
-      expect(parseMontant('1.2.3'), isNull);
-      expect(parseMontant('1,25.50'), isNull); // groupe de milliers invalide
-      expect(parseMontant('1234567890123'), isNull); // 13 chiffres
-      expect(parseMontant(',5'), isNull);
-    });
+    test('null refusé', () => expect(parseMontant(null), isNull));
 
     test('montantPositif', () {
-      expect(montantPositif('0'), isFalse);
       expect(montantPositif('0.00'), isFalse);
       expect(montantPositif('0.01'), isTrue);
-      expect(montantPositif('1250'), isTrue);
+      expect(montantPositif('1250.00'), isTrue);
     });
   });
 
@@ -84,7 +105,7 @@ void main() {
   });
 
   group('saisie touche après touche dans un champ', () {
-    for (final (saisie, attendu) in const [('1.250,50', '1250.50'), ('1,250.50', '1250.50'), ('1250,5', '1250.5'), ('12,50', '12.50')]) {
+    for (final (saisie, attendu) in const [('1.250,50', '1250.50'), ('1,250.50', '1250.50'), ('1250,5', '1250.50'), ('12,50', '12.50')]) {
       testWidgets('« $saisie » → $attendu', (tester) async {
         final c = TextEditingController();
         await tester.pumpWidget(MaterialApp(home: Scaffold(body: TextField(controller: c, inputFormatters: montantFormatters))));

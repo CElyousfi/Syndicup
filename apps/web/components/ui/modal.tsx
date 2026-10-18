@@ -11,6 +11,8 @@ const SORTIE_MS = 240;
  * Contrôlée par le parent (open/onClose) pour se marier avec useActionState.
  * Sur mobile (< md) elle devient une feuille qui monte du bas — poignée, coins hauts arrondis,
  * pleine largeur, contenu défilant, zone sûre respectée (voir `.su-modal` dans globals.css).
+ * `dismissible={false}` (envoi en cours) : Échap, clic sur le fond, croix et glisser ne ferment
+ * pas — le résultat de l'envoi doit rester visible.
  */
 export function Modal({
   open,
@@ -20,6 +22,7 @@ export function Modal({
   children,
   wide = false,
   closeLabel = "Fermer",
+  dismissible = true,
 }: {
   open: boolean;
   onClose: () => void;
@@ -28,8 +31,15 @@ export function Modal({
   children: ReactNode;
   wide?: boolean;
   closeLabel?: string;
+  dismissible?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
+  // Lu au moment du geste (le glisser capture son rappel au pointerdown).
+  const fermable = useRef(dismissible);
+  fermable.current = dismissible;
+  const fermer = useCallback(() => {
+    if (fermable.current) onClose();
+  }, [onClose]);
 
   // Fermeture animée partout : la boîte joue sa sortie (`data-closing`, motion.css) PUIS se
   // ferme. Sans ce relais, Firefox et Safari la retirent de la couche supérieure d'un coup.
@@ -60,14 +70,14 @@ export function Modal({
     if (open && !glisser.current) void import("../../lib/feel/lazy").then((m) => (glisser.current = m));
   }, [open]);
   const onDragStart = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (ref.current) glisser.current?.suivreGlisser(e.nativeEvent, e.currentTarget, ref.current, onClose);
+    if (ref.current) glisser.current?.suivreGlisser(e.nativeEvent, e.currentTarget, ref.current, fermer);
   };
 
   const onBackdrop = useCallback(
     (e: React.MouseEvent<HTMLDialogElement>) => {
-      if (e.target === ref.current) onClose();
+      if (e.target === ref.current) fermer();
     },
-    [onClose]
+    [fermer]
   );
 
   return (
@@ -77,7 +87,7 @@ export function Modal({
       // Échap : on passe par l'état du parent pour que la sortie soit animée.
       onCancel={(e) => {
         e.preventDefault();
-        onClose();
+        fermer();
       }}
       onMouseDown={onBackdrop}
       className={`su-modal m-auto w-full ${wide ? "max-w-2xl" : "max-w-md"} rounded-[28px] bg-surface p-0 text-ink-strong shadow-pop`}
@@ -91,9 +101,10 @@ export function Modal({
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={fermer}
+          disabled={!dismissible}
           aria-label={closeLabel}
-          className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:rotate-90 hover:bg-[#e3e2da]"
+          className="su-btn flex size-9 shrink-0 items-center justify-center rounded-full bg-tile text-ink hover:rotate-90 hover:bg-[#e3e2da] disabled:pointer-events-none disabled:opacity-40"
         >
           <IconX width={18} height={18} />
         </button>

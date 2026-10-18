@@ -5,16 +5,20 @@ import { annuaireMembres } from "../../../../../../lib/membres";
 import { getLots } from "../../../../../../lib/finances-data";
 import type { AgProcuration, AssembleeGenerale } from "../../../../../../lib/api/types";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
+import { Banner } from "../../../../../../components/ui/banner";
 import { Pupitre } from "./pupitre";
 import { VueVotant } from "./vue-votant";
 import { failWith } from "../../../../../../lib/api/or-fail";
 
 export default async function SeancePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const { locale, id } = await params;
+  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   const { dict } = ctx;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
@@ -55,6 +59,7 @@ export default async function SeancePage({
 
   return (
     <div className="page-root">
+      {sp.ouverte === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.seanceOuverte}</Banner> : null}
       <PageHeader
         back={<BackLink href={`/${locale}/ag/${id}`} label={dict.nav.ag} />}
         title={gestion ? dict.ag.pupitre : dict.ag.seance}

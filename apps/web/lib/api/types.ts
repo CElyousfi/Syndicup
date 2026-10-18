@@ -1754,3 +1754,10 @@ export interface AssistantReponse {
   reponse: string;
   ecrans: AssistantEcran[];
 }
+
+/** GET /incidents/compteurs — cartes de synthèse, périmètre visible de l'appelant (API #18). */
+export interface CompteursIncidents {
+  par_statut: { OUVERT: number; EN_COURS: number; RESOLU: number; FERME: number };
+  total: number;
+  sla_depasses: number;
+}

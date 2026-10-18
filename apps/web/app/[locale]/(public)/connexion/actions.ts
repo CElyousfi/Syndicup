@@ -24,7 +24,11 @@ export async function connexionEmail(_prev: FormState, formData: FormData): Prom
     method: "POST",
     body: { email, mot_de_passe: motDePasse },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) {
+    // Seule l'adresse e-mail est renvoyée pour être réaffichée — jamais le mot de passe.
+    const erreur = await fromApiError(res);
+    return erreur.status === "error" ? { ...erreur, values: { email } } : erreur;
+  }
   await writeTokens(res.data, { rester });
   const next = nextSur(formData);
   const loc = isLocale(locale) ? locale : "fr";

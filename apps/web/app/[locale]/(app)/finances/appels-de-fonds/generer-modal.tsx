@@ -1,13 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Modal } from "../../../../../components/ui/modal";
+import { ActionModal } from "../../../../../components/ui/action-modal";
 import { Field, Input, Select } from "../../../../../components/ui/field";
+import { MoneyInput } from "../../../../../components/ui/money-input";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { Banner } from "../../../../../components/ui/banner";
-import { IDLE, fieldError } from "../../../../../lib/forms";
+import { fieldError } from "../../../../../lib/forms";
+import { formKey, formValue } from "../../../../../lib/form-values";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { TypeAppelDeFonds } from "../../../../../lib/api/types";
 import { genererAppelDeFonds } from "../actions";
@@ -25,18 +26,8 @@ export function GenererAppelModal({
   ouvertInitialement?: boolean;
   budgetActifManquant: boolean;
 }) {
-  const [open, setOpen] = useState(ouvertInitialement);
-  const [state, action] = useActionState(genererAppelDeFonds, IDLE);
   const router = useRouter();
   const f = dict.finances;
-
-  // Succès → aller directement au détail du nouvel appel.
-  useEffect(() => {
-    if (state.status === "success") {
-      const { id } = state.data as { id: string };
-      router.push(`/${locale}/finances/appels-de-fonds/${id}`);
-    }
-  }, [state, router, locale]);
 
   const moisProchain = (() => {
     const d = new Date();
@@ -44,48 +35,43 @@ export function GenererAppelModal({
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   })();
 
+  const lienBudget = (
+    <ButtonLink href={`/${locale}/finances/budgets`} variant="secondary" size="sm">
+      {f.creerBudgetDabord}
+    </ButtonLink>
+  );
+
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>
-        <IconCoins width={16} height={16} />
-        {f.genererAppel}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={f.genererAppel} closeLabel={dict.common.close}>
-        <form action={action} className="space-y-4">
+    <ActionModal
+      action={genererAppelDeFonds}
+      title={f.genererAppel}
+      closeLabel={dict.common.close}
+      defaultOpen={ouvertInitialement}
+      // Succès → toast puis détail du nouvel appel.
+      success={{ message: dict.formulaires.succes.appelGenere, closeAndToast: true }}
+      onSuccess={(s) => {
+        const { id } = s.data as { id: string };
+        router.push(`/${locale}/finances/appels-de-fonds/${id}`);
+      }}
+      trigger={(open) => (
+        <Button onClick={open}>
+          <IconCoins width={16} height={16} />
+          {f.genererAppel}
+        </Button>
+      )}
+    >
+      {({ state, formAction, close }) => (
+        <form action={formAction} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
 
-          {budgetActifManquant ? (
-            <Banner
-              variant="warn"
-              title={f.budgetActifRequis}
-              action={
-                <ButtonLink href={`/${locale}/finances/budgets`} variant="secondary" size="sm">
-                  {f.creerBudgetDabord}
-                </ButtonLink>
-              }
-            />
-          ) : null}
+          {budgetActifManquant ? <Banner variant="warn" title={f.budgetActifRequis} action={lienBudget} /> : null}
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label={f.periode}
-              htmlFor="periode"
-              hint={f.periodeAide}
-              required
-              error={fieldError(state, "periode")}
-            >
-              <Input
-                id="periode"
-                name="periode"
-                type="month"
-                dir="ltr"
-                defaultValue={moisProchain}
-                required
-                className="tnum text-start"
-              />
+            <Field label={f.periode} htmlFor="periode" hint={f.periodeAide} required error={fieldError(state, "periode")}>
+              <Input id="periode" name="periode" type="month" dir="ltr" defaultValue={formValue(state, "periode", moisProchain)} required className="tnum text-start" />
             </Field>
-            <Field label={f.typeAppel} htmlFor="type" required>
-              <Select id="type" name="type" defaultValue="CHARGES_COURANTES" required>
+            <Field label={f.typeAppel} htmlFor="type" required error={fieldError(state, "type")}>
+              <Select key={formKey(state, "type")} id="type" name="type" defaultValue={formValue(state, "type", "CHARGES_COURANTES")} required>
                 {(Object.keys(dict.enums.typeAppel) as TypeAppelDeFonds[]).map((t) => (
                   <option key={t} value={t}>
                     {dict.enums.typeAppel[t]}
@@ -93,47 +79,26 @@ export function GenererAppelModal({
                 ))}
               </Select>
             </Field>
-            <Field
-              label={`${f.montantTotal} (${dict.common.mad})`}
-              htmlFor="montant_total"
-              required
-              error={fieldError(state, "montant_total")}
-            >
-              <Input
-                id="montant_total"
-                name="montant_total"
-                inputMode="decimal"
-                dir="ltr"
-                pattern="\d{1,12}([.]\d{1,2})?"
-                required
-                className="tnum text-start"
-              />
+            <Field label={`${f.montantTotal} (${dict.common.mad})`} htmlFor="montant_total" required hint={dict.formulaires.montantAide} error={fieldError(state, "montant_total")}>
+              <MoneyInput id="montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_total")} />
             </Field>
-            <Field label={f.echeance} htmlFor="date_echeance" required>
-              <Input id="date_echeance" name="date_echeance" type="date" required />
+            <Field label={f.echeance} htmlFor="date_echeance" required error={fieldError(state, "date_echeance")}>
+              <Input id="date_echeance" name="date_echeance" type="date" dir="ltr" required defaultValue={formValue(state, "date_echeance")} className="tnum text-start" />
             </Field>
           </div>
 
           <Banner variant="info">{f.montantReparti}</Banner>
 
-          <FormAlert
-            state={state}
-            legalGateTitle={f.budgetActifRequis}
-            legalGateAction={
-              <ButtonLink href={`/${locale}/finances/budgets`} variant="secondary" size="sm">
-                {f.creerBudgetDabord}
-              </ButtonLink>
-            }
-          />
+          <FormAlert state={state} legalGateTitle={f.budgetActifRequis} legalGateAction={lienBudget} />
 
-          <div className="flex justify-end gap-2 pt-1">
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-              {dict.common.cancel}
+          <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+            <Button type="button" variant="secondary" onClick={close}>
+              {dict.common.close}
             </Button>
             <SubmitButton>{f.genererAppel}</SubmitButton>
           </div>
         </form>
-      </Modal>
-    </>
+      )}
+    </ActionModal>
   );
 }

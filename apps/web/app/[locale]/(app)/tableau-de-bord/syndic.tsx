@@ -26,7 +26,7 @@ import {
   joursRestants,
   nomComplet,
 } from "../../../../lib/format";
-import { versCentimes, versChaine } from "../../../../lib/centimes";
+import { ratio, versCentimes, versChaine } from "../../../../lib/centimes";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";
 import { ResidenceAJour } from "../../../../components/ui/residence-a-jour";
@@ -134,7 +134,7 @@ export async function DashboardSyndic({
       const totalC = versCentimes(a.montantTotal);
       return {
         label: formatPeriode(a.periode, locale),
-        totalRatio: maxAppel > 0n ? Number(totalC) / Number(maxAppel) : 0,
+        totalRatio: ratio(totalC, maxAppel),
         paidRatio: t.ratio,
         displayPaid: formatMAD(versChaine(t.paye), locale),
         displayTotal: formatMAD(a.montantTotal, locale),
@@ -312,13 +312,13 @@ export async function DashboardSyndic({
                 items={[
                   {
                     label: dict.finances.tauxPaiement,
-                    value: Number(paye),
+                    value: ratio(paye, paye + impaye),
                     display: <Amount value={versChaine(paye)} locale={locale} />,
                     color: "var(--color-sage)",
                   },
                   {
                     label: dict.dash.impayes,
-                    value: Number(impaye),
+                    value: ratio(impaye, paye + impaye),
                     display: <Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />,
                     color: "var(--color-danger)",
                   },
@@ -331,7 +331,7 @@ export async function DashboardSyndic({
                 centerSub={dict.dash.impayes}
                 items={parNiveau.map((n) => ({
                   label: dict.enums.escalade[n.niveau],
-                  value: Number(n.montant),
+                  value: ratio(n.montant, parNiveau.reduce((s, x) => s + x.montant, 0n)),
                   display: <Amount value={versChaine(n.montant)} locale={locale} upIsGood={false} />,
                 }))}
               />

@@ -12,12 +12,9 @@ import { CopyButton } from "../../../../../../components/ui/copy";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import type { CanalInvitation, LcdDeclaration, StatutDeclarationLcd } from "../../../../../../lib/api/types";
-import {
-  cloturerDeclaration,
-  deciderDeclaration,
-  designerGestionnaire,
-  modifierDeclaration,
-} from "../../actions";
+import { cloturerDeclaration, deciderDeclaration, designerGestionnaire, modifierDeclaration } from "../../actions";
+import { formKey, formValue } from "../../../../../../lib/form-values";
+import { ActionModal } from "../../../../../../components/ui/action-modal";
 
 type Decision = "VALIDEE" | "REFUSEE" | "SUSPENDUE";
 
@@ -77,7 +74,7 @@ export function DecisionPanel({
         optionalLabel={dict.common.optional}
         error={fieldError(state, "motif")}
       >
-        <Textarea id="dec_motif" name="motif" rows={3} maxLength={1000} required={motifRequis} />
+        <Textarea id="dec_motif" name="motif" rows={3} maxLength={1000} required={motifRequis} defaultValue={formValue(state, "motif")} />
       </Field>
       <FormAlert state={state} />
       <div className="flex justify-end">
@@ -162,20 +159,20 @@ export function DesignerGestionnaireModal({
             />
             {mode === "compte" ? (
               <Field label={l.gestionnaireId} htmlFor="g_id" hint={l.gestionnaireIdAide} required error={fieldError(state, "utilisateur_id")}>
-                <Input id="g_id" name="utilisateur_id" required dir="ltr" className="font-mono text-[13px]" />
+                <Input id="g_id" name="utilisateur_id" required dir="ltr" className="font-mono text-[13px]" defaultValue={formValue(state, "utilisateur_id")} />
               </Field>
             ) : mode === "email" ? (
               <Field label={l.gestionnaireEmail} htmlFor="g_email" required error={fieldError(state, "email")}>
-                <Input id="g_email" name="email" type="email" required dir="ltr" maxLength={200} />
+                <Input id="g_email" name="email" type="email" required dir="ltr" maxLength={200} defaultValue={formValue(state, "email")} />
               </Field>
             ) : (
               <Field label={l.gestionnaireTelephone} htmlFor="g_tel" required error={fieldError(state, "telephone")}>
-                <Input id="g_tel" name="telephone" type="tel" required dir="ltr" placeholder="+2126…" maxLength={20} />
+                <Input id="g_tel" name="telephone" type="tel" required dir="ltr" placeholder="+2126…" maxLength={20} defaultValue={formValue(state, "telephone")} />
               </Field>
             )}
             {mode !== "compte" ? (
               <Field label={l.canalInvitation} htmlFor="g_canal" required>
-                <Select id="g_canal" name="canal" defaultValue={mode === "email" ? "EMAIL" : "SMS"}>
+                <Select key={formKey(state, "canal")} id="g_canal" name="canal" defaultValue={formValue(state, "canal", mode === "email" ? "EMAIL" : "SMS")}>
                   {CANAUX.map((c) => (
                     <option key={c} value={c}>
                       {dict.enums.canal[c]}
@@ -189,7 +186,7 @@ export function DesignerGestionnaireModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.confirm}</SubmitButton>
             </div>
@@ -211,48 +208,40 @@ export function ModifierContactsModal({
   declaration: LcdDeclaration;
 }) {
   const l = dict.lcd;
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(modifierDeclaration, IDLE);
 
   return (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={modifierDeclaration}
+        title={l.modifierContacts}
+        closeLabel={dict.common.close}
+        success={{ message: l.contactsModifies }}
+        trigger={(open) => <Button variant="secondary" size="sm" onClick={open}>
         {l.modifierContacts}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={l.modifierContacts} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{l.contactsModifies}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="declaration_id" value={declaration.id} />
             <Field label={l.plateformes} htmlFor="m_plateformes" hint={l.plateformesAide} optionalLabel={dict.common.optional} error={fieldError(state, "plateformes")}>
-              <Input id="m_plateformes" name="plateformes" maxLength={200} defaultValue={(declaration.plateformesJson ?? []).join(", ")} />
+              <Input id="m_plateformes" name="plateformes" maxLength={200} defaultValue={formValue(state, "plateformes", (declaration.plateformesJson ?? []).join(", "))} />
             </Field>
             <Field label={l.contactUrgenceNom} htmlFor="m_cu_nom" optionalLabel={dict.common.optional} error={fieldError(state, "contact_urgence_nom")}>
-              <Input id="m_cu_nom" name="contact_urgence_nom" maxLength={120} defaultValue={declaration.contactUrgenceNom ?? ""} />
+              <Input id="m_cu_nom" name="contact_urgence_nom" maxLength={120} defaultValue={formValue(state, "contact_urgence_nom", declaration.contactUrgenceNom ?? "")} />
             </Field>
             <Field label={l.contactUrgenceTelephone} htmlFor="m_cu_tel" optionalLabel={dict.common.optional} error={fieldError(state, "contact_urgence_telephone")}>
-              <Input id="m_cu_tel" name="contact_urgence_telephone" type="tel" dir="ltr" maxLength={20} defaultValue={declaration.contactUrgenceTelephone ?? ""} />
+              <Input id="m_cu_tel" name="contact_urgence_telephone" type="tel" dir="ltr" maxLength={20} defaultValue={formValue(state, "contact_urgence_telephone", declaration.contactUrgenceTelephone ?? "")} />
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+              <Button type="button" variant="secondary" onClick={close}>
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.save}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }
 
@@ -269,43 +258,35 @@ export function CloturerModal({
   lotNumero: string;
 }) {
   const l = dict.lcd;
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(cloturerDeclaration, IDLE);
 
   return (
-    <>
-      <Button variant="dangerGhost" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={cloturerDeclaration}
+        title={l.cloturer}
+        closeLabel={dict.common.close}
+        success={{ message: l.cloturee }}
+        trigger={(open) => <Button variant="dangerGhost" size="sm" onClick={open}>
         {l.cloturer}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={l.cloturer} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{l.cloturee}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="declaration_id" value={declarationId} />
             <p className="text-[15px] font-semibold text-ink">{fill(l.cloturerQuestion, { lot: lotNumero })}</p>
             <Field label={l.dateFin} htmlFor="c_fin" optionalLabel={dict.common.optional} error={fieldError(state, "date_fin")}>
-              <Input id="c_fin" name="date_fin" type="date" className="tnum" />
+              <Input id="c_fin" name="date_fin" type="date" className="tnum" defaultValue={formValue(state, "date_fin")} />
             </Field>
             <IrreversibleNotice>{l.cloturerAide}</IrreversibleNotice>
             <FormAlert state={state} />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+              <Button type="button" variant="secondary" onClick={close}>
+                {dict.common.close}
               </Button>
               <SubmitButton variant="danger">{l.cloturer}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }

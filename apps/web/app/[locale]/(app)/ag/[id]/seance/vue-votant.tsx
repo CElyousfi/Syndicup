@@ -268,7 +268,7 @@ export function VueVotant({
             </p>
             <div className="flex flex-wrap justify-end gap-2">
               <Button type="button" variant="secondary" size="lg" onClick={() => setChoix(null)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton size="lg">{a.voter}</SubmitButton>
             </div>

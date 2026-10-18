@@ -12,6 +12,7 @@ import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { LcdReglement, RegimeLcd } from "../../../../../lib/api/types";
 import { mettreAJourReglement } from "../actions";
 import { IconCheck } from "../../../../../components/ui/icons";
+import { formChecked, formKey, formValue } from "../../../../../lib/form-values";
 
 const REGIMES: RegimeLcd[] = ["NON_DEFINI", "AUTORISEE", "ENCADREE", "INTERDITE"];
 
@@ -86,17 +87,17 @@ export function ReglementForm({
             <Checkbox
               name="declaration_prealable_obligatoire"
               label={l.declarationPrealable}
-              defaultChecked={params?.declaration_prealable_obligatoire ?? true}
+              defaultChecked={formChecked(state, "declaration_prealable_obligatoire", params?.declaration_prealable_obligatoire ?? true)}
             />
             <Checkbox
               name="gestionnaire_obligatoire_si_proprietaire_absent"
               label={l.gestionnaireObligatoire}
-              defaultChecked={params?.gestionnaire_obligatoire_si_proprietaire_absent ?? false}
+              defaultChecked={formChecked(state, "gestionnaire_obligatoire_si_proprietaire_absent", params?.gestionnaire_obligatoire_si_proprietaire_absent ?? false)}
             />
             <Checkbox
               name="contact_gardien_obligatoire"
               label={l.contactGardien}
-              defaultChecked={params?.contact_gardien_obligatoire ?? false}
+              defaultChecked={formChecked(state, "contact_gardien_obligatoire", params?.contact_gardien_obligatoire ?? false)}
             />
             <div className="grid gap-4 sm:grid-cols-3">
               <Field
@@ -112,7 +113,7 @@ export function ReglementForm({
                   type="number"
                   min={0}
                   max={720}
-                  defaultValue={params?.delai_declaration_heures ?? ""}
+                  defaultValue={formValue(state, "delai_declaration_heures", params?.delai_declaration_heures ?? "")}
                   className="tnum"
                 />
               </Field>
@@ -128,7 +129,7 @@ export function ReglementForm({
                   type="number"
                   min={1}
                   max={366}
-                  defaultValue={params?.nb_nuits_max_par_an ?? ""}
+                  defaultValue={formValue(state, "nb_nuits_max_par_an", params?.nb_nuits_max_par_an ?? "")}
                   className="tnum"
                 />
               </Field>
@@ -144,7 +145,7 @@ export function ReglementForm({
                   type="number"
                   min={1}
                   max={50}
-                  defaultValue={params?.nb_voyageurs_max_par_lot ?? ""}
+                  defaultValue={formValue(state, "nb_voyageurs_max_par_lot", params?.nb_voyageurs_max_par_lot ?? "")}
                   className="tnum"
                 />
               </Field>
@@ -158,7 +159,7 @@ export function ReglementForm({
         <div className="mt-4">
           {resolutions.length > 0 ? (
             <Field label={l.agResolutionLiee} htmlFor="r_res" optionalLabel={dict.common.optional} error={fieldError(state, "ag_resolution_id")}>
-              <Select id="r_res" name="ag_resolution_id" defaultValue={reglement.regimeLcdAgResolutionId ?? ""}>
+              <Select key={formKey(state, "ag_resolution_id")} id="r_res" name="ag_resolution_id" defaultValue={formValue(state, "ag_resolution_id", reglement.regimeLcdAgResolutionId ?? "")}>
                 <option value="">{dict.common.none}</option>
                 {resolutions.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -174,7 +175,7 @@ export function ReglementForm({
                 name="ag_resolution_id"
                 dir="ltr"
                 className="font-mono text-[13px]"
-                defaultValue={reglement.regimeLcdAgResolutionId ?? ""}
+                defaultValue={formValue(state, "ag_resolution_id", reglement.regimeLcdAgResolutionId ?? "")}
                 placeholder="00000000-0000-0000-0000-000000000000"
               />
             </Field>

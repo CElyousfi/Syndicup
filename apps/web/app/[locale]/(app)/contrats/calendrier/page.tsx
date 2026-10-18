@@ -5,7 +5,7 @@ import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { Echeancier } from "../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../lib/i18n";
-import { formatPeriode } from "../../../../../lib/format";
+import { formatJourCourt, formatPeriode } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
 import { ButtonLink } from "../../../../../components/ui/button";
@@ -46,7 +46,7 @@ export default async function CalendrierPage({ params, searchParams }: { params:
   const premierJour = (debut.getUTCDay() + 6) % 7;
   const cases: (Date | null)[] = [...Array<null>(premierJour).fill(null), ...Array.from({ length: fin.getUTCDate() }, (_, i) => new Date(Date.UTC(y, m - 1, i + 1)))];
   while (cases.length % 7) cases.push(null);
-  const jours = [1, 2, 3, 4, 5, 6, 7].map((d) => new Date(Date.UTC(2024, 0, d)).toLocaleDateString(ctx.locale === "ar" ? "ar-MA" : "fr-FR", { weekday: "short", timeZone: "UTC" }));
+  const jours = [1, 2, 3, 4, 5, 6, 7].map((d) => formatJourCourt(new Date(Date.UTC(2024, 0, d)), ctx.locale));
   const aujourdhui = iso(now);
   return (
     <div className="page-root">

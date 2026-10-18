@@ -152,6 +152,7 @@ export default async function VisitesPage({
           title={v.aucuneVisite}
           hint={gardien || gestion ? v.aucuneVisiteAide : undefined}
           illustration="empty-visites"
+          action={gardien || gestion ? <EnregistrerVisiteModal dict={dict} locale={ctx.locale} lots={lots.map((l) => ({ id: l.id, numero: l.numero }))} /> : undefined}
         />
       ) : (
         <div className="space-y-10">

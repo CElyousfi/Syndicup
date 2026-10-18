@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAppContext } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
-import type { CategorieIncident, Incident, Prestataire, StatutIncident } from "../../../../lib/api/types";
+import type { CategorieIncident, CompteursIncidents, Incident, Prestataire, StatutIncident } from "../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
@@ -50,29 +50,26 @@ export default async function IncidentsPage({
   const peutSignaler = !prestataire;
 
   const page = Math.max(1, Number(sp.page) || 1);
-  const [incidentsRes, prestatairesRes] = await Promise.all([
-    apiFetch<Incident[]>("/incidents", { searchParams: { page, limit: 50 } }),
+  // Filtres appliqués PAR L'API (statut, urgence, catégorie) : meta.total est filtré, la
+  // pagination suit l'URL ; les cartes de synthèse viennent de /incidents/compteurs (tout le
+  // périmètre visible de l'appelant), jamais de la page affichée.
+  const filtre = Boolean(sp.statut || sp.urgence || sp.categorie);
+  const [incidentsRes, compteursRes, prestatairesRes] = await Promise.all([
+    apiFetch<Incident[]>("/incidents", {
+      searchParams: { page, limit: 50, statut: sp.statut || undefined, urgence: sp.urgence || undefined, categorie: sp.categorie || undefined },
+    }),
+    apiFetch<CompteursIncidents>("/incidents/compteurs"),
     gestion && ctx.role !== "GARDIEN"
       ? apiFetch<Prestataire[]>("/prestataires")
       : Promise.resolve(null),
   ]);
-  const tous = incidentsRes.ok ? incidentsRes.data : [];
-  const incidents = tous.filter((inc) => {
-    if (sp.statut && inc.statut !== sp.statut) return false;
-    if (sp.urgence && inc.urgence !== sp.urgence) return false;
-    if (sp.categorie && inc.categorie !== sp.categorie) return false;
-    return true;
-  });
+  const incidents = incidentsRes.ok ? incidentsRes.data : [];
   const prestataireParId = new Map(
     (prestatairesRes?.ok ? prestatairesRes.data : []).map((p) => [p.id, p.nom])
   );
-
-  // Indicateurs dérivés de la page déjà chargée — aucune requête supplémentaire.
-  const ouverts = tous.filter((x) => x.statut === "OUVERT" || x.statut === "EN_COURS");
-  const slaDepassesNb = ouverts.filter(
-    (x) => x.slaDeadline && new Date(x.slaDeadline).getTime() < Date.now()
-  ).length;
-  const resolusNb = tous.filter((x) => x.statut === "RESOLU" || x.statut === "FERME").length;
+  const compteurs = compteursRes.ok ? compteursRes.data : null;
+  const ouvertsNb = compteurs ? compteurs.par_statut.OUVERT + compteurs.par_statut.EN_COURS : 0;
+  const resolusNb = compteurs ? compteurs.par_statut.RESOLU + compteurs.par_statut.FERME : 0;
 
   const p = (path: string) => `/${locale}${path}`;
   const titre = prestataire ? i.mesTickets : gestion ? i.titre : i.mesSignalements;
@@ -94,20 +91,22 @@ export default async function IncidentsPage({
         }
       />
 
-      {tous.length > 0 ? (
+      {!compteursRes.ok ? (
+        <LoadError error={failureOf(compteursRes)} locale={ctx.locale} variant="inline" className="mb-5" />
+      ) : compteurs && compteurs.total > 0 ? (
         <div className="mb-5 grid gap-4 sm:grid-cols-3">
           <StatCard
             icon={<CWrench />}
             tone="tosca"
             label={dict.dash.incidentsOuverts}
-            value={ouverts.length}
+            value={ouvertsNb}
           />
           <StatCard
             icon={<CAlert />}
             tone="danger"
             label={i.slaDepasse}
-            value={slaDepassesNb}
-            trendTone={slaDepassesNb > 0 ? "danger" : "ok"}
+            value={compteurs.sla_depasses}
+            trendTone={compteurs.sla_depasses > 0 ? "danger" : "ok"}
           />
           <StatCard
             icon={<CShield />}
@@ -154,11 +153,18 @@ export default async function IncidentsPage({
         </Button>
       </form>
 
-      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 ? (
+      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 && filtre ? (
+        <EmptyState
+          title={dict.formulaires.filtres.aucunResultat}
+          hint={dict.formulaires.filtres.aucunResultatAide}
+          illustration="empty-search"
+          action={<ButtonLink href={p("/incidents")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink>}
+        />
+      ) : incidents.length === 0 ? (
         <EmptyState
           title={i.aucunIncident}
           hint={gestion ? i.aucunIncidentAide : undefined}
-          illustration={tous.length > 0 ? "empty-search" : "empty-incidents"}
+          illustration="empty-incidents"
           action={
             peutSignaler ? (
               <ButtonLink href={p("/incidents/nouveau")}>

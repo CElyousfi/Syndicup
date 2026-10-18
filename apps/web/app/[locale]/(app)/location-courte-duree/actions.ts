@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
+import { fromApiError, fileTooLarge, uploadRefused, localError, succes } from "../../../../lib/forms-server";
 import type {
   LcdDeclaration,
   LcdGestionnaireResult,
@@ -56,7 +56,7 @@ export async function mettreAJourReglement(_prev: FormState, fd: FormData): Prom
   }
   if (agResolutionId) body.ag_resolution_id = agResolutionId;
   const res = await apiFetch<LcdReglement>("/lcd/reglement", { method: "PUT", body });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, "/reglement");
   return success();
 }
@@ -88,7 +88,7 @@ export async function declarerLot(_prev: FormState, fd: FormData): Promise<FormS
       ...(dateDebut ? { date_debut: dateDebut } : {}),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   return success(undefined, { statut: res.data.statut, id: res.data.id });
 }
@@ -104,7 +104,7 @@ export async function modifierDeclaration(_prev: FormState, fd: FormData): Promi
       contact_urgence_telephone: optionnel(fd, "contact_urgence_telephone"),
     },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/declarations/${id}`);
   return success();
 }
@@ -120,7 +120,7 @@ export async function deciderDeclaration(_prev: FormState, fd: FormData): Promis
     idempotent: true,
     body: { decision, ...(motif ? { motif } : {}) },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/declarations/${id}`);
   return success();
 }
@@ -133,7 +133,7 @@ export async function cloturerDeclaration(_prev: FormState, fd: FormData): Promi
     method: "POST",
     body: dateFin ? { date_fin: dateFin } : {},
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/declarations/${id}`);
   return success();
 }
@@ -150,7 +150,7 @@ export async function designerGestionnaire(_prev: FormState, fd: FormData): Prom
     method: "POST",
     body,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/declarations/${id}`);
   return success(undefined, { invitation: res.data.invitation });
 }
@@ -187,21 +187,21 @@ async function televerserPieces(fd: FormData): Promise<string[] | { erreur: Form
   const chemins: string[] = [];
   for (const fichier of fichiers) {
     if (fichier.size > 15 * 1024 * 1024) {
-      return { erreur: await fileTooLarge("pieces_jointes", 15) };
+      return { erreur: await fileTooLarge("pieces_jointes", 15, false, fd) };
     }
     const contentType = fichier.type || (fichier.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
     const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/lcd/sejours/upload-url", {
       method: "POST",
       body: { nom_fichier: fichier.name || "photo.jpg", content_type: contentType },
     });
-    if (!prep.ok) return { erreur: await fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
     const upload = await fetch(prep.data.upload_url, {
       method: "PUT",
       headers: { "Content-Type": contentType, "x-upsert": "true" },
       body: await fichier.arrayBuffer(),
     });
     if (!upload.ok) {
-      return { erreur: await uploadRefused(upload.status) };
+      return { erreur: await uploadRefused(upload.status, fd) };
     }
     chemins.push(prep.data.storage_path);
   }
@@ -218,7 +218,7 @@ export async function declarerSejour(_prev: FormState, fd: FormData): Promise<Fo
     idempotent: true,
     body: { lot_id: champ(fd, "lot_id"), ...corpsSejour(fd), ...(pieces.length > 0 ? { pieces_jointes: pieces } : {}) },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, "/sejours");
   redirect(`/${locale}${BASE}/sejours/${res.data.id}?declare=1`);
 }
@@ -230,12 +230,12 @@ export async function modifierSejour(_prev: FormState, fd: FormData): Promise<Fo
     method: "PATCH",
     body: corpsSejour(fd),
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   const pieces = await televerserPieces(fd);
   if (!Array.isArray(pieces)) return pieces.erreur;
   if (pieces.length > 0) {
     const ajout = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
-    if (!ajout.ok) return fromApiError(ajout);
+    if (!ajout.ok) return fromApiError(ajout, fd);
   }
   revalider(locale, `/sejours/${id}`);
   redirect(`/${locale}${BASE}/sejours/${id}?modifie=1`);
@@ -247,20 +247,20 @@ export async function ajouterPiecesJointes(_prev: FormState, fd: FormData): Prom
   const id = champ(fd, "sejour_id");
   const pieces = await televerserPieces(fd);
   if (!Array.isArray(pieces)) return pieces.erreur;
-  if (pieces.length === 0) return await localError("VALIDATION_ERROR", (l) => l.aucunFichier, { field: "pieces_jointes" });
+  if (pieces.length === 0) return await localError("VALIDATION_ERROR", (l) => l.aucunFichier, { field: "pieces_jointes", fd });
   const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
-  return success(champ(fd, "message_succes") || undefined);
+  return succes((d) => d.lcd.pieceAjoutee);
 }
 
 export async function retirerPieceJointe(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const id = champ(fd, "sejour_id");
   const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "DELETE", body: { chemin: champ(fd, "chemin") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
-  return success(champ(fd, "message_succes") || undefined);
+  return succes((d) => d.lcd.pieceRetiree);
 }
 
 export async function annulerSejour(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -272,7 +272,7 @@ export async function annulerSejour(_prev: FormState, fd: FormData): Promise<For
     idempotent: true,
     body: motif ? { motif } : {},
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
   return success();
 }
@@ -287,7 +287,7 @@ export async function confirmerArrivee(_prev: FormState, fd: FormData): Promise<
     idempotent: true,
     body: constate === null ? {} : { nb_voyageurs_constate: constate },
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
   return success();
 }
@@ -299,7 +299,7 @@ export async function confirmerDepart(_prev: FormState, fd: FormData): Promise<F
     method: "POST",
     idempotent: true,
   });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `/sejours/${id}`);
   return success();
 }

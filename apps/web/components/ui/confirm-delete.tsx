@@ -1,15 +1,10 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import type React from "react";
-import { Modal } from "./modal";
-import { IrreversibleNotice } from "./irreversible-notice";
-import { Banner } from "./banner";
-import { Button } from "./button";
-import { FormAlert, SubmitButton } from "./form";
-import { IDLE, type FormState } from "../../lib/forms";
+import { ConfirmAction } from "./confirm-action";
+import type { FormState } from "../../lib/forms";
 import { fill, type Dict, type Locale } from "../../lib/i18n";
-import { toast } from "../../lib/toast";
 
 function IconTrash(props: React.SVGProps<SVGSVGElement>) {
   return (
@@ -20,9 +15,9 @@ function IconTrash(props: React.SVGProps<SVGSVGElement>) {
 }
 
 /**
- * Suppression / annulation avec confirmation — le même geste partout dans l'app : un bouton
- * discret, une question nominative, l'avertissement d'irréversibilité, puis l'action serveur.
- * Les refus métier (409 : « a un historique ») s'affichent dans la modale, jamais en 500.
+ * Suppression avec confirmation — cas particulier de <ConfirmAction> : un bouton discret, une
+ * question nominative, l'avertissement d'irréversibilité, puis l'action serveur. Les refus
+ * métier (409 : « a un historique ») s'affichent dans la modale, jamais en 500.
  */
 export function ConfirmDelete({
   dict,
@@ -33,6 +28,8 @@ export function ConfirmDelete({
   titre,
   aide,
   label,
+  confirmLabel,
+  succes,
   variant = "dangerGhost",
   size = "sm",
   icon = true,
@@ -47,6 +44,10 @@ export function ConfirmDelete({
   titre?: string;
   aide?: string;
   label?: string;
+  /** Verbe du bouton de confirmation (défaut : le libellé, ou « Supprimer définitivement »). */
+  confirmLabel?: string;
+  /** Message du succès (défaut : « Supprimé. »). */
+  succes?: string;
   variant?: "dangerGhost" | "secondary" | "danger";
   size?: "sm" | "md";
   icon?: boolean;
@@ -54,54 +55,26 @@ export function ConfirmDelete({
   compact?: boolean;
   children?: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState(action, IDLE);
   const g = dict.gestion;
   const libelle = label ?? g.supprimer;
-
-  useEffect(() => {
-    if (state.status === "success") {
-      toast({ titre: g.supprime, tone: "ok", duree: 3500 });
-      const t = setTimeout(() => setOpen(false), 700);
-      return () => clearTimeout(t);
-    }
-  }, [state, g.supprime]);
-
   return (
-    <>
-      <Button
-        type="button"
-        variant={variant}
-        size={size}
-        onClick={() => setOpen(true)}
-        title={libelle}
-        aria-label={libelle}
-      >
-        {icon || compact ? <IconTrash width={15} height={15} /> : null}
-        {compact ? null : libelle}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={titre ?? libelle} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <Banner variant="ok">{g.supprime}</Banner>
-        ) : (
-          <form action={formAction} className="space-y-4">
-            <input type="hidden" name="locale" value={locale} />
-            {Object.entries(champs).map(([k, v]) => (
-              <input key={k} type="hidden" name={k} value={v} />
-            ))}
-            <p className="text-[16px] font-bold leading-snug text-ink">{fill(g.supprimerQuestion, { nom })}</p>
-            {children}
-            <IrreversibleNotice>{aide ?? g.supprimerIrreversible}</IrreversibleNotice>
-            <FormAlert state={state} />
-            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
-              </Button>
-              <SubmitButton variant="danger">{label ?? g.supprimerConfirmer}</SubmitButton>
-            </div>
-          </form>
-        )}
-      </Modal>
-    </>
+    <ConfirmAction
+      action={action}
+      fields={{ locale, ...champs }}
+      triggerLabel={libelle}
+      triggerVariant={variant}
+      triggerSize={size}
+      triggerIcon={icon || compact ? <IconTrash width={15} height={15} /> : null}
+      compact={compact}
+      title={titre ?? libelle}
+      question={fill(g.supprimerQuestion, { nom })}
+      consequence={aide ?? g.supprimerIrreversible}
+      irreversible
+      confirmLabel={confirmLabel ?? label ?? g.supprimerConfirmer}
+      closeLabel={dict.common.close}
+      success={succes ?? g.supprime}
+    >
+      {children}
+    </ConfirmAction>
   );
 }

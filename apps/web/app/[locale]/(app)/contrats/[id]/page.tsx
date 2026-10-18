@@ -24,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   return { title: getDict(isLocale(locale) ? locale : "fr").contrats.titre };
 }
 
-export default async function ContratDetailPage({ params, searchParams }: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ cree?: string }> }) {
+export default async function ContratDetailPage({ params, searchParams }: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ cree?: string; maj?: string }> }) {
   const { locale, id } = await params;
   const sp = await searchParams;
   const ctx = await getAppContext(locale);
@@ -50,6 +50,7 @@ export default async function ContratDetailPage({ params, searchParams }: { para
         actions={gestion ? <>{vivant ? <ButtonLink href={p(`/contrats/${id}/modifier`)} variant="secondary">{dict.common.modify}</ButtonLink> : null}{x.statut === "BROUILLON" || x.statut === "SUSPENDU" ? <ActiverModal dict={dict} locale={ctx.locale} contrat={x} /> : null}{x.statut === "ACTIF" ? <SuspendreModal dict={dict} locale={ctx.locale} contrat={x} /> : null}{vivant ? <ResilierModal dict={dict} locale={ctx.locale} contrat={x} /> : null}</> : undefined}
       />
       {sp.cree ? <Banner variant="ok" className="mb-4" title={c.cree}>{c.creeAide}</Banner> : null}
+      {sp.maj === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.contratModifie}</Banner> : null}
       {x.statut === "RESILIE" && x.motifResiliation ? <Banner variant="warn" className="mb-4" title={`${c.motifResiliation}${x.dateResiliation ? ` · ${formatDate(x.dateResiliation, ctx.locale)}` : ""}`}>{x.motifResiliation}</Banner> : null}
       {x.statut === "ACTIF" && x.jours_avant_fin !== null && x.jours_avant_fin <= 90 ? <Banner variant={x.jours_avant_fin <= 30 ? "danger" : "warn"} className="mb-4">{fill(c.joursAvantFin, { n: x.jours_avant_fin })}{x.tacite ? ` · ${c.tacite}` : ""}</Banner> : null}
       <div className="grid gap-x-8 gap-y-6 lg:grid-cols-3">

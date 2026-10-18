@@ -1,15 +1,15 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable } from "../../../../../../components/ui/pressable";
 import { Badge } from "../../../../../../components/ui/badge";
 import { Banner } from "../../../../../../components/ui/banner";
 import { SectionHeader } from "../../../../../../components/ui/card";
-import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
+import { ConfirmAction } from "../../../../../../components/ui/confirm-action";
 import { Figure } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
 import { Donut } from "../../../../../../components/ui/charts";
-import { IDLE } from "../../../../../../lib/forms";
+
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import type {
   AgResolution,
@@ -46,7 +46,8 @@ export function Pupitre({
   });
   const [resultats, setResultats] = useState<AgResultatLigne[] | null>(null);
   const [chargement, setChargement] = useState(true);
-  const [finaliserState, finaliserAction] = useActionState(finaliserResolution, IDLE);
+  // Chaque finalisation relance aussitôt la lecture des agrégats (résultat figé).
+  const [finalisations, setFinalisations] = useState(0);
 
   const resolution = resolutions[index];
 
@@ -89,7 +90,7 @@ export function Pupitre({
       annule = true;
       clearInterval(timer);
     };
-  }, [agId, resolution?.id, resolution, finaliserState, essai, staleOk, staleFail]);
+  }, [agId, resolution?.id, resolution, finalisations, essai, staleOk, staleFail]);
 
   if (!resolution) return <Banner variant="info">{a.aucuneResolution}</Banner>;
 
@@ -206,18 +207,32 @@ export function Pupitre({
             </div>
 
             {resolution.resultat === "EN_ATTENTE" ? (
-              <form action={finaliserAction} className="mt-6 space-y-3">
-                <input type="hidden" name="locale" value={locale} />
-                <input type="hidden" name="ag_id" value={agId} />
-                <input type="hidden" name="resolution_id" value={resolution.id} />
+              <div className="mt-6 space-y-3">
                 <p className="text-[13px] leading-relaxed text-body">
                   {a.finaliserCorps} <span className="font-semibold text-warn">{a.egaliteRejetee}</span>
                 </p>
-                <FormAlert state={finaliserState} />
-                <SubmitButton size="lg" className="w-full sm:w-auto">
-                  {a.finaliser}
-                </SubmitButton>
-              </form>
+                {/* Écriture probante (résultat inscrit au PV) : jamais en un clic. */}
+                <ConfirmAction
+                  key={resolution.id}
+                  action={finaliserResolution}
+                  fields={{ locale, ag_id: agId, resolution_id: resolution.id }}
+                  triggerLabel={a.finaliser}
+                  triggerVariant="primary"
+                  triggerSize="lg"
+                  triggerClassName="w-full sm:w-auto"
+                  title={dict.formulaires.confirmer.finaliserTitre}
+                  question={fill(dict.formulaires.confirmer.finaliserQuestion, { ordre: resolution.ordre })}
+                  consequence={dict.formulaires.confirmer.finaliserConsequence}
+                  irreversible
+                  tone="primary"
+                  confirmLabel={dict.formulaires.confirmer.finaliserConfirmer}
+                  closeLabel={dict.common.close}
+                  success={dict.formulaires.succes.resolutionFinalisee}
+                  onSuccess={() => setFinalisations((n) => n + 1)}
+                >
+                  <p className="text-[13px] font-semibold text-warn">{a.egaliteRejetee}</p>
+                </ConfirmAction>
+              </div>
             ) : null}
           </div>
 

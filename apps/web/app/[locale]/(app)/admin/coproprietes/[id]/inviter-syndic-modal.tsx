@@ -18,6 +18,7 @@ import type { CanalInvitation } from "../../../../../../lib/api/types";
 import { inviterSyndicAdmin } from "../../actions";
 import { CodeInvitation } from "../../../invitations/invitation-modals";
 import { celebrate } from "../../../../../../lib/success";
+import { formKey, formValue } from "../../../../../../lib/form-values";
 
 export function InviterSyndicModal({
   dict,
@@ -95,7 +96,7 @@ export function InviterSyndicModal({
             <input type="hidden" name="copropriete_id" value={coproprieteId} />
             <p className="text-[13px] text-soft">{ad.syndicAide}</p>
             <Field label={dict.invitations.canal} htmlFor="fc_canal" required>
-              <Select id="fc_canal" name="canal" defaultValue="WHATSAPP" required>
+              <Select key={formKey(state, "canal")} id="fc_canal" name="canal" defaultValue={formValue(state, "canal", "WHATSAPP")} required>
                 {canaux.map((c) => (
                   <option key={c} value={c}>
                     {dict.enums.canal[c]}
@@ -106,7 +107,7 @@ export function InviterSyndicModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{ad.inviterSyndic}</SubmitButton>
             </div>

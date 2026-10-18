@@ -94,6 +94,8 @@ export interface FrameLabels {
   actions: string;
   quickTitle: string;
   done: string;
+  /** Croix des toasts (« Fermer » / « إغلاق »). */
+  close: string;
 }
 
 /**
@@ -434,7 +436,7 @@ export function AppFrame({
           « menu » ouvrent la feuille de navigation à la place de l'ancien tiroir. */}
       <GuidedTour locale={locale} labels={tour} onDrawer={setSheetOpen} />
       {dari ? <DariAssistant locale={locale} labels={dari.labels} prenom={dari.prenom} roleLabel={userRole} /> : null}
-      <Toaster />
+      <Toaster closeLabel={labels.close} />
       <SuccessOverlay doneLabel={labels.done} labels={alive} locale={locale} />
       <SignatureOverlay labels={alive} locale={locale} />
       <ConnectivityBanner offline={alive.horsLigne} online={alive.enLigne} />

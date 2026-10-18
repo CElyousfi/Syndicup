@@ -18,15 +18,14 @@ import {
   modifierParametresPaie,
 } from "./actions";
 import type { ParametresPaie } from "../../../../lib/api/types";
+import { formChecked, formKey, formValue } from "../../../../lib/form-values";
 
 const DELAIS_DEFAUT: Record<string, number> = { N1: 3, N2: 15, N3: 30, N4: 45, N5: 60, N6: 90 };
 
-function PiedSection({ dict, state }: { dict: Dict; state: import("../../../../lib/forms").FormState }) {
+/** Pied de section — le succès est annoncé par <FormAlert> (bandeau + toast), jamais deux fois. */
+function PiedSection({ dict }: { dict: Dict; state?: import("../../../../lib/forms").FormState }) {
   return (
     <div className="flex items-center justify-end gap-3 border-t border-hairline pt-4">
-      {state.status === "success" ? (
-        <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p>
-      ) : null}
       <SubmitButton>{dict.common.save}</SubmitButton>
     </div>
   );
@@ -48,18 +47,18 @@ export function IdentiteForm({
       <input type="hidden" name="locale" value={locale} />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={pa.nom} htmlFor="c_nom" required>
-          <Input id="c_nom" name="nom" defaultValue={copro.nom} required maxLength={200} />
+          <Input id="c_nom" name="nom" defaultValue={formValue(state, "nom", copro.nom)} required maxLength={200} />
         </Field>
         <Field label={pa.ville} htmlFor="c_ville" required>
-          <Input id="c_ville" name="ville" defaultValue={copro.ville} required maxLength={100} />
+          <Input id="c_ville" name="ville" defaultValue={formValue(state, "ville", copro.ville)} required maxLength={100} />
         </Field>
       </div>
       <Field label={pa.adresse} htmlFor="c_adresse" required>
-        <Input id="c_adresse" name="adresse" defaultValue={copro.adresse} required maxLength={500} />
+        <Input id="c_adresse" name="adresse" defaultValue={formValue(state, "adresse", copro.adresse)} required maxLength={500} />
       </Field>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label={pa.typeResidence} htmlFor="c_type">
-          <Select id="c_type" name="type_residence" defaultValue={copro.typeResidence} disabled>
+          <Select key={formKey(state, "type_residence")} id="c_type" name="type_residence" defaultValue={formValue(state, "type_residence", copro.typeResidence)} disabled>
             {(Object.keys(dict.enums.typeResidence) as TypeResidence[]).map((t) => (
               <option key={t} value={t}>
                 {dict.enums.typeResidence[t]}
@@ -74,7 +73,7 @@ export function IdentiteForm({
             type="number"
             min={1}
             max={10000}
-            defaultValue={copro.nbLots}
+            defaultValue={formValue(state, "nb_lots", copro.nbLots)}
             required
             className="tnum"
           />
@@ -110,8 +109,8 @@ export function ReglementForm({
           name="total_tantiemes"
           inputMode="decimal"
           dir="ltr"
-          pattern="\d{1,12}([.]\d{1,2})?"
-          defaultValue={copro.totalTantiemes ?? ""}
+          pattern="\d{1,12}([.,]\d{1,2})?"
+          defaultValue={formValue(state, "total_tantiemes", copro.totalTantiemes ?? "")}
           className="tnum max-w-56 text-start"
         />
       </Field>
@@ -139,12 +138,12 @@ export function OptionsForm({
       <Switch
         name="locataire_voit_pv"
         label={pa.optLocatairesPv}
-        defaultChecked={config.locataire_voit_pv === true}
+        defaultChecked={formChecked(state, "locataire_voit_pv", config.locataire_voit_pv === true)}
       />
       <Switch
         name="reservation_espaces_proprietaires_only"
         label={pa.optReservationProprio}
-        defaultChecked={config.reservation_espaces_proprietaires_only === true}
+        defaultChecked={formChecked(state, "reservation_espaces_proprietaires_only", config.reservation_espaces_proprietaires_only === true)}
       />
       <FormAlert state={state} />
       <PiedSection dict={dict} state={state} />
@@ -178,7 +177,7 @@ export function RecouvrementForm({
               min={0}
               max={3650}
               placeholder={String(DELAIS_DEFAUT[n])}
-              defaultValue={typeof politique[n] === "number" ? String(politique[n]) : ""}
+              defaultValue={formValue(state, n, typeof politique[n] === "number" ? String(politique[n]) : "")}
               className="tnum"
             />
           </Field>
@@ -222,7 +221,7 @@ export function LegauxForm({
             type="number"
             min={1}
             max={365}
-            defaultValue={copro.delaiConvocationJours ?? ""}
+            defaultValue={formValue(state, "delai_convocation_jours", copro.delaiConvocationJours ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum"
           />
@@ -233,8 +232,8 @@ export function LegauxForm({
             name="quorum_premiere_convocation"
             inputMode="decimal"
             dir="ltr"
-            pattern="(0[.]\d{1,3}|1([.]0{1,3})?)"
-            defaultValue={copro.quorumPremiereConvocation ?? ""}
+            pattern="(0[.,]\d{1,3}|1([.,]0{1,3})?)"
+            defaultValue={formValue(state, "quorum_premiere_convocation", copro.quorumPremiereConvocation ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum text-start"
           />
@@ -246,7 +245,7 @@ export function LegauxForm({
             type="number"
             min={1}
             max={730}
-            defaultValue={copro.delaiExecutionResolutionJours ?? ""}
+            defaultValue={formValue(state, "delai_execution_resolution_jours", copro.delaiExecutionResolutionJours ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum"
           />
@@ -258,7 +257,7 @@ export function LegauxForm({
             type="number"
             min={1}
             max={100}
-            defaultValue={copro.limiteProcurationsMandataire ?? ""}
+            defaultValue={formValue(state, "limite_procurations_mandataire", copro.limiteProcurationsMandataire ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum"
           />
@@ -270,7 +269,7 @@ export function LegauxForm({
             type="number"
             min={1}
             max={240}
-            defaultValue={copro.retentionDesactivationMois ?? ""}
+            defaultValue={formValue(state, "retention_desactivation_mois", copro.retentionDesactivationMois ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum"
           />
@@ -301,7 +300,7 @@ export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Loc
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {champs.map(([name, label, val]) => (
           <Field key={name} label={label} htmlFor={`paie_${name}`} optionalLabel={name === "smig_mensuel" || name === "jours_conge_annuels" ? dict.common.optional : undefined}>
-            <Input id={`paie_${name}`} name={name} inputMode="decimal" dir="ltr" defaultValue={val ?? ""} className="tnum text-start" required={name !== "smig_mensuel" && name !== "jours_conge_annuels"} />
+            <Input id={`paie_${name}`} name={name} inputMode="decimal" dir="ltr" defaultValue={formValue(state, name, val ?? "")} className="tnum text-start" required={name !== "smig_mensuel" && name !== "jours_conge_annuels"} />
           </Field>
         ))}
       </div>
@@ -311,21 +310,21 @@ export function PaieForm({ dict, locale, parametres }: { dict: Dict; locale: Loc
         <div className="mt-2 space-y-2">
           {Array.from({ length: Math.max(6, tranches.length) }, (_, i) => tranches[i] ?? { jusqua: "", taux: "", deduction: "" }).map((t, i) => (
             <div key={i} className="grid grid-cols-3 gap-2">
-              <Input name={`t_jusqua_${i}`} placeholder={pa.paieJusqua} inputMode="decimal" dir="ltr" defaultValue={t.jusqua ?? ""} className="tnum text-start" />
-              <Input name={`t_taux_${i}`} placeholder={pa.paieTaux} inputMode="decimal" dir="ltr" defaultValue={t.taux} className="tnum text-start" />
-              <Input name={`t_deduction_${i}`} placeholder={pa.paieDeduction} inputMode="decimal" dir="ltr" defaultValue={t.deduction} className="tnum text-start" />
+              <Input name={`t_jusqua_${i}`} placeholder={pa.paieJusqua} inputMode="decimal" dir="ltr" defaultValue={formValue(state, `t_jusqua_${i}`, t.jusqua ?? "")} className="tnum text-start" />
+              <Input name={`t_taux_${i}`} placeholder={pa.paieTaux} inputMode="decimal" dir="ltr" defaultValue={formValue(state, `t_taux_${i}`, t.taux)} className="tnum text-start" />
+              <Input name={`t_deduction_${i}`} placeholder={pa.paieDeduction} inputMode="decimal" dir="ltr" defaultValue={formValue(state, `t_deduction_${i}`, t.deduction)} className="tnum text-start" />
             </div>
           ))}
         </div>
       </div>
-      <Switch name="retenue_absence_injustifiee" label={pa.paieRetenueAbsence} defaultChecked={p?.retenue_absence_injustifiee ?? true} />
+      <Switch name="retenue_absence_injustifiee" label={pa.paieRetenueAbsence} defaultChecked={formChecked(state, "retenue_absence_injustifiee", p?.retenue_absence_injustifiee ?? true)} />
       <Field label={pa.paieSource} htmlFor="paie_source" optionalLabel={dict.common.optional}>
-        <Input id="paie_source" name="source" maxLength={500} defaultValue={p?.source ?? ""} />
+        <Input id="paie_source" name="source" maxLength={500} defaultValue={formValue(state, "source", p?.source ?? "")} />
       </Field>
       <FormAlert state={state} />
       <div className="flex items-center justify-between gap-3 border-t border-hairline pt-4">
         <Button type="submit" name="effacer" value="1" variant="dangerGhost" size="sm">{pa.paieEffacer}</Button>
-        <div className="flex items-center gap-3">{state.status === "success" ? <p className="text-[13px] font-medium text-ok">{dict.parametres.enregistre}</p> : null}<SubmitButton>{dict.common.save}</SubmitButton></div>
+        <div className="flex items-center gap-3"><SubmitButton>{dict.common.save}</SubmitButton></div>
       </div>
     </form>
   );

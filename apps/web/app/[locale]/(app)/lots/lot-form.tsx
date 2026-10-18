@@ -7,6 +7,7 @@ import { IDLE, fieldError } from "../../../../lib/forms";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { Lot, StatutLot, TypeLot } from "../../../../lib/api/types";
 import { creerLot, modifierLot } from "./actions";
+import { formKey, formValue } from "../../../../lib/form-values";
 
 export function LotForm({
   dict,
@@ -29,7 +30,7 @@ export function LotForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label={dict.lots.type} htmlFor="type_lot" required>
-          <Select id="type_lot" name="type_lot" defaultValue={lot?.typeLot ?? "APPARTEMENT"} required>
+          <Select key={formKey(state, "type_lot")} id="type_lot" name="type_lot" defaultValue={formValue(state, "type_lot", lot?.typeLot ?? "APPARTEMENT")} required>
             {(Object.keys(dict.enums.typeLot) as TypeLot[]).map((t) => (
               <option key={t} value={t}>
                 {dict.enums.typeLot[t]}
@@ -43,17 +44,17 @@ export function LotForm({
           required
           error={fieldError(state, "numero")}
         >
-          <Input id="numero" name="numero" defaultValue={lot?.numero ?? ""} required maxLength={20} />
+          <Input id="numero" name="numero" defaultValue={formValue(state, "numero", lot?.numero ?? "")} required maxLength={20} />
         </Field>
         <Field label={dict.lots.batiment} htmlFor="batiment" hint={dict.lots.batimentAide} optionalLabel={dict.common.optional}>
-          <Input id="batiment" name="batiment" defaultValue={lot?.batiment ?? ""} maxLength={40} />
+          <Input id="batiment" name="batiment" defaultValue={formValue(state, "batiment", lot?.batiment ?? "")} maxLength={40} />
         </Field>
         <Field label={dict.lots.etage} htmlFor="etage" optionalLabel={dict.common.optional}>
           <Input
             id="etage"
             name="etage"
             type="number"
-            defaultValue={lot?.etage ?? ""}
+            defaultValue={formValue(state, "etage", lot?.etage ?? "")}
             min={-5}
             max={200}
           />
@@ -69,8 +70,8 @@ export function LotForm({
             name="tantiemes"
             inputMode="decimal"
             dir="ltr"
-            pattern="\d{1,12}([.]\d{1,2})?"
-            defaultValue={lot?.tantiemes ?? ""}
+            pattern="\d{1,12}([.,]\d{1,2})?"
+            defaultValue={formValue(state, "tantiemes", lot?.tantiemes ?? "")}
             required
             className="tnum text-start"
           />
@@ -86,13 +87,13 @@ export function LotForm({
             name="superficie"
             inputMode="decimal"
             dir="ltr"
-            pattern="\d{1,8}([.]\d{1,2})?"
-            defaultValue={lot?.superficie ?? ""}
+            pattern="\d{1,8}([.,]\d{1,2})?"
+            defaultValue={formValue(state, "superficie", lot?.superficie ?? "")}
             className="tnum text-start"
           />
         </Field>
         <Field label={dict.lots.typeUsage} htmlFor="type_usage" optionalLabel={dict.common.optional}>
-          <Select id="type_usage" name="type_usage" defaultValue={lot?.typeUsage ?? ""}>
+          <Select key={formKey(state, "type_usage")} id="type_usage" name="type_usage" defaultValue={formValue(state, "type_usage", lot?.typeUsage ?? "")}>
             <option value="">{dict.common.none}</option>
             {(Object.keys(dict.lots.usages) as Array<keyof Dict["lots"]["usages"]>).map((u) => (
               <option key={u} value={u}>
@@ -103,7 +104,7 @@ export function LotForm({
         </Field>
         {lot ? (
           <Field label={dict.lots.statut} htmlFor="statut">
-            <Select id="statut" name="statut" defaultValue={lot.statut}>
+            <Select key={formKey(state, "statut")} id="statut" name="statut" defaultValue={formValue(state, "statut", lot.statut)}>
               {(Object.keys(dict.enums.statutLot) as StatutLot[]).map((s) => (
                 <option key={s} value={s}>
                   {dict.enums.statutLot[s]}
@@ -118,7 +119,7 @@ export function LotForm({
           hint={dict.lots.lotParentAide}
           optionalLabel={dict.common.optional}
         >
-          <Select id="lot_parent_id" name="lot_parent_id" defaultValue={lot?.lotParentId ?? ""}>
+          <Select key={formKey(state, "lot_parent_id")} id="lot_parent_id" name="lot_parent_id" defaultValue={formValue(state, "lot_parent_id", lot?.lotParentId ?? "")}>
             <option value="">{dict.common.none}</option>
             {lotsParents
               .filter((lp) => lp.id !== lot?.id)

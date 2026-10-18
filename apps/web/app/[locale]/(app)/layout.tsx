@@ -61,6 +61,7 @@ export default async function AppLayout({
         actions: dict.nav.actions,
         quickTitle: dict.nav.quickTitle,
         done: dict.common.done,
+        close: dict.common.close,
       }}
       alive={dict.alive}
       staleLabels={dict.errors.stale}

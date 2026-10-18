@@ -81,6 +81,7 @@ export default async function InvitationsPage({
         <EmptyState
           title={inv.aucune}
           hint={inv.aucuneAide}
+          action={<CreerInvitationModal dict={dict} locale={ctx.locale} lots={lots.map((l) => ({ id: l.id, numero: l.numero }))} />}
           icon={
             <IconCircle tone="sand" size={64}>
               <CKey width={30} height={30} />

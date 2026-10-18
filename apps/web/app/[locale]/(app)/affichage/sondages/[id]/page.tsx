@@ -39,7 +39,7 @@ export default async function SondagePage({ params, searchParams }: { params: Pr
         title={s.question}
         subtitle={`${s.statut === "CLOS" ? fill(c.closLe, { date: formatDateHeure(s.closLe ?? s.dateFin, ctx.locale) }) : fill(c.finLe, { date: formatDateHeure(s.dateFin, ctx.locale) })} · ${fill(c.par, { nom: nomComplet(s.auteur) ?? "—" })} · ${e.audience[s.audience]}${s.batiment ? ` ${s.batiment}` : ""}`}
         badge={<Badge variant={sondageVariant[s.statut]}>{e.statutSondage[s.statut]}</Badge>}
-        actions={gestion ? <div className="flex flex-wrap gap-2">{s.statut === "BROUILLON" ? <><SondageTransitionModal dict={dict} locale={ctx.locale} sondage={s} action="ouvrir" /><SupprimerBouton dict={dict} locale={ctx.locale} id={s.id} sondage /></> : null}{s.statut === "OUVERT" ? <SondageTransitionModal dict={dict} locale={ctx.locale} sondage={s} action="clore" /> : null}</div> : undefined}
+        actions={gestion ? <div className="flex flex-wrap gap-2">{s.statut === "BROUILLON" ? <><SondageTransitionModal dict={dict} locale={ctx.locale} sondage={s} action="ouvrir" /><SupprimerBouton dict={dict} locale={ctx.locale} id={s.id} sondage titre={s.question} /></> : null}{s.statut === "OUVERT" ? <SondageTransitionModal dict={dict} locale={ctx.locale} sondage={s} action="clore" /> : null}</div> : undefined}
       />
       {sp.cree === "1" ? <Banner variant="ok">{c.sondageEnregistre}</Banner> : null}
       <Banner variant="info">{c.mention}</Banner>

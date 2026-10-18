@@ -14,6 +14,7 @@ import { creerInvitation, regenererInvitation } from "./actions";
 import { IconPlus } from "../../../../components/ui/icons";
 import { celebrate } from "../../../../lib/success";
 import { FadeImg } from "../../../../components/ui/motion/fade-img";
+import { formKey, formValue } from "../../../../lib/form-values";
 
 const ROLES_SANS_LOT: RoleType[] = ["SYNDIC", "GARDIEN", "PRESTATAIRE"];
 // SYNDIC volontairement absent : un syndic n'invite jamais un autre syndic — seul le super
@@ -179,7 +180,7 @@ export function CreerInvitationModal({
                 </Select>
               </Field>
               <Field label={inv.canal} htmlFor="inv_canal" required>
-                <Select id="inv_canal" name="canal" defaultValue="QR_CODE" required>
+                <Select key={formKey(state, "canal")} id="inv_canal" name="canal" defaultValue={formValue(state, "canal", "QR_CODE")} required>
                   {(["EMAIL", "SMS", "QR_CODE", "WHATSAPP"] as CanalInvitation[]).map((c) => (
                     <option key={c} value={c}>
                       {dict.enums.canal[c]}
@@ -190,7 +191,7 @@ export function CreerInvitationModal({
             </div>
             {lotRequis ? (
               <Field label={inv.lot} htmlFor="inv_lot" required error={fieldError(state, "lot_id")}>
-                <Select id="inv_lot" name="lot_id" required defaultValue={lots[0]?.id ?? ""}>
+                <Select key={formKey(state, "lot_id")} id="inv_lot" name="lot_id" required defaultValue={formValue(state, "lot_id", lots[0]?.id ?? "")}>
                   {lots.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.numero}
@@ -204,7 +205,7 @@ export function CreerInvitationModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={fermer}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{dict.common.create}</SubmitButton>
             </div>
@@ -250,7 +251,7 @@ export function RegenererModal({
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.cancel}
+                {dict.common.close}
               </Button>
               <SubmitButton>{inv.regenerer}</SubmitButton>
             </div>

@@ -15,6 +15,7 @@ import { supprimerPrestataire } from "./actions";
 import { LiveList } from "../../../../components/ui/live-list";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
+import { actifVariant } from "../../../../lib/status";
 
 export async function generateMetadata({
   params,
@@ -82,7 +83,7 @@ export default async function PrestatairesPage({
                     <span dir="ltr">{p.telephone ?? p.email ?? p.contact}</span>
                   </TD>
                   <TD>
-                    <Badge variant={p.actif ? "ok" : "outline"}>
+                    <Badge variant={actifVariant(p.actif)}>
                       {p.actif ? i.actif : i.inactif}
                     </Badge>
                   </TD>

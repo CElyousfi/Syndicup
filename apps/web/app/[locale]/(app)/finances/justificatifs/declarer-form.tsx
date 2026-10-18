@@ -6,6 +6,8 @@ import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
+import { formKey, formValue } from "../../../../../lib/form-values";
+import { MoneyInput } from "../../../../../components/ui/money-input";
 import type { Dict, Locale } from "../../../../../lib/i18n";
 import type { CompteBancaire } from "../../../../../lib/api/types";
 import { formatMAD, formatPeriode } from "../../../../../lib/format";
@@ -58,17 +60,17 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
             </Select>
           </Field>
           <Field label={j.appel} htmlFor="appel_de_fonds_lot_id" required>
-            <Select id="appel_de_fonds_lot_id" name="appel_de_fonds_lot_id" defaultValue="SOLDE">
+            <Select key={`${lotId}:${formKey(state, "appel_de_fonds_lot_id")}`} id="appel_de_fonds_lot_id" name="appel_de_fonds_lot_id" defaultValue={formValue(state, "appel_de_fonds_lot_id", "SOLDE")}>
               <option value="SOLDE">{j.surSolde}</option>
               {/* alive:allow <option> natif : texte seul, aucun élément React possible */}
               {lignesDuLot.map((l) => <option key={l.id} value={l.id}>{formatPeriode(l.periode, locale)} · {j.restant} {formatMAD(l.restant, locale)}</option>)}
             </Select>
           </Field>
           <Field label={`${j.montant} (${dict.common.mad})`} htmlFor="montant" required error={fieldError(state, "montant")}>
-            <Input id="montant" name="montant" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" required className="tnum text-start" />
+            <MoneyInput id="montant" name="montant" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant")} />
           </Field>
           <Field label={j.datePaiement} htmlFor="date_paiement" required error={fieldError(state, "date_paiement")}>
-            <Input id="date_paiement" name="date_paiement" type="date" dir="ltr" required defaultValue={aujourdhui} className="tnum text-start" />
+            <Input id="date_paiement" name="date_paiement" type="date" dir="ltr" required defaultValue={formValue(state, "date_paiement", aujourdhui)} className="tnum text-start" />
           </Field>
           {mode === "declarer" ? (
             <>
@@ -79,27 +81,27 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
               </Field>
               <Field label={j.beneficiaire} htmlFor="beneficiaire" required error={fieldError(state, "beneficiaire")}>
                 {comptes.length > 0 ? (
-                  <Select id="beneficiaire" name="beneficiaire" required defaultValue={comptes[0]!.libelle}>
+                  <Select key={formKey(state, "beneficiaire")} id="beneficiaire" name="beneficiaire" required defaultValue={formValue(state, "beneficiaire", comptes[0]!.libelle)}>
                     {comptes.map((c) => <option key={c.index} value={c.libelle}>{c.libelle} · {c.banque} · {c.rib_masque}</option>)}
                   </Select>
                 ) : (
-                  <Input id="beneficiaire" name="beneficiaire" required maxLength={200} placeholder={j.compte} />
+                  <Input id="beneficiaire" name="beneficiaire" required maxLength={200} placeholder={j.compte} defaultValue={formValue(state, "beneficiaire")} />
                 )}
               </Field>
               {methode !== "ESPECES" ? (
                 <>
                   <Field label={j.banqueEmettrice} htmlFor="banque_emettrice" optionalLabel={dict.common.optional}>
-                    <Input id="banque_emettrice" name="banque_emettrice" maxLength={120} />
+                    <Input id="banque_emettrice" name="banque_emettrice" maxLength={120} defaultValue={formValue(state, "banque_emettrice")} />
                   </Field>
                   <Field label={j.reference} htmlFor="reference" hint={j.referenceAide} optionalLabel={dict.common.optional} error={fieldError(state, "reference")}>
-                    <Input id="reference" name="reference" dir="ltr" maxLength={120} className="text-start" />
+                    <Input id="reference" name="reference" dir="ltr" maxLength={120} className="text-start" defaultValue={formValue(state, "reference")} />
                   </Field>
                 </>
               ) : null}
             </>
           ) : (
             <Field label={j.commentaire} htmlFor="commentaire" optionalLabel={dict.common.optional}>
-              <Input id="commentaire" name="commentaire" maxLength={500} />
+              <Input id="commentaire" name="commentaire" maxLength={500} defaultValue={formValue(state, "commentaire")} />
             </Field>
           )}
         </div>

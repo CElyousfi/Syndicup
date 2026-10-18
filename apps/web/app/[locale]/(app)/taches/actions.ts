@@ -19,12 +19,12 @@ async function televerserPieces(fd: FormData, name = "pieces"): Promise<{ storag
   const fichiers = fd.getAll(name).filter((f): f is File => f instanceof File && f.size > 0);
   const out: { storage_path: string; nom: string }[] = [];
   for (const f of fichiers) {
-    if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15) };
+    if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15, false, fd) };
     const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
     const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/taches/upload-url", { method: "POST", body: { nom_fichier: f.name || "piece.pdf", content_type: contentType } });
-    if (!prep.ok) return { erreur: await fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep, fd) };
     const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-    if (!up.ok) return { erreur: await uploadRefused(up.status) };
+    if (!up.ok) return { erreur: await uploadRefused(up.status, fd) };
     out.push({ storage_path: prep.data.storage_path, nom: f.name || "piece.pdf" });
   }
   return out;
@@ -50,7 +50,7 @@ export async function creerTache(_prev: FormState, fd: FormData): Promise<FormSt
   const pieces = await televerserPieces(fd);
   if ("erreur" in pieces) return pieces.erreur;
   const res = await apiFetch<TacheDetail>("/taches", { method: "POST", body: { ...corps(fd), pieces_jointes: pieces } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale);
   redirect(`/${locale}${BASE}/${res.data.id}?cree=1`);
 }
@@ -61,7 +61,7 @@ export async function modifierTache(_prev: FormState, fd: FormData): Promise<For
   const pieces = await televerserPieces(fd);
   if ("erreur" in pieces) return pieces.erreur;
   const res = await apiFetch<TacheDetail>(`/taches/${id}`, { method: "PATCH", body: { ...corps(fd), ...(pieces.length ? { pieces_jointes: pieces } : {}) } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   redirect(`/${locale}${BASE}/${id}?maj=1`);
 }
@@ -72,7 +72,7 @@ export async function changerStatut(_prev: FormState, fd: FormData): Promise<For
   const pieces = await televerserPieces(fd, "photo");
   if ("erreur" in pieces) return pieces.erreur;
   const res = await apiFetch<TacheDetail>(`/taches/${id}/statut`, { method: "POST", body: { statut: champ(fd, "statut"), commentaire: optionnel(fd, "commentaire"), piece_jointe: pieces[0] ?? null } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success(undefined, { suivante_id: res.data.suivante_id ?? null });
 }
@@ -81,7 +81,7 @@ export async function assignerTache(_prev: FormState, fd: FormData): Promise<For
   const locale = champ(fd, "locale");
   const id = champ(fd, "tache_id");
   const res = await apiFetch<TacheDetail>(`/taches/${id}/assigner`, { method: "POST", body: { assignee_id: optionnel(fd, "assignee_id") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
@@ -95,7 +95,7 @@ export async function commenterTache(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const id = champ(fd, "tache_id");
   const res = await apiFetch(`/taches/${id}/commentaires`, { method: "POST", body: { contenu: champ(fd, "contenu") } });
-  if (!res.ok) return fromApiError(res);
+  if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
   return success();
 }
