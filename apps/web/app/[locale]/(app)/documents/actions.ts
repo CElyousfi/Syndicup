@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, uploadRefused, localError } from "../../../../lib/forms-server";
 import type { DocumentCopro, Notification } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -55,12 +56,7 @@ export async function televerserFichierDocument(
   const locale = champ(fd, "locale");
   const fichier = fd.get("fichier");
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return {
-      status: "error",
-      code: "VALIDATION_ERROR",
-      message: "Fichier manquant.",
-      fields: { fichier: "Fichier manquant." },
-    };
+    return await localError("VALIDATION_ERROR", (l) => l.fichierManquant, { field: "fichier" });
   }
 
   const contentType = fichier.type || typeDepuisExtension(fichier.name);
@@ -86,11 +82,7 @@ export async function televerserFichierDocument(
     body: contenu,
   });
   if (!upload.ok) {
-    return {
-      status: "error",
-      code: "INTERNAL_ERROR",
-      message: `Téléversement refusé par le stockage (${upload.status}).`,
-    };
+    return await uploadRefused(upload.status);
   }
 
   const res = await apiFetch<DocumentCopro>("/documents", {

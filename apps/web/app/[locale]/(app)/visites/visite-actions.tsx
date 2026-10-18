@@ -122,10 +122,10 @@ export function RepondreVisiteForm({
           </SubmitButton>
         </form>
       </div>
-      {state.status === "error" ? (
-        <p className="text-[12px] text-danger">
-          {state.code === "UNPROCESSABLE_ENTITY" ? v.dejaRepondu : state.message}
-        </p>
+      {state.status === "error" && state.code === "UNPROCESSABLE_ENTITY" ? (
+        <p className="text-[12px] text-warn">{v.dejaRepondu}</p>
+      ) : state.status === "error" ? (
+        <FormAlert state={state} compact />
       ) : (
         <p className="text-[11px] text-faint">{v.reponseUnique}</p>
       )}

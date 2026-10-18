@@ -29,9 +29,7 @@ export function ValiderForm({
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="reservation_id" value={reservationId} />
       <SubmitButton size="sm">{dict.espaces.valider}</SubmitButton>
-      {state.status === "error" ? (
-        <p className="text-[12px] text-danger">{state.message}</p>
-      ) : null}
+      <FormAlert state={state} compact />
     </form>
   );
 }

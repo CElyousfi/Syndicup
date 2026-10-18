@@ -3,7 +3,8 @@
 /** Server Actions — Rapports (M18). Génération / soumission = écritures probantes : `idempotent: true`. */
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError } from "../../../../lib/forms-server";
 import type { RapportGestion } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string { return String(fd.get(name) ?? "").trim(); }

@@ -1,47 +1,48 @@
 /**
  * Contrat commun des Server Actions de formulaire — consommé par useActionState côté client.
- * Les erreurs métier (422) portent le message français de l'API, à afficher tel quel ;
- * VALIDATION_ERROR porte `fields` (champ → message) à afficher sous chaque champ.
+ * Module CLIENT-COMPATIBLE (types, constantes, aides pures) : la construction d'un état d'erreur
+ * à partir d'une réponse API, qui a besoin de la langue de la requête, vit dans
+ * lib/forms-server.ts (`fromApiError`).
+ *
+ * Un état d'erreur porte TOUJOURS, déjà localisés côté serveur : un titre, un message, la
+ * prochaine étape (Réessayer / Se reconnecter / Actualiser / Contacter le syndic) et la
+ * référence courte de la requête — <FormAlert> n'a plus qu'à les afficher.
  */
-import type { ApiError } from "./api/types";
+import type { ApiErrorCode } from "./api/types";
+import type { ErrorAction } from "./errors";
 
 export type FormState =
   | { status: "idle" }
   | {
       status: "error";
-      code: ApiError["code"] | "NETWORK";
+      code: ApiErrorCode;
+      /** Message localisé, prêt à afficher. */
       message: string;
+      /** Titre localisé (absent pour une simple erreur de champ). */
+      title?: string;
       fields?: Record<string, string>;
       requestId?: string;
+      /** Référence courte formatée (« Réf. 1a2b3c4d »), copiable. */
+      reference?: string;
       /** 422 « gaté légalement » (paramètre légal non configuré) — bannière, pas erreur rouge. */
       legalGate?: boolean;
       retryAfter?: number;
+      /** Prochaine étape proposée, et son libellé localisé. */
+      action?: ErrorAction;
+      actionLabel?: string;
+      /** Lien de l'action (reconnexion : /{locale}/connexion?next=…). */
+      actionHref?: string;
+      /** Libellés du bouton de copie de la référence. */
+      copyLabel?: string;
+      copiedLabel?: string;
+      /** Message brut du serveur (FR) — repli texte pour les rares tests de contenu. */
+      serverMessage?: string;
     }
   | { status: "success"; message?: string; data?: unknown };
 
+export type FormErrorState = Extract<FormState, { status: "error" }>;
+
 export const IDLE: FormState = { status: "idle" };
-
-/** Heuristique : un 422 dont le message pointe une valeur légale non configurée (brief §6.3). */
-function isLegalGate(error: ApiError): boolean {
-  if (error.code !== "UNPROCESSABLE_ENTITY") return false;
-  return /non configur|confirmation juridique|LEGAL_QUESTIONS/i.test(error.message);
-}
-
-export function fromApiError(e: {
-  error: ApiError;
-  requestId?: string;
-  retryAfter?: number;
-}): FormState {
-  return {
-    status: "error",
-    code: e.error.code,
-    message: e.error.message,
-    fields: e.error.fields,
-    requestId: e.requestId,
-    legalGate: isLegalGate(e.error),
-    retryAfter: e.retryAfter,
-  };
-}
 
 export function success(message?: string, data?: unknown): FormState {
   return { status: "success", message, data };

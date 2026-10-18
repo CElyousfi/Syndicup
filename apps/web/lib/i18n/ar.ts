@@ -3,6 +3,7 @@
  * (النوع مشتق من fr.ts).
  */
 import type { fr } from "./fr";
+import { errorsAr } from "./errors-ar";
 
 type DeepDict<T> = { [K in keyof T]: T[K] extends object ? DeepDict<T[K]> : string };
 
@@ -2703,4 +2704,6 @@ export const ar: DeepDict<typeof fr> = {
     mesSaisies: "إدخالاتي",
     chargementImpossible: "تعذر تحميل بعض البيانات — أعيدوا المحاولة.",
   },
+  /** Moments difficiles : erreurs, chargements échoués, accès refusé (lib/errors.ts). */
+  errors: errorsAr,
 };

@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { apiPublic } from "../../../../lib/api/client";
 import { writeTokens } from "../../../../lib/session";
 import { destinationApresConnexion } from "../../../../lib/bootstrap";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError } from "../../../../lib/forms-server";
 import { getDict, isLocale } from "../../../../lib/i18n";
 import type { SessionTokens } from "../../../../lib/api/types";
 

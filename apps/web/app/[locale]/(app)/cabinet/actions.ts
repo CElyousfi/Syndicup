@@ -4,7 +4,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError } from "../../../../lib/forms-server";
 import { writeCoproprieteId } from "../../../../lib/session";
 import type { Cabinet, CabinetMandat, CabinetMembre, CabinetPrestataire, Profil } from "../../../../lib/api/types";
 

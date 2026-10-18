@@ -5,9 +5,10 @@ import { useFormStatus } from "react-dom";
 import { toast } from "../../lib/toast";
 import { celebrate } from "../../lib/success";
 import type { ReactNode } from "react";
-import type { FormState } from "../../lib/forms";
+import type { FormErrorState, FormState } from "../../lib/forms";
 import { Button, type ButtonVariant } from "./button";
 import { Banner } from "./banner";
+import { ActionLink, ReferenceChip, RefreshButton } from "./error-parts";
 
 export function SubmitButton({
   children,
@@ -65,8 +66,11 @@ export function FormAlert({
   legalGateAction,
   successRender,
   celebrate: celebration,
+  compact = false,
 }: {
   state: FormState;
+  /** Sous un bouton de ligne (valider, révoquer…) : sans titre, largeur bornée. */
+  compact?: boolean;
   legalGateTitle?: string;
   legalGateAction?: ReactNode;
   successRender?: (message?: string) => ReactNode;
@@ -94,7 +98,13 @@ export function FormAlert({
   return (
     <>
       <span ref={ancre} hidden />
-      {corpsAlerte(state, legalGateTitle, legalGateAction, successRender)}
+      {compact ? (
+        state.status === "error" ? (
+          <div className="max-w-xs text-start">{corpsAlerte(state, legalGateTitle, legalGateAction, successRender, true)}</div>
+        ) : null
+      ) : (
+        corpsAlerte(state, legalGateTitle, legalGateAction, successRender)
+      )}
     </>
   );
 }
@@ -103,7 +113,8 @@ function corpsAlerte(
   state: FormState,
   legalGateTitle?: string,
   legalGateAction?: ReactNode,
-  successRender?: (message?: string) => ReactNode
+  successRender?: (message?: string) => ReactNode,
+  compact = false
 ): ReactNode {
   if (state.status === "success") {
     if (successRender) return successRender(state.message);
@@ -112,21 +123,56 @@ function corpsAlerte(
   if (state.status !== "error") return null;
   if (state.legalGate) {
     return (
-      <Banner variant="legal" title={legalGateTitle} action={legalGateAction}>
+      <Banner variant="legal" title={legalGateTitle ?? state.title} action={legalGateAction}>
         {state.message}
       </Banner>
     );
   }
   // Les erreurs par champ sont affichées sous les champs — pas de doublon global.
-  if (state.code === "VALIDATION_ERROR" && state.fields && Object.keys(state.fields).length > 0) return null;
+  if (!compact && state.code === "VALIDATION_ERROR" && state.fields && Object.keys(state.fields).length > 0) return null;
+  return <ErrorBanner state={state} compact={compact} />;
+}
+
+/**
+ * Bannière d'échec : ce qui s'est passé (titre + message localisés côté serveur), la prochaine
+ * étape (Réessayer / Se reconnecter / Actualiser / Contacter le syndic) et la référence courte,
+ * copiable. Session expirée = ton neutre (ce n'est pas une faute), lien qui ramène ici.
+ */
+export function ErrorBanner({ state, compact = false }: { state: FormErrorState; compact?: boolean }) {
+  const action = errorAction(state);
+  const neutre = state.code === "UNAUTHENTICATED" || state.code === "NETWORK" || state.code === "RATE_LIMITED";
   return (
-    <Banner variant="danger">
+    <Banner
+      variant={neutre ? "warn" : "danger"}
+      title={compact ? undefined : state.title}
+      action={action || state.reference ? (
+        <div className="flex flex-wrap items-center gap-2">
+          {action}
+          {state.reference ? (
+            <ReferenceChip label={state.reference} value={state.requestId ?? state.reference} copyLabel={state.copyLabel} copiedLabel={state.copiedLabel} />
+          ) : null}
+        </div>
+      ) : undefined}
+    >
       {state.message}
-      {state.requestId ? (
-        <span className="mt-1 block font-mono text-[11px] text-faint" dir="ltr">
-          {state.requestId}
-        </span>
-      ) : null}
+      {state.action === "contact" && state.actionLabel ? <span className="mt-1 block text-soft">{state.actionLabel}</span> : null}
     </Banner>
   );
+}
+
+function errorAction(state: FormErrorState): ReactNode {
+  if (!state.actionLabel) return null;
+  switch (state.action) {
+    case "relogin":
+      return <ActionLink href={state.actionHref ?? "/connexion"} label={state.actionLabel} variant="primary" />;
+    case "refresh":
+      return <RefreshButton label={state.actionLabel} />;
+    case "retry":
+      // « Réessayer » relit d'abord l'état réel de la page (la saisie reste dans le formulaire) :
+      // chaque appel porte une NOUVELLE clé d'idempotence, un renvoi automatique après une coupure
+      // réseau pourrait donc doubler une écriture déjà traitée. L'utilisateur renvoie lui-même.
+      return <RefreshButton label={state.actionLabel} />;
+    default:
+      return null;
+  }
 }

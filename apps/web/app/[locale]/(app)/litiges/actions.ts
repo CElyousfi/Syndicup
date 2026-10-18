@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError } from "../../../../lib/forms-server";
 import type { Litige } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {

@@ -4,7 +4,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, fileTooLarge, uploadRefused } from "../../../../lib/forms-server";
 import type { TacheDetail } from "../../../../lib/api/types";
 
 const BASE = "/taches";
@@ -18,12 +19,12 @@ async function televerserPieces(fd: FormData, name = "pieces"): Promise<{ storag
   const fichiers = fd.getAll(name).filter((f): f is File => f instanceof File && f.size > 0);
   const out: { storage_path: string; nom: string }[] = [];
   for (const f of fichiers) {
-    if (f.size > 15 * 1024 * 1024) return { erreur: { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (15 Mo max).", fields: { [name]: "15 Mo max." } } };
+    if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15) };
     const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
     const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/taches/upload-url", { method: "POST", body: { nom_fichier: f.name || "piece.pdf", content_type: contentType } });
-    if (!prep.ok) return { erreur: fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep) };
     const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-    if (!up.ok) return { erreur: { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${up.status}).` } };
+    if (!up.ok) return { erreur: await uploadRefused(up.status) };
     out.push({ storage_path: prep.data.storage_path, nom: f.name || "piece.pdf" });
   }
   return out;

@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { readSession } from "../../../../lib/session";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, sessionExpired, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
 import type { Copropriete } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -17,7 +18,7 @@ async function patchCopro(
 ): Promise<FormState> {
   const coproprieteId = coproIdExplicite || (await readSession()).coproprieteId;
   if (!coproprieteId) {
-    return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+    return await sessionExpired();
   }
   const res = await apiFetch<Copropriete>(`/coproprietes/${coproprieteId}`, {
     method: "PATCH",
@@ -90,13 +91,13 @@ export async function televerserLogo(_prev: FormState, fd: FormData): Promise<Fo
   const locale = champ(fd, "locale");
   const fichier = fd.get("fichier");
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return { status: "error", code: "VALIDATION_ERROR", message: "Image manquante.", fields: { fichier: "Image manquante." } };
+    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier" });
   }
   if (fichier.size > 2 * 1024 * 1024) {
-    return { status: "error", code: "VALIDATION_ERROR", message: "Image trop lourde (2 Mo max).", fields: { fichier: "2 Mo max." } };
+    return await fileTooLarge("fichier", 2, true);
   }
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  if (!coproprieteId) return await sessionExpired();
 
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>(`/coproprietes/${coproprieteId}/logo/upload-url`, {
     method: "POST",
@@ -109,7 +110,7 @@ export async function televerserLogo(_prev: FormState, fd: FormData): Promise<Fo
     body: await fichier.arrayBuffer(),
   });
   if (!upload.ok) {
-    return { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` };
+    return await uploadRefused(upload.status);
   }
   const res = await patchCopro(locale, { logo_storage_path: prep.data.storage_path }, coproprieteId);
   if (res.status !== "success") return res;
@@ -139,16 +140,16 @@ export async function televerserPhoto(_prev: FormState, fd: FormData): Promise<F
   const cle = champ(fd, "cle");
   const fichier = fd.get("fichier");
   if (!/^(accueil|entree|cour|salle|piscine|espace:[0-9a-f-]{36})$/i.test(cle)) {
-    return { status: "error", code: "VALIDATION_ERROR", message: "Emplacement inconnu." };
+    return await localError("VALIDATION_ERROR", (l) => l.emplacementInconnu);
   }
   if (!(fichier instanceof File) || fichier.size === 0) {
-    return { status: "error", code: "VALIDATION_ERROR", message: "Image manquante.", fields: { fichier: "Image manquante." } };
+    return await localError("VALIDATION_ERROR", (l) => l.imageManquante, { field: "fichier" });
   }
   if (fichier.size > 5 * 1024 * 1024) {
-    return { status: "error", code: "VALIDATION_ERROR", message: "Image trop lourde (5 Mo max).", fields: { fichier: "5 Mo max." } };
+    return await fileTooLarge("fichier", 5, true);
   }
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  if (!coproprieteId) return await sessionExpired();
 
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>(`/coproprietes/${coproprieteId}/photos/upload-url`, {
     method: "POST",
@@ -161,7 +162,7 @@ export async function televerserPhoto(_prev: FormState, fd: FormData): Promise<F
     body: await fichier.arrayBuffer(),
   });
   if (!upload.ok) {
-    return { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` };
+    return await uploadRefused(upload.status);
   }
   const photos = { ...(await photosActuelles(coproprieteId)), [cle]: prep.data.storage_path };
   const res = await patchCopro(locale, { photos_json: photos }, coproprieteId);
@@ -174,7 +175,7 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
   const locale = champ(fd, "locale");
   const cle = champ(fd, "cle");
   const coproprieteId = champ(fd, "copro_id") || (await readSession()).coproprieteId;
-  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  if (!coproprieteId) return await sessionExpired();
   const photos = await photosActuelles(coproprieteId);
   delete photos[cle];
   const res = await patchCopro(locale, { photos_json: Object.keys(photos).length ? photos : null }, coproprieteId);
@@ -187,7 +188,7 @@ export async function retirerPhoto(_prev: FormState, fd: FormData): Promise<Form
 export async function modifierParametresPaie(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const coproprieteId = (await readSession()).coproprieteId;
-  if (!coproprieteId) return { status: "error", code: "UNAUTHENTICATED", message: "Session absente." };
+  if (!coproprieteId) return await sessionExpired();
   let body: Record<string, unknown> | null = null;
   if (fd.get("effacer") !== "1") {
     const tranches: { jusqua: string | null; taux: string; deduction: string }[] = [];

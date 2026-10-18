@@ -2,6 +2,8 @@
  * Dictionnaire français — langue de référence du produit. Ton : vouvoiement, langage courant
  * (jamais de jargon technique à l'écran), rigueur sur les mentions légales et financières.
  */
+import { errorsFr } from "./errors-fr";
+
 export const fr = {
   brand: {
     name: "SyndicUp",
@@ -2726,4 +2728,6 @@ export const fr = {
     mesSaisies: "Mes saisies",
     chargementImpossible: "Certaines données n'ont pas pu être chargées — réessayez.",
   },
+  /** Moments difficiles : erreurs, chargements échoués, accès refusé (lib/errors.ts). */
+  errors: errorsFr,
 };

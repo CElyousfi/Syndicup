@@ -115,9 +115,12 @@ export function VueVotant({
     return <Banner variant="info">{a.aucuneResolution}</Banner>;
   }
 
+  // Décision sur le CODE (le message est localisé et peut être en arabe) ; repli texte sur le
+  // message brut du serveur tant que l'API répond « déjà voté » en 422 générique.
   const dejaVoteErreur =
     state.status === "error" &&
-    (state.code === "CONFLICT" || /déjà voté/i.test(state.message));
+    (state.code === "CONFLICT" ||
+      (state.code === "UNPROCESSABLE_ENTITY" && /déjà voté/i.test(state.serverMessage ?? "")));
 
   const changer = (i: number) => {
     setIndex(Math.max(0, Math.min(statuts.length - 1, i)));

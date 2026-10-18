@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
 import type {
   LcdDeclaration,
   LcdGestionnaireResult,
@@ -186,21 +187,21 @@ async function televerserPieces(fd: FormData): Promise<string[] | { erreur: Form
   const chemins: string[] = [];
   for (const fichier of fichiers) {
     if (fichier.size > 15 * 1024 * 1024) {
-      return { erreur: { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (15 Mo max).", fields: { pieces_jointes: "15 Mo max." } } };
+      return { erreur: await fileTooLarge("pieces_jointes", 15) };
     }
     const contentType = fichier.type || (fichier.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
     const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/lcd/sejours/upload-url", {
       method: "POST",
       body: { nom_fichier: fichier.name || "photo.jpg", content_type: contentType },
     });
-    if (!prep.ok) return { erreur: fromApiError(prep) };
+    if (!prep.ok) return { erreur: await fromApiError(prep) };
     const upload = await fetch(prep.data.upload_url, {
       method: "PUT",
       headers: { "Content-Type": contentType, "x-upsert": "true" },
       body: await fichier.arrayBuffer(),
     });
     if (!upload.ok) {
-      return { erreur: { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${upload.status}).` } };
+      return { erreur: await uploadRefused(upload.status) };
     }
     chemins.push(prep.data.storage_path);
   }
@@ -246,7 +247,7 @@ export async function ajouterPiecesJointes(_prev: FormState, fd: FormData): Prom
   const id = champ(fd, "sejour_id");
   const pieces = await televerserPieces(fd);
   if (!Array.isArray(pieces)) return pieces.erreur;
-  if (pieces.length === 0) return { status: "error", code: "VALIDATION_ERROR", message: "Aucun fichier sélectionné.", fields: { pieces_jointes: "Aucun fichier sélectionné." } };
+  if (pieces.length === 0) return await localError("VALIDATION_ERROR", (l) => l.aucunFichier, { field: "pieces_jointes" });
   const res = await apiFetch<LcdSejour>(`/lcd/sejours/${id}/pieces-jointes`, { method: "POST", body: { chemins: pieces } });
   if (!res.ok) return fromApiError(res);
   revalider(locale, `/sejours/${id}`);

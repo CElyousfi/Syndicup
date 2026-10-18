@@ -4,7 +4,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
 import type { DemoCopropriete, ImportJob } from "../../../../lib/api/types";
 
 const BASE = "/import";
@@ -17,13 +18,13 @@ function revalider(locale: string, ...suffixes: string[]) {
 export async function creerImport(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const f = fd.get("fichier");
-  if (!(f instanceof File) || f.size === 0) return { status: "error", code: "VALIDATION_ERROR", message: "Choisissez un fichier xlsx ou csv.", fields: { fichier: "Fichier requis." } };
-  if (f.size > 20 * 1024 * 1024) return { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (20 Mo max).", fields: { fichier: "20 Mo max." } };
+  if (!(f instanceof File) || f.size === 0) return await localError("VALIDATION_ERROR", (l) => l.fichierImportRequis, { field: "fichier" });
+  if (f.size > 20 * 1024 * 1024) return await fileTooLarge("fichier", 20);
   const contentType = f.type || (f.name.toLowerCase().endsWith(".csv") ? "text/csv" : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/import/upload-url", { method: "POST", body: { nom_fichier: f.name || "import.xlsx", content_type: contentType } });
   if (!prep.ok) return fromApiError(prep);
   const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-  if (!up.ok) return { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${up.status}).` };
+  if (!up.ok) return await uploadRefused(up.status);
   const canal = optionnel(fd, "canal");
   const res = await apiFetch<ImportJob>("/import", { method: "POST", body: { type: champ(fd, "type"), storage_path: prep.data.storage_path, nom_fichier: f.name || "import.xlsx", options: { inviter: champ(fd, "inviter") !== "off", ...(canal ? { canal } : {}), ...(optionnel(fd, "date_reference") ? { date_reference: champ(fd, "date_reference") } : {}) } } });
   if (!res.ok) return fromApiError(res);

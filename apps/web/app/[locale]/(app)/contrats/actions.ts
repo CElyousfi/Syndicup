@@ -4,7 +4,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
-import { fromApiError, success, type FormState } from "../../../../lib/forms";
+import { success, type FormState } from "../../../../lib/forms";
+import { fromApiError, fileTooLarge, uploadRefused } from "../../../../lib/forms-server";
 import type { Contrat, ContratEcheance } from "../../../../lib/api/types";
 
 const BASE = "/contrats";
@@ -17,12 +18,12 @@ function revalider(locale: string, ...suffixes: string[]) {
 async function televerserPiece(fd: FormData, name: string): Promise<{ storage_path: string; nom: string } | null | { erreur: FormState }> {
   const f = fd.get(name);
   if (!(f instanceof File) || f.size === 0) return null;
-  if (f.size > 15 * 1024 * 1024) return { erreur: { status: "error", code: "VALIDATION_ERROR", message: "Fichier trop lourd (15 Mo max).", fields: { [name]: "15 Mo max." } } };
+  if (f.size > 15 * 1024 * 1024) return { erreur: await fileTooLarge(name, 15) };
   const contentType = f.type || (f.name.toLowerCase().endsWith(".pdf") ? "application/pdf" : "image/jpeg");
   const prep = await apiFetch<{ storage_path: string; upload_url: string }>("/contrats/upload-url", { method: "POST", body: { nom_fichier: f.name || "contrat.pdf", content_type: contentType } });
-  if (!prep.ok) return { erreur: fromApiError(prep) };
+  if (!prep.ok) return { erreur: await fromApiError(prep) };
   const up = await fetch(prep.data.upload_url, { method: "PUT", headers: { "Content-Type": contentType, "x-upsert": "true" }, body: await f.arrayBuffer() });
-  if (!up.ok) return { erreur: { status: "error", code: "INTERNAL_ERROR", message: `Téléversement refusé par le stockage (${up.status}).` } };
+  if (!up.ok) return { erreur: await uploadRefused(up.status) };
   return { storage_path: prep.data.storage_path, nom: f.name || "contrat.pdf" };
 }
 
