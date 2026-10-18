@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -347,13 +348,16 @@ class _CongeRowState extends ConsumerState<_CongeRow> {
 
   Future<void> _decider(String action, {String? motif}) async {
     setState(() => _busy = true);
-    final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/conges/${widget.conge.id}/$action', body: motif == null ? {} : {'motif_refus': motif}, idempotent: true);
+    final body = motif == null ? <String, Object?>{} : <String, Object?>{'motif_refus': motif};
+    final intent = 'conge-$action:${widget.conge.id}';
+    final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/conges/${widget.conge.id}/$action', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body));
     if (!mounted) return;
     setState(() => _busy = false);
     if (r is ApiFail) {
       showApiError(context, r);
       return;
     }
+    IdemKeys.done(intent);
     final d = context.dict;
     showToast(context, action == 'approuver' ? d.personnel.congeApprouve : (action == 'refuser' ? d.personnel.congeRefuse : d.personnel.congeAnnule));
     widget.onDone();
@@ -414,6 +418,7 @@ class _CongeForm extends ConsumerStatefulWidget {
 }
 
 class _CongeFormState extends ConsumerState<_CongeForm> {
+  final _idem = IdemKey();
   String _type = 'ANNUEL';
   DateTime? _debut, _fin;
   final _motif = TextEditingController();
@@ -466,7 +471,8 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                     _loading = true;
                     _fail = null;
                   });
-                  final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/${widget.personnelId}/conges', idempotent: true, body: {'type': _type, 'date_debut': jourIso(_debut!), 'date_fin': jourIso(_fin!), if (_motif.text.trim().isNotEmpty) 'motif': _motif.text.trim()});
+                  final body = {'type': _type, 'date_debut': jourIso(_debut!), 'date_fin': jourIso(_fin!), if (_motif.text.trim().isNotEmpty) 'motif': _motif.text.trim()};
+                  final r = await ref.read(apiClientProvider).post<dynamic>('/personnel/${widget.personnelId}/conges', idempotencyKey: _idem.forPayload(body), body: body);
                   if (!mounted) return;
                   if (r is ApiFail) {
                     setState(() {
@@ -475,6 +481,7 @@ class _CongeFormState extends ConsumerState<_CongeForm> {
                     });
                     return;
                   }
+                  _idem.consumed();
                   widget.onDone();
                   if (!context.mounted) return;
                   // Contexte racine capturé avant de fermer la feuille : l'écran de succès s'y pose.

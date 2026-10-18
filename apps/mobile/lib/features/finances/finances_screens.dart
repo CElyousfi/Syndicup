@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -154,11 +155,13 @@ class BudgetsScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.finances.activerBudgetTitre, body: fill(d.finances.activerBudgetCorps, {'exercice': b.exercice}), confirmLabel: d.finances.activerBudget, irreversible: true);
     if (!ok) return;
-    final r = await ref.read(apiClientProvider).post<dynamic>('/finances/budgets/${b.id}/activer', idempotent: true);
+    final intent = 'budget-activer:${b.id}';
+    final r = await ref.read(apiClientProvider).post<dynamic>('/finances/budgets/${b.id}/activer', idempotencyKey: IdemKeys.of(intent).value);
     if (!context.mounted) return;
     if (r is ApiFail) {
       showApiError(context, r);
     } else {
+      IdemKeys.done(intent);
       ref.invalidate(budgetsProvider);
       showToast(context, d.common.updated);
     }
@@ -326,6 +329,8 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
   String _type = 'CHARGES_COURANTES';
   bool _loading = false;
   ApiFail? _fail;
+  /// Même clé d'un essai à l'autre (même contenu) : « Réessayer » n'émet jamais deux appels.
+  final _idem = IdemKey();
   @override
   Widget build(BuildContext context) {
     final d = context.dict;
@@ -354,10 +359,12 @@ class _GenererFormState extends ConsumerState<_GenererForm> {
               _loading = true;
               _fail = null;
             });
-            final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotent: true, body: {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()}, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
+            final body = {'periode': _periode.text.trim(), 'type': _type, 'montant_total': _montant.text.trim(), 'date_echeance': _echeance.text.trim()};
+            final r = await ref.read(apiClientProvider).post<AppelDeFonds>('/finances/appels-de-fonds', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AppelDeFonds.fromJson(asMap(j)));
             if (!mounted) return;
             switch (r) {
               case ApiOk<AppelDeFonds>(:final data):
+                _idem.consumed();
                 ref.invalidate(syntheseProvider);
                 ref.invalidate(appelsProvider);
                 final racine = Navigator.of(this.context, rootNavigator: true).context;
@@ -464,6 +471,8 @@ class _PaiementForm extends ConsumerStatefulWidget {
 }
 
 class _PaiementFormState extends ConsumerState<_PaiementForm> {
+  /// Clé d'idempotence stable : « Réessayer » après un délai dépassé ne crée jamais de second paiement.
+  final _idem = IdemKey();
   late String _mode = widget.ligneInitiale != null || widget.lotInitial == null ? 'cible' : 'fifo';
   String? _ligne;
   String? _lot;
@@ -537,10 +546,11 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
       if (_payeur.text.trim().isNotEmpty) 'payeur_utilisateur_id': _payeur.text.trim(),
       if (_mode == 'fifo') 'lot_id': _lot else ...{'appel_de_fonds_lot_id': _ligne, 'accepter_trop_percu': _tropPercu},
     };
-    final r = await ref.read(apiClientProvider).post<PaiementResult>('/finances/paiements', idempotent: true, body: body, parse: (j) => PaiementResult.fromJson(asMap(j)));
+    final r = await ref.read(apiClientProvider).post<PaiementResult>('/finances/paiements', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => PaiementResult.fromJson(asMap(j)));
     if (!mounted) return;
     switch (r) {
       case ApiOk<PaiementResult>(:final data):
+        _idem.consumed();
         ref.invalidate(syntheseProvider);
         ref.invalidate(appelsProvider);
         ref.invalidate(paiementsProvider);

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -212,6 +213,8 @@ class _VueVotant extends ConsumerStatefulWidget {
 }
 
 class _VueVotantState extends ConsumerState<_VueVotant> {
+  /// Clé stable par bulletin (même résolution, même choix) : un vote rejoué n'est jamais compté deux fois.
+  final _idem = IdemKey();
   int _index = -1;
   String? _identite; // lot:<id> | proc:<id>
   String? _choix;
@@ -348,10 +351,11 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
       'valeur': choix,
       if (identite.startsWith('proc:')) ...{'procuration_id': identite.substring(5), 'lot_id': null} else 'lot_id': identite.substring(4),
     };
-    final res = await ref.read(apiClientProvider).post<AgVote>('/ag/${widget.ag.id}/votes', idempotent: true, body: body, parse: (j) => AgVote.fromJson(asMap(j)));
+    final res = await ref.read(apiClientProvider).post<AgVote>('/ag/${widget.ag.id}/votes', idempotencyKey: _idem.forPayload(body), body: body, parse: (j) => AgVote.fromJson(asMap(j)));
     if (!mounted) return;
     switch (res) {
       case ApiOk<AgVote>(:final data):
+        _idem.consumed();
         setState(() {
           _loading = false;
           _votes['${r.id}|$identite'] = data.valeur;

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -148,9 +149,11 @@ class MembreDetailScreen extends ConsumerWidget {
                                 if (!ok1 || !context.mounted) return;
                                 final ok2 = await confirmDialog(context, title: d.membres.anonymiserConfirme, body: d.common.irreversible, danger: true, confirmLabel: d.membres.anonymiser);
                                 if (!ok2 || !context.mounted) return;
-                                final r = await ref.read(apiClientProvider).post<dynamic>('/users/$id/anonymize', idempotent: true);
+                                final intent = 'anonymiser:$id';
+                                final r = await ref.read(apiClientProvider).post<dynamic>('/users/$id/anonymize', idempotencyKey: IdemKeys.of(intent).value);
                                 if (!context.mounted) return;
                                 if (r is ApiFail) showApiError(context, r); else {
+                                  IdemKeys.done(intent);
                                   ref.invalidate(membreProvider(id));
                                   ref.invalidate(membresProvider);
                                   showToast(context, d.membres.anonymise);

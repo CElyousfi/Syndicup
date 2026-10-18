@@ -10,6 +10,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -593,11 +594,14 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
     final motif = await showFormSheet<String>(context, title: d.lcd.annuler, builder: (ctx) => _MotifForm(body: d.lcd.annulerAide, label: d.lcd.motifAnnulation, submit: d.lcd.annuler, danger: true));
     if (motif == null || !mounted) return;
     setState(() => _loading = true);
-    final r = await ref.read(apiClientProvider).post<LcdSejour>('/lcd/sejours/${s.id}/annuler', body: {'motif': motif.isEmpty ? null : motif}, idempotencyKey: const Uuid().v4(), parse: (j) => LcdSejour.fromJson(asMap(j)));
+    final body = {'motif': motif.isEmpty ? null : motif};
+    final intent = 'sejour-annuler:${s.id}';
+    final r = await ref.read(apiClientProvider).post<LcdSejour>('/lcd/sejours/${s.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => LcdSejour.fromJson(asMap(j)));
     if (!mounted) return;
     setState(() => _loading = false);
     switch (r) {
       case ApiOk<LcdSejour>():
+        IdemKeys.done(intent);
         ref.invalidate(lcdSejourProvider(s.id));
         ref.invalidate(lcdSejoursProvider);
         ref.invalidate(lcdDuJourProvider);

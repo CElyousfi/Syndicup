@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -904,6 +905,8 @@ class _TransfertForm extends ConsumerStatefulWidget {
 }
 
 class _TransfertFormState extends ConsumerState<_TransfertForm> {
+  /// Transfert de propriété : écriture probante, une seule même si l'on réessaie.
+  final _idem = IdemKey();
   final _email = TextEditingController();
   final _tel = TextEditingController();
   bool _dette = false, _loading = false;
@@ -976,13 +979,15 @@ class _TransfertFormState extends ConsumerState<_TransfertForm> {
               _fail = null;
             });
             final tel = _tel.text.trim().isEmpty ? null : (normaliserTelephone(_tel.text) ?? _tel.text.trim());
-            final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/lots/${widget.lot.id}/transfert-propriete', idempotent: true, body: {
+            final body = {
               'nouveau_proprietaire': {'email': _email.text.trim().isEmpty ? null : _email.text.trim(), 'telephone': tel},
               'dette_reprise_acquereur': _dette,
-            }, parse: asMap);
+            };
+            final r = await ref.read(apiClientProvider).post<Map<String, dynamic>>('/lots/${widget.lot.id}/transfert-propriete', idempotencyKey: _idem.forPayload(body), body: body, parse: asMap);
             if (!mounted) return;
             switch (r) {
               case ApiOk<Map<String, dynamic>>(:final data):
+                _idem.consumed();
                 widget.onDone();
                 ref.invalidate(lotsProvider);
                 final inv = data['invitation'];

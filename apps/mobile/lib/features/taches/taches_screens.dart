@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -122,7 +123,9 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
       if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showApiError(context, (prep as ApiFail)); return; }
       final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(res.piece!.chemin).readAsBytes(), res.piece!.contentType);
       if (!ok) { if (mounted) showToast(context, d.common.errorTitle, error: true); return; }
-      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotent: true, parse: (j) => Tache.fromJson(asMap(j)));
+      // Clé propre à cette intention (cette pièce, ce statut) : chaque nouvelle tentative de
+      // l'utilisateur téléverse une nouvelle pièce, donc une nouvelle écriture.
+      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotencyKey: IdemKeys.of('tache-statut:${x.id}:${prep.data['storage_path']}').value, parse: (j) => Tache.fromJson(asMap(j)));
       if (!mounted) return;
       if (r is ApiFail<Tache>) { showApiError(context, r); return; }
       showToast(context, d.taches.statutChange);

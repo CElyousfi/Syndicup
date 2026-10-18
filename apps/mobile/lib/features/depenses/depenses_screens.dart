@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -263,10 +264,12 @@ class DepenseDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.depenses.soumettreTitre, body: d.depenses.soumettreCorps, confirmLabel: d.depenses.soumettre);
     if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/soumettre', body: const {}, idempotent: true, parse: (j) => Depense.fromJson(asMap(j)));
+    final intent = 'depense-soumettre:${x.id}';
+    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/soumettre', body: const {}, idempotencyKey: IdemKeys.of(intent).value, parse: (j) => Depense.fromJson(asMap(j)));
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Depense>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.depenses.soumise);
       case ApiFail<Depense>():
@@ -278,10 +281,13 @@ class DepenseDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final motif = await demanderMotifDepense(context, title: d.depenses.annulerTitre, body: d.depenses.annulerCorps, label: d.depenses.annulerMotif, submit: d.depenses.annuler, danger: true);
     if (motif == null || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/annuler', body: {'motif': motif.isEmpty ? null : motif}, idempotent: true, parse: (j) => Depense.fromJson(asMap(j)));
+    final body = {'motif': motif.isEmpty ? null : motif};
+    final intent = 'depense-annuler:${x.id}';
+    final r = await ref.read(apiClientProvider).post<Depense>('/depenses/${x.id}/annuler', body: body, idempotencyKey: IdemKeys.of(intent).forPayload(body), parse: (j) => Depense.fromJson(asMap(j)));
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Depense>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.depenses.annulee);
       case ApiFail<Depense>():

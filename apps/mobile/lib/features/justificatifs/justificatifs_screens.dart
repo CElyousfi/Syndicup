@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
 import '../../core/api/api_result.dart';
+import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -442,10 +443,12 @@ class JustificatifDetailScreen extends ConsumerWidget {
     final d = context.dict;
     final ok = await confirmDialog(context, title: d.justificatifs.annuler, body: d.common.irreversible, confirmLabel: d.justificatifs.annuler, danger: true);
     if (!ok || !context.mounted) return;
-    final r = await ref.read(apiClientProvider).post<Justificatif>('/finances/justificatifs/${y.id}/annuler', body: const {}, idempotent: true, parse: (j) => Justificatif.fromJson(asMap(j)));
+    final intent = 'justificatif-annuler:${y.id}';
+    final r = await ref.read(apiClientProvider).post<Justificatif>('/finances/justificatifs/${y.id}/annuler', body: const {}, idempotencyKey: IdemKeys.of(intent).value, parse: (j) => Justificatif.fromJson(asMap(j)));
     if (!context.mounted) return;
     switch (r) {
       case ApiOk<Justificatif>():
+        IdemKeys.done(intent);
         _refresh(ref);
         showToast(context, d.justificatifs.annule);
       case ApiFail<Justificatif>():
