@@ -54,6 +54,8 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
                 <input type="file"
                   name="fichier"
                   required
+                  // Même liste que l'API (documentUploadUrlSchema) : image, PDF, Word, Excel, texte.
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
                   className="sr-only"
                   onChange={(e) => setNomFichier(e.target.files?.[0]?.name ?? null)}
                 />

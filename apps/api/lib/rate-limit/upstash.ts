@@ -6,11 +6,22 @@
 import type { RateLimiter, RateLimitDecision } from "./types";
 import { logger } from "../logging/logger";
 
+/**
+ * Temps réel restant avant la réouverture : la clé Redis est indexée sur la fenêtre fixe
+ * floor(t / windowMs), donc le compteur repart à zéro à la frontière suivante — pas une fenêtre
+ * entière après le refus (ancien comportement : Retry-After = fenêtre complète).
+ */
+export function secondesAvantFinFenetre(maintenantMs: number, windowMs: number): number {
+  const fin = (Math.floor(maintenantMs / windowMs) + 1) * windowMs;
+  return Math.max(1, Math.ceil((fin - maintenantMs) / 1000));
+}
+
 export function upstashRateLimiter(url: string, token: string): RateLimiter {
   return {
     async limit(key, { max, windowMs }): Promise<RateLimitDecision> {
       const windowSec = Math.max(1, Math.ceil(windowMs / 1000));
-      const fenetre = Math.floor(Date.now() / windowMs);
+      const maintenant = Date.now();
+      const fenetre = Math.floor(maintenant / windowMs);
       const redisKey = `rl:${key}:${fenetre}`;
       try {
         const res = await fetch(`${url}/pipeline`, {
@@ -25,7 +36,7 @@ export function upstashRateLimiter(url: string, token: string): RateLimiter {
         const rows = (await res.json()) as Array<{ result: number }>;
         const count = rows[0]?.result ?? 0;
         if (count > max) {
-          return { allowed: false, retryAfterSec: windowSec };
+          return { allowed: false, retryAfterSec: secondesAvantFinFenetre(maintenant, windowMs) };
         }
         return { allowed: true };
       } catch (e) {

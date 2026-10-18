@@ -97,6 +97,11 @@ components:
         total: { type: integer }
         page: { type: integer }
         has_more: { type: boolean }
+        rejouee:
+          type: boolean
+          description: >
+            Présent (true) quand la réponse est le rejeu d'une requête déjà traitée sous la même
+            Idempotency-Key : réponse stockée renvoyée à l'identique, aucune nouvelle écriture.
 
     Error:
       type: object
@@ -112,8 +117,78 @@ components:
           properties:
             code:
               type: string
-              enum: [VALIDATION_ERROR, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, UNPROCESSABLE_ENTITY, RATE_LIMITED, INTERNAL_ERROR]
-            message: { type: string }
+              description: >
+                Code stable sur lequel les clients aiguillent (jamais sur `message`). Synchronisé
+                avec le type `ErrorCode` de apps/api/lib/http/respond.ts. Génériques : 400
+                VALIDATION_ERROR, 401, 403, 404, 409 CONFLICT, 422 UNPROCESSABLE_ENTITY, 429
+                RATE_LIMITED (+ Retry-After), 500, 501 NOT_IMPLEMENTED (fonction non configurée sur
+                ce déploiement), 503 SERVICE_UNAVAILABLE (dépendance momentanément indisponible —
+                stockage, assistant ; + Retry-After). Les codes métier sont des 422, ou des 409
+                pour les doublons / chevauchements.
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHENTICATED
+                - FORBIDDEN
+                - NOT_FOUND
+                - CONFLICT
+                - UNPROCESSABLE_ENTITY
+                - RATE_LIMITED
+                - INTERNAL_ERROR
+                - NOT_IMPLEMENTED
+                - SERVICE_UNAVAILABLE
+                - LCD_REGIME_NON_DEFINI
+                - LCD_INTERDITE
+                - LCD_PARAMETRE_NON_CONFIGURE
+                - LCD_GESTIONNAIRE_REQUIS
+                - LCD_DECLARATION_NON_VALIDEE
+                - LCD_QUOTA_NUITS_DEPASSE
+                - LCD_DELAI_DECLARATION
+                - LCD_VOYAGEURS_MAX
+                - LCD_SEJOUR_CHEVAUCHEMENT
+                - DEPENSE_STATUT_INVALIDE
+                - DEPENSE_APPROBATION_CONSEIL_REQUISE
+                - DEPENSE_RESERVE_RESOLUTION_REQUISE
+                - FONDS_RESERVE_INSUFFISANT
+                - BUDGET_TOTAL_DERIVE_DES_POSTES
+                - BUDGET_POSTE_UTILISE
+                - INCIDENT_NON_RESOLU
+                - INCIDENT_DEJA_EVALUE
+                - JUSTIFICATIF_STATUT_INVALIDE
+                - JUSTIFICATIF_PREUVE_REQUISE
+                - JUSTIFICATIF_PARAMETRE_NON_CONFIGURE
+                - RAPPORT_STATUT_INVALIDE
+                - RAPPORT_PARAMETRE_NON_CONFIGURE
+                - CONTRAT_STATUT_INVALIDE
+                - CONTRAT_RESOLUTION_AG_REQUISE
+                - CONTRAT_ECHEANCE_STATUT_INVALIDE
+                - PAIE_PARAMETRES_NON_CONFIGURES
+                - PAIE_STATUT_INVALIDE
+                - CONGE_STATUT_INVALIDE
+                - CONGE_SOLDE_INSUFFISANT
+                - PERSONNEL_STATUT_INVALIDE
+                - ANNONCE_STATUT_INVALIDE
+                - COMMENTAIRES_DESACTIVES
+                - SONDAGE_STATUT_INVALIDE
+                - SONDAGE_DEJA_REPONDU
+                - SONDAGE_CHOIX_INVALIDE
+                - TACHE_STATUT_INVALIDE
+                - TACHE_ASSIGNEE_INVALIDE
+                - EMPLACEMENT_STATUT_INVALIDE
+                - EMPLACEMENT_CODE_EXISTANT
+                - EMPLACEMENT_NON_VISITEUR
+                - ATTRIBUTION_CHEVAUCHEMENT
+                - IMMATRICULATION_EXISTANTE
+                - IMMATRICULATION_INCONNUE
+                - BADGE_STATUT_INVALIDE
+                - BADGE_IDENTIFIANT_EXISTANT
+                - IMPORT_FICHIER_ILLISIBLE
+                - IMPORT_STATUT_INVALIDE
+                - DEMO_INTERDIT
+                - CABINET_STATUT_INVALIDE
+                - MANDAT_EXISTANT
+                - MANDAT_STATUT_INVALIDE
+                - CONFLIT_SYNDIC
+            message: { type: string, description: "Phrase française destinée à l'utilisateur (sans référence interne de spécification)." }
             fields:
               type: object
               additionalProperties: { type: string }
@@ -4011,7 +4086,11 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
         "503":
-          description: Modèles saturés — réessayer dans un instant.
+          description: Modèles saturés — réessayer après Retry-After (20 s).
+          headers:
+            Retry-After:
+              schema: { type: integer, example: 20 }
+              description: Secondes avant de réessayer.
           content:
             application/json:
               schema: { $ref: "#/components/schemas/Error" }
@@ -5453,7 +5532,22 @@ paths:
               required: [nom_fichier, content_type]
               properties:
                 nom_fichier: { type: string, minLength: 1, maxLength: 200 }
-                content_type: { type: string, minLength: 1, maxLength: 150 }
+                content_type:
+                  type: string
+                  description: "Image (JPEG, PNG, WebP, HEIC/HEIF), PDF, Word (.doc/.docx), Excel (.xls/.xlsx), texte ou CSV — sinon 400 VALIDATION_ERROR."
+                  enum:
+                    - image/jpeg
+                    - image/png
+                    - image/webp
+                    - image/heic
+                    - image/heif
+                    - application/pdf
+                    - application/msword
+                    - application/vnd.openxmlformats-officedocument.wordprocessingml.document
+                    - application/vnd.ms-excel
+                    - application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+                    - text/plain
+                    - text/csv
       responses:
         "201":
           description: Chemin canonique + URL signée d'upload.

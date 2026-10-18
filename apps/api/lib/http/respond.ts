@@ -8,6 +8,9 @@
 import { randomUUID } from "node:crypto";
 import type { ZodError } from "zod";
 import { getRequestContext } from "./request-context-storage";
+// Effet de bord voulu : messages Zod par défaut en français. respond.ts est importé par chaque
+// route : la map est installée une fois, au chargement du premier handler.
+import "./zod-fr";
 
 /** request_id du contexte de requête (posé par withApiHandler) ; fallback UUID hors requête. */
 function requestId(): string {
@@ -158,19 +161,85 @@ const STATUS: Record<ErrorCode, number> = {
 };
 
 export function ok(data: unknown, init?: { status?: number; meta?: Record<string, unknown> }) {
+  // meta.rejouee : posé quand withIdempotency a renvoyé la réponse stockée d'un rejeu
+  // Idempotency-Key (aucune nouvelle écriture) — documenté dans openapi (Meta.rejouee).
+  const rejouee = getRequestContext()?.idempotenceRejouee ? { rejouee: true } : {};
   return Response.json(
-    { data, meta: { request_id: requestId(), ...init?.meta } },
+    { data, meta: { request_id: requestId(), ...rejouee, ...init?.meta } },
     { status: init?.status ?? 200 }
   );
 }
 
+// ── Nettoyage des références de spec dans les messages utilisateur ──────────────────────────
+// Les services citent leurs sources (« (Partie 5.5) », « (Doc A §6) », « — Master Spec Partie
+// 2.4 », « LEGAL_QUESTIONS_BRIEF §9 »). Utile dans le code et les logs, illisible pour un
+// copropriétaire : retiré ici, une seule fois, du texte renvoyé au client.
+const NUM = String.raw`\d+(?:\.\d+)*`;
+const REF_SOURCE = [
+  String.raw`Master\s+Spec(?:\s+Partie\s+${NUM})?`,
+  String.raw`Partie\s+${NUM}`,
+  String.raw`Doc\s+A(?:\s*§\s*${NUM})?`,
+  String.raw`(?:docs\/)?LEGAL_QUESTIONS_BRIEF(?:\.md)?(?:\s*§\s*${NUM})?`,
+  String.raw`brief\s*§\s*${NUM}`,
+  String.raw`CLAUDE\.md(?:\s*§\s*${NUM})?`,
+  String.raw`§\s*${NUM}`,
+].join("|");
+// Suites accolées : « / 4.4 », « et 6 », « , §8.3 », « étape 2 », « point 4 », « — M6 ».
+const REF_SUITE = String.raw`(?:\s*(?:\/|et)\s*(?:§\s*)?${NUM}|\s*,\s*§\s*${NUM}|\s+(?:étape|point)\s+\d+|\s*—\s*M\d+\b)*`;
+const REF = String.raw`(?:voir\s+)?(?:${REF_SOURCE})${REF_SUITE}`;
+const RE_INDICE = /Partie\s+\d|Doc\s+A\b|Master\s+Spec|§\s*\d|LEGAL_QUESTIONS_BRIEF|CLAUDE\.md/;
+const RE_REF = new RegExp(REF, "g");
+const RE_PARENTHESE = /\s*\(([^()]*)\)/g;
+const RE_REF_TIRET = new RegExp(String.raw`\s*(?:—|–|\s-)\s*${REF}(?:\s*(?:\/|,)\s*${REF})*`, "g");
+const RE_REF_PREFIXE = new RegExp(String.raw`^${REF}\s*:\s*`);
+const BORDS = /^[\s,;:/—–-]+|[\s,;:/—–-]+$/g;
+
+/** Retire les références internes (spec, Doc A, brief) d'un message destiné à l'utilisateur. */
+export function nettoyerMessage(message: string): string {
+  if (!RE_INDICE.test(message)) return message;
+  let s = message.replace(RE_PARENTHESE, (entier: string, interieur: string) => {
+    if (!RE_INDICE.test(interieur)) return entier;
+    const reste = interieur
+      .replace(RE_REF, "")
+      .replace(/\s*([,;/])\s*(?:[,;/—–-]\s*)+/g, "$1 ")
+      .replace(BORDS, "")
+      .trim();
+    // Rien d'utile (ou seulement une citation du document) : la parenthèse disparaît.
+    if (!reste || /^[«"“].*[»"”]$/.test(reste)) return "";
+    return entier.replace(`(${interieur})`, `(${reste})`);
+  });
+  s = s.replace(RE_REF_TIRET, "").replace(RE_REF_PREFIXE, "");
+  s = s
+    .replace(/\s{2,}/g, " ")
+    // Espace orphelin avant « . » / « , » uniquement — l'espace typographique français avant
+    // « : ; ! ? » est conservé.
+    .replace(/\s+([.,])/g, "$1")
+    .replace(/([.,])\1+/g, "$1")
+    .replace(/\s*:\s*\./g, ".")
+    .trim();
+  return s.length > 0 ? s : message;
+}
+
 export function fail(code: ErrorCode, message: string, fields?: Record<string, string>) {
+  const champs = fields
+    ? Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, nettoyerMessage(v)]))
+    : undefined;
   return Response.json(
     // meta.request_id aussi sur les erreurs : sans lui un client ne peut corréler aucun échec
     // avec les logs/Sentry côté serveur (CLAUDE.md §5).
-    { error: { code, message, ...(fields ? { fields } : {}) }, meta: { request_id: requestId() } },
+    {
+      error: { code, message: nettoyerMessage(message), ...(champs ? { fields: champs } : {}) },
+      meta: { request_id: requestId() },
+    },
     { status: STATUS[code] }
   );
+}
+
+/** Ajoute le header Retry-After (secondes, ≥ 1) à une réponse d'erreur (429, 503). */
+export function avecRetryAfter(res: Response, secondes: number): Response {
+  const headers = new Headers(res.headers);
+  headers.set("Retry-After", String(Math.max(1, Math.ceil(secondes))));
+  return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
 }
 
 export function failZod(error: ZodError) {
