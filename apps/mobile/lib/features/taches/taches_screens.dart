@@ -53,7 +53,7 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
         SuQueueSyncFlash(pending: file.length),
         if (file.isNotEmpty) Padding(padding: const EdgeInsets.only(bottom: 12), child: SuBanner(tone: BannerTone.info, body: '${context.mdict.pendingSend} (${file.length})', action: SuButton(variant: SuButtonVariant.ghost, onPressed: () => ref.read(tachesSyncProvider.notifier).flush(), label: d.common.retry))),
         if (!gardien) ...[
-          FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? v }, onChanged: (v) => setState(() => _filtre = v)),
+          FilterChips<String>(value: _filtre, options: _filtres, labelOf: (v) => switch (v) { 'OUVERTES' => t.ouvertes, 'RETARD' => t.enRetard, 'TOUTES' => t.toutes, _ => e.statut[v] ?? humanizeCode(v) }, onChanged: (v) => setState(() => _filtre = v)),
           const SizedBox(height: 16),
         ],
         SuFadeSwitch(value: _filtre, child: AsyncView(liste, onRetry: () => gardien ? ref.invalidate(mesTachesProvider) : ref.invalidate(tachesProvider(_filtre)), data: (rows) {
@@ -80,8 +80,8 @@ class TacheRow extends StatelessWidget {
     return ListRow(
       leading: IconCircle(tacheIcone(x), tone: tacheTone(x)),
       title: x.titre,
-      subtitle: '${x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance}${x.assignee != null ? ' · ${x.assignee!.affichage}' : ''}${x.checklist != null && x.checklist!.isNotEmpty ? ' · ${fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})}' : ''}${x.origine != 'MANUELLE' ? ' · ${e.origine[x.origine] ?? x.origine}' : ''}',
-      trailing: enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : StatusBadge(x.enRetard ? t.enRetard : (e.statut[x.statut] ?? x.statut), variant: x.enRetard ? BadgeVariant.danger : (tacheVariant[x.statut] ?? BadgeVariant.neutral), small: true),
+      subtitle: '${x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance}${x.assignee != null ? ' · ${x.assignee!.affichage}' : ''}${x.checklist != null && x.checklist!.isNotEmpty ? ' · ${fill(t.checklistProgres, {'n': '${x.checklistFaits}', 'total': '${x.checklist!.length}'})}' : ''}${x.origine != 'MANUELLE' ? ' · ${e.origine[x.origine] ?? humanizeCode(x.origine)}' : ''}',
+      trailing: enFile ? const Icon(Icons.cloud_upload_outlined, size: 18, color: SuColors.soft) : StatusBadge(x.enRetard ? t.enRetard : (e.statut[x.statut] ?? humanizeCode(x.statut)), variant: x.enRetard ? BadgeVariant.danger : (tacheVariant[x.statut] ?? BadgeVariant.neutral), small: true),
       chevron: true,
       onTap: () => context.push('/taches/${x.id}'),
     );
@@ -182,12 +182,12 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                         if (x.enRetard) StatusBadge(t.enRetard, variant: BadgeVariant.danger, pulse: true),
                       ]),
                       const SizedBox(height: 18),
-                      Text(e.statut[x.statut] ?? x.statut, style: tt.displaySmall),
+                      Text(e.statut[x.statut] ?? humanizeCode(x.statut), style: tt.displaySmall),
                       const SizedBox(height: 4),
-                      Text('${e.origine[x.origine] ?? x.origine}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
+                      Text('${e.origine[x.origine] ?? humanizeCode(x.origine)}${x.creePar != null ? ' · ${x.creePar!.affichage}' : x.origine != 'MANUELLE' ? ' · ${t.creeeParSysteme}' : ''} · ${formatDateHeure(x.creeLe, l)}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),
                       const SizedBox(height: 14),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        StatusBadge(e.priorite[x.priorite] ?? x.priorite, variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
+                        StatusBadge(e.priorite[x.priorite] ?? humanizeCode(x.priorite), variant: prioriteVariant[x.priorite] ?? BadgeVariant.neutral),
                       ]),
                       if (nbEtapes > 0) ...[
                         const SizedBox(height: 16),
@@ -206,7 +206,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
                   KeyValueRow(t.assignee, x.assignee?.affichage ?? t.nonAssignee),
                   KeyValueRow(t.echeance, x.dateEcheance != null ? formatJourAnnee(x.dateEcheance, l) : t.sansEcheance),
                   if (x.termineeLe != null) KeyValueRow(e.statut['TERMINEE'] ?? 'TERMINEE', formatDateHeure(x.termineeLe, l)),
-                  KeyValueRow(t.recurrence, x.recurrenceFrequence != null ? (e.frequence[x.recurrenceFrequence!] ?? x.recurrenceFrequence!) : t.aucuneRecurrence),
+                  KeyValueRow(t.recurrence, x.recurrenceFrequence != null ? (e.frequence[x.recurrenceFrequence!] ?? humanizeCode(x.recurrenceFrequence!)) : t.aucuneRecurrence),
                 ])),
                 if (x.checklist != null && x.checklist!.isNotEmpty) ...[
                   SectionHeader(t.checklist, subtitle: fill(t.checklistProgres, {'n': '$nbFaits', 'total': '$nbEtapes'})),
@@ -327,7 +327,7 @@ class _StatutSheetState extends State<_StatutSheet> {
     final t = d.taches;
     final e = d.enumsTaches;
     return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      SuSelect<String>(label: t.nouveauStatut, value: _statut, options: _cibles(), labelOf: (v) => e.statut[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+      SuSelect<String>(label: t.nouveauStatut, value: _statut, options: _cibles(), labelOf: (v) => e.statut[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 12),
       SuField(label: t.commentaireStatut, controller: _commentaire, maxLines: 3, maxLength: 4000, optionalLabel: d.common.optional),
       const SizedBox(height: 8),

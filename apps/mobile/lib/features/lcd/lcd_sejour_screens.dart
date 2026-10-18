@@ -80,7 +80,7 @@ class SejourRow extends StatelessWidget {
       leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)),
       title: libelleSejour(s),
       subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}${heure != null && s.statut == 'PREVU' ? ' · $heure' : ''}${enAttente ? ' · ${md.pendingSend}' : ''}',
-      trailing: trailing ?? StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true, pulse: s.statut == 'EN_COURS'),
+      trailing: trailing ?? StatusBadge(d.enums.statutSejour[s.statut] ?? humanizeCode(s.statut), variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true, pulse: s.statut == 'EN_COURS'),
       onTap: () => context.push('/location-courte-duree/sejours/${s.id}'),
     );
   }
@@ -379,7 +379,7 @@ class _LcdSejourFormScreenState extends ConsumerState<LcdSejourFormScreen> {
             children: [
               Expanded(child: SuField(label: d.lcd.voyageurNationalite, controller: _nat, hint: d.lcd.voyageurNationaliteAide, maxLength: 3, textDirection: TextDirection.ltr, inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[A-Za-z]'))], error: fieldError(_fail, 'voyageur_nationalite'))),
               const SizedBox(width: 10),
-              Expanded(child: SuSelect<String?>(label: d.lcd.pieceIdentiteType, value: _piece, options: [null, ...d.enums.typePieceIdentite.keys], labelOf: (v) => v == null ? d.common.none : d.enums.typePieceIdentite[v] ?? v, onChanged: (v) => setState(() => _piece = v), placeholder: d.common.none)),
+              Expanded(child: SuSelect<String?>(label: d.lcd.pieceIdentiteType, value: _piece, options: [null, ...d.enums.typePieceIdentite.keys], labelOf: (v) => v == null ? d.common.none : d.enums.typePieceIdentite[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _piece = v), placeholder: d.common.none)),
             ],
           ),
           const SizedBox(height: 16),
@@ -637,7 +637,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
           final peutGerer = ctx.isGestion || s.declareParId == me || ctx.declareSejoursLcd;
           final enFile = queue.where((q) => !q.definitif).isNotEmpty;
           // Fin de pièce dans un isolat LTR (U+2066…U+2069) : jamais réordonnée par le bidi après un libellé arabe.
-          final piece = s.pieceIdentiteType == null ? null : '${d.enums.typePieceIdentite[s.pieceIdentiteType] ?? s.pieceIdentiteType}${s.pieceIdentiteFin != null ? ' · \u2066****${s.pieceIdentiteFin}\u2069' : ''}';
+          final piece = s.pieceIdentiteType == null ? null : '${d.enums.typePieceIdentite[s.pieceIdentiteType] ?? humanizeCode(s.pieceIdentiteType)}${s.pieceIdentiteFin != null ? ' · \u2066****${s.pieceIdentiteFin}\u2069' : ''}';
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -652,7 +652,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                     const SizedBox(height: 4),
                     Text('${d.lcd.lot} ${s.lotNumero} · ${fill(d.lcd.nuits, {'n': s.nuits})} · ${fill(d.lcd.voyageurs, {'n': s.nbVoyageurs})}', style: t.bodyLarge?.copyWith(color: SuColors.soft)),
                     const SizedBox(height: 12),
-                    StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
+                    StatusBadge(d.enums.statutSejour[s.statut] ?? humanizeCode(s.statut), variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, pulse: s.statut == 'EN_COURS'),
                   ],
                 ),
               ),
@@ -751,7 +751,7 @@ class _EvenementItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(d.enums.typeEvenementSejour[e.type] ?? e.type, style: t.titleMedium),
+                  Text(d.enums.typeEvenementSejour[e.type] ?? humanizeCode(e.type), style: t.titleMedium),
                   const SizedBox(height: 2),
                   Text(formatDateHeure(e.horodatage, context.locale), style: t.bodySmall),
                   if (constate != null) Padding(padding: const EdgeInsets.only(top: 2), child: Text('${d.lcd.nbVoyageursConstate} : $constate', style: t.bodySmall)),

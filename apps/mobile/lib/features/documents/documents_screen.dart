@@ -95,7 +95,7 @@ class DocumentRow extends ConsumerWidget {
     return ListRow(
       leading: const IconCircle(Icons.picture_as_pdf_rounded, tone: Tone.lilac),
       title: doc.nom,
-      subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? doc.visibilite}',
+      subtitle: '${libelleTypeDocument(context, doc.type)} · ${formatDateCourte(doc.creeLe, context.locale)} · ${d.enums.visibiliteDocument[doc.visibilite] ?? humanizeCode(doc.visibilite)}',
       trailing: canDelete
           ? BusyBuilder(
               'document-supprimer:${doc.id}',
@@ -214,7 +214,7 @@ class _UploadFormState extends ConsumerState<_UploadForm> {
         const SizedBox(height: 12),
         SuField(label: d.documents.type, controller: _type, help: d.documents.typeHint, error: fieldError(_fail, 'type'), required: true),
         const SizedBox(height: 12),
-        SuSelect<String>(label: d.documents.visibilite, value: _visibilite, options: const ['PUBLIC_COPROPRIETE', 'SYNDIC_ONLY', 'CONSEIL_SYNDICAL'], labelOf: (v) => d.enums.visibiliteDocument[v] ?? v, onChanged: (v) => setState(() => _visibilite = v), help: d.documents.visibiliteAide[_visibilite]),
+        SuSelect<String>(label: d.documents.visibilite, value: _visibilite, options: const ['PUBLIC_COPROPRIETE', 'SYNDIC_ONLY', 'CONSEIL_SYNDICAL'], labelOf: (v) => d.enums.visibiliteDocument[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _visibilite = v), help: d.documents.visibiliteAide[_visibilite]),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),

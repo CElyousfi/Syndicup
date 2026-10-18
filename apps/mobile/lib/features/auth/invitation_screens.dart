@@ -351,7 +351,7 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
                 ],
               );
             }
-            final role = d.roles[a.roleCible] ?? a.roleCible;
+            final role = d.roles[a.roleCible] ?? humanizeCode(a.roleCible);
             return Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -431,7 +431,7 @@ class ChooseCoproScreen extends ConsumerWidget {
       copros = const [];
       profil = null;
     }
-    String roleDans(String coproId) => profil?.roles.where((r) => r.actif && r.coproprieteId == coproId).map((r) => d.roles[r.role] ?? r.role).join(' · ') ?? '';
+    String roleDans(String coproId) => profil?.roles.where((r) => r.actif && r.coproprieteId == coproId).map((r) => d.roles[r.role] ?? humanizeCode(r.role)).join(' · ') ?? '';
     return PublicScaffold(
       showBack: true,
       children: [

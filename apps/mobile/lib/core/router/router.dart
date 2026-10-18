@@ -49,6 +49,7 @@ import '../auth/session_events.dart';
 import '../deeplinks/deeplinks.dart';
 import '../i18n/i18n.dart';
 import '../theme/motion.dart';
+import '../widgets/widgets.dart';
 
 /// Écrans racines d'onglet : fondu enchaîné avec léger zoom (« fade through ») à l'arrivée —
 /// changer d'onglet n'est pas avancer dans une pile. Route Material à part entière : quand un
@@ -269,22 +270,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
     ],
-    errorBuilder: (context, state) => Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(context.dict.common.notFoundTitle, style: Theme.of(context).textTheme.headlineSmall),
-              const SizedBox(height: 8),
-              Text(context.dict.common.notFoundBody, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton(onPressed: () => context.go('/'), child: Text(context.dict.common.backHome)),
-            ],
-          ),
+    // Lien inconnu (ancienne notification, lien web mal formé) : une vraie page, avec retour.
+    errorBuilder: (context, state) => SuPage(
+      title: context.dict.common.notFoundTitle,
+      largeTitle: false,
+      children: [
+        EmptyState(
+          title: context.dict.common.notFoundTitle,
+          hint: context.dict.common.notFoundBody,
+          icon: Icons.explore_off_rounded,
+          illustration: 'empty-search',
+          actionLabel: context.canPop() ? context.dict.common.back : context.dict.common.backHome,
+          onAction: () => context.canPop() ? context.pop() : context.go('/'),
         ),
-      ),
+      ],
     ),
   );
 });

@@ -96,7 +96,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
                 const SizedBox(height: 4),
                 Text('${libelleRole(context, ctx.role)}${ctx.copropriete != null ? ' · ${ctx.copropriete!.nom}' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center),
                 const SizedBox(height: 10),
-                StatusBadge(d.enums.statutCompte[p.statutCompte] ?? p.statutCompte, variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral),
+                StatusBadge(d.enums.statutCompte[p.statutCompte] ?? humanizeCode(p.statutCompte), variant: compteVariant[p.statutCompte] ?? BadgeVariant.neutral),
               ],
             ),
           ),

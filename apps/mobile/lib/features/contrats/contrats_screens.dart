@@ -65,14 +65,14 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
                 key: ValueKey(e.id),
                 leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : Tone.tosca),
                 title: e.contratLibelle ?? d.contrats.titre,
-                subtitle: '${formatDateCourte(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
-                trailing: e.montant != null ? AnimatedAmount(e.montant, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null) : StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
+                subtitle: '${formatDateCourte(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? humanizeCode(e.type)}',
+                trailing: e.montant != null ? AnimatedAmount(e.montant, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null) : StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? humanizeCode(e.statut), variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
                 onTap: () => context.push('/contrats/${e.contratId}'),
               ),
           ]),
         ],
         SectionHeader(d.contrats.liste),
-        FilterChips<String>(value: _onglet, options: _onglets, labelOf: (s) => s == 'TOUS' ? d.contrats.tous : s == 'A_RENOUVELER' ? d.contrats.aRenouveler : (d.enumsContrats.statutContrat[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
+        FilterChips<String>(value: _onglet, options: _onglets, labelOf: (s) => s == 'TOUS' ? d.contrats.tous : s == 'A_RENOUVELER' ? d.contrats.aRenouveler : (d.enumsContrats.statutContrat[s] ?? humanizeCode(s)), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(
           value: _onglet,
@@ -132,11 +132,11 @@ class _ContratRow extends StatelessWidget {
     return ListRow(
       leading: IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral),
       title: c.libelle,
-      subtitle: [d.enumsContrats.typeContrat[c.type] ?? c.type, if (c.prestataireNom != null) c.prestataireNom!, fin].join(' · '),
+      subtitle: [d.enumsContrats.typeContrat[c.type] ?? humanizeCode(c.type), if (c.prestataireNom != null) c.prestataireNom!, fin].join(' · '),
       trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
         if (c.montantPeriode != null) AnimatedAmount(c.montantPeriode, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
         const SizedBox(height: 4),
-        StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? c.statut, variant: contratVariant[c.statut] ?? BadgeVariant.neutral, small: true),
+        StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? humanizeCode(c.statut), variant: contratVariant[c.statut] ?? BadgeVariant.neutral, small: true),
       ]),
       onTap: () => context.push('/contrats/${c.id}'),
     );
@@ -168,7 +168,7 @@ class ContratDetailScreen extends ConsumerWidget {
                 Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   IconCircle(_iconeContrat(c.type), tone: c.statut == 'ACTIF' ? (c.aRenouveler ? Tone.warn : Tone.sage) : c.statut == 'EXPIRE' ? Tone.danger : Tone.neutral, size: 56),
                   const Spacer(),
-                  StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? c.statut, variant: contratVariant[c.statut] ?? BadgeVariant.neutral),
+                  StatusBadge(d.enumsContrats.statutContrat[c.statut] ?? humanizeCode(c.statut), variant: contratVariant[c.statut] ?? BadgeVariant.neutral),
                 ]),
                 const SizedBox(height: 18),
                 if (c.montantPeriode != null) ...[
@@ -178,7 +178,7 @@ class ContratDetailScreen extends ConsumerWidget {
                   const SizedBox(height: 14),
                 ],
                 Wrap(spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(d.enumsContrats.periodicite[c.periodicite] ?? c.periodicite, variant: BadgeVariant.outline),
+                  StatusBadge(d.enumsContrats.periodicite[c.periodicite] ?? humanizeCode(c.periodicite), variant: BadgeVariant.outline),
                   if (c.tacite) StatusBadge(d.contrats.tacite, variant: BadgeVariant.info),
                 ]),
               ]),
@@ -230,12 +230,12 @@ class ContratDetailScreen extends ConsumerWidget {
                   ListRow(
                     key: ValueKey(e.id),
                     leading: IconCircle(_iconeEcheance(e.type), tone: e.statut == 'MANQUEE' ? Tone.danger : e.statut == 'A_VENIR' ? Tone.tosca : Tone.sage),
-                    title: '${formatDate(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? e.type}',
+                    title: '${formatDate(e.dateEcheance, l)} · ${d.enumsContrats.typeEcheance[e.type] ?? humanizeCode(e.type)}',
                     subtitle: e.depenseLibelle != null ? '${e.depenseLibelle} · ${d.enumsDepenses.statutDepense[e.depenseStatut ?? ''] ?? ''}' : null,
                     trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, mainAxisSize: MainAxisSize.min, children: [
                       if (e.montant != null) AnimatedAmount(e.montant, style: t.titleMedium, textDirection: TextDirection.ltr, maxLines: null),
                       const SizedBox(height: 4),
-                      StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? e.statut, variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
+                      StatusBadge(d.enumsContrats.statutEcheance[e.statut] ?? humanizeCode(e.statut), variant: echeanceVariant[e.statut] ?? BadgeVariant.neutral, small: true),
                     ]),
                     onTap: e.depenseId != null && ctx.voitDepenses ? () => context.push('/depenses/${e.depenseId}') : null,
                   ),

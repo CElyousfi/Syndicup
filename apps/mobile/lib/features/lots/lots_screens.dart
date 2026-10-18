@@ -68,7 +68,7 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
                   ListRow(
                     key: ValueKey(x.id),
                     leading: IconCircle(_iconLot(x.typeLot), tone: Tone.lilac),
-                    title: '${d.enums.typeLot[x.typeLot] ?? x.typeLot} ${x.numero}',
+                    title: '${d.enums.typeLot[x.typeLot] ?? humanizeCode(x.typeLot)} ${x.numero}',
                     subtitle: [
                       if (x.etage != null) '${d.lots.etage} ${x.etage}' else d.lots.rdc,
                       '${formatEntier(x.tantiemes)} ${d.lots.tantiemes.toLowerCase()}',
@@ -77,7 +77,7 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
                     trailing: Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
-                        StatusBadge(d.enums.statutLot[x.statut] ?? x.statut, variant: lotVariant[x.statut] ?? BadgeVariant.neutral, small: true),
+                        StatusBadge(d.enums.statutLot[x.statut] ?? humanizeCode(x.statut), variant: lotVariant[x.statut] ?? BadgeVariant.neutral, small: true),
                         if (soldes.containsKey(x.id) && soldes[x.id]! > BigInt.zero) Padding(padding: const EdgeInsets.only(top: 4), child: AnimatedAmount(versChaine(soldes[x.id]!), style: t.labelSmall?.copyWith(color: SuColors.danger, fontWeight: FontWeight.w700), textDirection: TextDirection.ltr, maxLines: null, upIsGood: false)),
                       ],
                     ),
@@ -210,11 +210,11 @@ class _EnTete extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('${d.enums.typeLot[lot.typeLot] ?? lot.typeLot} ${lot.numero}', style: t.displaySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
+                  Text('${d.enums.typeLot[lot.typeLot] ?? humanizeCode(lot.typeLot)} ${lot.numero}', style: t.displaySmall, maxLines: 2, overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 4),
                   Text('${lot.etage != null ? '${d.lots.etage} ${lot.etage}' : d.lots.rdc} · ${d.lots.tantiemes} ${formatEntier(lot.tantiemes)}${lot.superficie != null ? ' · ${lot.superficie} m²' : ''}', style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                   const SizedBox(height: 8),
-                  StatusBadge(d.enums.statutLot[lot.statut] ?? lot.statut, variant: lotVariant[lot.statut] ?? BadgeVariant.neutral),
+                  StatusBadge(d.enums.statutLot[lot.statut] ?? humanizeCode(lot.statut), variant: lotVariant[lot.statut] ?? BadgeVariant.neutral),
                 ],
               ),
             ),
@@ -250,7 +250,7 @@ class _Propriete extends StatelessWidget {
           key: ValueKey(p.id),
           leading: Avatar(nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? '?', size: 48),
           title: nomComplet(p.utilisateur?.prenom, p.utilisateur?.nom) ?? p.utilisateurId.substring(0, 8),
-          subtitle: '${d.enums.typePropriete[p.typePropriete] ?? p.typePropriete} · ${d.lots.quotePart} ${p.quotePart} % · ${fill(d.common.sinceDate, {'date': formatDateCourte(p.dateDebut, l)})}${p.dateFin != null ? ' → ${formatDateCourte(p.dateFin, l)}' : ''}',
+          subtitle: '${d.enums.typePropriete[p.typePropriete] ?? humanizeCode(p.typePropriete)} · ${d.lots.quotePart} ${p.quotePart} % · ${fill(d.common.sinceDate, {'date': formatDateCourte(p.dateDebut, l)})}${p.dateFin != null ? ' → ${formatDateCourte(p.dateFin, l)}' : ''}',
           trailing: p.estRepresentantIndivision ? const Icon(Icons.star_rounded, color: SuColors.warn) : null,
         );
     return ListView(
@@ -286,7 +286,7 @@ class _Occupation extends StatelessWidget {
                     key: ValueKey(o.id),
                     leading: Avatar(nomComplet(o.utilisateur?.prenom, o.utilisateur?.nom) ?? '?', size: 48),
                     title: nomComplet(o.utilisateur?.prenom, o.utilisateur?.nom) ?? o.utilisateurId.substring(0, 8),
-                    subtitle: '${d.enums.typeOccupation[o.typeOccupation] ?? o.typeOccupation} · ${fill(d.common.sinceDate, {'date': formatDateCourte(o.dateDebut, l)})}${o.accesFinancesAccorde ? ' · ${d.lots.accesFinances}' : ''}',
+                    subtitle: '${d.enums.typeOccupation[o.typeOccupation] ?? humanizeCode(o.typeOccupation)} · ${fill(d.common.sinceDate, {'date': formatDateCourte(o.dateDebut, l)})}${o.accesFinancesAccorde ? ' · ${d.lots.accesFinances}' : ''}',
                     trailing: o.actif ? null : StatusBadge(d.common.hide, variant: BadgeVariant.outline, small: true),
                   ),
               ]),
@@ -383,7 +383,7 @@ class _Finances extends ConsumerWidget {
                                           child: Column(
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
-                                              Text(appel == null ? d.finances.ligneConcernee : (d.enums.typeAppel[appel.type] ?? appel.type), style: t.titleMedium),
+                                              Text(appel == null ? d.finances.ligneConcernee : (d.enums.typeAppel[appel.type] ?? humanizeCode(appel.type)), style: t.titleMedium),
                                               Padding(
                                                 padding: const EdgeInsets.only(top: 3),
                                                 child: Text(appel == null ? li.appelDeFondsLotId.substring(0, 8) : '${d.finances.periode} ${formatPeriode(appel.periode, l)} · ${d.finances.echeance} ${formatDateCourte(appel.dateEcheance, l)}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35)),
@@ -407,8 +407,8 @@ class _Finances extends ConsumerWidget {
                                       runSpacing: 6,
                                       crossAxisAlignment: WrapCrossAlignment.center,
                                       children: [
-                                        StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true),
-                                        if (full != null) StatusBadge(d.enums.escalade[full.niveauEscalade] ?? full.niveauEscalade, variant: escaladeVariant(full.niveauEscalade), small: true),
+                                        StatusBadge(d.enums.statutLigne[li.statut] ?? humanizeCode(li.statut), variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true),
+                                        if (full != null) StatusBadge(d.enums.escalade[full.niveauEscalade] ?? humanizeCode(full.niveauEscalade), variant: escaladeVariant(full.niveauEscalade), small: true),
                                         if (li.conteste) StatusBadge(d.enums.conteste, variant: BadgeVariant.warn, small: true),
                                         if (peutContester && !li.conteste && li.statut != 'PAYE')
                                           SuButton(
@@ -564,15 +564,15 @@ class _Parkings extends ConsumerWidget {
         SectionHeader(p.onglets.mesAttributions, actionLabel: ctx.isGestion || ctx.isConseil || ctx.isGardien ? p.titre : null, onAction: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings') : null),
         AsyncView(attributions, onRetry: () => ref.invalidate(attributionsProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucuneAttribution)
-            : CardList([for (final a in rows) ListRow(key: ValueKey(a.id), leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral), title: '${a.emplacementCode} · ${e.typeAttribution[a.type] ?? a.type}', subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : p.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}', trailing: StatusBadge(a.active ? p.active : p.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true), onTap: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings/${a.emplacementId}') : null)])),
+            : CardList([for (final a in rows) ListRow(key: ValueKey(a.id), leading: IconCircle(Icons.local_parking_rounded, tone: a.active ? Tone.ok : Tone.neutral), title: '${a.emplacementCode} · ${e.typeAttribution[a.type] ?? humanizeCode(a.type)}', subtitle: '${formatJourAnnee(a.dateDebut, l)} → ${a.dateFin != null ? formatJourAnnee(a.dateFin, l) : p.sansFin}${a.redevanceMensuelle != null ? ' · ${formatMAD(a.redevanceMensuelle, l)}' : ''}', trailing: StatusBadge(a.active ? p.active : p.terminee, variant: a.active ? BadgeVariant.ok : BadgeVariant.neutral, small: true), onTap: ctx.isGestion || ctx.isConseil || ctx.isGardien ? () => context.push('/parkings/${a.emplacementId}') : null)])),
         SectionHeader(p.vehicules, actionLabel: peutDeclarer ? p.declarerVehicule : null, onAction: peutDeclarer ? declarer : null),
         AsyncView(vehicules, onRetry: () => ref.invalidate(vehiculesProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucunVehicule)
-            : CardList([for (final v in rows) ListRow(key: ValueKey(v.id), leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral), title: v.immatriculation, subtitle: '${e.typeVehicule[v.type] ?? v.type}${v.description.isNotEmpty ? ' · ${v.description}' : ''}', trailing: StatusBadge(v.actif ? p.actif : p.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true))])),
+            : CardList([for (final v in rows) ListRow(key: ValueKey(v.id), leading: IconCircle(v.type == 'MOTO' ? Icons.two_wheeler_rounded : Icons.directions_car_rounded, tone: v.actif ? Tone.sage : Tone.neutral), title: v.immatriculation, subtitle: '${e.typeVehicule[v.type] ?? humanizeCode(v.type)}${v.description.isNotEmpty ? ' · ${v.description}' : ''}', trailing: StatusBadge(v.actif ? p.actif : p.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true))])),
         SectionHeader(p.badges),
         AsyncView(badges, onRetry: () => ref.invalidate(badgesProvider(lot.id)), skeletonCount: 2, data: (rows) => rows.isEmpty
             ? _Vide(p.aucunBadge)
-            : CardList([for (final b in rows) ListRow(key: ValueKey(b.id), leading: IconCircle(Icons.badge_rounded, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral), title: '${b.identifiant} · ${e.typeBadge[b.type] ?? b.type}', subtitle: '${p.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${p.caution} ${formatMAD(b.cautionMontant, l)}' : ''}', trailing: StatusBadge(e.statutBadge[b.statut] ?? b.statut, variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true))])),
+            : CardList([for (final b in rows) ListRow(key: ValueKey(b.id), leading: IconCircle(Icons.badge_rounded, tone: b.statut == 'ACTIF' ? Tone.sage : b.statut == 'PERDU' ? Tone.danger : Tone.neutral), title: '${b.identifiant} · ${e.typeBadge[b.type] ?? humanizeCode(b.type)}', subtitle: '${p.remisLe} ${formatJourAnnee(b.remisLe, l)}${b.cautionMontant != null ? ' · ${p.caution} ${formatMAD(b.cautionMontant, l)}' : ''}', trailing: StatusBadge(e.statutBadge[b.statut] ?? humanizeCode(b.statut), variant: badgeAccesVariant[b.statut] ?? BadgeVariant.neutral, small: true))])),
       ],
     );
   }
@@ -665,7 +665,7 @@ class _LotFormScreenState extends ConsumerState<LotFormScreen> {
         if (widget.id == null) {
           // Création : succès plein écran Wise, puis la fiche du nouveau lot.
           final d = context.dict;
-          await showSuccess(context, title: d.common.updated, body: '${d.enums.typeLot[data.typeLot] ?? data.typeLot} ${data.numero}', illustration: 'ok-general');
+          await showSuccess(context, title: d.common.updated, body: '${d.enums.typeLot[data.typeLot] ?? humanizeCode(data.typeLot)} ${data.numero}', illustration: 'ok-general');
           if (!mounted) return;
         } else {
           showToast(context, context.dict.common.updated);
@@ -693,7 +693,7 @@ class _ProprietaireForm extends ConsumerStatefulWidget {
 class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
   final List<_Copro> _rows = [_Copro()];
   String _type = 'PLEIN';
-  final _date = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+  final _date = TextEditingController(text: jourIso(DateTime.now()));
   bool _loading = false;
   ApiFail? _fail;
 
@@ -707,7 +707,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Segmented<String>(value: _type, options: const ['PLEIN', 'INDIVISION', 'SCI'], labelOf: (v) => d.enums.typePropriete[v] ?? v, onChanged: (v) => setState(() {
+        Segmented<String>(value: _type, options: const ['PLEIN', 'INDIVISION', 'SCI'], labelOf: (v) => d.enums.typePropriete[v] ?? humanizeCode(v), onChanged: (v) => setState(() {
           _type = v;
           if (v != 'INDIVISION') {
             _rows.removeRange(1, _rows.length);
@@ -739,11 +739,11 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
         if (_type == 'INDIVISION') ...[
           SuButton(variant: SuButtonVariant.secondary, onPressed: () => setState(() => _rows.add(_Copro())), icon: Icons.add_rounded, label: d.lots.ajouterIndivisaire),
           const SizedBox(height: 10),
-          Row(children: [Expanded(child: Gauge(ratio100, color: total == BigInt.from(10000) ? SuColors.ok : SuColors.warn)), const SizedBox(width: 10), AnimatedFigureText('${formatMontant(versChaine(total))} %', style: t.labelMedium)]),
+          Row(children: [Expanded(child: Gauge(ratio100, color: total == BigInt.from(10000) ? SuColors.ok : SuColors.warn)), const SizedBox(width: 10), AnimatedFigureText(formatPourcent(ratio(total, BigInt.from(10000))), style: t.labelMedium)]),
           Padding(padding: const EdgeInsets.only(top: 4), child: Text('${d.lots.quotePartRegle} · ★ ${d.lots.representantAide}', style: t.bodySmall)),
           const SizedBox(height: 10),
         ],
-        SuField(label: d.lots.dateDebut, controller: _date, hint: 'AAAA-MM-JJ', textDirection: TextDirection.ltr, required: true, error: fieldError(_fail, 'date_debut')),
+        SuDateField(label: d.lots.dateDebut, controller: _date, required: true, error: fieldError(_fail, 'date_debut')),
         const SizedBox(height: 16),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
@@ -843,7 +843,7 @@ class _OccupantForm extends ConsumerStatefulWidget {
 
 class _OccupantFormState extends ConsumerState<_OccupantForm> {
   final _user = TextEditingController();
-  final _date = TextEditingController(text: DateTime.now().toIso8601String().substring(0, 10));
+  final _date = TextEditingController(text: jourIso(DateTime.now()));
   String _type = 'LOCATAIRE';
   bool _finances = false, _convocations = false, _loading = false;
   ApiFail? _fail;
@@ -856,9 +856,9 @@ class _OccupantFormState extends ConsumerState<_OccupantForm> {
       children: [
         _MembreField(label: d.lots.utilisateur, help: d.lots.utilisateurIdAide, controller: _user, membres: membres),
         const SizedBox(height: 12),
-        Segmented<String>(value: _type, options: const ['LOCATAIRE', 'PROPRIETAIRE_OCCUPANT'], labelOf: (v) => d.enums.typeOccupation[v] ?? v, onChanged: (v) => setState(() => _type = v)),
+        Segmented<String>(value: _type, options: const ['LOCATAIRE', 'PROPRIETAIRE_OCCUPANT'], labelOf: (v) => d.enums.typeOccupation[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _type = v)),
         const SizedBox(height: 12),
-        SuField(label: d.lots.dateDebut, controller: _date, hint: 'AAAA-MM-JJ', textDirection: TextDirection.ltr, required: true, error: fieldError(_fail, 'date_debut')),
+        SuDateField(label: d.lots.dateDebut, controller: _date, required: true, error: fieldError(_fail, 'date_debut')),
         const SizedBox(height: 8),
         SuCheckbox(value: _finances, onChanged: (v) => setState(() => _finances = v), label: d.lots.accesFinances, help: d.lots.accesFinancesAide),
         SuCheckbox(value: _convocations, onChanged: (v) => setState(() => _convocations = v), label: d.lots.recoitConvocations),

@@ -93,7 +93,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
             : peutPlacer
                 // Place visiteur : grande cible ronde, verte une fois la place attribuée.
                 ? CircleIconButton(onTap: () => place(v), icon: v.emplacementId != null ? Icons.local_parking_rounded : Icons.add_location_alt_rounded, iconColor: v.emplacementId != null ? SuColors.ok : SuColors.link, tooltip: d.parkings.attribuerPlace)
-                : StatusBadge(d.enums.statutVisite[v.statut] ?? v.statut, variant: visiteVariant[v.statut] ?? BadgeVariant.neutral, pulse: v.statut == 'EN_ATTENTE', small: true),
+                : StatusBadge(d.enums.statutVisite[v.statut] ?? humanizeCode(v.statut), variant: visiteVariant[v.statut] ?? BadgeVariant.neutral, pulse: v.statut == 'EN_ATTENTE', small: true),
         onTap: peutRepondre ? () => context.push('/visites/${v.id}') : null,
       );
     }

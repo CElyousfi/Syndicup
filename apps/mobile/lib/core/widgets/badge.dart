@@ -37,7 +37,8 @@ class StatusBadge extends StatelessWidget {
             const SizedBox(width: 6),
           ],
           Text(
-            label,
+            // Filet de sécurité : un code brut (`EN_ATTENTE`) n'est jamais affiché tel quel.
+            looksLikeCode(label) ? humanizeCode(label) : label,
             style: TextStyle(fontSize: small ? 11.5 : 12.5, fontWeight: FontWeight.w600, color: fg, height: 1.2, fontFamily: variant == BadgeVariant.ink ? 'GeistMono' : null, letterSpacing: variant == BadgeVariant.ink ? -0.3 : null),
           ),
         ],

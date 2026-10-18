@@ -251,7 +251,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
 
     return SuPage(
       title: d.ag.seance,
-      subtitle: d.enums.typeAg[ag.type] ?? ag.type,
+      subtitle: d.enums.typeAg[ag.type] ?? humanizeCode(ag.type),
       children: [
         _Salle(
           resolutions: resolutions,
@@ -269,8 +269,8 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
             children: [
               Row(
                 children: [
-                  Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, style: t.labelMedium?.copyWith(color: SuColors.soft))),
-                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral),
+                  Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite), style: t.labelMedium?.copyWith(color: SuColors.soft))),
+                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral),
                 ],
               ),
               const SizedBox(height: 14),
@@ -340,7 +340,7 @@ class _VueVotantState extends ConsumerState<_VueVotant> {
   Future<void> _confirmer(AgResolution r) async {
     final d = context.dict;
     final choix = _choix!;
-    final ok = await confirmDialog(context, title: d.ag.voteConfirmTitre, body: fill(d.ag.voteConfirmCorps, {'valeur': d.enums.valeurVote[choix] ?? choix, 'ordre': r.ordre}), confirmLabel: d.ag.voter, irreversible: true);
+    final ok = await confirmDialog(context, title: d.ag.voteConfirmTitre, body: fill(d.ag.voteConfirmCorps, {'valeur': d.enums.valeurVote[choix] ?? humanizeCode(choix), 'ordre': r.ordre}), confirmLabel: d.ag.voter, irreversible: true);
     if (!ok) return;
     setState(() {
       _loading = true;
@@ -452,8 +452,8 @@ class _PupitreState extends ConsumerState<_Pupitre> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(children: [
-                  Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, variant: BadgeVariant.info, small: true))),
-                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                  Expanded(child: Align(alignment: AlignmentDirectional.centerStart, child: StatusBadge(d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite), variant: BadgeVariant.info, small: true))),
+                  StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
                 ]),
                 const SizedBox(height: 14),
                 Text(r.texte, style: t.headlineSmall?.copyWith(height: 1.4)),

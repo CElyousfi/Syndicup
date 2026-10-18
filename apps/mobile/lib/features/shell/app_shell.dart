@@ -25,6 +25,7 @@ import '../../core/util/nav.dart';
 import '../../core/util/notifications_link.dart';
 import '../../core/deeplinks/deeplinks.dart';
 import '../../core/home_widgets/home_widgets.dart';
+import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../../offline/sync_queue/visites_sync.dart';
 import '../assistant/dari.dart';
@@ -555,7 +556,7 @@ class _MenuSheet extends ConsumerWidget {
                 children: [
                   const IconCircle(Icons.apartment_rounded, tone: Tone.sage, size: 44, iconSize: 22),
                   const SizedBox(width: 12),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? ctx.role), style: t.labelSmall)])),
+                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(ctx.copropriete?.nom ?? dict.nav.cabinet, style: t.titleSmall, maxLines: 1, overflow: TextOverflow.ellipsis), Text(ctx.copropriete?.ville ?? (dict.roles[ctx.role] ?? humanizeCode(ctx.role)), style: t.labelSmall)])),
                   if (ctx.multiCopro)
                     LinkButton(dict.a11y.switchCopro, onTap: () {
                       Navigator.pop(context);
@@ -589,7 +590,7 @@ class _MenuSheet extends ConsumerWidget {
             children: [
               Avatar(nom, size: 44, tinted: false),
               const SizedBox(width: 12),
-              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nom, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis), Text(dict.roles[ctx.role] ?? ctx.role, style: t.labelSmall)])),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(nom, style: t.titleMedium, maxLines: 1, overflow: TextOverflow.ellipsis), Text(dict.roles[ctx.role] ?? humanizeCode(ctx.role), style: t.labelSmall)])),
             ],
           ),
           const SizedBox(height: 4),

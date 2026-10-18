@@ -56,7 +56,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
     Future<void> refresh() => refreshing(ref, [incidentsProvider]);
     final contenu = <Widget>[
-      FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+      FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 16),
       AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
         final visible = list.where((i) => _statut == 'TOUS' || (_statut == 'OUVERTS' ? i.ouvert : i.statut == _statut)).toList()..sort((a, b) => b.creeLe.compareTo(a.creeLe));
@@ -71,13 +71,13 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
               key: ValueKey(i.id),
               leading: IconCircle(iconCategorie(i.categorie), tone: i.slaDepasse ? Tone.danger : incidentTone(i.statut)),
               title: i.sousCategorie,
-              subtitle: '${d.enums.categorieIncident[i.categorie] ?? i.categorie} · ${d.enums.partie[i.partie] ?? i.partie} · ${formatDateHeure(i.creeLe, context.locale)}',
+              subtitle: '${d.enums.categorieIncident[i.categorie] ?? humanizeCode(i.categorie)} · ${d.enums.partie[i.partie] ?? humanizeCode(i.partie)} · ${formatDateHeure(i.creeLe, context.locale)}',
               trailing: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? i.statut, variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
+                  i.slaDepasse ? StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, small: true, pulse: true) : StatusBadge(d.enums.statutIncident[i.statut] ?? humanizeCode(i.statut), variant: incidentVariant[i.statut] ?? BadgeVariant.neutral, small: true),
                   const SizedBox(height: 4),
-                  StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
+                  StatusBadge(d.enums.urgence[i.urgence] ?? humanizeCode(i.urgence), variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral, small: true),
                 ],
               ),
               onTap: () => context.push('/incidents/${i.id}'),
@@ -178,7 +178,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
         const SizedBox(height: 18),
         SuField(label: d.incidents.sousCategorie, controller: _sous, hint: d.incidents.sousCategorieHint, required: true, error: fieldError(_fail, 'sous_categorie')),
         SectionHeader('2 · ${d.incidents.partie}', subtitle: d.incidents.partieAide),
-        Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? v, onChanged: (v) => setState(() => _partie = v)),
+        Segmented<String>(value: _partie, options: const ['COMMUNE', 'PRIVATIVE'], labelOf: (v) => d.enums.partie[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _partie = v)),
         SectionHeader('3 · ${d.incidents.urgence}'),
         for (final u in const ['NORMALE', 'URGENTE', 'URGENCE_MAXIMALE'])
           _ChoixTile(
@@ -213,7 +213,7 @@ class _IncidentFormScreenState extends ConsumerState<IncidentFormScreen> {
           const SizedBox(height: 14),
         ],
         if (_categorie == 'PARKING') ...[
-          SuSelect<String?>(label: d.incidents.emplacementConcerne, value: _emplacement, options: [null, ...emplacements.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : emplacements.where((x) => x.id == v).map((x) => '${x.code} · ${d.enumsParkings.typeEmplacement[x.type] ?? x.type}').firstOrNull ?? v, onChanged: (v) => setState(() => _emplacement = v), help: d.incidents.emplacementConcerneAide, error: fieldError(_fail, 'emplacement_id')),
+          SuSelect<String?>(label: d.incidents.emplacementConcerne, value: _emplacement, options: [null, ...emplacements.map((x) => x.id)], labelOf: (v) => v == null ? d.common.none : emplacements.where((x) => x.id == v).map((x) => '${x.code} · ${d.enumsParkings.typeEmplacement[x.type] ?? humanizeCode(x.type)}').firstOrNull ?? v, onChanged: (v) => setState(() => _emplacement = v), help: d.incidents.emplacementConcerneAide, error: fieldError(_fail, 'emplacement_id')),
           const SizedBox(height: 14),
           SuField(label: d.incidents.immatriculationSignalee, controller: _plaque, hint: '12345-A-6', help: d.incidents.immatriculationSignaleeAide, optionalLabel: d.common.optional, error: fieldError(_fail, 'immatriculation_signalee'), keyboardType: TextInputType.visiblePassword),
           const SizedBox(height: 14),
@@ -456,13 +456,13 @@ class IncidentDetailScreen extends ConsumerWidget {
                         if (i.slaDepasse) StatusBadge(d.incidents.slaDepasse, variant: BadgeVariant.danger, pulse: true),
                       ]),
                       const SizedBox(height: 18),
-                      Text(d.enums.statutIncident[i.statut] ?? i.statut, style: t.displaySmall),
+                      Text(d.enums.statutIncident[i.statut] ?? humanizeCode(i.statut), style: t.displaySmall),
                       const SizedBox(height: 4),
                       Text(fill(d.incidents.creeLe, {'date': formatDateHeure(i.creeLe, l)}), style: t.bodyMedium?.copyWith(color: SuColors.soft)),
                       const SizedBox(height: 14),
                       Wrap(spacing: 6, runSpacing: 6, children: [
-                        StatusBadge(d.enums.urgence[i.urgence] ?? i.urgence, variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
-                        StatusBadge(d.enums.partie[i.partie] ?? i.partie, variant: BadgeVariant.outline),
+                        StatusBadge(d.enums.urgence[i.urgence] ?? humanizeCode(i.urgence), variant: urgenceVariant[i.urgence] ?? BadgeVariant.neutral),
+                        StatusBadge(d.enums.partie[i.partie] ?? humanizeCode(i.partie), variant: BadgeVariant.outline),
                         if (i.lotId != null) StatusBadge('${d.invitations.lot} ${lotNumero ?? ''}', variant: BadgeVariant.outline),
                       ]),
                       if (i.description != null) ...[
@@ -719,7 +719,7 @@ class _StatutFormState extends ConsumerState<_StatutForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SuSelect<String>(label: d.incidents.statut, value: _statut, options: const ['OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
+        SuSelect<String>(label: d.incidents.statut, value: _statut, options: const ['OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
         const SizedBox(height: 12),
         SuField(label: d.incidents.commentaire, controller: _commentaire, hint: d.incidents.commentaireHint, maxLines: 3, error: fieldError(_fail, 'commentaire')),
         const SizedBox(height: 16),

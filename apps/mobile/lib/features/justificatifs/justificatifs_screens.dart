@@ -82,9 +82,9 @@ class JustificatifRow extends StatelessWidget {
     final v = justificatifVariant[x.statut] ?? BadgeVariant.neutral;
     return ListRow(
       leading: IconCircle(_iconeMethode(x.methode), tone: x.enAttente ? Tone.warn : _toneDe(v)),
-      title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? x.methode}',
+      title: '${x.lotNumero ?? d.justificatifs.lot} · ${d.enumsJustificatifs.methode[x.methode] ?? humanizeCode(x.methode)}',
       subtitle: '${formatDate(x.datePaiementDeclaree, l)}${x.reference != null ? ' · ${x.reference}' : ''}${x.declareParNom != null ? ' · ${x.declareParNom}' : ''}',
-      trailing: _MontantFin(x.montant, secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? x.statut, variant: v, small: true)),
+      trailing: _MontantFin(x.montant, secondaire: StatusBadge(d.enumsJustificatifs.statutJustificatif[x.statut] ?? humanizeCode(x.statut), variant: v, small: true)),
       onTap: () => context.push('/justificatifs/${x.id}'),
     );
   }
@@ -178,12 +178,12 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
       children: [
         Text(especes ? j.especesAideGardien : j.declarerAide, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),
-        SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? x.typeLot} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
+        SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? humanizeCode(x.typeLot)} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
         const SizedBox(height: 10),
         SuField(label: '${j.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, mono: true, textDirection: TextDirection.ltr, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'montant')),
         const SizedBox(height: 10),
         if (!especes) ...[
-          Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? v, onChanged: (v) => setState(() => _methode = v)),
+          Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _methode = v)),
           const SizedBox(height: 10),
           if (widget.comptes.isNotEmpty) ...[
             SuSelect<CompteBancaire>(label: j.beneficiaire, value: _compte, options: widget.comptes, labelOf: (c) => '${c.libelle} · ${c.ribMasque}', onChanged: (v) => setState(() => _compte = v), required: true),
@@ -317,7 +317,7 @@ class _JustificatifsScreenState extends ConsumerState<JustificatifsScreen> {
       subtitle: d.justificatifs.subtitle,
       onRefresh: () => refreshing(ref, [justificatifsProvider]),
       children: [
-        FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
+        FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? humanizeCode(s)), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
         SuFadeSwitch(value: _onglet, child: AsyncView(rows, onRetry: () => ref.invalidate(justificatifsProvider(statut)), data: (xs) => xs.isEmpty ? EmptyState(title: d.justificatifs.aucun, hint: d.justificatifs.aucunAide, icon: Icons.verified_rounded, illustration: 'empty-appels') : CardList([for (final x in xs) JustificatifRow(x, key: ValueKey(x.id))]))),
       ],
@@ -379,8 +379,8 @@ class JustificatifDetailScreen extends ConsumerWidget {
                 Padding(padding: const EdgeInsets.only(top: 4), child: Text('${y.lotNumero ?? j.lot} · ${formatDate(y.datePaiementDeclaree, l)}', style: t.bodyMedium?.copyWith(color: SuColors.soft), textAlign: TextAlign.center)),
                 const SizedBox(height: 12),
                 Wrap(alignment: WrapAlignment.center, spacing: 6, runSpacing: 6, children: [
-                  StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? y.statut, variant: v),
-                  StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? y.methode, variant: BadgeVariant.outline),
+                  StatusBadge(d.enumsJustificatifs.statutJustificatif[y.statut] ?? humanizeCode(y.statut), variant: v),
+                  StatusBadge(d.enumsJustificatifs.methode[y.methode] ?? humanizeCode(y.methode), variant: BadgeVariant.outline),
                 ]),
               ]),
             ),
@@ -420,8 +420,8 @@ class JustificatifDetailScreen extends ConsumerWidget {
                     key: ValueKey(li.appelDeFondsLotId),
                     leading: IconCircle(Icons.request_quote_rounded, tone: li.appelDeFondsLotId == y.appelDeFondsLotId ? Tone.sage : Tone.neutral),
                     title: formatPeriode(li.periode, l),
-                    subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? li.type}',
-                    trailing: _MontantFin(li.restant, upIsGood: false, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? li.statut, variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
+                    subtitle: '${formatDate(li.dateEcheance, l)} · ${d.enums.typeAppel[li.type] ?? humanizeCode(li.type)}',
+                    trailing: _MontantFin(li.restant, upIsGood: false, secondaire: StatusBadge(d.enums.statutLigne[li.statut] ?? humanizeCode(li.statut), variant: ligneAppelVariant[li.statut] ?? BadgeVariant.neutral, small: true)),
                   ),
               ]),
             if (affectations.isNotEmpty) ...[

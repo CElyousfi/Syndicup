@@ -97,7 +97,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               const SizedBox(height: 10),
               SuField(label: p.ville, controller: _ville, error: fieldError(_fail, 'ville')),
               const SizedBox(height: 10),
-              KeyValueRow(p.typeResidence, d.enums.typeResidence[c.typeResidence] ?? c.typeResidence),
+              KeyValueRow(p.typeResidence, d.enums.typeResidence[c.typeResidence] ?? humanizeCode(c.typeResidence)),
               const SizedBox(height: 4),
               SuField(label: p.nbLots, controller: _nbLots, keyboardType: TextInputType.number, inputFormatters: [FilteringTextInputFormatter.digitsOnly], textDirection: TextDirection.ltr, error: fieldError(_fail, 'nb_lots')),
               const SizedBox(height: 12),
@@ -124,7 +124,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
             SuCard(
               child: c.politiqueRecouvrementJson == null || c.politiqueRecouvrementJson!.isEmpty
                   ? Text(p.nonConfigure, style: t.bodyMedium?.copyWith(color: SuColors.soft))
-                  : Column(children: [for (final e in c.politiqueRecouvrementJson!.entries) KeyValueRow(d.enums.escalade[e.key] ?? e.key, '${e.value}', mono: true)]),
+                  : Column(children: [for (final e in c.politiqueRecouvrementJson!.entries) KeyValueRow(d.enums.escalade[e.key] ?? humanizeCode(e.key), '${e.value}', mono: true)]),
             ),
             SectionHeader(p.legaux),
             SuBanner(tone: BannerTone.legal, body: p.legauxBanner),

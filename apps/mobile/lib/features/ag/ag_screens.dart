@@ -44,9 +44,9 @@ class AgListScreen extends ConsumerWidget {
               ListRow(
                 key: ValueKey(a.id),
                 leading: IconCircle(Icons.how_to_vote_rounded, tone: a.statut == 'EN_COURS' ? Tone.warn : a.statut == 'ANNULEE' ? Tone.neutral : Tone.lilac),
-                title: d.enums.typeAg[a.type] ?? a.type,
+                title: d.enums.typeAg[a.type] ?? humanizeCode(a.type),
                 subtitle: '${formatDateLongue(a.dateAg, l)}${a.quorumAtteint != null ? ' · ${d.ag.quorum} ${formatPourcent(double.tryParse(a.quorumAtteint!))}' : ''}',
-                trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [StatusBadge(d.enums.statutAg[a.statut] ?? a.statut, variant: agVariant[a.statut] ?? BadgeVariant.neutral, small: true, pulse: a.statut == 'EN_COURS'), if (a.aVenir) Padding(padding: const EdgeInsets.only(top: 4), child: Text(echeanceRelative(context, a.dateAg), style: t.labelSmall))]),
+                trailing: Column(crossAxisAlignment: CrossAxisAlignment.end, children: [StatusBadge(d.enums.statutAg[a.statut] ?? humanizeCode(a.statut), variant: agVariant[a.statut] ?? BadgeVariant.neutral, small: true, pulse: a.statut == 'EN_COURS'), if (a.aVenir) Padding(padding: const EdgeInsets.only(top: 4), child: Text(echeanceRelative(context, a.dateAg), style: t.labelSmall))]),
                 onTap: () => context.push('/ag/${a.id}'),
               ),
           ]);
@@ -118,7 +118,7 @@ class _AgFormScreenState extends ConsumerState<AgFormScreen> {
                 ref.invalidate(agListProvider);
                 // Succès plein écran posé sur la fiche (contexte racine : ce formulaire est remplacé).
                 final root = Navigator.of(context, rootNavigator: true).context;
-                final resume = '${d.enums.typeAg[_type] ?? _type} · ${formatDateLongue(_date.toIso8601String(), context.locale)}';
+                final resume = '${d.enums.typeAg[_type] ?? humanizeCode(_type)} · ${formatDateLongue(_date.toIso8601String(), context.locale)}';
                 context.pushReplacement('/ag/${data.id}');
                 showSuccess(root, title: d.ag.nouvelleTitre, body: resume, illustration: 'ok-general');
               case ApiFail<AssembleeGenerale>():
@@ -153,7 +153,7 @@ class AgDetailScreen extends ConsumerWidget {
     Future<void> refresh() => refreshing(ref, [agProvider(id), agProcurationsProvider(id), agListProvider]);
 
     return SuPage(
-      title: ag.valueOrNull == null ? d.ag.titre : (d.enums.typeAg[ag.valueOrNull!.type] ?? ag.valueOrNull!.type),
+      title: ag.valueOrNull == null ? d.ag.titre : (d.enums.typeAg[ag.valueOrNull!.type] ?? humanizeCode(ag.valueOrNull!.type)),
       subtitle: ag.valueOrNull == null ? null : formatDateLongue(ag.valueOrNull!.dateAg, l),
       onRefresh: refresh,
       children: [
@@ -177,7 +177,7 @@ class AgDetailScreen extends ConsumerWidget {
                       children: [
                         IconCircle(Icons.how_to_vote_rounded, tone: a.statut == 'EN_COURS' ? Tone.warn : a.statut == 'ANNULEE' ? Tone.neutral : Tone.lilac, size: 56),
                         const Spacer(),
-                        StatusBadge(d.enums.statutAg[a.statut] ?? a.statut, variant: agVariant[a.statut] ?? BadgeVariant.neutral, pulse: a.statut == 'EN_COURS'),
+                        StatusBadge(d.enums.statutAg[a.statut] ?? humanizeCode(a.statut), variant: agVariant[a.statut] ?? BadgeVariant.neutral, pulse: a.statut == 'EN_COURS'),
                       ],
                     ),
                     const SizedBox(height: 18),
@@ -200,7 +200,7 @@ class AgDetailScreen extends ConsumerWidget {
               if (a.statut == 'EN_COURS') ...[
                 const SizedBox(height: 12),
                 PosterCard(
-                  kicker: d.enums.typeAg[a.type] ?? a.type,
+                  kicker: d.enums.typeAg[a.type] ?? humanizeCode(a.type),
                   title: md.seanceEnCours,
                   body: '${resolutions.length} ${d.ag.resolutions.toLowerCase()}',
                   ctaLabel: ctx.isGestion ? d.ag.pupitre : d.ag.rejoindreSeance,
@@ -221,8 +221,8 @@ class AgDetailScreen extends ConsumerWidget {
                       key: ValueKey(r.id),
                       leading: OrdreResolution(r.ordre),
                       title: r.texte,
-                      subtitle: '${d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite} — ${d.enums.typeMajoriteAide[r.typeMajorite] ?? ''}',
-                      trailing: StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                      subtitle: '${d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite)} — ${d.enums.typeMajoriteAide[r.typeMajorite] ?? ''}',
+                      trailing: StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
                       onTap: a.statut == 'CLOTUREE' || a.statut == 'EN_COURS' ? () => _resultats(context, ref, a, r, ctx) : null,
                     ),
                     // M22 — suivi d'exécution d'une résolution adoptée (copropriétaires inclus).
@@ -319,7 +319,7 @@ class AgDetailScreen extends ConsumerWidget {
                 OrdreResolution(r.ordre),
                 const SizedBox(width: 12),
                 Expanded(child: Text('${d.ag.resolution} ${r.ordre}', style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.soft))),
-                StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
               ]),
               const SizedBox(height: 12),
               Text(r.texte, style: Theme.of(context).textTheme.headlineSmall),
@@ -465,7 +465,7 @@ class ResultatsWidget extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(children: [
-                    Expanded(child: Text(d.enums.valeurVote[v] ?? v, style: t.titleSmall?.copyWith(color: fg))),
+                    Expanded(child: Text(d.enums.valeurVote[v] ?? humanizeCode(v), style: t.titleSmall?.copyWith(color: fg))),
                     AnimatedFigureText('${formatEntier(val.toString())} t. · ${nb(v)}', tint: false, textDirection: TextDirection.ltr, style: t.bodyMedium?.copyWith(color: fg, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()])),
                   ]),
                   const SizedBox(height: 6),
@@ -512,7 +512,7 @@ class _ResolutionFormState extends ConsumerState<_ResolutionForm> {
         const SizedBox(height: 12),
         SuField(label: d.ag.texteResolution, controller: _texte, maxLines: 4, required: true, error: fieldError(_fail, 'texte')),
         const SizedBox(height: 12),
-        SuSelect<String>(label: d.ag.typeMajorite, value: _maj, options: const ['SIMPLE', 'DOUBLE', 'UNANIMITE'], labelOf: (v) => d.enums.typeMajorite[v] ?? v, onChanged: (v) => setState(() => _maj = v), help: d.enums.typeMajoriteAide[_maj]),
+        SuSelect<String>(label: d.ag.typeMajorite, value: _maj, options: const ['SIMPLE', 'DOUBLE', 'UNANIMITE'], labelOf: (v) => d.enums.typeMajorite[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _maj = v), help: d.enums.typeMajoriteAide[_maj]),
         const SizedBox(height: 8),
         SuCheckbox(value: _execution, onChanged: (v) => setState(() => _execution = v), label: d.taches.necessiteExecution),
         const SizedBox(height: 16),
@@ -741,8 +741,8 @@ class AgPvScreen extends ConsumerWidget {
                       Row(children: [
                         OrdreResolution(r.ordre),
                         const SizedBox(width: 12),
-                        Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? r.typeMajorite, style: t.bodyMedium?.copyWith(color: SuColors.soft))),
-                        StatusBadge(d.enums.resultatResolution[r.resultat] ?? r.resultat, variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
+                        Expanded(child: Text(d.enums.typeMajorite[r.typeMajorite] ?? humanizeCode(r.typeMajorite), style: t.bodyMedium?.copyWith(color: SuColors.soft))),
+                        StatusBadge(d.enums.resultatResolution[r.resultat] ?? humanizeCode(r.resultat), variant: resolutionVariant[r.resultat] ?? BadgeVariant.neutral, small: true),
                       ]),
                       const SizedBox(height: 12),
                       Text(r.texte, style: t.titleMedium),
@@ -811,7 +811,7 @@ class AgVotesScreen extends ConsumerWidget {
                 leading: Avatar(membres.where((m) => m.id == v.utilisateurId).map((m) => m.nom).firstOrNull ?? '?', size: 48),
                 title: membres.where((m) => m.id == v.utilisateurId).map((m) => m.nom).firstOrNull ?? v.utilisateurId.substring(0, 8),
                 subtitle: '${d.invitations.lot} ${lots.where((x) => x.id == v.lotId).map((x) => x.numero).firstOrNull ?? ''} · ${formatEntier(v.tantiemesRepresentes)} t. · ${formatDateHeure(v.horodatage, l)}',
-                trailing: StatusBadge(d.enums.valeurVote[v.valeur] ?? v.valeur, variant: v.valeur == 'POUR' ? BadgeVariant.ok : v.valeur == 'CONTRE' ? BadgeVariant.danger : BadgeVariant.neutral, small: true),
+                trailing: StatusBadge(d.enums.valeurVote[v.valeur] ?? humanizeCode(v.valeur), variant: v.valeur == 'POUR' ? BadgeVariant.ok : v.valeur == 'CONTRE' ? BadgeVariant.danger : BadgeVariant.neutral, small: true),
               ),
           ]);
         }),

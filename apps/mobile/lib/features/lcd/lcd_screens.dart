@@ -109,7 +109,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [Expanded(child: Text(d.lcd.regime, style: t.titleMedium)), const SizedBox(width: 8), StatusBadge(d.enums.regimeLcd[r.regimeLcd] ?? r.regimeLcd, variant: regimeLcdVariant[r.regimeLcd] ?? BadgeVariant.neutral, small: true)]),
+                  Row(children: [Expanded(child: Text(d.lcd.regime, style: t.titleMedium)), const SizedBox(width: 8), StatusBadge(d.enums.regimeLcd[r.regimeLcd] ?? humanizeCode(r.regimeLcd), variant: regimeLcdVariant[r.regimeLcd] ?? BadgeVariant.neutral, small: true)]),
                   const SizedBox(height: 4),
                   Text(resume, style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35), maxLines: 3, overflow: TextOverflow.ellipsis),
                   if (ctx.isSyndic) Padding(padding: const EdgeInsets.only(top: 8), child: Text(d.lcd.configurerReglement, style: t.labelMedium?.copyWith(color: SuColors.link, decoration: TextDecoration.underline, decorationColor: SuColors.link))),
@@ -142,7 +142,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
           leading: IconCircle(Icons.apartment_rounded, tone: x.statut == 'EN_ATTENTE' ? Tone.warn : x.statut == 'VALIDEE' ? Tone.ok : Tone.neutral),
           title: '${d.lcd.lot} ${x.lotNumero}',
           subtitle: '${x.plateformes?.isNotEmpty == true ? '${x.plateformes!.join(', ')} · ' : ''}${md.lcdDeclareLe} ${formatDateCourte(x.creeLe, l)}',
-          trailing: StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? x.statut, variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, small: true, pulse: x.statut == 'EN_ATTENTE' && ctx.isGestion),
+          trailing: StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? humanizeCode(x.statut), variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, small: true, pulse: x.statut == 'EN_ATTENTE' && ctx.isGestion),
           onTap: () => context.push('/location-courte-duree/declarations/${x.id}'),
         );
 
@@ -431,7 +431,7 @@ class _LcdReglementScreenState extends ConsumerState<LcdReglementScreen> {
         if (reglement.isLoading && !_prefilled)
           const LoadingList(count: 3)
         else ...[
-          SuSelect<String>(label: d.lcd.regime, value: _regime, options: d.enums.regimeLcd.keys.toList(), labelOf: (v) => d.enums.regimeLcd[v] ?? v, onChanged: (v) => setState(() => _regime = v), required: true, error: fieldError(_fail, 'regime_lcd'), help: d.lcd.regimeAide),
+          SuSelect<String>(label: d.lcd.regime, value: _regime, options: d.enums.regimeLcd.keys.toList(), labelOf: (v) => d.enums.regimeLcd[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _regime = v), required: true, error: fieldError(_fail, 'regime_lcd'), help: d.lcd.regimeAide),
           const SizedBox(height: 14),
           // Effet du régime choisi, en clair.
           SuBanner(
@@ -586,7 +586,7 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
                     const SizedBox(height: 4),
                     Text('${md.lcdDeclareLe} ${formatDateCourte(x.creeLe, l)}', style: t.bodyLarge?.copyWith(color: SuColors.soft)),
                     const SizedBox(height: 12),
-                    StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? x.statut, variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, pulse: x.statut == 'EN_ATTENTE'),
+                    StatusBadge(d.enums.statutDeclarationLcd[x.statut] ?? humanizeCode(x.statut), variant: declarationLcdVariant[x.statut] ?? BadgeVariant.neutral, pulse: x.statut == 'EN_ATTENTE'),
                   ],
                 ),
               ),
@@ -668,7 +668,7 @@ class _DecisionFormState extends ConsumerState<_DecisionForm> {
       children: [
         Text(d.lcd.decisionAide, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: SuColors.soft)),
         const SizedBox(height: 16),
-        Segmented<String>(value: _decision, options: options, labelOf: (v) => d.enums.statutDeclarationLcd[v] ?? v, onChanged: (v) => setState(() => _decision = v)),
+        Segmented<String>(value: _decision, options: options, labelOf: (v) => d.enums.statutDeclarationLcd[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _decision = v)),
         const SizedBox(height: 18),
         SuField(label: d.lcd.motif, controller: _motif, maxLines: 3, required: motifRequis, optionalLabel: motifRequis ? null : context.dict.common.optional, help: motifRequis ? d.lcd.motifAide : null, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'motif')),
         const SizedBox(height: 12),
@@ -748,7 +748,7 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
               children: [
                 FittedBox(fit: BoxFit.scaleDown, child: Text(inv.code, style: t.displayMedium?.copyWith(fontFamily: 'GeistMono', letterSpacing: 4), textDirection: TextDirection.ltr)),
                 const SizedBox(height: 6),
-                Text('${d.enums.canal[inv.canal] ?? inv.canal} · ${formatDateCourte(inv.expireLe, context.locale)}', style: t.bodySmall, textAlign: TextAlign.center),
+                Text('${d.enums.canal[inv.canal] ?? humanizeCode(inv.canal)} · ${formatDateCourte(inv.expireLe, context.locale)}', style: t.bodySmall, textAlign: TextAlign.center),
               ],
             ),
           ),
@@ -789,7 +789,7 @@ class _GestionnaireFormState extends ConsumerState<_GestionnaireForm> {
           const SizedBox(height: 16),
           SuField(label: d.lcd.gestionnaireEmail, controller: _email, keyboardType: TextInputType.emailAddress, textDirection: TextDirection.ltr, optionalLabel: d.common.optional, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'email')),
           const SizedBox(height: 16),
-          SuSelect<String>(label: d.lcd.canalInvitation, value: _canal, options: const ['SMS', 'WHATSAPP', 'EMAIL', 'QR_CODE'], labelOf: (v) => d.enums.canal[v] ?? v, onChanged: (v) => setState(() => _canal = v)),
+          SuSelect<String>(label: d.lcd.canalInvitation, value: _canal, options: const ['SMS', 'WHATSAPP', 'EMAIL', 'QR_CODE'], labelOf: (v) => d.enums.canal[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _canal = v)),
         ] else
           SuField(label: d.lcd.gestionnaireId, controller: _userId, mono: true, textDirection: TextDirection.ltr, help: d.lcd.gestionnaireIdAide, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'utilisateur_id')),
         const SizedBox(height: 20),
@@ -931,8 +931,8 @@ class LcdLotSection extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              KeyValueRow(d.lcd.regime, '', valueWidget: Align(alignment: AlignmentDirectional.centerEnd, child: StatusBadge(d.enums.regimeLcd[synth.regimeLcd] ?? synth.regimeLcd, variant: regimeLcdVariant[synth.regimeLcd] ?? BadgeVariant.neutral, small: true))),
-              KeyValueRow(d.lcd.declarations, '', valueWidget: Align(alignment: AlignmentDirectional.centerEnd, child: StatusBadge(decl == null ? md.lcdStatutNonDeclare : d.enums.statutDeclarationLcd[decl.statut] ?? decl.statut, variant: decl == null ? BadgeVariant.outline : declarationLcdVariant[decl.statut] ?? BadgeVariant.neutral, small: true))),
+              KeyValueRow(d.lcd.regime, '', valueWidget: Align(alignment: AlignmentDirectional.centerEnd, child: StatusBadge(d.enums.regimeLcd[synth.regimeLcd] ?? humanizeCode(synth.regimeLcd), variant: regimeLcdVariant[synth.regimeLcd] ?? BadgeVariant.neutral, small: true))),
+              KeyValueRow(d.lcd.declarations, '', valueWidget: Align(alignment: AlignmentDirectional.centerEnd, child: StatusBadge(decl == null ? md.lcdStatutNonDeclare : d.enums.statutDeclarationLcd[decl.statut] ?? humanizeCode(decl.statut), variant: decl == null ? BadgeVariant.outline : declarationLcdVariant[decl.statut] ?? BadgeVariant.neutral, small: true))),
               if (decl != null) KeyValueRow(d.lcd.gestionnaire, decl.gestionnaireId != null ? md.lcdGestionnaireDesigne : d.lcd.aucunGestionnaire),
               KeyValueRow(fill(d.lcd.nuitsUtilisees, {'annee': synth.annee}), quota == null ? '${synth.nuitsUtilisees}' : '${synth.nuitsUtilisees} / $quota'),
               if (ratio != null) Padding(padding: const EdgeInsets.only(bottom: 8), child: Gauge(ratio)),
@@ -945,7 +945,7 @@ class LcdLotSection extends ConsumerWidget {
           Padding(padding: const EdgeInsets.only(top: 18, bottom: 2), child: Text(d.lcd.derniersSejours, style: t.bodyMedium?.copyWith(color: SuColors.soft, fontWeight: FontWeight.w600))),
           CardList([
             for (final s in synth.derniersSejours.take(3))
-              ListRow(key: ValueKey(s.id), leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? s.statut, variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
+              ListRow(key: ValueKey(s.id), leading: IconCircle(Icons.luggage_rounded, tone: sejourTone(s.statut)), title: s.voyageurPrincipalNom, subtitle: '${formatJour(s.jourArrivee, l)} → ${formatJour(s.jourDepart, l)}', trailing: StatusBadge(d.enums.statutSejour[s.statut] ?? humanizeCode(s.statut), variant: sejourVariant[s.statut] ?? BadgeVariant.neutral, small: true), onTap: () => context.push('/location-courte-duree/sejours/${s.id}')),
           ]),
         ],
       ],

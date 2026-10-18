@@ -49,3 +49,17 @@ const Map<String, BadgeVariant> prioriteVariant = {'BASSE': BadgeVariant.neutral
 // M23 — parkings.
 const emplacementVariant = {'DISPONIBLE': BadgeVariant.ok, 'ATTRIBUE': BadgeVariant.info, 'HORS_SERVICE': BadgeVariant.neutral};
 const badgeAccesVariant = {'ACTIF': BadgeVariant.ok, 'PERDU': BadgeVariant.danger, 'DESACTIVE': BadgeVariant.neutral, 'RESTITUE': BadgeVariant.outline};
+
+/// Repli lisible d'un code d'enum que le dictionnaire ne connaît pas encore (nouvelle valeur côté
+/// serveur) : `A_APPROUVER` → « A approuver », `EN_COURS` → « En cours » — jamais un code
+/// SCREAMING_SNAKE brut à l'écran. Les valeurs connues passent toujours par le dictionnaire.
+String humanizeCode(Object? code) {
+  final s = code?.toString().trim() ?? '';
+  if (s.isEmpty) return '—';
+  if (!looksLikeCode(s) && !RegExp(r'^[A-Z]{4,}$').hasMatch(s)) return s;
+  final mots = s.split('_').where((m) => m.isNotEmpty).map((m) => m.toLowerCase()).join(' ');
+  return mots.isEmpty ? s : mots[0].toUpperCase() + mots.substring(1);
+}
+
+/// Vrai pour un code d'enum brut (`EN_ATTENTE`), faux pour un libellé (« En attente », « AG »).
+bool looksLikeCode(String s) => RegExp(r'^[A-Z][A-Z0-9]*(_[A-Z0-9]+)+$').hasMatch(s);

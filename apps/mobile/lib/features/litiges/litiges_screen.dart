@@ -63,7 +63,7 @@ class LitigesScreen extends ConsumerWidget {
                                 ),
                               ),
                               const SizedBox(width: 8),
-                              StatusBadge(d.enums.statutLitige[x.statut] ?? x.statut, variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true),
+                              StatusBadge(d.enums.statutLitige[x.statut] ?? humanizeCode(x.statut), variant: litigeVariant[x.statut] ?? BadgeVariant.neutral, small: true),
                             ],
                           ),
                           const SizedBox(height: 12),
@@ -126,7 +126,7 @@ class LitigesScreen extends ConsumerWidget {
     await showFormSheet<void>(context, title: d.litiges.cloturerTitre, builder: (sheet) => StatefulBuilder(builder: (_, setS) => Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Segmented<String>(value: statut, options: const ['RESOLU', 'CLOS'], labelOf: (v) => d.enums.statutLitige[v] ?? v, onChanged: (v) => setS(() => statut = v)),
+        Segmented<String>(value: statut, options: const ['RESOLU', 'CLOS'], labelOf: (v) => d.enums.statutLitige[v] ?? humanizeCode(v), onChanged: (v) => setS(() => statut = v)),
         const SizedBox(height: 6),
         Text(d.litiges.cloturerAide, style: Theme.of(context).textTheme.bodySmall),
         const SizedBox(height: 12),

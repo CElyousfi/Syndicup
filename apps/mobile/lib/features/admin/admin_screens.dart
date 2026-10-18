@@ -54,8 +54,8 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
                     key: ValueKey(c.id),
                     leading: const IconCircle(Icons.apartment_rounded, tone: Tone.lilac),
                     title: c.nom,
-                    subtitle: '${c.ville} · ${d.enums.typeResidence[c.typeResidence] ?? c.typeResidence} · ${c.nbLots} ${d.nav.lots.toLowerCase()}',
-                    trailing: StatusBadge(d.enums.statutCopropriete[c.statut] ?? c.statut, variant: coproVariant[c.statut] ?? BadgeVariant.neutral, small: true),
+                    subtitle: '${c.ville} · ${d.enums.typeResidence[c.typeResidence] ?? humanizeCode(c.typeResidence)} · ${c.nbLots} ${d.nav.lots.toLowerCase()}',
+                    trailing: StatusBadge(d.enums.statutCopropriete[c.statut] ?? humanizeCode(c.statut), variant: coproVariant[c.statut] ?? BadgeVariant.neutral, small: true),
                     onTap: () => context.push('/admin/coproprietes/${c.id}'),
                   ),
               ]);
@@ -102,7 +102,7 @@ class _AdminCoproFormScreenState extends ConsumerState<AdminCoproFormScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(c.nom, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      Padding(padding: const EdgeInsets.only(top: 3), child: Text('${c.ville} · ${d.enums.typeResidence[c.typeResidence] ?? c.typeResidence} · ${c.nbLots} ${d.nav.lots.toLowerCase()}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft))),
+                      Padding(padding: const EdgeInsets.only(top: 3), child: Text('${c.ville} · ${d.enums.typeResidence[c.typeResidence] ?? humanizeCode(c.typeResidence)} · ${c.nbLots} ${d.nav.lots.toLowerCase()}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft))),
                     ],
                   ),
                 ),
@@ -222,8 +222,8 @@ class AdminCoproDetailScreen extends ConsumerWidget {
                   spacing: 8,
                   runSpacing: 8,
                   children: [
-                    StatusBadge(d.enums.statutCopropriete[copro.valueOrNull!.statut] ?? copro.valueOrNull!.statut, variant: coproVariant[copro.valueOrNull!.statut] ?? BadgeVariant.neutral),
-                    StatusBadge(d.enums.typeResidence[copro.valueOrNull!.typeResidence] ?? copro.valueOrNull!.typeResidence, variant: BadgeVariant.outline),
+                    StatusBadge(d.enums.statutCopropriete[copro.valueOrNull!.statut] ?? humanizeCode(copro.valueOrNull!.statut), variant: coproVariant[copro.valueOrNull!.statut] ?? BadgeVariant.neutral),
+                    StatusBadge(d.enums.typeResidence[copro.valueOrNull!.typeResidence] ?? humanizeCode(copro.valueOrNull!.typeResidence), variant: BadgeVariant.outline),
                   ],
                 ),
               ),

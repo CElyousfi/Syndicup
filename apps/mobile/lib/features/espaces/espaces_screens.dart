@@ -360,7 +360,7 @@ class ReservationsScreen extends ConsumerWidget {
                   Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Expanded(child: Text(e?.nom ?? d.espaces.titre, style: t.titleMedium, maxLines: 2, overflow: TextOverflow.ellipsis)),
                     const SizedBox(width: 10),
-                    StatusBadge(d.enums.statutReservation[r.statut] ?? r.statut, variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion),
+                    StatusBadge(d.enums.statutReservation[r.statut] ?? humanizeCode(r.statut), variant: reservationVariant[r.statut] ?? BadgeVariant.neutral, small: true, pulse: r.statut == 'EN_ATTENTE' && gestion),
                   ]),
                   const SizedBox(height: 3),
                   Text('${formatDateHeure(r.dateDebut, l)} → ${formatHeure(r.dateFin, l)} · ${d.invitations.lot} $lot${r.nombreInvites != null ? ' · ${r.nombreInvites} ${d.espaces.nombreInvites.toLowerCase()}' : ''}', style: t.bodyMedium?.copyWith(fontSize: 14, color: SuColors.soft, height: 1.35)),
