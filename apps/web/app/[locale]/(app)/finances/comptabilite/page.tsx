@@ -39,6 +39,7 @@ import { Amount, Figure } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { LoadError } from "../../../../../components/ui/load-error";
 import { failureOf } from "../../../../../lib/api/unwrap";
+import { Banner } from "../../../../../components/ui/banner";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -50,7 +51,7 @@ export default async function ComptabilitePage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ exercice?: string }>;
+  searchParams: Promise<{ exercice?: string; export?: string }>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
@@ -66,11 +67,22 @@ export default async function ComptabilitePage({
     apiFetch<BudgetAg[]>("/finances/budgets"),
   ]);
   // Comptabilité = chiffres probants : une lecture en échec n'affiche JAMAIS des zéros.
-  const echec = !syntheseRes.ok ? syntheseRes.error : !lotsRes.ok ? lotsRes.error : null;
+  // Lots refusés PAR CONCEPTION (403 : rôle sans lots.lire) : simple référentiel de libellés,
+  // la page reste utilisable ; seule une vraie panne bloque. (Synthèse en 403 → écran « Pas
+  // d'accès » de LoadError, jamais « Réessayer ».)
+  const lotsRefuses = !lotsRes.ok && lotsRes.error.status === 403;
+  const echec = !syntheseRes.ok ? syntheseRes.error : !lotsRes.ok && !lotsRefuses ? lotsRes.error : null;
+  const exportEchec =
+    sp.export === "echec" ? (
+      <Banner variant="warn" className="mb-6" title={dict.errors.export.title}>
+        {dict.errors.export.body}
+      </Banner>
+    ) : null;
   if (echec) {
     return (
       <div className="page-root">
         <PageHeader title={gestion ? c.titre : c.monReleve} subtitle={gestion ? c.subtitle : c.monReleveSubtitle} />
+        {exportEchec}
         <LoadError error={echec} locale={ctx.locale} />
       </div>
     );
@@ -151,6 +163,8 @@ export default async function ComptabilitePage({
           </div>
         }
       />
+      {/* Retour d'un export CSV impossible (/api/finances-csv) : on dit pourquoi, et quoi faire. */}
+      {exportEchec}
 
       {/* Indicateurs — tous calculés */}
       {gestion && !parcoursComplet ? <div className="mb-6"><ParcoursCompta dict={dict} etapes={etapes} /></div> : null}

@@ -2888,6 +2888,11 @@ export const fr = {
     },
 
     /** Visionneuse de documents. */
+    /** Export (CSV comptable) impossible : retour sur la page d'origine. */
+    export: {
+      title: "Export impossible pour l'instant",
+      body: "Certaines données n'ont pas pu être lues : nous n'avons pas généré de fichier incomplet. Réessayez l'export dans un instant.",
+    },
     viewer: {
       unavailable: "Document indisponible",
       unavailableBody: "Nous n'avons pas pu ouvrir ce document pour l'instant.",

@@ -32,9 +32,14 @@ export async function GET(req: NextRequest) {
     getLotsResult(),
     apiFetch<Paiement[]>("/finances/paiements", { searchParams: { exercice: annee } }),
   ]);
-  // Un export comptable incomplet est pire qu'aucun export : jamais un CSV de zéros.
+  // Un export comptable incomplet est pire qu'aucun export : jamais un CSV de zéros. Le lien est
+  // un simple <a href> : on ramène l'utilisateur sur la comptabilité, qui explique l'échec.
   if (!syntheseRes.ok || !lotsRes.ok || !paiementsRes.ok) {
-    return NextResponse.json({ error: dict.errors.load.title }, { status: 503 });
+    console.warn(JSON.stringify({ niveau: "warn", message: "export comptable impossible", type, exercice: annee }));
+    const retour = new URL(`/${locale}/finances/comptabilite`, req.nextUrl.origin);
+    retour.searchParams.set("exercice", annee);
+    retour.searchParams.set("export", "echec");
+    return NextResponse.redirect(retour, 303);
   }
   const synthese = syntheseRes.data;
   const lots = lotsRes.data;
