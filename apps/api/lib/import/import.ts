@@ -16,6 +16,7 @@ import { attacherDocument, preparerUploadModule } from "../documents/attach";
 import { telechargerObjet } from "../storage/supabase-storage";
 import { emitEvent } from "../events/emit";
 import type { ErrorCode } from "../http/respond";
+import { messageErreurLigne } from "./erreurs-ligne";
 import { money } from "../money";
 import { identites, type Identite } from "../communication/communication";
 import { CHAMPS, detecterMapping, lireTableur, normaliserDate, normaliserDecimal, normaliserTelephone, type Tableur } from "./parse";
@@ -242,8 +243,9 @@ export async function executerImport(ctx: TenantContext, id: string) {
           } catch (e) {
             await db.$executeRawUnsafe("ROLLBACK TO SAVEPOINT import_ligne");
             cache.clear();
-            const message = e instanceof LigneError ? e.message : e instanceof Prisma.PrismaClientKnownRequestError ? `Contrainte de données (${e.code}${e.meta?.target ? ` : ${JSON.stringify(e.meta.target)}` : ""}).` : e instanceof Prisma.PrismaClientUnknownRequestError ? (e.message.match(/message: \\?"([^"\\]+)/)?.[1] ?? e.message.match(/(Somme[^"\n]*|violates[^"\n]*)/)?.[1] ?? "Contrainte de données.") : ((e as Error).message ?? "Erreur inconnue");
             if (!(e instanceof LigneError) && !(e instanceof Prisma.PrismaClientKnownRequestError) && !(e instanceof Prisma.PrismaClientUnknownRequestError)) throw e;
+            // Le numéro de ligne voyage dans `n` ; le message nomme le champ, jamais le texte Postgres.
+            const message = e instanceof LigneError ? e.message : messageErreurLigne(e, type);
             resume.erreurs.push({ n: l.n, message });
             await log(db, ctx, id, "LIGNE", { ligne: l.n, hash, resultat: "ERREUR", details: { message } });
           }

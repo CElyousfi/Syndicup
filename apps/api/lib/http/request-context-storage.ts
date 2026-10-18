@@ -10,6 +10,14 @@ export interface RequestContext {
   ip: string | null;
   utilisateurId?: string;
   coproprieteId?: string;
+  /** Vrai quand la réponse est un rejeu Idempotency-Key (réponse stockée) → meta.rejouee. */
+  idempotenceRejouee?: boolean;
+}
+
+/** Marque la requête courante comme rejeu idempotent. No-op hors requête. */
+export function marquerRejeuIdempotent(): void {
+  const store = als.getStore();
+  if (store) store.idempotenceRejouee = true;
 }
 
 const als = new AsyncLocalStorage<RequestContext>();

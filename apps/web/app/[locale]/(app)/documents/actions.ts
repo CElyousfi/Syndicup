@@ -10,6 +10,39 @@ function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
 }
 
+/** Certains navigateurs laissent `File.type` vide (HEIC, .docx sous Windows…) : repli par extension. */
+const TYPES_PAR_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+  gif: "image/gif",
+  mp4: "video/mp4",
+  mov: "video/quicktime",
+  webm: "video/webm",
+  pdf: "application/pdf",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ppt: "application/vnd.ms-powerpoint",
+  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  odt: "application/vnd.oasis.opendocument.text",
+  ods: "application/vnd.oasis.opendocument.spreadsheet",
+  odp: "application/vnd.oasis.opendocument.presentation",
+  rtf: "application/rtf",
+  csv: "text/csv",
+  txt: "text/plain",
+  zip: "application/zip",
+};
+
+function typeDepuisExtension(nom: string): string {
+  const ext = nom.split(".").pop()?.toLowerCase() ?? "";
+  return TYPES_PAR_EXTENSION[ext] ?? "application/octet-stream";
+}
+
 /**
  * Téléversement complet : URL signée d'upload (API) → PUT du fichier vers Supabase Storage
  * (exception d'architecture autorisée) → enregistrement des métadonnées (API). Le fichier ne
@@ -30,13 +63,14 @@ export async function televerserFichierDocument(
     };
   }
 
+  const contentType = fichier.type || typeDepuisExtension(fichier.name);
   const prep = await apiFetch<{ storage_path: string; upload_url: string; token: string }>(
     "/documents/upload-url",
     {
       method: "POST",
       body: {
         nom_fichier: fichier.name,
-        content_type: fichier.type || "application/octet-stream",
+        content_type: contentType,
       },
     }
   );
@@ -46,7 +80,7 @@ export async function televerserFichierDocument(
   const upload = await fetch(prep.data.upload_url, {
     method: "PUT",
     headers: {
-      "Content-Type": fichier.type || "application/octet-stream",
+      "Content-Type": contentType,
       "x-upsert": "true",
     },
     body: contenu,

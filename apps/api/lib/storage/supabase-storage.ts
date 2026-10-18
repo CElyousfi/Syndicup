@@ -9,6 +9,9 @@
  * `creerUrlSignee` n'est donc couvert par aucun test d'intégration — voir ROADMAP_BACKLOG.md M9.
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { StockageIndisponibleError, erreurStockage } from "./erreurs";
+
+export { StockageIndisponibleError };
 
 const SIGNED_URL_TTL_SECONDS = 15 * 60;
 /** Image jointe à une notification push : le téléphone peut la télécharger plus tard (hors ligne, Doze). */
@@ -49,7 +52,8 @@ export function ensureBucketDocuments(): Promise<void> {
     // Course bénigne entre instances : "already exists" = objectif atteint.
     if (error && !/already exists|duplicate/i.test(error.message)) {
       bucketPret = null;
-      throw new Error(`Échec de création du bucket documents : ${error.message}`);
+      // Panne (réseau, 5xx, 429) → 503 récupérable ; refus 4xx → erreur ordinaire (500 + Sentry).
+      throw erreurStockage("Création du bucket documents", error);
     }
   })();
   return bucketPret;
@@ -69,7 +73,7 @@ export async function creerUrlUploadSignee(
     .from(BUCKET_DOCUMENTS)
     .createSignedUploadUrl(storagePath, { upsert: true });
   if (error || !data) {
-    throw new Error(`Échec de génération de l'URL d'upload : ${error?.message ?? "inconnu"}`);
+    throw erreurStockage("URL d'upload", error);
   }
   return { url: data.signedUrl, token: data.token };
 }
@@ -86,7 +90,7 @@ export async function creerUrlSignee(storagePath: string, ttlSecondes: number = 
     .from(BUCKET_DOCUMENTS)
     .createSignedUrl(storagePath, ttlSecondes);
   if (error || !data) {
-    throw new Error(`Échec de génération de l'URL signée : ${error?.message ?? "inconnu"}`);
+    throw erreurStockage("URL signée", error);
   }
   return data.signedUrl;
 }

@@ -78,7 +78,7 @@ export const invitationCreateSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["lot_id"],
-        message: `lot_id interdit pour le rôle ${val.role_cible} (rattaché à la copropriété — Partie 5.3).`,
+        message: `lot_id interdit pour le rôle ${val.role_cible} (rattaché à la copropriété, Master Spec Partie 5.3).`,
       });
     }
     if (!sansLot && !val.lot_id) {

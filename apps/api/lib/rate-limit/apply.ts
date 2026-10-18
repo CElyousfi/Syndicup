@@ -2,7 +2,7 @@
  * Application du rate limiting dans une route : renvoie une Response 429 (enveloppe
  * RATE_LIMITED + Retry-After) si la limite est atteinte, null sinon.
  */
-import { fail } from "../http/respond";
+import { fail, avecRetryAfter } from "../http/respond";
 import { getRateLimiter } from "./index";
 
 export async function enforceRateLimit(
@@ -15,8 +15,15 @@ export async function enforceRateLimit(
   const key = `${bucket}:${identifiant ?? ip}`;
   const decision = await getRateLimiter().limit(key, opts);
   if (decision.allowed) return null;
-  const res = fail("RATE_LIMITED", "Trop de requêtes — réessayez plus tard.");
-  const headers = new Headers(res.headers);
-  headers.set("Retry-After", String(decision.retryAfterSec ?? 60));
-  return new Response(res.body, { status: res.status, headers });
+  const secondes = decision.retryAfterSec ?? 60;
+  return avecRetryAfter(
+    fail("RATE_LIMITED", `Trop de requêtes — réessayez dans ${dureeLisible(secondes)}.`),
+    secondes
+  );
+}
+
+function dureeLisible(secondes: number): string {
+  if (secondes < 60) return `${Math.max(1, Math.ceil(secondes))} s`;
+  const minutes = Math.ceil(secondes / 60);
+  return minutes === 1 ? "1 minute" : `${minutes} minutes`;
 }

@@ -9,6 +9,7 @@ import { Prisma } from "@prisma/client";
 import { can } from "../auth/permissions";
 import { withTenant, type TenantDb } from "../tenant/db";
 import { withTenantIdempotent } from "../http/idempotency";
+import { messageTriggerContrainte } from "../http/prisma-errors";
 import type { TenantContext } from "../tenant/context";
 import { money, toApiString } from "../money";
 import { genererCode, expiration } from "../auth/invitations";
@@ -36,14 +37,13 @@ function rethrowContrainteMetier(e: unknown): never {
     e instanceof Prisma.PrismaClientUnknownRequestError ||
     e instanceof Prisma.PrismaClientKnownRequestError
   ) {
-    const message = e.message;
-    if (message.includes("Somme des quote_part") || message.includes("Somme des tantièmes")) {
-      // Le driver Postgres embarque le message RAISE EXCEPTION dans un champ `message: "..."`
-      // au sein d'un blob de debug — on l'extrait proprement plutôt que de remonter tout le blob.
-      const match = message.match(/message: "([^"]*)"/);
-      throw new ContrainteMetierError(match ? match[1]! : message);
-    }
+    // Le driver Postgres embarque le message RAISE EXCEPTION dans un blob de debug : on le
+    // traduit en phrase utilisateur (sans UUID ni texte Postgres) — jamais le blob brut.
+    const message = messageTriggerContrainte(e.message);
+    if (message) throw new ContrainteMetierError(message);
   }
+  // Toute autre erreur (P2002, P2025…) remonte telle quelle : withApiHandler la mappe
+  // proprement (409 / 404) sans texte Postgres.
   throw e as Error;
 }
 

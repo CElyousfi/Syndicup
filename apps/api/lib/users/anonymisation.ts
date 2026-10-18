@@ -41,7 +41,7 @@ async function anonymiserDansTransaction(
   }
   if (u.statutCompte !== "DESACTIVE") {
     throw new ContrainteMetierError(
-      `Anonymisation refusée : statut_compte=${u.statutCompte} — seul un compte DESACTIVE est anonymisable (machine à états Partie 5.2).`
+      `Anonymisation refusée : statut_compte=${u.statutCompte} — seul un compte DESACTIVE est anonymisable (machine à états, Master Spec Partie 5.2).`
     );
   }
 

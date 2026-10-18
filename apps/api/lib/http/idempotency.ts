@@ -5,7 +5,11 @@
  *   - rejeu même clé + même payload (statut TERMINE) → réponse stockée renvoyée à l'identique
  *     (le résultat porte `rejouee: true` pour que la route ajoute meta.rejouee) ;
  *   - même clé + payload différent → 409 CONFLICT (règle du contrat) ;
- *   - même clé en cours de traitement (requête concurrente) → 409 CONFLICT.
+ *   - même clé en cours de traitement (requête concurrente) → 409 CONFLICT ;
+ *   - deux requêtes concurrentes qui posent la même clé au même instant : la perdante reçoit
+ *     P2002 sur l'INSERT du claim → relecture dans une transaction neuve puis rejeu de la
+ *     réponse de la gagnante (ou 409 si elle n'est toujours pas terminée) — jamais un 500.
+ * Tout rejeu marque la requête (meta.rejouee: true dans l'enveloppe de succès).
  *
  * S'utilise À L'INTÉRIEUR de la transaction withTenant du service appelant : le claim et la
  * réponse stockée partagent la transaction de l'écriture métier — un rollback annule les deux.
@@ -17,6 +21,8 @@ import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import type { TenantContext } from "../tenant/context";
 import { withTenant, type TenantDb } from "../tenant/db";
+import { codePrisma } from "./prisma-errors";
+import { marquerRejeuIdempotent } from "./request-context-storage";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -36,6 +42,33 @@ export function readIdempotencyKey(req: Request): string {
 
 function hashPayload(payload: unknown): string {
   return createHash("sha256").update(JSON.stringify(payload ?? null)).digest("hex");
+}
+
+const MESSAGE_EN_COURS =
+  "Requête identique déjà en cours de traitement. Patientez quelques secondes puis actualisez.";
+
+/**
+ * Course perdue sur le claim (P2002 sur la clé primaire idempotency_key) — interne : levée hors
+ * de la transaction avortée, rattrapée par withTenantIdempotent (et mappée en 409 par le
+ * handler si un appelant utilise withIdempotency directement).
+ */
+export class IdempotencyCourseError extends IdempotencyConflitError {}
+
+/** Ligne existante : rejeu de la réponse stockée (TERMINE, même payload) ou 409. */
+function rejouerOuRefuser<T>(
+  ligne: { payloadHash: string; statut: string; reponseJson: unknown },
+  payloadHash: string
+): T {
+  if (ligne.payloadHash !== payloadHash) {
+    throw new IdempotencyConflitError(
+      "Cette Idempotency-Key a déjà été utilisée pour une requête différente. Générez une nouvelle clé pour cette opération."
+    );
+  }
+  if (ligne.statut === "TERMINE") {
+    marquerRejeuIdempotent();
+    return ligne.reponseJson as T;
+  }
+  throw new IdempotencyConflitError(MESSAGE_EN_COURS);
 }
 
 type Db = TenantDb;
@@ -58,27 +91,26 @@ export async function withIdempotency<T>(
   const existante = await db.idempotencyKey.findUnique({
     where: { cle_endpoint: { cle: opts.cle, endpoint: opts.endpoint } },
   });
-  if (existante) {
-    if (existante.payloadHash !== payloadHash) {
-      throw new IdempotencyConflitError(
-        "Cette Idempotency-Key a déjà été utilisée avec un payload différent."
-      );
-    }
-    if (existante.statut === "TERMINE") {
-      return existante.reponseJson as T;
-    }
-    throw new IdempotencyConflitError("Requête identique déjà en cours de traitement.");
-  }
+  if (existante) return rejouerOuRefuser<T>(existante, payloadHash);
 
-  await db.idempotencyKey.create({
-    data: {
-      cle: opts.cle,
-      endpoint: opts.endpoint,
-      coproprieteId: ctx.coproprieteId,
-      utilisateurId: ctx.utilisateurId,
-      payloadHash,
-    },
-  });
+  try {
+    await db.idempotencyKey.create({
+      data: {
+        cle: opts.cle,
+        endpoint: opts.endpoint,
+        coproprieteId: ctx.coproprieteId,
+        utilisateurId: ctx.utilisateurId,
+        payloadHash,
+      },
+    });
+  } catch (e) {
+    // Course : une requête concurrente a posé la même clé entre notre lecture et notre INSERT.
+    // Postgres a fait attendre l'INSERT jusqu'à son commit, puis levé la violation d'unicité
+    // (P2002) ; notre transaction est désormais avortée — withTenantIdempotent relit la ligne
+    // dans une transaction neuve et rejoue la réponse stockée.
+    if (codePrisma(e) === "P2002") throw new IdempotencyCourseError(MESSAGE_EN_COURS);
+    throw e;
+  }
 
   const data = await fn();
 
@@ -101,10 +133,42 @@ export async function withIdempotency<T>(
  * service à protéger, sans changer la forme du callback : le claim, l'écriture métier et la
  * réponse stockée partagent la même transaction.
  */
-export function withTenantIdempotent<T>(
+export async function withTenantIdempotent<T>(
   ctx: TenantContext,
   opts: { cle: string | undefined; endpoint: string; payload: unknown },
   cb: (db: Db) => Promise<T>
 ): Promise<T> {
-  return withTenant(ctx, (db) => withIdempotency(ctx, db, opts, () => cb(db)));
+  try {
+    return await withTenant(ctx, (db) => withIdempotency(ctx, db, opts, () => cb(db)));
+  } catch (e) {
+    if (!(e instanceof IdempotencyCourseError) || !opts.cle) throw e;
+    return reprendreApresCourse<T>(ctx, { ...opts, cle: opts.cle });
+  }
+}
+
+/** Attentes successives (ms) avant de relire la clé gagnante d'une course — ~1 s au total. */
+const ATTENTES_COURSE_MS = [0, 150, 300, 500];
+
+/**
+ * Après une course perdue : relit la ligne de la requête gagnante (transaction neuve). Elle est
+ * normalement déjà TERMINE (claim et réponse partagent la transaction du gagnant) → rejeu à
+ * l'identique ; sinon on patiente brièvement, puis 409 « déjà en cours » si elle ne l'est pas.
+ */
+async function reprendreApresCourse<T>(
+  ctx: TenantContext,
+  opts: { cle: string; endpoint: string; payload: unknown }
+): Promise<T> {
+  const payloadHash = hashPayload(opts.payload);
+  for (const attente of ATTENTES_COURSE_MS) {
+    if (attente > 0) await new Promise((r) => setTimeout(r, attente));
+    const ligne = await withTenant(ctx, (db) =>
+      db.idempotencyKey.findUnique({
+        where: { cle_endpoint: { cle: opts.cle, endpoint: opts.endpoint } },
+      })
+    );
+    if (ligne && (ligne.payloadHash !== payloadHash || ligne.statut === "TERMINE")) {
+      return rejouerOuRefuser<T>(ligne, payloadHash);
+    }
+  }
+  throw new IdempotencyConflitError(MESSAGE_EN_COURS);
 }

@@ -54,6 +54,8 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
                 <input type="file"
                   name="fichier"
                   required
+                  // Même liste que l'API (DOCUMENT_CONTENT_TYPES) : images, vidéos, PDF, bureautique, RTF, texte, ZIP.
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,image/gif,video/mp4,video/quicktime,video/webm,application/pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.odt,.ods,.odp,.rtf,.csv,.txt,.zip"
                   className="sr-only"
                   onChange={(e) => setNomFichier(e.target.files?.[0]?.name ?? null)}
                 />

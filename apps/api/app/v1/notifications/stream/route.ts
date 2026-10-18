@@ -15,6 +15,7 @@ import {
 import { livraisonPush, PREFERENCES_PUSH_DEFAUT } from "../../../../lib/notifications/push-niveaux";
 import { tenantFromRequest, mapAuthError } from "../../../../lib/http/request-context";
 import { fail } from "../../../../lib/http/respond";
+import { withApiHandler } from "../../../../lib/http/handler";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -23,7 +24,12 @@ const TICK_MS = 2000;
 const PING_MS = 20_000;
 const MAX_DUREE_MS = 55 * 60 * 1000; // le client se reconnecte (EventSource) — jamais de connexion éternelle
 
-export async function GET(req: Request) {
+/**
+ * Tout ce qui précède l'ouverture du flux passe par withApiHandler (X-Request-Id, enveloppe
+ * standard, 404/409/503 récupérables, 500 enveloppé) ; le flux lui-même, une fois ouvert,
+ * n'émet plus d'erreur HTTP — chaque tick rate silencieusement réessaie au suivant.
+ */
+async function handleGET(req: Request) {
   let ctx;
   try {
     ctx = await tenantFromRequest(req);
@@ -110,3 +116,5 @@ export async function GET(req: Request) {
     },
   });
 }
+
+export const GET = withApiHandler(handleGET);
