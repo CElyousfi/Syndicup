@@ -16,6 +16,8 @@ import { IconChevronEnd, IconPlus, IconSearch } from "../../../../components/ui/
 import { StatCard } from "../../../../components/ui/stat-card";
 import { IconCircle, CBuilding, CFile, CShield } from "../../../../components/ui/color-icons";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -93,7 +95,7 @@ export default async function AdminPage({
         </div>
       </form>
 
-      {copros.length === 0 ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : copros.length === 0 ? (
         <EmptyState title={dict.common.emptyDefault} illustration={q ? "empty-search" : undefined} />
       ) : (
         <TableCard>

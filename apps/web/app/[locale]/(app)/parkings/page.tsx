@@ -20,6 +20,8 @@ import { badgeAccesVariant, emplacementVariant } from "../../../../lib/status";
 import { BadgeDesactiverModal, BadgeModal, BadgePerduModal, BadgeRestituerModal, EmplacementModal, RechercheVehiculeForm, RetirerVehiculeModal, VehiculeModal, type LotOption } from "./parkings-client";
 import { LiveList } from "../../../../components/ui/live-list";
 import { Amount } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { firstFailure, unwrap } from "../../../../lib/api/unwrap";
 
 type Onglet = "plan" | "emplacements" | "vehicules" | "badges" | "visiteurs";
 const PILL = "inline-flex h-10 items-center gap-2 rounded-full border px-4 text-[14px] font-semibold transition-colors";
@@ -74,7 +76,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
   const vehicules = vehRes?.ok ? vehRes.data : [];
   const badges = badgesRes?.ok ? badgesRes.data : [];
   const visiteurs = visRes?.ok ? visRes.data : null;
-  const erreur = !planRes.ok || (empRes && !empRes.ok) || (vehRes && !vehRes.ok) || (badgesRes && !badgesRes.ok) || (visRes && !visRes.ok);
+  const erreur = firstFailure(unwrap(planRes), empRes && unwrap(empRes), vehRes && unwrap(vehRes), badgesRes && unwrap(badgesRes), visRes && unwrap(visRes));
 
   const CaseEmplacement = ({ x }: { x: Emplacement }) => {
     const occupee = x.statut === "ATTRIBUE" || Boolean(x.visiteurOccupee);
@@ -105,10 +107,13 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         </div>}
       />
       {sp.supprime === "1" ? <Banner variant="ok" className="mb-4">{t.emplacementSupprime}</Banner> : null}
-      {erreur ? <Banner variant="danger" className="mb-4">{t.chargementImpossible}</Banner> : null}
+      {erreur ? (
+        // Une lecture en échec n'est jamais présentée comme « aucun emplacement ».
+        <LoadError error={erreur} locale={ctx.locale} />
+      ) : null}
       <LinkTabs className="mb-5" tabs={onglets.map((o) => ({ href: href(o), label: t.onglets[o], active: o === onglet }))} />
 
-      {onglet === "plan" ? (
+      {!erreur && onglet === "plan" ? (
         <div className="space-y-5">
           {!resident ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -144,7 +149,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         </div>
       ) : null}
 
-      {onglet === "emplacements" ? (
+      {!erreur && onglet === "emplacements" ? (
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2">
             <Link href={href("emplacements")} className={`${PILL} ${!type && !statut ? PILL_ON : PILL_OFF}`}>{dict.common.all}</Link>
@@ -171,7 +176,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         </div>
       ) : null}
 
-      {onglet === "vehicules" ? (
+      {!erreur && onglet === "vehicules" ? (
         <div className="space-y-4">
           {gestion || gardien ? <Card><RechercheVehiculeForm dict={dict} /></Card> : null}
           {vehicules.length === 0 ? <EmptyState title={t.aucunVehicule} hint={t.aucunVehiculeAide} illustration="empty-parkings" /> : (
@@ -193,7 +198,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         </div>
       ) : null}
 
-      {onglet === "badges" ? (
+      {!erreur && onglet === "badges" ? (
         badges.length === 0 ? <EmptyState title={t.aucunBadge} hint={gestion ? t.aucunBadgeAide : undefined} illustration="empty-parkings" /> : (
           <TableCard><Table>
             <THead><TH>{t.identifiant}</TH><TH>{t.type}</TH><TH>{t.lot}</TH><TH>{t.statut}</TH><TH>{t.remisLe}</TH><TH align="end">{t.caution}</TH><TH align="end">{dict.common.actions}</TH></THead>
@@ -217,7 +222,7 @@ export default async function ParkingsPage({ params, searchParams }: { params: P
         )
       ) : null}
 
-      {onglet === "visiteurs" && visiteurs ? (
+      {!erreur && onglet === "visiteurs" && visiteurs ? (
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="space-y-4 lg:col-span-2">
             <Card>

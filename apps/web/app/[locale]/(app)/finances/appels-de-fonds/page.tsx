@@ -4,7 +4,7 @@ import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { BudgetAg } from "../../../../../lib/api/types";
 import { getDict, isLocale } from "../../../../../lib/i18n";
-import { getSynthese, totauxGlobaux, totauxParAppel } from "../../../../../lib/finances-data";
+import { getSynthese, SYNTHESE_VIDE, totauxGlobaux, totauxParAppel } from "../../../../../lib/finances-data";
 import { formatDate, formatMAD, formatPeriode } from "../../../../../lib/format";
 import { versChaine } from "../../../../../lib/centimes";
 import { PageHeader } from "../../../../../components/page-header";
@@ -18,6 +18,7 @@ import { appelVariant } from "../../../../../lib/status";
 import { GenererAppelModal } from "./generer-modal";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
 
 export async function generateMetadata({
   params,
@@ -42,10 +43,11 @@ export default async function AppelsPage({
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const f = dict.finances;
 
-  const [synthese, budgetsRes] = await Promise.all([
+  const [syntheseRes, budgetsRes] = await Promise.all([
     getSynthese(),
     apiFetch<BudgetAg[]>("/finances/budgets", { searchParams: { limit: 50 } }),
   ]);
+  const synthese = syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE;
   const appels = synthese.appels;
   const totaux = totauxParAppel(synthese);
   const { du, paye: payeGlobal, impaye, taux } = totauxGlobaux(synthese);
@@ -71,7 +73,9 @@ export default async function AppelsPage({
         }
       />
 
-      {appels.length === 0 ? (
+      {!syntheseRes.ok ? (
+        <LoadError error={syntheseRes.error} locale={ctx.locale} />
+      ) : appels.length === 0 ? (
         <EmptyState
           title={f.aucunAppel}
           illustration="empty-appels"

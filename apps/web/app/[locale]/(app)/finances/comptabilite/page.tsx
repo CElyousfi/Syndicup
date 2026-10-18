@@ -11,7 +11,7 @@ import type { BudgetAg, Paiement } from "../../../../../lib/api/types";
 import { getDict, isLocale, fill } from "../../../../../lib/i18n";
 import { formatDateHeure, formatMAD, formatPeriode } from "../../../../../lib/format";
 import { versChaine } from "../../../../../lib/centimes";
-import { getLots, getSynthese } from "../../../../../lib/finances-data";
+import { getLotsResult, getSynthese, SYNTHESE_VIDE } from "../../../../../lib/finances-data";
 import {
   budgetVsRealise,
   exercice,
@@ -37,6 +37,8 @@ import { ParcoursCompta, AideReleveResident, type EtapeParcours } from "../../..
 import { escaladeVariant } from "../../../../../lib/status";
 import { Amount, Figure } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -58,11 +60,23 @@ export default async function ComptabilitePage({
   const gestion = ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL"].some((r) => ctx.roles.includes(r as never));
   const mad = (v: bigint) => formatMAD(versChaine(v), ctx.locale);
 
-  const [synthese, lots, budgetsRes] = await Promise.all([
+  const [syntheseRes, lotsRes, budgetsRes] = await Promise.all([
     getSynthese(),
-    getLots(),
+    getLotsResult(),
     apiFetch<BudgetAg[]>("/finances/budgets"),
   ]);
+  // Comptabilité = chiffres probants : une lecture en échec n'affiche JAMAIS des zéros.
+  const echec = !syntheseRes.ok ? syntheseRes.error : !lotsRes.ok ? lotsRes.error : null;
+  if (echec) {
+    return (
+      <div className="page-root">
+        <PageHeader title={gestion ? c.titre : c.monReleve} subtitle={gestion ? c.subtitle : c.monReleveSubtitle} />
+        <LoadError error={echec} locale={ctx.locale} />
+      </div>
+    );
+  }
+  const synthese = syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE;
+  const lots = lotsRes.ok ? lotsRes.data : [];
   // Résident : uniquement les exercices où SES lots ont des lignes (jamais un exercice à zéro).
   const exercices = exercicesDisponibles(synthese, !gestion);
   // Vocabulaire par rôle : le syndic « encaisse », le résident « règle ».
@@ -96,7 +110,15 @@ export default async function ComptabilitePage({
   }
 
   const paiementsRes = await apiFetch<Paiement[]>("/finances/paiements", { searchParams: { exercice: annee } });
-  const e = exercice(synthese, paiementsRes.ok ? paiementsRes.data : [], annee);
+  if (!paiementsRes.ok) {
+    return (
+      <div className="page-root">
+        <PageHeader title={gestion ? c.titre : c.monReleve} subtitle={gestion ? c.subtitle : c.monReleveSubtitle} />
+        <LoadError error={failureOf(paiementsRes)} locale={ctx.locale} />
+      </div>
+    );
+  }
+  const e = exercice(synthese, paiementsRes.data, annee);
   const t = totauxExercice(e);
   const mois = parMois(e);
   const types = parType(e);

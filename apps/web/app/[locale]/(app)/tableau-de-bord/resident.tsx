@@ -44,6 +44,8 @@ import { PosterCard } from "../../../../components/ui/poster-card";
 import { versChaine } from "../../../../lib/centimes";
 import { getSynthese, soldeParLot } from "../../../../lib/finances-data";
 import { Amount } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function DashboardResident({
   ctx,
@@ -74,7 +76,10 @@ export async function DashboardResident({
 
   const lots = lotsRes.ok ? lotsRes.data : [];
   // Soldes en un appel — la RLS de la synthèse limite les lignes aux lots de l'appelant.
-  const soldes = locataire ? new Map<string, bigint>() : soldeParLot(await getSynthese());
+  // Synthèse (ou lots) en échec : solde INDISPONIBLE — jamais « 0 MAD — Payé » en vert.
+  const synthese = locataire ? null : await getSynthese();
+  const soldeErreur = locataire ? null : !lotsRes.ok ? failureOf(lotsRes) : synthese && !synthese.ok ? synthese.error : null;
+  const soldes = synthese?.ok ? soldeParLot(synthese.data) : new Map<string, bigint>();
   const lotsAvecSolde = locataire ? [] : lots;
 
   const prochaineAg = agsRes?.ok
@@ -110,7 +115,17 @@ export async function DashboardResident({
         className={`grid gap-4 sm:grid-cols-2 ${locataire ? "" : "xl:grid-cols-3"}`}
         data-tour="dash-stats"
       >
-        {!locataire ? (
+        {!locataire && soldeErreur ? (
+          <StatCard
+            icon={<CCoins />}
+            tone="sand"
+            label={dict.dash.monSolde}
+            value={<span className="text-[20px] text-soft">{dict.errors.load.solde}</span>}
+            trend={dict.errors.actions.retry}
+            trendTone="neutral"
+            href={p("/tableau-de-bord")}
+          />
+        ) : !locataire ? (
           <StatCard
             icon={<CCoins />}
             tone={totalDu > 0n ? "sand" : "sage"}
@@ -125,14 +140,14 @@ export async function DashboardResident({
           icon={<CWrench />}
           tone="tosca"
           label={dict.incidents.mesSignalements}
-          value={incidents.length}
+          value={incidentsRes.ok ? incidents.length : dict.common.none}
           href={p("/incidents")}
         />
         <StatCard
           icon={<CCalendar />}
           tone="lilac"
           label={dict.nav.reservations}
-          value={reservations.length}
+          value={reservationsRes.ok ? reservations.length : dict.common.none}
           href={p("/reservations")}
         />
       </div>
@@ -147,7 +162,9 @@ export async function DashboardResident({
           title={dict.dash.monSolde}
           subtitle={`${dict.dash.payerEnLigne} · ${dict.dash.bientotDisponible}`}
         >
-          {lotsAvecSolde.length === 0 ? (
+          {soldeErreur ? (
+            <LoadError error={soldeErreur} locale={locale} title={dict.errors.load.solde} variant="inline" />
+          ) : lotsAvecSolde.length === 0 ? (
             <EmptyLine text={dict.common.emptyDefault} icon={<IconHome width={20} height={20} />} />
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -245,11 +262,11 @@ export async function DashboardResident({
 
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">
         <Section title={dict.dash.mesIncidents} href={p("/incidents")} linkLabel={dict.common.seeAll}>
-          <ListeIncidents incidents={incidents} ctx={ctx} />
+          {incidentsRes.ok ? <ListeIncidents incidents={incidents} ctx={ctx} /> : <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" />}
         </Section>
 
         <Section title={dict.dash.mesReservations} href={p("/reservations")} linkLabel={dict.common.seeAll}>
-          <ListeReservations reservations={reservations} ctx={ctx} />
+          {reservationsRes.ok ? <ListeReservations reservations={reservations} ctx={ctx} /> : <LoadError error={failureOf(reservationsRes)} locale={locale} variant="inline" />}
         </Section>
 
         {/* M21 — Tableau d'affichage */}
@@ -259,7 +276,9 @@ export async function DashboardResident({
           href={p("/affichage")}
           linkLabel={dict.common.seeAll}
         >
-          {annonces.length === 0 ? (
+          {!annoncesRes.ok ? (
+            <LoadError error={failureOf(annoncesRes)} locale={locale} variant="inline" />
+          ) : annonces.length === 0 ? (
             <EmptyLine text={dict.communication.aucune} icon={<IconMegaphone width={20} height={20} />} />
           ) : (
             <FlatList>
@@ -290,7 +309,9 @@ export async function DashboardResident({
 
         {/* Notifications récentes */}
         <Section title={dict.dash.notificationsRecentes} href={p("/notifications")} linkLabel={dict.notifs.voirToutes}>
-          {notifs.length === 0 ? (
+          {!notifsRes.ok ? (
+            <LoadError error={failureOf(notifsRes)} locale={locale} variant="inline" />
+          ) : notifs.length === 0 ? (
             <EmptyLine text={dict.notifs.aucune} icon={<IconBell width={20} height={20} />} />
           ) : (
             <FlatList>

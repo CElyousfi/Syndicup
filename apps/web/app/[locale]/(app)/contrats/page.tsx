@@ -21,6 +21,8 @@ import { contratVariant } from "../../../../lib/status";
 import { FiltreType } from "./filtre-type";
 import { LiveList } from "../../../../components/ui/live-list";
 import { Amount } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 const ONGLETS = ["TOUS", "ACTIF", "A_RENOUVELER", "BROUILLON", "SUSPENDU", "EXPIRE", "RESILIE"] as const;
 
@@ -60,13 +62,18 @@ export default async function ContratsPage({ params, searchParams }: { params: P
     <div className="page-root">
       <PageHeader title={c.titre} subtitle={c.subtitle} actions={<><ButtonLink href={p("/contrats/calendrier")} variant="secondary"><CCalendar className="h-4 w-4" />{c.calendrier}</ButtonLink>{gestion ? <ButtonLink href={p("/contrats/nouveau")}><IconPlus width={16} height={16} />{c.nouveau}</ButtonLink> : null}</>} />
       {assurance && !assurance.immeuble_active ? <Banner variant="danger" className="mb-4" title={c.assuranceAbsente} action={gestion ? <Link href={p("/contrats/nouveau?type=ASSURANCE_IMMEUBLE")} className="link text-[13px]">{c.nouveau}</Link> : undefined}>{c.assuranceAbsenteCorps}</Banner> : null}
-      {!listeRes.ok ? <Banner variant="warn" className="mb-4">{c.chargementImpossible}</Banner> : null}
-      <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Liste en échec : pas de compteurs à zéro (ils mentiraient) — <LoadError> plus bas. */}
+      {listeRes.ok ? <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard icon={<CHandshake />} tone="sage" label={c.actifs} value={String(parStatut.ACTIF ?? 0)} href={qs("ACTIF")} />
         <StatCard icon={<CAlert />} tone={aRenouveler.length > 0 ? "warn" : "sage"} label={c.aRenouveler} value={String(aRenouveler.length)} hint={c.aRenouvelerAide} href={qs("A_RENOUVELER")} />
         <StatCard icon={<CCalendar />} tone="tosca" label={c.echeances30} value={String(prochaines.length)} hint={echRes.ok && prochaines.length ? mad(echRes.data.total_montant) : undefined} href={p("/contrats/calendrier")} />
-        <StatCard icon={<CShield />} tone={assurance?.immeuble_active ? "ok" : "danger"} label={c.assurance} value={assurance?.immeuble_active ? "✓" : "✗"} trend={assurance?.immeuble_active ? c.assuranceOk : c.assuranceAbsente} trendTone={assurance?.immeuble_active ? "ok" : "danger"} hint={assurance?.rc_active ? `${c.assuranceRc} ✓` : undefined} />
-      </div>
+        {assurance ? (
+          <StatCard icon={<CShield />} tone={assurance.immeuble_active ? "ok" : "danger"} label={c.assurance} value={assurance.immeuble_active ? "✓" : "✗"} trend={assurance.immeuble_active ? c.assuranceOk : c.assuranceAbsente} trendTone={assurance.immeuble_active ? "ok" : "danger"} hint={assurance.rc_active ? `${c.assuranceRc} ✓` : undefined} />
+        ) : (
+          // État d'assurance non lu : on ne prétend pas qu'elle est absente.
+          <StatCard icon={<CShield />} tone="sand" label={c.assurance} value={dict.common.none} trend={dict.errors.load.section} trendTone="neutral" />
+        )}
+      </div> : null}
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <LinkTabs tabs={ONGLETS.map((o) => ({ href: qs(o), label: o === "TOUS" ? c.tous : o === "A_RENOUVELER" ? c.aRenouveler : e.statutContrat[o as StatutContrat], active: onglet === o, count: o === "A_RENOUVELER" ? aRenouveler.length : o === "TOUS" ? undefined : parStatut[o as StatutContrat] }))} />
         <div className="flex items-center gap-2">
@@ -74,7 +81,7 @@ export default async function ContratsPage({ params, searchParams }: { params: P
           <ExportButtons ressource="contrats" filtres={{ type, statut: onglet === "TOUS" || onglet === "A_RENOUVELER" ? undefined : onglet }} labels={{ csv: dict.rapports.exporterCsv, xlsx: dict.rapports.exporterXlsx }} size="sm" />
         </div>
       </div>
-      {rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} illustration={onglet === "TOUS" && !type ? "empty-documents" : "empty-search"} /> : (
+      {!listeRes.ok ? <LoadError error={failureOf(listeRes)} locale={ctx.locale} /> : rows.length === 0 ? <EmptyState title={onglet === "TOUS" && !type ? c.aucun : c.aucunFiltre} hint={onglet === "TOUS" && !type && gestion ? c.aucunAide : undefined} illustration={onglet === "TOUS" && !type ? "empty-documents" : "empty-search"} /> : (
         <TableCard>
           <Table>
             <THead><TH>{c.libelle}</TH><TH>{c.type}</TH><TH>{c.prestataire}</TH><TH>{c.periodicite}</TH><TH align="end">{c.montantPeriode}</TH><TH>{c.dateFin}</TH><TH>{c.statut}</TH></THead>

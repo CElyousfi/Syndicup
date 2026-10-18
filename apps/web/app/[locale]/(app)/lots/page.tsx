@@ -30,6 +30,8 @@ import { IconPlus, IconSearch } from "../../../../components/ui/icons";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { Amount } from "../../../../components/ui/amount";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 /** Glyphe couleur par famille de lot — habitat vs bâtiment/annexe. */
 const LOTS_HABITAT = ["APPARTEMENT", "VILLA", "LOGE_GARDIEN"];
@@ -77,7 +79,10 @@ export default async function LotsPage({
   });
 
   // Solde par lot en un appel (synthèse financière, RLS appliquée côté API).
-  const soldes = voitSolde ? soldeParLot(await getSynthese()) : new Map<string, bigint>();
+  // Synthèse en échec : soldes « — » ligne par ligne et total indisponible (jamais « 0 — Payé »).
+  const synthese = voitSolde ? await getSynthese() : null;
+  const soldesIndisponibles = synthese !== null && !synthese.ok;
+  const soldes = synthese?.ok ? soldeParLot(synthese.data) : new Map<string, bigint>();
 
   const p = (path: string) => `/${locale}${path}`;
   const totalTantiemes = ctx.copropriete?.totalTantiemes ?? null;
@@ -119,7 +124,7 @@ export default async function LotsPage({
             icon={<CBuilding />}
             tone="sage"
             label={dict.nav.lots}
-            value={res.ok ? (res.meta.total ?? tous.length) : tous.length}
+            value={res.ok ? (res.meta.total ?? tous.length) : dict.common.none}
           />
           <StatCard
             icon={<CScale />}
@@ -132,8 +137,9 @@ export default async function LotsPage({
               icon={<CCoins />}
               tone="sand"
               label={dict.dash.impayes}
-              value={formatMAD(versChaine(impayeTotal), ctx.locale)}
-              trendTone={impayeTotal > 0n ? "danger" : "ok"}
+              value={soldesIndisponibles ? dict.common.none : formatMAD(versChaine(impayeTotal), ctx.locale)}
+              trend={soldesIndisponibles ? dict.errors.load.solde : undefined}
+              trendTone={soldesIndisponibles ? "neutral" : impayeTotal > 0n ? "danger" : "ok"}
             />
           ) : null}
         </div>
@@ -180,7 +186,9 @@ export default async function LotsPage({
         </form>
       ) : null}
 
-      {lots.length === 0 ? (
+      {!res.ok ? (
+        <LoadError error={failureOf(res)} locale={ctx.locale} />
+      ) : lots.length === 0 ? (
         <EmptyState
           title={dict.lots.aucunLot}
           hint={gestion && tous.length === 0 ? dict.lots.aucunLotAide : undefined}

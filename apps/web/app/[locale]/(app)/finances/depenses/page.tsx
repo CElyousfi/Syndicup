@@ -22,6 +22,8 @@ import { depenseVariant } from "../../../../../lib/status";
 import { FiltresDepenses } from "./filtres";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -90,7 +92,6 @@ export default async function DepensesPage({
           {d.seuilNonConfigureCorps}
         </Banner>
       ) : null}
-      {!listeRes.ok ? <Banner variant="warn" className="mb-4">{d.chargementImpossible}</Banner> : null}
 
       {rapport ? (
         <div className="mb-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -113,7 +114,7 @@ export default async function DepensesPage({
 
       <FiltresDepenses dict={dict} locale={ctx.locale} valeurs={{ exercice, categorie: sp.categorie ?? "", source: sp.source ?? "", q: sp.q ?? "", statut: sp.statut ?? "" }} />
 
-      {depenses.length === 0 ? (
+      {!listeRes.ok ? <LoadError error={failureOf(listeRes)} locale={ctx.locale} /> : depenses.length === 0 ? (
         <EmptyState
           title={sp.categorie || sp.source || sp.q || statut ? d.aucuneFiltre : d.aucune}
           illustration={sp.categorie || sp.source || sp.q || statut ? "empty-search" : "empty-documents"}

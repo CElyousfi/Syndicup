@@ -26,6 +26,8 @@ import { ConfirmerArriveeForm, ConfirmerDepartForm } from "../../lcd-modals";
 import { AnnulerSejourModal, PiecesJointesCard } from "./sejour-actions";
 import type { LcdPieceJointe } from "../../../../../../lib/api/types";
 import { LiveList } from "../../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../../lib/api/unwrap";
 
 type SejourDetail = LcdSejour & { evenements?: LcdSejourEvenement[] };
 
@@ -318,7 +320,9 @@ export default async function SejourDetailPage({
           {incidentsRes ? (
             <Card>
               <SectionHeader title={l.incidentsLies} />
-              {incidents.length === 0 ? (
+              {!incidentsRes.ok ? (
+                <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} variant="inline" className="mt-3" />
+              ) : incidents.length === 0 ? (
                 <p className="mt-3 text-sm text-soft">{dict.common.none}</p>
               ) : (
                 <Lignes className="mt-2">

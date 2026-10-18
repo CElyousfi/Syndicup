@@ -18,6 +18,8 @@ import { CCalendar, CVote, IconCircle } from "../../../../components/ui/color-ic
 import { EcheanceRelative } from "../tableau-de-bord/syndic";
 import { LiveList } from "../../../../components/ui/live-list";
 import { Figure } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -62,7 +64,7 @@ export default async function AgListPage({
 
       <PhotoBanner src={photoSrc(ctx.copropriete, "salle")} title={ctx.copropriete?.nom} className="mb-6" />
 
-      {ags.length === 0 ? (
+      {!agsRes.ok ? <LoadError error={failureOf(agsRes)} locale={ctx.locale} /> : ags.length === 0 ? (
         <EmptyState
           title={dict.ag.aucuneAg}
           hint={gestion ? dict.ag.aucuneAgAide : undefined}

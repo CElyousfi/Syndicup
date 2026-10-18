@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, Quittance } from "../../../../../../lib/api/types";
-import { getLots, getSynthese } from "../../../../../../lib/finances-data";
+import { getLots, getSynthese, SYNTHESE_VIDE } from "../../../../../../lib/finances-data";
 import { fill } from "../../../../../../lib/i18n";
 import { formatDate, formatPeriode } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
@@ -33,7 +33,9 @@ export default async function QuittancePage({
     periode: null,
     montant: null,
   };
-  const [synthese, lots] = await Promise.all([getSynthese(), getLots()]);
+  // Contexte d'affichage seulement : synthèse en échec = libellés « — », la quittance reste lisible.
+  const [syntheseRes, lots] = await Promise.all([getSynthese(), getLots()]);
+  const synthese = syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE;
   const ligne = synthese.lignes.find((l) => l.id === quittance.appelDeFondsLotId);
   if (ligne) {
     const appel = synthese.appels.find((a) => a.id === ligne.appelDeFondsId);

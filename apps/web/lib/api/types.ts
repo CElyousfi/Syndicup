@@ -31,7 +31,6 @@ export type KnownApiErrorCode =
   | "NOT_IMPLEMENTED"
   | "SERVICE_UNAVAILABLE"
   | "NETWORK";
-// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export type ApiErrorCode = KnownApiErrorCode | (string & {});
 
 export interface ApiError {

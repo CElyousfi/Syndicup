@@ -16,6 +16,8 @@ import { litigeVariant } from "../../../../lib/status";
 import { IconCheck } from "../../../../components/ui/icons";
 import { CloturerLitigeModal, DeclarerLitigeModal, EscaladerModal } from "./litige-actions";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -92,7 +94,7 @@ export default async function LitigesPage({
         </div>
       ) : null}
 
-      {litiges.length === 0 ? (
+      {!litigesRes.ok ? <LoadError error={failureOf(litigesRes)} locale={ctx.locale} /> : litiges.length === 0 ? (
         <EmptyState
           title={li.aucun}
           hint={gestion ? li.aucunAide : undefined}

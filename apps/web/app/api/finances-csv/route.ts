@@ -10,7 +10,7 @@ import { readSession } from "../../../lib/session";
 import { getDict, isLocale } from "../../../lib/i18n";
 import { formatDateHeure, formatPeriode } from "../../../lib/format";
 import type { Paiement } from "../../../lib/api/types";
-import { getLots, getSynthese } from "../../../lib/finances-data";
+import { getLotsResult, getSynthese } from "../../../lib/finances-data";
 import { csv, exercice, journalPaiements, montantCsv, parLot, parMois } from "../../../lib/comptabilite";
 
 export async function GET(req: NextRequest) {
@@ -27,12 +27,18 @@ export async function GET(req: NextRequest) {
   const dict = getDict(locale);
   const c = dict.comptabilite;
 
-  const [synthese, lots, paiementsRes] = await Promise.all([
+  const [syntheseRes, lotsRes, paiementsRes] = await Promise.all([
     getSynthese(),
-    getLots(),
+    getLotsResult(),
     apiFetch<Paiement[]>("/finances/paiements", { searchParams: { exercice: annee } }),
   ]);
-  const e = exercice(synthese, paiementsRes.ok ? paiementsRes.data : [], annee);
+  // Un export comptable incomplet est pire qu'aucun export : jamais un CSV de zéros.
+  if (!syntheseRes.ok || !lotsRes.ok || !paiementsRes.ok) {
+    return NextResponse.json({ error: dict.errors.load.title }, { status: 503 });
+  }
+  const synthese = syntheseRes.data;
+  const lots = lotsRes.data;
+  const e = exercice(synthese, paiementsRes.data, annee);
 
   let lignes: Array<Array<string | number | null>>;
   if (type === "mois") {

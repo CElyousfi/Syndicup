@@ -16,6 +16,8 @@ import { Avatar } from "../../../../components/ui/avatar";
 import { personnelVariant } from "../../../../lib/status";
 import { ChangerPresenceModal, CreerFicheModal } from "./personnel-modals";
 import { ExportButtons } from "../../../../components/ui/export-buttons";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -59,7 +61,7 @@ export default async function PersonnelPage({ params }: { params: Promise<{ loca
 
       {absent ? <Banner variant="warn" className="mb-4">{pe.absentAlerte}</Banner> : null}
 
-      {fiches.length === 0 ? (
+      {!personnelRes.ok ? <LoadError error={failureOf(personnelRes)} locale={ctx.locale} /> : fiches.length === 0 ? (
         <EmptyState
           title={pe.aucuneFiche}
           hint={gestion ? pe.aucuneFicheAide : undefined}

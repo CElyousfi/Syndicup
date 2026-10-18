@@ -8,6 +8,8 @@ import { lienNotification } from "../../../../lib/notifications-link";
 import { PageHeader } from "../../../../components/page-header";
 import { EmptyState } from "../../../../components/ui/empty-state";
 import { NotificationsList } from "./notifications-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -54,7 +56,7 @@ export default async function NotificationsPage({
         subtitle={nonLues > 0 ? fill(n.nonLues, { n: nonLues }) : n.toutesLues}
       />
 
-      {items.length === 0 ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : items.length === 0 ? (
         <EmptyState title={n.aucune} hint={n.aucuneAide} illustration="empty-notifications" />
       ) : (
         <NotificationsList items={items} marquerLuLabel={n.marquerLu} />

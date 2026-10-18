@@ -34,6 +34,8 @@ import { EcheanceRelative } from "../../tableau-de-bord/syndic";
 import { IconClock, IconVote } from "../../../../../components/ui/icons";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { Figure } from "../../../../../components/ui/amount";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { failureOf } from "../../../../../lib/api/unwrap";
 
 export default async function AgDetailPage({
   params,
@@ -310,6 +312,7 @@ export default async function AgDetailPage({
             <Card id="procurations">
               <SectionHeader title={a.procurations} subtitle={a.procurationsAide} />
               <div className="mt-4 space-y-3">
+                {procsRes?.ok === false ? <LoadError error={failureOf(procsRes)} locale={ctx.locale} variant="inline" /> : null}
                 {procurations.length > 0 ? (
                   <LiveList as="ul" className="space-y-2">
                     {procurations.map((proc) => (

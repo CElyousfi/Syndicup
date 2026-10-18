@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { apiFetch } from "../../../../lib/api/client";
 import {
-  getLots,
+  getLotsResult,
   getSynthese,
+  SYNTHESE_VIDE,
   impayesParNiveau,
   totauxGlobaux,
   totauxParAppel,
@@ -44,6 +45,8 @@ import { chargerOnboarding } from "../import/onboarding-card";
 import { IconCalendar, IconScale, IconVote, IconWrench } from "../../../../components/ui/icons";
 import { AgPoster, ChecklistTile, EmptyLine, FlatList, RoundActions, Row, RowIcon, Section } from "./parts";
 import { Amount } from "../../../../components/ui/amount";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function DashboardSyndic({
   ctx,
@@ -55,13 +58,13 @@ export async function DashboardSyndic({
   const { dict, locale } = ctx;
   const p = (path: string) => `/${locale}${path}`;
 
-  const [synthese, incidentsRes, agsRes, reservationsRes, lots, litigesRes, documentsRes] =
+  const [syntheseRes, incidentsRes, agsRes, reservationsRes, lotsRes, litigesRes, documentsRes] =
     await Promise.all([
       getSynthese(),
       apiFetch<Incident[]>("/incidents", { searchParams: { limit: 100 } }),
       apiFetch<AssembleeGenerale[]>("/ag", { searchParams: { limit: 10 } }),
       apiFetch<Reservation[]>("/reservations"),
-      getLots(),
+      getLotsResult(),
       apiFetch<Litige[]>("/litiges"),
       apiFetch<DocumentCopro[]>("/documents"),
     ]);
@@ -73,6 +76,10 @@ export async function DashboardSyndic({
   const tachesMeta = tachesRes.ok ? (tachesRes.meta as { total?: number; retard?: number }) : {};
   const tachesRetard = tachesMeta.retard ?? 0;
 
+  // Synthèse en échec : impayés et taux INDISPONIBLES — jamais « 0 MAD d'impayés, 100 % ».
+  const finErreur = syntheseRes.ok ? null : syntheseRes.error;
+  const synthese = syntheseRes.ok ? syntheseRes.data : SYNTHESE_VIDE;
+  const lots = lotsRes.ok ? lotsRes.data : [];
   const appels = synthese.appels;
   const totaux = totauxParAppel(synthese);
   const { paye, impaye, taux: tauxRecouvrement } = totauxGlobaux(synthese);
@@ -98,6 +105,7 @@ export async function DashboardSyndic({
     (l) => l.statut === "OUVERT"
   );
   const totalLots = lots.length;
+  const indispo = dict.common.none;
 
   const prenom = ctx.profil.prenom ?? nomComplet(ctx.profil) ?? "";
 
@@ -130,8 +138,8 @@ export async function DashboardSyndic({
       <PageHeader
         title={<Greeting labels={dict.alive} name={prenom} fallback={fill(dict.dash.greeting, { prenom })} />}
         subtitle={
-          lectureSeule
-            ? dict.dash.controleTitle
+          lectureSeule || !lotsRes.ok
+            ? lectureSeule ? dict.dash.controleTitle : (ctx.copropriete?.nom ?? undefined)
             : `${ctx.copropriete?.nom ?? ""} · ${fill(dict.lots.subtitle, {
                 count: totalLots,
                 tantiemes: ctx.copropriete?.totalTantiemes ?? "—",
@@ -161,7 +169,7 @@ export async function DashboardSyndic({
       ) : null}
 
       {/* Moment signature 6 : toute la résidence à jour (aucun impayé). */}
-      {impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
+      {!finErreur && impaye === 0n && tauxRecouvrement >= 1 && ctx.copropriete ? <ResidenceAJour coproId={ctx.copropriete.id} label={dict.alive.residenceAJour} /> : null}
 
       {/* Soldes Wise : tuiles chiffres clés */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" data-tour="dash-stats">
@@ -169,23 +177,25 @@ export async function DashboardSyndic({
           icon={<CCoins />}
           tone="sand"
           label={dict.dash.impayes}
-          value={formatMAD(versChaine(impaye), locale)}
+          value={finErreur ? indispo : formatMAD(versChaine(impaye), locale)}
+          trend={finErreur ? dict.errors.load.solde : undefined}
+          trendTone="neutral"
           href={p("/finances/appels-de-fonds")}
         />
         <StatCard
           icon={<CMoneyBag />}
           tone="sage"
           label={dict.finances.tauxPaiement}
-          value={`${Math.round(tauxRecouvrement * 100)}%`}
+          value={finErreur ? indispo : `${Math.round(tauxRecouvrement * 100)}%`}
           trendTone={tauxRecouvrement >= 0.85 ? "ok" : tauxRecouvrement >= 0.6 ? "warn" : "danger"}
-          trend={<TrendArrow up={tauxRecouvrement >= 0.6} />}
+          trend={finErreur ? undefined : <TrendArrow up={tauxRecouvrement >= 0.6} />}
           href={p("/finances/appels-de-fonds")}
         />
         <StatCard
           icon={<CWrench />}
           tone="tosca"
           label={dict.dash.incidentsOuverts}
-          value={incidents.length}
+          value={incidentsRes.ok ? incidents.length : indispo}
           trend={slaDepasses.length > 0 ? `${slaDepasses.length} · ${dict.dash.slaDepasse}` : undefined}
           trendTone="danger"
           href={p("/incidents")}
@@ -194,7 +204,7 @@ export async function DashboardSyndic({
           icon={<CBuilding />}
           tone="lilac"
           label={dict.nav.lots}
-          value={totalLots}
+          value={lotsRes.ok ? totalLots : indispo}
           href={p("/lots")}
         />
       </div>
@@ -204,7 +214,11 @@ export async function DashboardSyndic({
 
       {/* Prochaine AG : LE fait marquant, en carte-affiche. */}
       <div className="mt-10">
-        {prochaineAg ? (
+        {!agsRes.ok ? (
+          <Section title={dict.dash.prochaineAg}>
+            <LoadError error={failureOf(agsRes)} locale={locale} variant="inline" />
+          </Section>
+        ) : prochaineAg ? (
           <AgPoster
             ag={prochaineAg}
             dict={dict}
@@ -241,7 +255,9 @@ export async function DashboardSyndic({
               </Link>
             }
           />
-          {barres.length === 0 ? (
+          {finErreur ? (
+            <LoadError error={finErreur} locale={locale} className="mt-2" />
+          ) : barres.length === 0 ? (
             <EmptyState
               title={dict.finances.aucunAppel}
               hint={dict.finances.aucunAppelAide}
@@ -274,7 +290,9 @@ export async function DashboardSyndic({
             title={parNiveau.length > 0 ? dict.dash.impayesParNiveau : dict.dash.impayes}
           />
           <div className="mt-6">
-            {parNiveau.length === 0 ? (
+            {finErreur ? (
+              <LoadError error={finErreur} locale={locale} title={dict.errors.load.solde} variant="inline" />
+            ) : parNiveau.length === 0 ? (
               <Donut
                 size={168}
                 centerLabel={<Amount value={versChaine(impaye)} locale={locale} upIsGood={false} />}
@@ -317,7 +335,9 @@ export async function DashboardSyndic({
           href={p("/incidents")}
           linkLabel={dict.common.seeAll}
         >
-          {incidents.length === 0 ? (
+          {!incidentsRes.ok ? (
+            <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" />
+          ) : incidents.length === 0 ? (
             <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />
           ) : (
             <FlatList>
@@ -357,7 +377,9 @@ export async function DashboardSyndic({
           linkLabel={dict.common.seeAll}
         >
           {lectureSeule ? (
-            litigesOuverts.length === 0 ? (
+            !litigesRes.ok ? (
+              <LoadError error={failureOf(litigesRes)} locale={locale} variant="inline" />
+            ) : litigesOuverts.length === 0 ? (
               <EmptyLine text={dict.litiges.aucun} icon={<IconScale width={20} height={20} />} />
             ) : (
               <FlatList>
@@ -375,6 +397,8 @@ export async function DashboardSyndic({
                 ))}
               </FlatList>
             )
+          ) : !reservationsRes.ok ? (
+            <LoadError error={failureOf(reservationsRes)} locale={locale} variant="inline" />
           ) : reservationsEnAttente.length === 0 ? (
             <EmptyLine text={dict.espaces.aucuneReservation} icon={<IconCalendar width={20} height={20} />} />
           ) : (

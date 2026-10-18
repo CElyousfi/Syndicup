@@ -13,6 +13,8 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { CBell, CCalendar, CHandshake } from "../../../../components/ui/color-icons";
 import { reservationVariant } from "../../../../lib/status";
 import { AnnulerModal, RejeterModal, ValiderForm } from "./reservation-actions";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -119,7 +121,7 @@ export default async function ReservationsPage({
         </div>
       ) : null}
 
-      {reservations.length === 0 ? (
+      {!reservationsRes.ok ? <LoadError error={failureOf(reservationsRes)} locale={ctx.locale} /> : reservations.length === 0 ? (
         <EmptyState
           title={e.aucuneReservation}
           hint={e.aucuneReservationAide}

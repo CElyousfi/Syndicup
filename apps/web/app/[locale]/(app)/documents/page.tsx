@@ -18,6 +18,8 @@ import { telechargerDocument, supprimerDocument } from "./actions";
 import { ConfirmDelete } from "../../../../components/ui/confirm-delete";
 import { LiveList } from "../../../../components/ui/live-list";
 import { Button } from "../../../../components/ui/button";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -58,7 +60,7 @@ export default async function DocumentsPage({
 
       <PhotoBanner src={photoSrc(ctx.copropriete, "cour")} title={ctx.copropriete?.nom} className="mb-6" />
 
-      {documents.length === 0 ? (
+      {!res.ok ? <LoadError error={failureOf(res)} locale={ctx.locale} /> : documents.length === 0 ? (
         <EmptyState
           title={d.aucunDocument}
           hint={gestion ? d.aucunDocumentAide : undefined}

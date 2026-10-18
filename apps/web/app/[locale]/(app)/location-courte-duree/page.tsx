@@ -29,6 +29,8 @@ import { SejourListe } from "../../../../components/lcd/sejour-list";
 import { Ligne, Lignes } from "../../../../components/espaces/ligne-liste";
 import { ConfirmerArriveeForm, ConfirmerDepartForm, DeclarerLotModal } from "./lcd-modals";
 import { LiveList } from "../../../../components/ui/live-list";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 export async function generateMetadata({
   params,
@@ -185,10 +187,9 @@ export default async function LocationCourteDureePage({
         }
       />
 
-      {erreurChargement ? (
-        <Banner variant="warn" className="mb-5">
-          {l.chargementImpossible}
-        </Banner>
+      {erreurChargement && reglementRes.ok === false ? (
+        // Régime non lu : on ne prétend ni « non défini » ni « interdit ».
+        <LoadError error={failureOf(reglementRes)} locale={ctx.locale} variant="inline" className="mb-5" />
       ) : null}
 
       <BanniereRegime
@@ -260,6 +261,12 @@ export default async function LocationCourteDureePage({
 
       <div className="space-y-10">
         {/* ── Aujourd'hui (syndic, gardien) ── */}
+        {duJourRes?.ok === false ? (
+          <div>
+            <SectionHeader title={l.duJour} className="mb-3" />
+            <LoadError error={failureOf(duJourRes)} locale={ctx.locale} variant="inline" />
+          </div>
+        ) : null}
         {duJour ? (
           <div>
             <SectionHeader
@@ -311,7 +318,9 @@ export default async function LocationCourteDureePage({
         {gestion || vue === "conseil" ? (
           <div>
             <SectionHeader title={l.declarations} className="mb-3" />
-            {declarations.length === 0 ? (
+            {!declarationsRes.ok ? (
+              <LoadError error={failureOf(declarationsRes)} locale={ctx.locale} />
+            ) : declarations.length === 0 ? (
               <EmptyState title={l.aucuneDeclaration} hint={l.aucuneDeclarationAide} illustration="empty-lcd" />
             ) : (
               <TableCard>
@@ -364,7 +373,9 @@ export default async function LocationCourteDureePage({
         {vue === "resident" || vue === "gestionnaire" ? (
           <div>
             <SectionHeader title={l.declarations} className="mb-3" />
-            {declarations.length === 0 ? (
+            {!declarationsRes.ok ? (
+              <LoadError error={failureOf(declarationsRes)} locale={ctx.locale} />
+            ) : declarations.length === 0 ? (
               <EmptyState
                 title={l.aucuneDeclarationResident}
                 hint={regimeOuvert && vue === "resident" ? l.declarerLotAide : undefined}
@@ -418,7 +429,9 @@ export default async function LocationCourteDureePage({
                 ) : undefined
               }
             />
-            {sejours.length === 0 ? (
+            {sejoursRes?.ok === false ? (
+              <LoadError error={failureOf(sejoursRes)} locale={ctx.locale} />
+            ) : sejours.length === 0 ? (
               <EmptyState
                 title={l.aucunSejour}
                 hint={aValidee ? l.aucunSejourAide : regimeOuvert ? l.aucunLotValide : undefined}

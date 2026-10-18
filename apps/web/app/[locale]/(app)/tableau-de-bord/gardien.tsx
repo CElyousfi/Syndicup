@@ -16,6 +16,8 @@ import { StatCard } from "../../../../components/ui/stat-card";
 import { Avatar } from "../../../../components/ui/avatar";
 import { CBell, CDoor, CWrench } from "../../../../components/ui/color-icons";
 import { EmptyLine, FlatList, Row, RowIcon, Section } from "./parts";
+import { LoadError } from "../../../../components/ui/load-error";
+import { failureOf } from "../../../../lib/api/unwrap";
 
 /** B5 — orienté terrain : l'action primaire est énorme et sans détour. */
 export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
@@ -108,7 +110,7 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
       <div className="mt-10 grid gap-x-10 gap-y-10 lg:grid-cols-2">
         {/* Visites en attente */}
         <Section title={dict.dash.visitesEnAttente} href={p("/visites")} linkLabel={dict.common.seeAll}>
-          {enAttente.length === 0 ? (
+          {!visitesRes.ok ? <LoadError error={failureOf(visitesRes)} locale={locale} variant="inline" /> : enAttente.length === 0 ? (
             <EmptyLine text={dict.visites.aucuneVisite} icon={<IconDoor width={20} height={20} />} />
           ) : (
             <FlatList>
@@ -131,7 +133,7 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
 
         {/* Visites du jour */}
         <Section title={dict.visites.duJour}>
-          {visitesDuJour.length === 0 ? (
+          {!visitesRes.ok ? <LoadError error={failureOf(visitesRes)} locale={locale} variant="inline" /> : visitesDuJour.length === 0 ? (
             <EmptyLine text={dict.visites.aucuneVisite} icon={<IconDoor width={20} height={20} />} />
           ) : (
             <FlatList>
@@ -150,7 +152,7 @@ export async function DashboardGardien({ ctx }: { ctx: AppContext }) {
 
         {/* Incidents ouverts */}
         <Section title={dict.dash.incidentsOuverts} href={p("/incidents")} linkLabel={dict.common.seeAll}>
-          {incidents.length === 0 ? (
+          {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={locale} variant="inline" /> : incidents.length === 0 ? (
             <EmptyLine text={dict.incidents.aucunIncident} icon={<IconWrench width={20} height={20} />} />
           ) : (
             <FlatList>
