@@ -19,21 +19,12 @@ import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../documents/document_viewer_screen.dart';
-import '../lcd/lcd_sejour_screens.dart' show PieceLocale, choisirPiece;
-import 'dart:io';
 
 /// M17 Justificatifs de paiement (Doc A §3.3/§3.4) — résident : « Payer » (comptes de la
 /// copropriété, déclaration avec preuve, mes déclarations) ; syndic / conseil : file de validation
 /// et détail (preuve + échéances ouvertes, valider / rejeter) ; gardien : espèces reçues à la loge.
 /// Écritures probantes en ligne avec Idempotency-Key stable (finances : jamais dans la file hors-ligne).
 
-Future<Map<String, String>?> _televerserPreuve(ApiClient api, PieceLocale p) async {
-  final prep = await api.post<Map<String, dynamic>>('/finances/justificatifs/upload-url', body: {'nom_fichier': p.nom, 'content_type': p.contentType}, parse: asMap);
-  if (prep is! ApiOk<Map<String, dynamic>>) return null;
-  final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(p.chemin).readAsBytes(), p.contentType);
-  if (!ok) return null;
-  return {'storage_path': prep.data['storage_path'] as String, 'nom': p.nom};
-}
 
 /// Pictogramme d'un moyen de paiement.
 IconData _iconeMethode(String m) => switch (m) {
@@ -143,7 +134,7 @@ class DeclarationForm extends ConsumerStatefulWidget {
 }
 
 class _DeclarationFormState extends ConsumerState<DeclarationForm> {
-  final _key = const Uuid().v4();
+  final _key = IdemKey();
   Lot? _lot;
   String _methode = 'VIREMENT';
   final _montant = TextEditingController();
@@ -151,7 +142,10 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
   final _banque = TextEditingController();
   DateTime _date = DateTime.now();
   CompteBancaire? _compte;
-  PieceLocale? _piece;
+  /// Preuve (photo ou PDF) : contrôlée au choix, envoyée avec progression ; « Réessayer »
+  /// après un refus de la déclaration ne la renvoie pas au stockage.
+  late final UploadQueue _preuve = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.justificatifs, max: 1);
+  final _form = GlobalKey<FormState>();
   bool _loading = false;
   ApiFail? _fail;
 
@@ -161,6 +155,19 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
     _lot = widget.lots.isNotEmpty ? widget.lots.first : null;
     _compte = widget.comptes.isNotEmpty ? widget.comptes.first : null;
     if (widget.mode == 'especes') _methode = 'ESPECES';
+    _preuve.addListener(_redessiner);
+  }
+
+  void _redessiner() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _preuve
+      ..removeListener(_redessiner)
+      ..dispose();
+    super.dispose();
   }
 
   @override
@@ -172,129 +179,148 @@ class _DeclarationFormState extends ConsumerState<DeclarationForm> {
     final j = d.justificatifs;
     final especes = widget.mode == 'especes';
     final preuveRequise = !especes && !ctx.isGestion && !ctx.isGardien;
-    final peutEnvoyer = _lot != null && _montant.text.trim().isNotEmpty && (!preuveRequise || _piece != null);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(especes ? j.especesAideGardien : j.declarerAide, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 12),
-        SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? humanizeCode(x.typeLot)} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
-        const SizedBox(height: 10),
-        SuField(label: '${j.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, mono: true, textDirection: TextDirection.ltr, required: true, onChanged: (_) => setState(() {}), error: fieldError(_fail, 'montant')),
-        const SizedBox(height: 10),
-        if (!especes) ...[
-          Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _methode = v)),
+    final up = context.mup;
+    final montantOk = parseMontant(_montant.text) != null;
+    final manque = [
+      if (_lot == null) j.lot,
+      if (_montant.text.trim().isEmpty) j.montant,
+      if (preuveRequise && _preuve.isEmpty) up.missingProof,
+    ];
+    final peutEnvoyer = manque.isEmpty && !_preuve.busy;
+    return Form(
+      key: _form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(especes ? j.especesAideGardien : j.declarerAide, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 12),
+          SuSelect<Lot>(label: j.lot, value: _lot, options: widget.lots, labelOf: (x) => '${d.enums.typeLot[x.typeLot] ?? humanizeCode(x.typeLot)} ${x.numero}', onChanged: (v) => setState(() => _lot = v), required: true),
           const SizedBox(height: 10),
-          if (widget.comptes.isNotEmpty) ...[
-            SuSelect<CompteBancaire>(label: j.beneficiaire, value: _compte, options: widget.comptes, labelOf: (c) => '${c.libelle} · ${c.ribMasque}', onChanged: (v) => setState(() => _compte = v), required: true),
+          SuField(label: '${j.montant} (${d.common.mad})', controller: _montant, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, mono: true, textDirection: TextDirection.ltr, required: true, onChanged: (_) => setState(() {}), validator: SuValidators.montant(context), valid: montantOk, error: fieldError(_fail, 'montant')),
+          const SizedBox(height: 10),
+          if (!especes) ...[
+            Segmented<String>(value: _methode, options: const ['VIREMENT', 'CHEQUE', 'ESPECES'], labelOf: (v) => d.enumsJustificatifs.methode[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _methode = v)),
             const SizedBox(height: 10),
+            if (widget.comptes.isNotEmpty) ...[
+              SuSelect<CompteBancaire>(label: j.beneficiaire, value: _compte, options: widget.comptes, labelOf: (c) => '${c.libelle} · ${c.ribMasque}', onChanged: (v) => setState(() => _compte = v), required: true),
+              const SizedBox(height: 10),
+            ],
+            if (_methode != 'ESPECES') ...[
+              SuField(label: j.banqueEmettrice, controller: _banque, optionalLabel: d.common.optional),
+              const SizedBox(height: 10),
+              SuField(label: j.reference, controller: _reference, help: j.referenceAide, optionalLabel: d.common.optional, mono: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'reference')),
+              const SizedBox(height: 10),
+            ],
           ],
-          if (_methode != 'ESPECES') ...[
-            SuField(label: j.banqueEmettrice, controller: _banque, optionalLabel: d.common.optional),
-            const SizedBox(height: 10),
-            SuField(label: j.reference, controller: _reference, help: j.referenceAide, optionalLabel: d.common.optional, mono: true, textDirection: TextDirection.ltr, error: fieldError(_fail, 'reference')),
-            const SizedBox(height: 10),
-          ],
+          ListRow(
+            padding: EdgeInsets.zero,
+            leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral),
+            title: j.datePaiement,
+            subtitle: formatDate(jourIso(_date), l),
+            chevron: true,
+            onTap: () async {
+              final p = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime.now().add(const Duration(days: 1)));
+              if (p != null) setState(() => _date = p);
+            },
+          ),
+          const SizedBox(height: 10),
+          Text(j.preuve + (preuveRequise ? ' *' : ''), style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.ink)),
+          const SizedBox(height: 4),
+          Text(j.preuveAide, style: Theme.of(context).textTheme.bodySmall),
+          const SizedBox(height: 4),
+          SuUploadList(
+            queue: _preuve,
+            enabled: !_loading,
+            addLabel: j.prendrePhoto,
+            onAdd: () async {
+              final p = await choisirPiece(context, target: UploadTarget.justificatifs);
+              if (p == null || !mounted) return;
+              _preuve.replace(p);
+            },
+          ),
+          const SizedBox(height: 10),
+          Text(md.retryHint, style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+          FormError(_fail),
+          if (_fail != null) const SizedBox(height: 12),
+          SubmitButton(
+            label: especes ? j.especesSaisir : j.declarer,
+            loading: _loading,
+            fail: _fail,
+            icon: Icons.send_rounded,
+            missing: manque,
+            onPressed: !peutEnvoyer ? null : () => _envoyer(especes: especes),
+          ),
         ],
-        ListRow(
-          padding: EdgeInsets.zero,
-          leading: const IconCircle(Icons.event_rounded, tone: Tone.neutral),
-          title: j.datePaiement,
-          subtitle: formatDate(jourIso(_date), l),
-          chevron: true,
-          onTap: () async {
-            final p = await showDatePicker(context: context, initialDate: _date, firstDate: DateTime(2020), lastDate: DateTime.now().add(const Duration(days: 1)));
-            if (p != null) setState(() => _date = p);
-          },
-        ),
-        const SizedBox(height: 10),
-        Text(j.preuve + (preuveRequise ? ' *' : ''), style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.ink)),
-        const SizedBox(height: 4),
-        Text(j.preuveAide, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, children: [
-          if (_piece != null)
-            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
-          else
-            ActionChip(avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link), label: Text(j.prendrePhoto), onPressed: () async {
-              final p = await choisirPiece(context);
-              if (p != null) setState(() => _piece = p);
-            }),
-        ]),
-        const SizedBox(height: 10),
-        Text(md.retryHint, style: Theme.of(context).textTheme.labelSmall),
-        const SizedBox(height: 12),
-        FormError(_fail),
-        if (_fail != null) const SizedBox(height: 12),
-        SubmitButton(
-          label: especes ? j.especesSaisir : j.declarer,
-          loading: _loading,
-          fail: _fail,
-          icon: Icons.send_rounded,
-          onPressed: !peutEnvoyer
-              ? null
-              : () async {
-                  setState(() {
-                    _loading = true;
-                    _fail = null;
-                  });
-                  final api = ref.read(apiClientProvider);
-                  Map<String, String>? preuve;
-                  if (_piece != null) {
-                    preuve = await _televerserPreuve(api, _piece!);
-                    if (preuve == null) {
-                      if (!mounted) return;
-                      setState(() => _loading = false);
-                      showToast(context, context.mdict.viewerError, error: true);
-                      return;
-                    }
-                  }
-                  final auNom = ctx.isGestion || ctx.isGardien;
-                  final r = especes
-                      ? await api.post<Map<String, dynamic>>('/finances/paiements/especes', body: {'lot_id': _lot!.id, 'montant': _montant.text.trim(), 'date_paiement': jourIso(_date), 'preuve': preuve}, idempotencyKey: _key, parse: asMap)
-                      : await api.post<Map<String, dynamic>>('/finances/justificatifs', body: {
-                          auNom ? 'pour_lot_id' : 'lot_id': _lot!.id,
-                          'montant': _montant.text.trim(),
-                          'methode': _methode,
-                          'date_paiement': jourIso(_date),
-                          'banque_emettrice': _banque.text.trim().isEmpty ? null : _banque.text.trim(),
-                          'beneficiaire': _compte?.libelle ?? (_methode == 'ESPECES' ? j.especes : '—'),
-                          'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
-                          'preuve': preuve,
-                        }, idempotencyKey: _key, parse: asMap);
-                  if (!mounted) return;
-                  switch (r) {
-                    case ApiOk<Map<String, dynamic>>():
-                      widget.onDone();
-                      // M26 — activité en direct : la ligne d'appel suit le résident jusqu'au « Réglé ».
-                      if (r.data['appel_de_fonds_lot_id'] is String) {
-                        LiveActivities.instance.suivre(ref,
-                            type: 'APPEL_DE_FONDS',
-                            objetId: r.data['appel_de_fonds_lot_id'] as String,
-                            etat: {'statut': 'EN_ATTENTE', 'lot_id': _lot!.id},
-                            titre: j.declare,
-                            corps: j.declareAide);
-                      }
-                      // Succès plein écran Wise (virement déclaré / espèces reçues).
-                      final racine = Navigator.of(this.context, rootNavigator: true).context;
-                      Navigator.pop(context);
-                      if (!racine.mounted) return;
-                      showSuccess(
-                        racine,
-                        title: especes ? (r.data['type'] == 'PAIEMENT' ? j.especesPaiement : j.especesSaisie) : j.declare,
-                        body: especes || auNom ? null : j.declareAide,
-                        illustration: 'ok-paiement',
-                      );
-                    case ApiFail<Map<String, dynamic>>():
-                      setState(() {
-                        _loading = false;
-                        _fail = r;
-                      });
-                  }
-                },
-        ),
-      ],
+      ),
     );
+  }
+
+  Future<void> _envoyer({required bool especes}) async {
+    if (!(_form.currentState?.validate() ?? true)) return;
+    final j = context.dict.justificatifs;
+    final ctx = ref.read(appContextProvider);
+    setState(() {
+      _loading = true;
+      _fail = null;
+    });
+    final api = ref.read(apiClientProvider);
+    // Preuve envoyée une seule fois : un nouvel essai réutilise le chemin déjà au stockage.
+    final echec = await _preuve.sendAll();
+    if (!mounted) return;
+    if (echec != null) {
+      setState(() {
+        _loading = false;
+        _fail = echec.code == UploadError.cancelled ? null : echec.toApiFail();
+      });
+      return;
+    }
+    final preuve = _preuve.isEmpty ? null : {'storage_path': _preuve.paths.first, 'nom': _preuve.slots.first.piece.nom};
+    final montant = parseMontant(_montant.text) ?? _montant.text.trim();
+    final auNom = ctx.isGestion || ctx.isGardien;
+    final Map<String, Object?> body = especes
+        ? {'lot_id': _lot!.id, 'montant': montant, 'date_paiement': jourIso(_date), 'preuve': preuve}
+        : {
+            auNom ? 'pour_lot_id' : 'lot_id': _lot!.id,
+            'montant': montant,
+            'methode': _methode,
+            'date_paiement': jourIso(_date),
+            'banque_emettrice': _banque.text.trim().isEmpty ? null : _banque.text.trim(),
+            'beneficiaire': _compte?.libelle ?? (_methode == 'ESPECES' ? j.especes : '—'),
+            'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(),
+            'preuve': preuve,
+          };
+    final r = await api.post<Map<String, dynamic>>(especes ? '/finances/paiements/especes' : '/finances/justificatifs', body: body, idempotencyKey: _key.forPayload(body), parse: asMap);
+    _key.settle(r);
+    if (!mounted) return;
+    switch (r) {
+      case ApiOk<Map<String, dynamic>>():
+        widget.onDone();
+        // M26 — activité en direct : la ligne d'appel suit le résident jusqu'au « Réglé ».
+        if (r.data['appel_de_fonds_lot_id'] is String) {
+          LiveActivities.instance.suivre(ref,
+              type: 'APPEL_DE_FONDS',
+              objetId: r.data['appel_de_fonds_lot_id'] as String,
+              etat: {'statut': 'EN_ATTENTE', 'lot_id': _lot!.id},
+              titre: j.declare,
+              corps: j.declareAide);
+        }
+        // Succès plein écran Wise (virement déclaré / espèces reçues).
+        final racine = Navigator.of(context, rootNavigator: true).context;
+        Navigator.pop(context);
+        if (!racine.mounted) return;
+        showSuccess(
+          racine,
+          title: especes ? (r.data['type'] == 'PAIEMENT' ? j.especesPaiement : j.especesSaisie) : j.declare,
+          body: especes || auNom ? null : j.declareAide,
+          illustration: 'ok-paiement',
+        );
+      case ApiFail<Map<String, dynamic>>():
+        setState(() {
+          _loading = false;
+          _fail = r;
+        });
+    }
   }
 }
 

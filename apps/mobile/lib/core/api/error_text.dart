@@ -56,7 +56,7 @@ String stripSpecRefs(String message) {
 }
 
 /// Codes « transport » produits par le client lui-même (jamais par l'API).
-const clientErrorCodes = {'NETWORK', 'TIMEOUT', 'PARSE_ERROR', 'BAD_RESPONSE'};
+const clientErrorCodes = {'NETWORK', 'TIMEOUT', 'PARSE_ERROR', 'BAD_RESPONSE', 'TOO_LARGE', 'BAD_TYPE', 'STORAGE', 'CANCELLED'};
 
 /// Traduction d'une erreur de l'API dans la langue de l'appareil (FR / AR). Jamais le message
 /// brut du serveur en arabe ; en français, le message serveur (sans références de spec) sert de
@@ -69,6 +69,7 @@ ErrorText errorText(BuildContext context, ApiError error, int status, {int? retr
 /// Variante sans BuildContext (tests, isolate de notifications).
 ErrorText errorTextFor(Locale locale, ApiError error, int status, {int? retryAfter, String? requestId}) {
   final ux = MobileDict.of(locale).ux;
+  final up = MobileUp.of(locale);
   final arabic = locale.isAr;
   final code = error.code;
   final serveur = arabic ? '' : stripSpecRefs(error.message);
@@ -81,6 +82,8 @@ ErrorText errorTextFor(Locale locale, ApiError error, int status, {int? retryAft
 
   switch (code) {
     case 'NETWORK':
+      // Coupure pendant un envoi de fichier : on rassure sur ce qui est déjà parti.
+      if (error.fields.containsKey('upload')) return t(up.networkTitle, up.network, ErrorAction.retry);
       return t(ux.errNetworkTitle, ux.errNetworkBody, ErrorAction.retry);
     case 'TIMEOUT':
       return t(ux.errTimeoutTitle, ux.errTimeoutBody, ErrorAction.retry);
@@ -111,6 +114,20 @@ ErrorText errorTextFor(Locale locale, ApiError error, int status, {int? retryAft
       return t(ux.errUnavailableTitle, ux.errUnavailableBody, ErrorAction.retry);
     case 'INTERNAL_ERROR':
       return t(ux.errInternalTitle, ux.errInternalBody, ErrorAction.retry);
+    // Envois de fichiers (upload.dart) — codes produits par l'appareil, avant ou pendant le PUT.
+    case 'TOO_LARGE':
+      return t(up.tooLargeTitle, fill(up.tooLarge, {'max': error.fields['max_mo'] ?? '50'}), ErrorAction.none);
+    case 'BAD_TYPE':
+      final body = switch (error.fields['kind']) {
+        'images' => up.badTypeImages,
+        'documents' => up.badTypeDocuments,
+        _ => up.badTypeImagesPdf,
+      };
+      return t(up.badTypeTitle, body, ErrorAction.none);
+    case 'STORAGE':
+      return t(up.storageTitle, up.storage, ErrorAction.retry);
+    case 'CANCELLED':
+      return t(up.cancelledTitle, up.cancelled, ErrorAction.retry);
   }
 
   // Codes métier (apps/api/lib/http/respond.ts).

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 
 import '../config/app_config.dart';
 import 'api_result.dart';
+import 'upload.dart' show PieceLocale, UploadProgress, UploadPutOutcome;
 
 /// Jetons & contexte tenant fournis par la session (core/auth).
 abstract class TokenSource {
@@ -232,22 +233,38 @@ class ApiClient {
   }
 
   /// Téléversement direct vers une URL signée Supabase Storage (documents, photos d'incident,
-  /// logo) — seule exception d'architecture autorisée (Master Spec 9.3, comme le web).
-  Future<bool> uploadSigned(String uploadUrl, List<int> bytes, String contentType) async {
+  /// pièces jointes) — seule exception d'architecture autorisée (Master Spec 9.3, comme le web).
+  /// Le fichier part EN FLUX (jamais lu en entier en mémoire), avec progression et annulation.
+  /// Pas d'en-tête d'authentification : l'URL signée porte son propre jeton.
+  /// Le contrôle type / taille a lieu AVANT (upload.dart, precheckUpload).
+  Future<UploadPutOutcome> putSignedFile(String uploadUrl, PieceLocale piece, int size, {UploadProgress? onProgress, CancelToken? cancelToken}) async {
     try {
-      final res = await Dio().put<dynamic>(
+      final res = await (_storageDio ??= Dio()).put<dynamic>(
         uploadUrl,
-        data: Stream.fromIterable([bytes]),
+        data: File(piece.chemin).openRead(),
+        cancelToken: cancelToken,
+        onSendProgress: onProgress,
         options: Options(
-          headers: {'Content-Type': contentType, 'x-upsert': 'true', 'Content-Length': bytes.length},
+          headers: {'Content-Type': piece.contentType, 'x-upsert': 'true', Headers.contentLengthHeader: size},
           validateStatus: (_) => true,
+          // Gros fichier sur un réseau mobile lent : délai d'envoi large, réponse courte.
+          sendTimeout: const Duration(minutes: 10),
+          receiveTimeout: const Duration(seconds: 60),
         ),
       );
-      return (res.statusCode ?? 500) < 300;
-    } catch (_) {
-      return false;
+      final status = res.statusCode ?? 0;
+      return status >= 200 && status < 300 ? const UploadPutOutcome.ok() : UploadPutOutcome.storage(status);
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) return const UploadPutOutcome.cancelled();
+      return const UploadPutOutcome.network();
+    } on SocketException {
+      return const UploadPutOutcome.network();
+    } on FileSystemException {
+      return const UploadPutOutcome.storage(0);
     }
   }
+
+  Dio? _storageDio;
 }
 
 /// `data` de liste → liste typée.

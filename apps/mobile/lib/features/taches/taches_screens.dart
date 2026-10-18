@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,7 +19,6 @@ import '../../core/widgets/widgets.dart';
 import '../../offline/local_db/database.dart';
 import '../../offline/sync_queue/taches_sync.dart';
 import '../documents/document_viewer_screen.dart';
-import '../lcd/lcd_sejour_screens.dart' show choisirPiece, PieceLocale;
 
 const _filtres = ['OUVERTES', 'RETARD', 'A_FAIRE', 'EN_COURS', 'BLOQUEE', 'TERMINEE', 'TOUTES'];
 
@@ -118,19 +115,18 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
 
   Future<void> _changerStatut(Tache x, bool syndic) async {
     final d = context.dict;
-    final res = await showFormSheet<({String statut, String? commentaire, PieceLocale? piece})>(context, title: d.taches.changerStatut, builder: (_) => _StatutSheet(tache: x, syndic: syndic));
+    // La photo éventuelle est envoyée DANS la feuille (progression, renvoi) : on reçoit son chemin.
+    final res = await showFormSheet<({String statut, String? commentaire, UploadOk? piece})>(context, title: d.taches.changerStatut, builder: (_) => _StatutSheet(tache: x, syndic: syndic));
     if (res == null || !mounted) return;
     final api = ref.read(apiClientProvider);
-    if (res.piece != null) {
+    final piece = res.piece;
+    if (piece != null) {
       // Une photo ne se met pas en file : envoi direct (réseau requis).
-      final prep = await api.post<Map<String, dynamic>>('/taches/upload-url', body: {'nom_fichier': res.piece!.nom, 'content_type': res.piece!.contentType}, parse: asMap);
-      if (prep is! ApiOk<Map<String, dynamic>>) { if (mounted) showApiError(context, (prep as ApiFail)); return; }
-      final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(res.piece!.chemin).readAsBytes(), res.piece!.contentType);
-      if (!ok) { if (mounted) showToast(context, d.common.errorTitle, error: true); return; }
       // Clé propre à cette intention (cette pièce, ce statut) : chaque nouvelle tentative de
       // l'utilisateur téléverse une nouvelle pièce, donc une nouvelle écriture.
-      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': {'storage_path': prep.data['storage_path'], 'nom': res.piece!.nom}}, idempotencyKey: IdemKeys.of('tache-statut:${x.id}:${prep.data['storage_path']}').value, parse: (j) => Tache.fromJson(asMap(j)));
-      IdemKeys.settle('tache-statut:${x.id}:${prep.data['storage_path']}', r);
+      final intention = 'tache-statut:${x.id}:${piece.storagePath}';
+      final r = await api.post<Tache>('/taches/${x.id}/statut', body: {'statut': res.statut, if (res.commentaire != null && res.commentaire!.isNotEmpty) 'commentaire': res.commentaire, 'piece_jointe': piece.asPiece}, idempotencyKey: IdemKeys.of(intention).value, parse: (j) => Tache.fromJson(asMap(j)));
+      IdemKeys.settle(intention, r);
       if (!mounted) return;
       if (r is ApiFail<Tache>) { showApiError(context, r); return; }
       showToast(context, d.taches.statutChange);
@@ -302,24 +298,52 @@ class _Commentaire extends StatelessWidget {
 
 Map<String, dynamic> _asMap(dynamic v) => v is Map ? v.cast<String, dynamic>() : const {};
 
-/// Feuille « changer le statut » — statut cible, commentaire, photo optionnelle (envoi direct).
-class _StatutSheet extends StatefulWidget {
+/// Feuille « changer le statut » — statut cible, commentaire, photo optionnelle envoyée ici
+/// avec progression (renvoi possible) ; la feuille se ferme une fois la photo au stockage.
+class _StatutSheet extends ConsumerStatefulWidget {
   const _StatutSheet({required this.tache, required this.syndic});
   final Tache tache;
   final bool syndic;
   @override
-  State<_StatutSheet> createState() => _StatutSheetState();
+  ConsumerState<_StatutSheet> createState() => _StatutSheetState();
 }
 
-class _StatutSheetState extends State<_StatutSheet> {
+class _StatutSheetState extends ConsumerState<_StatutSheet> {
   late String _statut;
   final _commentaire = TextEditingController();
-  PieceLocale? _piece;
+  late final UploadQueue _piece = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.taches, max: 1);
+  bool _envoi = false;
+  ApiFail? _fail;
   @override
   void initState() {
     super.initState();
     final cibles = _cibles();
     _statut = widget.tache.statut == 'EN_COURS' && cibles.contains('TERMINEE') ? 'TERMINEE' : cibles.first;
+  }
+
+  @override
+  void dispose() {
+    _piece.dispose();
+    _commentaire.dispose();
+    super.dispose();
+  }
+
+  Future<void> _valider() async {
+    setState(() {
+      _envoi = true;
+      _fail = null;
+    });
+    final echec = await _piece.sendAll();
+    if (!mounted) return;
+    if (echec != null) {
+      setState(() {
+        _envoi = false;
+        _fail = echec.code == UploadError.cancelled ? null : echec.toApiFail();
+      });
+      return;
+    }
+    final piece = _piece.isEmpty ? null : UploadOk(_piece.paths.first, _piece.slots.first.piece.nom);
+    Navigator.pop(context, (statut: _statut, commentaire: _commentaire.text.trim().isEmpty ? null : _commentaire.text.trim(), piece: piece));
   }
   List<String> _cibles() => ['A_FAIRE', 'EN_COURS', 'BLOQUEE', 'TERMINEE', 'ANNULEE'].where((s) => s != widget.tache.statut && (widget.syndic || s != 'ANNULEE')).toList();
   @override
@@ -332,14 +356,22 @@ class _StatutSheetState extends State<_StatutSheet> {
       const SizedBox(height: 12),
       SuField(label: t.commentaireStatut, controller: _commentaire, maxLines: 3, maxLength: 4000, optionalLabel: d.common.optional),
       const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: Text(_piece?.nom ?? t.photo, style: Theme.of(context).textTheme.bodyMedium, overflow: TextOverflow.ellipsis)),
-        SuButton(variant: SuButtonVariant.ghost, onPressed: () async { final p = await choisirPiece(context); if (p != null) setState(() => _piece = p); }, icon: Icons.add_a_photo_outlined, label: d.common.add),
-        if (_piece != null) SuIconButton(onPressed: () => setState(() => _piece = null), icon: Icons.close_rounded, iconSize: 18),
-      ]),
+      Text(t.photo, style: Theme.of(context).textTheme.bodyMedium),
+      SuUploadList(
+        queue: _piece,
+        enabled: !_envoi,
+        addLabel: d.common.add,
+        onAdd: () async {
+          final p = await choisirPiece(context, target: UploadTarget.taches);
+          if (p == null || !mounted) return;
+          _piece.replace(p);
+        },
+      ),
       if (widget.tache.recurrenceFrequence != null && _statut == 'TERMINEE') Padding(padding: const EdgeInsets.only(top: 4), child: Text(t.recurrenceAide, style: Theme.of(context).textTheme.bodySmall)),
       const SizedBox(height: 12),
-      SubmitButton(label: t.changerStatut, danger: _statut == 'ANNULEE', onPressed: () => Navigator.pop(context, (statut: _statut, commentaire: _commentaire.text.trim().isEmpty ? null : _commentaire.text.trim(), piece: _piece))),
+      FormError(_fail),
+      if (_fail != null) const SizedBox(height: 12),
+      SubmitButton(label: t.changerStatut, danger: _statut == 'ANNULEE', loading: _envoi, fail: _fail, onPressed: _envoi ? null : _valider),
     ]);
   }
 }

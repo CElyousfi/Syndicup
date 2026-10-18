@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,7 +18,6 @@ import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
 import '../../core/widgets/widgets.dart';
 import '../documents/document_viewer_screen.dart';
-import '../lcd/lcd_sejour_screens.dart' show PieceLocale, choisirPiece;
 
 /// M16 Dépenses (Doc A §3, §8) — mobile : liste et détail (syndic, conseil), approbation /
 /// rejet du conseil (push → décision avec motif), paiement par le syndic avec photo du reçu,
@@ -425,13 +422,34 @@ class _PaiementForm extends ConsumerStatefulWidget {
 }
 
 class _PaiementFormState extends ConsumerState<_PaiementForm> {
-  final _key = const Uuid().v4();
+  final _key = IdemKey();
   String _methode = 'VIREMENT';
   final _reference = TextEditingController();
   DateTime _date = DateTime.now();
-  PieceLocale? _piece;
+
+  /// Justificatif (photo ou PDF) : envoyé une seule fois, même si l'enregistrement du paiement
+  /// est rejoué (« Réessayer » après une coupure).
+  late final UploadQueue _piece = UploadQueue.forApi(ref.read(apiClientProvider), UploadTarget.depenses, max: 1);
   bool _loading = false;
   ApiFail? _fail;
+
+  @override
+  void initState() {
+    super.initState();
+    _piece.addListener(_redessiner);
+  }
+
+  void _redessiner() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _piece
+      ..removeListener(_redessiner)
+      ..dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -439,6 +457,7 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
     final l = context.locale;
     final x = widget.depense;
     final referenceRequise = _methode != 'ESPECES';
+    final manque = [if (referenceRequise && _reference.text.trim().isEmpty) d.depenses.reference];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -465,20 +484,17 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
         Text(d.depenses.justificatif, style: Theme.of(context).textTheme.labelMedium?.copyWith(color: SuColors.ink)),
         const SizedBox(height: 4),
         Text(d.depenses.justificatifAide, style: Theme.of(context).textTheme.bodySmall),
-        const SizedBox(height: 8),
-        Wrap(spacing: 8, runSpacing: 8, children: [
-          if (_piece != null)
-            Chip(avatar: Icon(_piece!.estImage ? Icons.image_rounded : Icons.picture_as_pdf_rounded, size: 16, color: SuColors.link), label: Text(_piece!.nom, overflow: TextOverflow.ellipsis), onDeleted: () => setState(() => _piece = null))
-          else
-            ActionChip(
-              avatar: const Icon(Icons.add_a_photo_rounded, size: 16, color: SuColors.link),
-              label: Text(d.depenses.prendrePhoto),
-              onPressed: () async {
-                final p = await choisirPiece(context);
-                if (p != null) setState(() => _piece = p);
-              },
-            ),
-        ]),
+        const SizedBox(height: 4),
+        SuUploadList(
+          queue: _piece,
+          enabled: !_loading,
+          addLabel: d.depenses.prendrePhoto,
+          onAdd: () async {
+            final p = await choisirPiece(context, target: UploadTarget.depenses);
+            if (p == null || !mounted) return;
+            _piece.replace(p);
+          },
+        ),
         const SizedBox(height: 14),
         FormError(_fail),
         if (_fail != null) const SizedBox(height: 12),
@@ -487,54 +503,52 @@ class _PaiementFormState extends ConsumerState<_PaiementForm> {
           loading: _loading,
           fail: _fail,
           icon: Icons.check_rounded,
-          onPressed: referenceRequise && _reference.text.trim().isEmpty
-              ? null
-              : () async {
-                  setState(() {
-                    _loading = true;
-                    _fail = null;
-                  });
-                  final api = ref.read(apiClientProvider);
-                  Map<String, String>? justificatif;
-                  if (_piece != null) {
-                    justificatif = await televerserPieceDepense(api, _piece!);
-                    if (justificatif == null) {
-                      if (!mounted) return;
-                      setState(() => _loading = false);
-                      showToast(context, context.mdict.viewerError, error: true);
-                      return;
-                    }
-                  }
-                  final r = await api.post<Depense>('/depenses/${x.id}/payer', body: {'methode': _methode, 'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(), 'date_paiement': jourIso(_date), 'justificatif': justificatif}, idempotencyKey: _key, parse: (j) => Depense.fromJson(asMap(j)));
-                  if (!mounted) return;
-                  switch (r) {
-                    case ApiOk<Depense>():
-                      widget.onDone();
-                      // Paiement enregistré → succès plein écran Wise.
-                      final racine = Navigator.of(this.context, rootNavigator: true).context;
-                      Navigator.pop(context);
-                      if (!racine.mounted) return;
-                      showSuccess(racine, title: d.depenses.payee, body: x.source == 'FONDS_RESERVE' ? '${x.libelle} · ${formatMAD(x.montantTtc, l)}\n${d.depenses.payeeReserve}' : '${x.libelle} · ${formatMAD(x.montantTtc, l)}', illustration: 'ok-paiement', moment: SuMomentKind.justified);
-                    case ApiFail<Depense>():
-                      setState(() {
-                        _loading = false;
-                        _fail = r;
-                      });
-                  }
-                },
+          missing: manque,
+          onPressed: manque.isNotEmpty || _piece.busy ? null : _payer,
         ),
       ],
     );
   }
-}
 
-/// URL signée → PUT direct → `{ storage_path, nom }` prêt pour l'API ; null si échec.
-Future<Map<String, String>?> televerserPieceDepense(ApiClient api, PieceLocale p) async {
-  final prep = await api.post<Map<String, dynamic>>('/depenses/upload-url', body: {'nom_fichier': p.nom, 'content_type': p.contentType}, parse: asMap);
-  if (prep is! ApiOk<Map<String, dynamic>>) return null;
-  final ok = await api.uploadSigned(prep.data['upload_url'] as String, await File(p.chemin).readAsBytes(), p.contentType);
-  if (!ok) return null;
-  return {'storage_path': prep.data['storage_path'] as String, 'nom': p.nom};
+  Future<void> _payer() async {
+    final d = context.dict;
+    final l = context.locale;
+    final x = widget.depense;
+    setState(() {
+      _loading = true;
+      _fail = null;
+    });
+    final api = ref.read(apiClientProvider);
+    // Seul un justificatif pas encore envoyé part : un nouvel essai réutilise le chemin connu.
+    final echec = await _piece.sendAll();
+    if (!mounted) return;
+    if (echec != null) {
+      setState(() {
+        _loading = false;
+        _fail = echec.code == UploadError.cancelled ? null : echec.toApiFail();
+      });
+      return;
+    }
+    final justificatif = _piece.isEmpty ? null : {'storage_path': _piece.paths.first, 'nom': _piece.slots.first.piece.nom};
+    final body = {'methode': _methode, 'reference': _reference.text.trim().isEmpty ? null : _reference.text.trim(), 'date_paiement': jourIso(_date), 'justificatif': justificatif};
+    final r = await api.post<Depense>('/depenses/${x.id}/payer', body: body, idempotencyKey: _key.forPayload(body), parse: (j) => Depense.fromJson(asMap(j)));
+    _key.settle(r);
+    if (!mounted) return;
+    switch (r) {
+      case ApiOk<Depense>():
+        widget.onDone();
+        // Paiement enregistré → succès plein écran Wise.
+        final racine = Navigator.of(context, rootNavigator: true).context;
+        Navigator.pop(context);
+        if (!racine.mounted) return;
+        showSuccess(racine, title: d.depenses.payee, body: x.source == 'FONDS_RESERVE' ? '${x.libelle} · ${formatMAD(x.montantTtc, l)}\n${d.depenses.payeeReserve}' : '${x.libelle} · ${formatMAD(x.montantTtc, l)}', illustration: 'ok-paiement', moment: SuMomentKind.justified);
+      case ApiFail<Depense>():
+        setState(() {
+          _loading = false;
+          _fail = r;
+        });
+    }
+  }
 }
 
 /// Feuille « motif » générique (annulation) — renvoie la saisie (vide autorisé si non requis).

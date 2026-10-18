@@ -1,11 +1,8 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../core/api/api_client.dart';
 import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
@@ -177,6 +174,9 @@ class _PhotosSection extends ConsumerStatefulWidget {
 class _PhotosSectionState extends ConsumerState<_PhotosSection> {
   String? _enCours;
 
+  /// Progression de l'envoi de la photo en cours (0 → 1).
+  double _progres = 0;
+
   Map<String, String> get _photos => {for (final e in (widget.copro.photosJson ?? const {}).entries) if (e.value is String) e.key: e.value as String};
 
   Future<void> _patch(Map<String, String> photos) async {
@@ -195,25 +195,24 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
   Future<void> _changer(String cle) async {
     final f = await ImagePicker().pickImage(source: ImageSource.gallery, maxWidth: 2000, imageQuality: 85);
     if (f == null || !mounted) return;
-    setState(() => _enCours = cle);
-    final api = ref.read(apiClientProvider);
-    final contentType = f.mimeType ?? (f.path.toLowerCase().endsWith('.png') ? 'image/png' : f.path.toLowerCase().endsWith('.webp') ? 'image/webp' : 'image/jpeg');
-    final prep = await api.post<Map<String, dynamic>>('/coproprietes/${widget.copro.id}/photos/upload-url', body: {'cle': cle, 'nom_fichier': f.name, 'content_type': contentType}, parse: asMap);
+    final target = UploadTarget.photoCopro(widget.copro.id, cle);
+    // Contrôle avant tout envoi : JPEG / PNG / WebP, 5 Mo (comme le web).
+    final piece = await pieceControlee(context, PieceLocale(nom: f.name, chemin: f.path, contentType: contentTypeFor(f.name, mime: f.mimeType)), target);
+    if (piece == null || !mounted) return;
+    setState(() {
+      _enCours = cle;
+      _progres = 0;
+    });
+    final r = await uploadWithProgress(ref.read(apiClientProvider), piece, target, onProgress: (sent, total) {
+      if (mounted && total > 0) setState(() => _progres = sent / total);
+    });
     if (!mounted) return;
-    if (prep is ApiFail<Map<String, dynamic>>) {
+    if (r is UploadFailed) {
       setState(() => _enCours = null);
-      showApiError(context, prep);
+      showApiError(context, r.toApiFail());
       return;
     }
-    final pr = (prep as ApiOk<Map<String, dynamic>>).data;
-    final ok = await api.uploadSigned(pr['upload_url'] as String, await File(f.path).readAsBytes(), contentType);
-    if (!mounted) return;
-    if (!ok) {
-      setState(() => _enCours = null);
-      showToast(context, context.mdict.networkError, error: true);
-      return;
-    }
-    await _patch({..._photos, cle: pr['storage_path'] as String});
+    await _patch({..._photos, cle: (r as UploadOk).storagePath});
     if (!mounted) return;
     setState(() => _enCours = null);
     showToast(context, context.dict.parametres.photoMiseAJour);
@@ -264,7 +263,18 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(borderRadius: BorderRadius.circular(16), child: SizedBox(width: 104, height: 72, child: CoproPhoto(cle, fallbackCle: fallbackCle))),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SizedBox(
+                  width: 104,
+                  height: 72,
+                  child: Stack(fit: StackFit.expand, children: [
+                    CoproPhoto(cle, fallbackCle: fallbackCle),
+                    // Envoi en cours : anneau de progression sur la vignette.
+                    if (busy) ColoredBox(color: SuColors.ink.withValues(alpha: 0.4), child: Center(child: SuRing(_progres, size: 40, stroke: 4, color: SuColors.surface, track: SuColors.surface.withValues(alpha: 0.3)))),
+                  ]),
+                ),
+              ),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
