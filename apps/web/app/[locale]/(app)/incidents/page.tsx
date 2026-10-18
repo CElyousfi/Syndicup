@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getAppContext } from "../../../../lib/app-context";
 import { apiFetch } from "../../../../lib/api/client";
 import type { CategorieIncident, Incident, Prestataire, StatutIncident } from "../../../../lib/api/types";
-import { getDict, isLocale } from "../../../../lib/i18n";
+import { fill, getDict, isLocale } from "../../../../lib/i18n";
 import { formatDateHeure } from "../../../../lib/format";
 import { PageHeader } from "../../../../components/page-header";
 import { Badge } from "../../../../components/ui/badge";
@@ -21,6 +21,8 @@ import { ExportButtons } from "../../../../components/ui/export-buttons";
 import { LiveList } from "../../../../components/ui/live-list";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
+import { collectPages, compteHonnete } from "../../../../lib/api/collect";
+import { Banner } from "../../../../components/ui/banner";
 
 export async function generateMetadata({
   params,
@@ -50,29 +52,44 @@ export default async function IncidentsPage({
   const peutSignaler = !prestataire;
 
   const page = Math.max(1, Number(sp.page) || 1);
+  // GET /incidents n'accepte que page + limit (aucun filtre statut / urgence / catégorie côté
+  // API) : filtres et compteurs portent sur les 500 signalements les plus récents, lus en
+  // pages de 100 — jamais sur la seule page affichée. Au-delà, les compteurs disent « n+ ».
   const [incidentsRes, prestatairesRes] = await Promise.all([
-    apiFetch<Incident[]>("/incidents", { searchParams: { page, limit: 50 } }),
+    collectPages<Incident>("/incidents", { limit: 100, maxPages: 5 }),
     gestion && ctx.role !== "GARDIEN"
       ? apiFetch<Prestataire[]>("/prestataires")
       : Promise.resolve(null),
   ]);
-  const tous = incidentsRes.ok ? incidentsRes.data : [];
-  const incidents = tous.filter((inc) => {
+  const tous = incidentsRes.ok ? incidentsRes.data.rows : [];
+  const complet = incidentsRes.ok ? incidentsRes.data.complete : true;
+  const filtre = Boolean(sp.statut || sp.urgence || sp.categorie);
+  const filtres = tous.filter((inc) => {
     if (sp.statut && inc.statut !== sp.statut) return false;
     if (sp.urgence && inc.urgence !== sp.urgence) return false;
     if (sp.categorie && inc.categorie !== sp.categorie) return false;
     return true;
   });
+  // Pagination des résultats filtrés (50 par page).
+  const PAR_PAGE = 50;
+  const incidents = filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
+  const metaPage = {
+    request_id: "",
+    page,
+    has_more: page * PAR_PAGE < filtres.length,
+    total: complet ? filtres.length : undefined,
+  };
   const prestataireParId = new Map(
     (prestatairesRes?.ok ? prestatairesRes.data : []).map((p) => [p.id, p.nom])
   );
 
-  // Indicateurs dérivés de la page déjà chargée — aucune requête supplémentaire.
+  // Indicateurs sur toutes les lignes lues (pas seulement la page affichée).
   const ouverts = tous.filter((x) => x.statut === "OUVERT" || x.statut === "EN_COURS");
   const slaDepassesNb = ouverts.filter(
     (x) => x.slaDeadline && new Date(x.slaDeadline).getTime() < Date.now()
   ).length;
   const resolusNb = tous.filter((x) => x.statut === "RESOLU" || x.statut === "FERME").length;
+  const compte = (n: number) => compteHonnete(n, complet, dict.formulaires.filtres.auMoins);
 
   const p = (path: string) => `/${locale}${path}`;
   const titre = prestataire ? i.mesTickets : gestion ? i.titre : i.mesSignalements;
@@ -100,23 +117,24 @@ export default async function IncidentsPage({
             icon={<CWrench />}
             tone="tosca"
             label={dict.dash.incidentsOuverts}
-            value={ouverts.length}
+            value={compte(ouverts.length)}
           />
           <StatCard
             icon={<CAlert />}
             tone="danger"
             label={i.slaDepasse}
-            value={slaDepassesNb}
+            value={compte(slaDepassesNb)}
             trendTone={slaDepassesNb > 0 ? "danger" : "ok"}
           />
           <StatCard
             icon={<CShield />}
             tone="ok"
             label={dict.enums.statutIncident.RESOLU}
-            value={resolusNb}
+            value={compte(resolusNb)}
           />
         </div>
       ) : null}
+      {!complet ? <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner> : null}
 
       <form className="filters mb-4 flex flex-wrap items-center gap-2" method="GET">
         <Select name="statut" defaultValue={sp.statut ?? ""} className="h-10 w-full sm:w-44">
@@ -154,11 +172,18 @@ export default async function IncidentsPage({
         </Button>
       </form>
 
-      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 ? (
+      {!incidentsRes.ok ? <LoadError error={failureOf(incidentsRes)} locale={ctx.locale} /> : incidents.length === 0 && filtre && tous.length > 0 ? (
+        <EmptyState
+          title={dict.formulaires.filtres.aucunResultat}
+          hint={dict.formulaires.filtres.aucunResultatAide}
+          illustration="empty-search"
+          action={<ButtonLink href={p("/incidents")} variant="secondary">{dict.formulaires.filtres.effacer}</ButtonLink>}
+        />
+      ) : incidents.length === 0 ? (
         <EmptyState
           title={i.aucunIncident}
           hint={gestion ? i.aucunIncidentAide : undefined}
-          illustration={tous.length > 0 ? "empty-search" : "empty-incidents"}
+          illustration="empty-incidents"
           action={
             peutSignaler ? (
               <ButtonLink href={p("/incidents/nouveau")}>
@@ -253,7 +278,7 @@ export default async function IncidentsPage({
           </TableCard>
           {incidentsRes.ok ? (
             <Pagination
-              meta={incidentsRes.meta}
+              meta={metaPage}
               basePath={p("/incidents")}
               searchParams={{ statut: sp.statut, urgence: sp.urgence, categorie: sp.categorie }}
               dict={dict}

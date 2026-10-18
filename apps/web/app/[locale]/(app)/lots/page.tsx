@@ -32,6 +32,8 @@ import { Amount } from "../../../../components/ui/amount";
 import { LiveList } from "../../../../components/ui/live-list";
 import { LoadError } from "../../../../components/ui/load-error";
 import { failureOf } from "../../../../lib/api/unwrap";
+import { collectPages } from "../../../../lib/api/collect";
+import { Banner } from "../../../../components/ui/banner";
 
 /** Glyphe couleur par famille de lot — habitat vs bâtiment/annexe. */
 const LOTS_HABITAT = ["APPARTEMENT", "VILLA", "LOGE_GARDIEN"];
@@ -50,7 +52,7 @@ export default async function LotsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ page?: string; q?: string; type?: string; statut?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; type?: string; statut?: string; supprime?: string }>;
 }) {
   const { locale } = await params;
   const sp = await searchParams;
@@ -61,11 +63,18 @@ export default async function LotsPage({
   const estResident = !voitSolde && !ctx.roles.includes("GARDIEN");
 
   const page = Math.max(1, Number(sp.page) || 1);
-  const res = await apiFetch<Lot[]>("/lots", { searchParams: { page, limit: 50 } });
-  const tous = res.ok ? res.data : [];
+  const PAR_PAGE = 50;
+  // GET /lots n'accepte que page + limit : un filtre (recherche, type, statut) appliqué à la
+  // seule page 1 cachait des lots. Filtre actif → lecture des 500 premiers lots (pages de 100)
+  // puis pagination des résultats ; au-delà, l'écran le dit (aucun résultat inventé).
+  const filtre = Boolean(sp.q || sp.type || sp.statut);
+  const res = await apiFetch<Lot[]>("/lots", { searchParams: { page: filtre ? 1 : page, limit: filtre ? 1 : PAR_PAGE } });
+  const collecte = filtre ? await collectPages<Lot>("/lots", { limit: 100, maxPages: 5 }) : null;
+  const tous = collecte ? (collecte.ok ? collecte.data.rows : []) : res.ok ? res.data : [];
+  const complet = collecte ? collecte.ok && collecte.data.complete : true;
 
   const q = (sp.q ?? "").toLowerCase();
-  const lots = tous.filter((l) => {
+  const filtres = tous.filter((l) => {
     if (sp.type && l.typeLot !== sp.type) return false;
     if (sp.statut && l.statut !== sp.statut) return false;
     if (q) {
@@ -77,6 +86,13 @@ export default async function LotsPage({
     }
     return true;
   });
+  const lots = filtre ? filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE) : filtres;
+  const metaPage = filtre
+    ? { request_id: "", page, has_more: page * PAR_PAGE < filtres.length, total: complet ? filtres.length : undefined }
+    : res.ok
+      ? res.meta
+      : { request_id: "" };
+  const chargementKo = collecte && !collecte.ok ? collecte : !res.ok ? res : null;
 
   // Solde par lot en un appel (synthèse financière, RLS appliquée côté API).
   // Synthèse en échec : soldes « — » ligne par ligne et total indisponible (jamais « 0 — Payé »).
@@ -93,6 +109,7 @@ export default async function LotsPage({
 
   return (
     <div className="page-root">
+      {sp.supprime === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.lotSupprime}</Banner> : null}
       <PageHeader
         title={estResident ? dict.lots.mesLots : dict.lots.title}
         subtitle={
@@ -186,15 +203,26 @@ export default async function LotsPage({
         </form>
       ) : null}
 
-      {!res.ok ? (
-        <LoadError error={failureOf(res)} locale={ctx.locale} />
+      {filtre && !complet && collecte?.ok ? (
+        <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner>
+      ) : null}
+
+      {chargementKo ? (
+        <LoadError error={failureOf(chargementKo)} locale={ctx.locale} />
+      ) : lots.length === 0 && filtre ? (
+        <EmptyState
+          title={dict.formulaires.filtres.aucunResultat}
+          hint={dict.formulaires.filtres.aucunResultatAide}
+          illustration="empty-search"
+          action={<ButtonLink href={p("/lots")} variant="secondary" size="sm">{dict.formulaires.filtres.effacer}</ButtonLink>}
+        />
       ) : lots.length === 0 ? (
         <EmptyState
           title={dict.lots.aucunLot}
-          hint={gestion && tous.length === 0 ? dict.lots.aucunLotAide : undefined}
-          illustration={tous.length > 0 ? "empty-search" : "empty-lots"}
+          hint={gestion ? dict.lots.aucunLotAide : undefined}
+          illustration="empty-lots"
           action={
-            gestion && tous.length === 0 ? (
+            gestion ? (
               <ButtonLink href={p("/lots/nouveau")} size="sm">
                 {dict.lots.nouveau}
               </ButtonLink>
@@ -289,7 +317,7 @@ export default async function LotsPage({
           </TableCard>
           {res.ok ? (
             <Pagination
-              meta={res.meta}
+              meta={metaPage}
               basePath={p("/lots")}
               searchParams={{ q: sp.q, type: sp.type, statut: sp.statut }}
               dict={dict}

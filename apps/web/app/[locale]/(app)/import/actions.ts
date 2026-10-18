@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, fileTooLarge, uploadRefused, localError } from "../../../../lib/forms-server";
+import { fromApiError, fileTooLarge, uploadRefused, localError, succes } from "../../../../lib/forms-server";
 import type { DemoCopropriete, ImportJob } from "../../../../lib/api/types";
 
 const BASE = "/import";
@@ -59,7 +59,7 @@ export async function annulerImport(_prev: FormState, fd: FormData): Promise<For
   const res = await apiFetch<ImportJob>(`/import/${id}/annuler`, { method: "POST" });
   if (!res.ok) return fromApiError(res, fd);
   revalider(locale, `${BASE}/${id}`);
-  return success();
+  return succes((d) => d.importation.annule);
 }
 
 /** Progression (appelée par le client toutes les 2 s pendant l'exécution). */

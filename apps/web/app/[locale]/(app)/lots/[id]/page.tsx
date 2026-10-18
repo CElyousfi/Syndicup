@@ -87,7 +87,7 @@ export default async function LotDetailPage({
   searchParams,
 }: {
   params: Promise<{ locale: string; id: string }>;
-  searchParams: Promise<{ onglet?: string }>;
+  searchParams: Promise<{ onglet?: string; cree?: string; maj?: string }>;
 }) {
   const { locale, id } = await params;
   const sp = await searchParams;
@@ -144,6 +144,7 @@ export default async function LotDetailPage({
 
   return (
     <div className="page-root">
+      {sp.cree === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.lotCree}</Banner> : sp.maj === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.lotModifie}</Banner> : null}
       <PageHeader
         back={<BackLink href={p("/lots")} label={dict.nav.lots} />}
         title={`${dict.enums.typeLot[lot.typeLot]} ${lot.numero}`}

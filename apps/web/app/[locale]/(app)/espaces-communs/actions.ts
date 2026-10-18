@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError } from "../../../../lib/forms-server";
+import { fromApiError, succes } from "../../../../lib/forms-server";
 import type { EspaceCommun, Reservation } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -64,7 +64,7 @@ export async function validerReservation(_prev: FormState, fd: FormData): Promis
   );
   if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/reservations`);
-  return success();
+  return succes((d) => d.espaces.reservationValidee);
 }
 
 export async function rejeterReservation(_prev: FormState, fd: FormData): Promise<FormState> {

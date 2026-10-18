@@ -21,8 +21,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   return { title: getDict(isLocale(locale) ? locale : "fr").importation.titre };
 }
-export default async function ImportDetailPage({ params }: { params: Promise<{ locale: string; id: string }> }) {
+export default async function ImportDetailPage({ params, searchParams }: { params: Promise<{ locale: string; id: string }>; searchParams: Promise<{ cree?: string }> }) {
   const { locale, id } = await params;
+  const sp = await searchParams;
   const ctx = await getAppContext(locale);
   exigerRole(ctx, ["SYNDIC", "SUPER_ADMIN", "CONSEIL_SYNDICAL", "SYNDIC_COMPTABLE"]);
   const { dict } = ctx;
@@ -39,6 +40,7 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
 
   return (
     <div className="page-root">
+      {sp.cree === "1" ? <Banner variant="ok" className="mb-4">{dict.formulaires.succes.importTeleverse}</Banner> : null}
       <PageHeader
         back={<BackLink href={`/${locale}/import?onglet=imports`} label={t.titre} />}
         title={j.nomFichier}

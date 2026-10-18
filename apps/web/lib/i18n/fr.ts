@@ -2818,6 +2818,8 @@ export const fr = {
       agAnnulee: "Assemblée annulée.",
       lotCree: "Lot créé.",
       lotModifie: "Lot modifié.",
+      lotSupprime: "Lot supprimé.",
+      importTeleverse: "Fichier importé — vérifiez la correspondance des colonnes, puis lancez l'import.",
       depenseModifiee: "Dépense modifiée.",
       contratModifie: "Contrat modifié.",
       importLance: "Import lancé.",

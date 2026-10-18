@@ -129,7 +129,7 @@ export function ExecutionPanel({ dict, locale, job }: { dict: Dict; locale: Loca
     }, 2000);
     return () => clearInterval(timer);
   }, [enCours, job.id, router]);
-  useEffect(() => { if (state.status === "success" || annul.status === "success") router.refresh(); }, [state.status, annul.status, router]);
+  useEffect(() => { if (state.status === "success" || annul.status === "success") router.refresh(); if (annul.status === "success") setConfirm(false); }, [state.status, annul.status, router]);
   const ratio = live.nbLignes > 0 ? live.nbTraitees / live.nbLignes : 0;
   return (
     <div className="space-y-3">
