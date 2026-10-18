@@ -248,14 +248,13 @@ class AppTheme {
 }
 
 class _RoundGlyph extends StatelessWidget {
-  const _RoundGlyph(this.icon, {this.mirror = false});
+  const _RoundGlyph(this.icon);
   final IconData icon;
-  final bool mirror;
   @override
   Widget build(BuildContext context) {
-    Widget g = Icon(icon, size: 22, color: SuColors.link);
-    // Une icône `matchTextDirection` (arrow_back_rounded) se retourne déjà seule en RTL.
-    if (mirror && !icon.matchTextDirection && Directionality.of(context) == TextDirection.rtl) g = Transform.flip(flipX: true, child: g);
+    // Icône `matchTextDirection` (arrow_back_rounded) : elle se retourne seule en RTL —
+    // aucun retournement manuel ici (il la remettait à l'endroit en arabe).
+    final g = Icon(icon, size: 22, color: SuColors.link);
     return Container(width: 42, height: 42, decoration: const BoxDecoration(color: SuColors.tile, shape: BoxShape.circle), alignment: Alignment.center, child: g);
   }
 }
