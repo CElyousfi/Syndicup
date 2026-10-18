@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
@@ -36,6 +35,7 @@ import { LiveList } from "../../../../../components/ui/live-list";
 import { Figure } from "../../../../../components/ui/amount";
 import { LoadError } from "../../../../../components/ui/load-error";
 import { failureOf } from "../../../../../lib/api/unwrap";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export default async function AgDetailPage({
   params,
@@ -50,7 +50,7 @@ export default async function AgDetailPage({
   const a = dict.ag;
 
   const agRes = await apiFetch<AssembleeGenerale>(`/ag/${id}`);
-  if (!agRes.ok) notFound();
+  if (!agRes.ok) return failWith(agRes, ctx.locale);
   const ag = agRes.data;
   const resolutions = ag.resolutions ?? [];
 

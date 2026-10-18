@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { JustificatifDetail } from "../../../../../../lib/api/types";
@@ -16,6 +15,7 @@ import { ValiderModal, RejeterModal, AnnulerBouton } from "../justificatif-modal
 import { Amount } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
 import { FadeImg } from "../../../../../../components/ui/motion/fade-img";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -30,7 +30,7 @@ export default async function JustificatifDetailPage({ params }: { params: Promi
   const e = dict.enumsJustificatifs;
   const syndic = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<JustificatifDetail>(`/finances/justificatifs/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const retour = syndic || ctx.roles.includes("CONSEIL_SYNDICAL") ? "/finances/justificatifs" : ctx.roles.includes("GARDIEN") ? "/finances/especes" : "/finances/payer";
   const viewer = { see: dict.common.see, close: dict.common.close, download: dict.common.download };

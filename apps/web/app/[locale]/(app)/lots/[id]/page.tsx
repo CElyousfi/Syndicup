@@ -1,9 +1,9 @@
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
 import type { AppelDeFonds, Lot, SoldeLot } from "../../../../../lib/api/types";
-import { contexteLignes, getSynthese } from "../../../../../lib/finances-data";
+import { contexteLignes, getSynthese, SYNTHESE_VIDE } from "../../../../../lib/finances-data";
+import { dataOr, failureOf } from "../../../../../lib/api/unwrap";
 import {
   formatDate,
   formatEntier,
@@ -33,6 +33,8 @@ import { LotLcdCard } from "../../../../../components/lcd/lot-lcd-card";
 import { LotParkingsSection } from "./lot-parkings";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { LoadError } from "../../../../../components/ui/load-error";
+import { orFail } from "../../../../../lib/api/or-fail";
 
 type Onglet = "propriete" | "occupation" | "finances" | "historique" | "parkings";
 
@@ -93,12 +95,14 @@ export default async function LotDetailPage({
   const { dict } = ctx;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
 
-  const lotRes = await apiFetch<Lot>(`/lots/${id}`);
-  if (!lotRes.ok) notFound();
-  const lot = lotRes.data;
+  const lot = await orFail(await apiFetch<Lot>(`/lots/${id}`), ctx.locale);
 
   const soldeRes = await apiFetch<SoldeLot>(`/finances/lots/${id}/solde`);
-  const voitFinances = soldeRes.ok;
+  // 403/404 : ce rôle ne voit pas les finances du lot (onglet absent). Toute AUTRE erreur :
+  // l'onglet reste, avec « Solde indisponible — Réessayer » — jamais un silence.
+  const soldeRefuse = !soldeRes.ok && (soldeRes.status === 403 || soldeRes.status === 404);
+  const soldeErreur = !soldeRes.ok && !soldeRefuse ? failureOf(soldeRes) : null;
+  const voitFinances = soldeRes.ok || soldeErreur !== null;
 
   const onglets: Onglet[] = voitFinances
     ? ["propriete", "occupation", "finances", "parkings", "historique"]
@@ -122,7 +126,7 @@ export default async function LotDetailPage({
   // Contexte des lignes financières (période, type, escalade) — un appel de synthèse partagé.
   const contextLignes =
     ongletActif === "finances" && voitFinances
-      ? contexteLignes(await getSynthese())
+      ? contexteLignes(dataOr(await getSynthese(), SYNTHESE_VIDE))
       : new Map<string, { periode: string; type: AppelDeFonds["type"]; escalade: string; lotId: string }>();
 
   const p = (path: string) => `/${locale}${path}`;
@@ -189,7 +193,7 @@ export default async function LotDetailPage({
           </div>
         </div>
 
-        <dl className={`mt-5 grid grid-cols-2 gap-3 sm:mt-6 ${soldeDu !== null ? "sm:grid-cols-3" : ""}`}>
+        <dl className={`mt-5 grid grid-cols-2 gap-3 sm:mt-6 ${soldeDu !== null || soldeErreur ? "sm:grid-cols-3" : ""}`}>
           <div className="min-w-0 rounded-[20px] bg-surface p-4 sm:p-5">
             <dt className="text-[13px] font-medium text-soft">{dict.lots.tantiemes}</dt>
             <dd className="mt-1.5 flex items-baseline gap-1.5">
@@ -197,7 +201,7 @@ export default async function LotDetailPage({
               {totalTantiemes ? <span className="tnum text-[13px] text-soft">/ {formatEntier(totalTantiemes)}</span> : null}
             </dd>
           </div>
-          <div className={`min-w-0 rounded-[20px] bg-surface p-4 sm:p-5 ${soldeDu !== null ? "order-last col-span-2 sm:order-none sm:col-span-1" : ""}`}>
+          <div className={`min-w-0 rounded-[20px] bg-surface p-4 sm:p-5 ${soldeDu !== null || soldeErreur ? "order-last col-span-2 sm:order-none sm:col-span-1" : ""}`}>
             <dt className="text-[13px] font-medium text-soft">{dict.lots.proprietaire}</dt>
             <dd className="mt-1.5 flex min-w-0 items-center gap-2.5">
               {proprioPrincipal ? (
@@ -217,11 +221,13 @@ export default async function LotDetailPage({
               )}
             </dd>
           </div>
-          {soldeDu !== null ? (
+          {soldeDu !== null || soldeErreur ? (
             <div className="min-w-0 rounded-[20px] bg-surface p-4 sm:p-5">
               <dt className="text-[13px] font-medium text-soft">{dict.lots.solde}</dt>
               <dd className="mt-1.5">
-                {aJour ? (
+                {soldeErreur || soldeDu === null ? (
+                  <span className="text-[15px] font-semibold text-soft">{dict.errors.load.solde}</span>
+                ) : aJour ? (
                   <span className="inline-flex items-center gap-2 text-[15px] font-semibold text-ok">
                     <span className="size-2 rounded-full bg-ok" aria-hidden />
                     {dict.enums.statutLigne.PAYE}
@@ -333,6 +339,9 @@ export default async function LotDetailPage({
         </div>
       ) : null}
 
+      {ongletActif === "finances" && soldeErreur ? (
+        <LoadError error={soldeErreur} locale={ctx.locale} title={dict.errors.load.solde} />
+      ) : null}
       {ongletActif === "finances" && voitFinances && soldeRes.ok ? (
         <div className="space-y-5">
           <Card className="flex flex-wrap items-center justify-between gap-4">

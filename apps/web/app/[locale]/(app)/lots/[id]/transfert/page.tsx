@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, SoldeLot } from "../../../../../../lib/api/types";
@@ -6,6 +5,7 @@ import { fill } from "../../../../../../lib/i18n";
 import { versCentimes } from "../../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { TransfertWizard } from "./transfert-wizard";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export default async function TransfertPage({
   params,
@@ -20,7 +20,7 @@ export default async function TransfertPage({
     apiFetch<Lot>(`/lots/${id}`),
     apiFetch<SoldeLot>(`/finances/lots/${id}/solde`),
   ]);
-  if (!lotRes.ok) notFound();
+  if (!lotRes.ok) return failWith(lotRes, ctx.locale);
   const soldeDu = soldeRes.ok ? soldeRes.data.solde_du : "0.00";
 
   return (

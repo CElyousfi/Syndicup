@@ -1,6 +1,5 @@
 /** Fiche emplacement (M23) — attribution en cours, historique, actions (attribuer / libérer / modifier / supprimer). */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { EmplacementDetail, Lot } from "../../../../../lib/api/types";
@@ -14,6 +13,7 @@ import { emplacementVariant } from "../../../../../lib/status";
 import { AttribuerModal, EmplacementModal, LibererModal, SupprimerEmplacementModal } from "../parkings-client";
 import { LiveList } from "../../../../../components/ui/live-list";
 import { Amount } from "../../../../../components/ui/amount";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -29,7 +29,7 @@ export default async function EmplacementPage({ params }: { params: Promise<{ lo
   const e = dict.enumsParkings;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<EmplacementDetail>(`/emplacements/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const lotsRes = gestion ? await apiFetch<Lot[]>("/lots", { searchParams: { limit: 200 } }) : null;
   const lots = (lotsRes?.ok ? lotsRes.data : []).map((l) => ({ id: l.id, numero: l.numero }));

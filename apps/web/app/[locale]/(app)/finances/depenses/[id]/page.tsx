@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { DepenseDetail } from "../../../../../../lib/api/types";
@@ -18,6 +17,7 @@ import { depenseVariant, factureVariant } from "../../../../../../lib/status";
 import { SoumettreModal, DeciderModals, PayerModal, AnnulerModal, AjouterFactureModal, StatutFactureForm } from "./depense-actions";
 import { Amount } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -43,7 +43,7 @@ export default async function DepenseDetailPage({
   const p = (path: string) => `/${locale}${path}`;
 
   const res = await apiFetch<DepenseDetail>(`/depenses/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
   const actions = actionsPossibles(x, { syndic, conseil });
   // Le conseil ne décide qu'au-dessus du seuil ; le syndic en dessous (l'API tranche, l'écran guide).

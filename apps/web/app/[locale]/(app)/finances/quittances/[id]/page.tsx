@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, Quittance } from "../../../../../../lib/api/types";
@@ -11,6 +10,7 @@ import { Brand } from "../../../../../../components/brand";
 import { CFile, IconCircle } from "../../../../../../components/ui/color-icons";
 import { PrintButton } from "./print-button";
 import { Amount } from "../../../../../../components/ui/amount";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 /** D5 — mise en page « document officiel » (valeur fiscale, conservation 10 ans). */
 export default async function QuittancePage({
@@ -24,7 +24,7 @@ export default async function QuittancePage({
   const f = dict.finances;
 
   const quittanceRes = await apiFetch<Quittance>(`/finances/quittances/${id}`);
-  if (!quittanceRes.ok) notFound();
+  if (!quittanceRes.ok) return failWith(quittanceRes, ctx.locale);
   const quittance = quittanceRes.data;
 
   // Contexte de la ligne (lot, période, montant) — reconstruit depuis les appels de fonds.

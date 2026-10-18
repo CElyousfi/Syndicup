@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { PrestataireFiche } from "../../../../../lib/api/types";
@@ -19,6 +18,7 @@ import { ModifierPrestataireModal } from "../prestataire-modal";
 import { RibButton } from "./rib-button";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 type Onglet = "identite" | "interventions" | "depenses" | "evaluations";
 
@@ -54,7 +54,7 @@ export default async function PrestataireDetailPage({
   const p = (path: string) => `/${locale}${path}`;
 
   const res = await apiFetch<PrestataireFiche>(`/prestataires/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const x = res.data;
 
   const onglets: Onglet[] = x.depenses ? ["identite", "interventions", "depenses", "evaluations"] : ["identite", "interventions", "evaluations"];

@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { getAppContext } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../lib/membres";
@@ -32,6 +31,7 @@ import { CreerDepenseIncidentModal, EvaluerPrestataireModal } from "./incident-d
 import { NotifierVehiculeModal } from "../../parkings/parkings-client";
 import { Amount } from "../../../../../components/ui/amount";
 import { LiveList } from "../../../../../components/ui/live-list";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 type IncidentAvecJournal = Incident & { logs: IncidentLog[]; createur?: IncidentCreateur | null };
 
@@ -52,7 +52,7 @@ export default async function IncidentDetailPage({
     syndic || ctx.roles.includes("GARDIEN") || ctx.role === "PRESTATAIRE";
 
   const incidentRes = await apiFetch<IncidentAvecJournal>(`/incidents/${id}`);
-  if (!incidentRes.ok) notFound();
+  if (!incidentRes.ok) return failWith(incidentRes, ctx.locale);
   const incident = incidentRes.data;
 
   const [prestatairesRes, lotsRes, membres, photosRes] = await Promise.all([

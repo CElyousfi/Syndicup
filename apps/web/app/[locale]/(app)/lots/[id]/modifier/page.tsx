@@ -1,10 +1,10 @@
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot } from "../../../../../../lib/api/types";
 import { fill } from "../../../../../../lib/i18n";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { LotForm } from "../../lot-form";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export default async function ModifierLotPage({
   params,
@@ -19,7 +19,7 @@ export default async function ModifierLotPage({
     apiFetch<Lot>(`/lots/${id}`),
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
   ]);
-  if (!lotRes.ok) notFound();
+  if (!lotRes.ok) return failWith(lotRes, ctx.locale);
 
   return (
     <div className="page-root">

@@ -1,4 +1,3 @@
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../../../../lib/membres";
@@ -16,6 +15,7 @@ import { Table, TableCard, TD, TH, THead, TR } from "../../../../../../../../com
 import { Avatar } from "../../../../../../../../components/ui/avatar";
 import { Figure } from "../../../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../../../components/ui/live-list";
+import { failWith } from "../../../../../../../../lib/api/or-fail";
 
 /** E6 — détail nominatif (SYNDIC uniquement, étiqueté « audit »). */
 export default async function VotesNominatifsPage({
@@ -35,7 +35,8 @@ export default async function VotesNominatifsPage({
     apiFetch<Lot[]>("/lots", { searchParams: { limit: 100 } }),
     annuaireMembres(),
   ]);
-  if (!agRes.ok || !votesRes.ok) notFound();
+  if (!agRes.ok) return failWith(agRes, ctx.locale);
+  if (!votesRes.ok) return failWith(votesRes, ctx.locale);
 
   const resolution = (agRes.data.resolutions ?? []).find((r) => r.id === rid);
   const lotParId = new Map((lotsRes.ok ? lotsRes.data : []).map((l) => [l.id, l.numero]));

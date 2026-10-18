@@ -1,6 +1,5 @@
 /** Fiche d'un import (M24) — étapes 2 à 4 : colonnes (mapping), aperçu avec erreurs, exécution avec progression, résultat + rapport csv, invitations créées. */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { getAppContext, exigerRole } from "../../../../../lib/app-context";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { ImportJob, Invitation, StatutImport } from "../../../../../lib/api/types";
@@ -16,6 +15,7 @@ import { CFile, CAlert, CShield } from "../../../../../components/ui/color-icons
 import { importVariant } from "../../../../../lib/status";
 import { EtapesImport, ExecutionPanel, InvitationsMasseModal, MappingForm } from "../import-client";
 import { Figure } from "../../../../../components/ui/amount";
+import { failWith } from "../../../../../lib/api/or-fail";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
   const { locale } = await params;
@@ -29,7 +29,7 @@ export default async function ImportDetailPage({ params }: { params: Promise<{ l
   const t = dict.importation;
   const gestion = ["SYNDIC", "SUPER_ADMIN"].some((r) => ctx.roles.includes(r as never));
   const res = await apiFetch<ImportJob>(`/import/${id}`);
-  if (!res.ok) notFound();
+  if (!res.ok) return failWith(res, ctx.locale);
   const j = res.data;
   const invitationsRes = gestion && (j.type === "LOTS_PROPRIETAIRES" || j.type === "PERSONNEL") && j.statut === "TERMINE" ? await apiFetch<Invitation[]>("/invitations", { searchParams: { limit: 200 } }) : null;
   const invitations = (invitationsRes?.ok ? invitationsRes.data : []).filter((i) => i.importJobId === j.id);

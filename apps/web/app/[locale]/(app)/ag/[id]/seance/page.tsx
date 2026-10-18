@@ -1,4 +1,4 @@
-import { redirect, notFound } from "next/navigation";
+import { redirect } from "next/navigation";
 import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import { annuaireMembres } from "../../../../../../lib/membres";
@@ -7,6 +7,7 @@ import type { AgProcuration, AssembleeGenerale } from "../../../../../../lib/api
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { Pupitre } from "./pupitre";
 import { VueVotant } from "./vue-votant";
+import { failWith } from "../../../../../../lib/api/or-fail";
 
 export default async function SeancePage({
   params,
@@ -20,7 +21,7 @@ export default async function SeancePage({
   const votant = ["PROPRIETAIRE", "INDIVISAIRE"].some((r) => ctx.roles.includes(r as never));
 
   const agRes = await apiFetch<AssembleeGenerale>(`/ag/${id}`);
-  if (!agRes.ok) notFound();
+  if (!agRes.ok) return failWith(agRes, ctx.locale);
   const ag = agRes.data;
   if (ag.statut !== "EN_COURS") redirect(`/${locale}/ag/${id}`);
   if (!gestion && !votant) redirect(`/${locale}/ag/${id}`);
