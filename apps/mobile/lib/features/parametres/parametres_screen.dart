@@ -106,7 +106,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
               SuField(label: p.totalTantiemes, controller: _tantiemes, help: p.totalTantiemesAide, keyboardType: const TextInputType.numberWithOptions(decimal: true), inputFormatters: montantFormatters, textDirection: TextDirection.ltr, mono: true, error: fieldError(_fail, 'total_tantiemes')),
               const SizedBox(height: 12),
               err('reglement'),
-              SubmitButton(label: d.common.save, loading: _loading && _section == 'reglement', fail: _section == 'reglement' ? _fail : null, onPressed: () => _save('reglement', {'total_tantiemes': _tantiemes.text.trim().isEmpty ? null : _tantiemes.text.trim()})),
+              SubmitButton(label: d.common.save, loading: _loading && _section == 'reglement', fail: _section == 'reglement' ? _fail : null, onPressed: () => _save('reglement', {'total_tantiemes': _tantiemes.text.trim().isEmpty ? null : (parseMontant(_tantiemes.text) ?? _tantiemes.text.trim())})),
             ])),
             SectionHeader(p.options),
             SuCard(child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
@@ -204,7 +204,10 @@ class _PhotosSectionState extends ConsumerState<_PhotosSection> {
       _progres = 0;
     });
     final r = await uploadWithProgress(ref.read(apiClientProvider), piece, target, onProgress: (sent, total) {
-      if (mounted && total > 0) setState(() => _progres = sent / total);
+      if (!mounted || total <= 0) return;
+      // Un redessin par point de pourcentage, pas un par paquet réseau.
+      final p = sent / total;
+      if (p - _progres >= 0.01 || p >= 1) setState(() => _progres = p);
     });
     if (!mounted) return;
     if (r is UploadFailed) {

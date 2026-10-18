@@ -981,6 +981,8 @@ class MobileUp {
     required this.numberInvalid,
     required this.valuePositive,
     required this.endAfterStart,
+    required this.amountAmbiguous,
+    required this.or,
     required this.missing,
     required this.missingSep,
     required this.missingProof,
@@ -994,11 +996,22 @@ class MobileUp {
 
   final String tooLargeTitle, tooLarge, badTypeTitle, badTypeImages, badTypeImagesPdf, badTypeDocuments, storageTitle, storage, networkTitle, network, cancelledTitle, cancelled;
   final String waiting, uploading, done, failed, retryOne, cancel, remove, sizeMo, sizeKo, photoVideo, fichier;
-  final String fieldRequired, amountInvalid, amountPositive, phoneInvalid, integerInvalid, periodInvalid, numberInvalid, valuePositive, endAfterStart, missing, missingSep, missingProof, missingFile, missingCategory;
+  final String fieldRequired, amountInvalid, amountPositive, phoneInvalid, integerInvalid, periodInvalid, numberInvalid, valuePositive, endAfterStart, amountAmbiguous, or, missing, missingSep, missingProof, missingFile, missingCategory;
   final String staleAt, staleOn, logoutTitle, logoutBody;
 
   /// « À compléter : lot, montant » — texte d'aide sous un bouton d'envoi désactivé.
   String missingList(List<String> champs) => fill(missing, {'champs': champs.join(missingSep)});
+
+  /// « 1.250 » seul : « Montant ambigu : 1 250 ou 1,25 ? » (la lecture décimale n'est proposée
+  /// que si elle tient en 2 décimales). Chiffres isolés en sens gauche-droite pour l'arabe.
+  String ambiguite(String brut) {
+    final t = brut.replaceAll(RegExp(r'\s| | '), '');
+    final i = t.indexOf(RegExp('[.,]'));
+    final entier = t.substring(0, i), reste = t.substring(i + 1);
+    final mille = '$entier $reste';
+    final choix = [mille, if (reste.endsWith('0')) '$entier,${reste.substring(0, 2)}'].map((x) => '⁦$x⁩').join(or);
+    return fill(amountAmbiguous, {'choix': choix});
+  }
 
   static const fr = MobileUp(
     tooLargeTitle: 'Fichier trop lourd',
@@ -1033,6 +1046,8 @@ class MobileUp {
     numberInvalid: 'Nombre invalide — exemple : 125,5',
     valuePositive: 'La valeur doit être supérieure à 0',
     endAfterStart: 'L\'heure de fin doit être après l\'heure de début',
+    amountAmbiguous: 'Montant ambigu : {choix} ?',
+    or: ' ou ',
     missing: 'À compléter : {champs}',
     missingSep: ', ',
     missingProof: 'preuve de paiement',
@@ -1069,14 +1084,16 @@ class MobileUp {
     photoVideo: 'صورة أو فيديو',
     fichier: 'ملف (PDF أو Word أو Excel…)',
     fieldRequired: 'حقل إلزامي',
-    amountInvalid: 'مبلغ غير صالح — مثال: 1 250,50',
+    amountInvalid: 'مبلغ غير صالح — مثال: ⁦1 250,50⁩',
     amountPositive: 'يجب أن يكون المبلغ أكبر من 0',
-    phoneInvalid: 'رقم غير صالح — مثال: ‎+212 6 12 34 56 78',
+    phoneInvalid: 'رقم غير صالح — مثال: ⁦+212 6 12 34 56 78⁩',
     integerInvalid: 'أدخلوا عددًا صحيحًا',
-    periodInvalid: 'الصيغة المطلوبة: AAAA-MM (مثال: 2026-10)',
-    numberInvalid: 'عدد غير صالح — مثال: 125,5',
+    periodInvalid: 'الصيغة المطلوبة: ⁦YYYY-MM⁩ (مثال: ⁦2026-10⁩)',
+    numberInvalid: 'عدد غير صالح — مثال: ⁦125,5⁩',
     valuePositive: 'يجب أن تكون القيمة أكبر من 0',
     endAfterStart: 'يجب أن تكون ساعة النهاية بعد ساعة البداية',
+    amountAmbiguous: 'مبلغ ملتبس: {choix}؟',
+    or: ' أو ',
     missing: 'يجب إكمال: {champs}',
     missingSep: '، ',
     missingProof: 'إثبات الأداء',

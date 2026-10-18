@@ -1,6 +1,7 @@
-import 'package:flutter/services.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:syndicup/core/format/format.dart';
+import 'package:syndicup/core/i18n/mobile_dict.dart';
 import 'package:syndicup/core/widgets/forms.dart';
 
 /// Saisie simulée : chaque formateur reçoit l'ancienne valeur et la sortie du précédent.
@@ -59,21 +60,42 @@ void main() {
     });
   });
 
-  group('montantFormatters — la virgule et le collage passent', () {
-    test('frappe d\'une virgule → point décimal', () {
-      expect(_tape('12', '12,').text, '12.');
-      expect(_tape('12.', '12.5').text, '12.5');
+  group('montantFormatters — le texte tapé est gardé, jamais tronqué', () {
+    test('virgule et collage gardés tels quels, lus par parseMontant', () {
+      expect(_tape('12', '12,').text, '12,');
+      expect(_tape('', '1 250,50').text, '1 250,50');
+      expect(parseMontant(_tape('', '1 250,50').text), '1250.50');
     });
 
-    test('collage « 1 250,50 » normalisé au lieu d\'être refusé', () {
-      expect(_tape('', '1 250,50').text, '1250.50');
-      expect(_tape('', '1.250,50').text, '1250.50');
-    });
-
-    test('trois décimales refusées : la saisie précédente reste', () {
-      expect(_tape('12.50', '12.505').text, '12.50');
+    test('lettres et séparateurs doublés refusés', () {
       expect(_tape('', 'abc').text, '');
+      expect(_tape('12', '12.,').text, '12');
     });
+
+    test('« 1.250 » seul : ambigu, signalé (jamais 1,25 en silence)', () {
+      expect(parseMontant('1.250'), isNull);
+      expect(montantAmbigu('1.250'), isTrue);
+      expect(montantAmbigu('1,250'), isTrue);
+      expect(montantAmbigu('12,50'), isFalse);
+      expect(montantAmbigu('1.250,50'), isFalse);
+      expect(MobileUp.fr.ambiguite('1.250'), 'Montant ambigu : ⁦1 250⁩ ou ⁦1,25⁩ ?');
+      expect(MobileUp.fr.ambiguite('2.505'), 'Montant ambigu : ⁦2 505⁩ ?');
+    });
+  });
+
+  group('saisie touche après touche dans un champ', () {
+    for (final (saisie, attendu) in const [('1.250,50', '1250.50'), ('1,250.50', '1250.50'), ('1250,5', '1250.5'), ('12,50', '12.50')]) {
+      testWidgets('« $saisie » → $attendu', (tester) async {
+        final c = TextEditingController();
+        await tester.pumpWidget(MaterialApp(home: Scaffold(body: TextField(controller: c, inputFormatters: montantFormatters))));
+        for (var i = 1; i <= saisie.length; i++) {
+          await tester.enterText(find.byType(TextField), saisie.substring(0, i));
+          await tester.pump();
+        }
+        expect(c.text, saisie);
+        expect(parseMontant(c.text), attendu);
+      });
+    }
   });
 
   group('telephonePlausible', () {

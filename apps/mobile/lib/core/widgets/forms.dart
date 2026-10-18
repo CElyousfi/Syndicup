@@ -674,25 +674,20 @@ Future<bool> confirmDialog(BuildContext context, {required String title, require
   return r ?? false;
 }
 
-/// Formateur : montant décimal "1234.56" (point, 2 décimales max). La virgule française est
-/// acceptée à la frappe (« 12,5 » → « 12.5 ») et un montant collé avec espaces / séparateurs de
-/// milliers (« 1 250,50 », « 1.250,50 ») est normalisé par [parseMontant] au lieu d'être refusé.
-final List<TextInputFormatter> montantFormatters = [FilteringTextInputFormatter.allow(RegExp('[0-9.,\\s  ]')), _DecimalNormalizer()];
+/// Formateur de saisie d'un montant : chiffres, séparateurs (« . », « , ») et espaces. Le texte
+/// tapé est GARDÉ tel quel (« 1.250,50 » reste « 1.250,50 » touche après touche) : c'est
+/// [parseMontant] qui le lit à l'envoi et [SuValidators.montant] qui signale une saisie
+/// illisible ou ambiguë (« 1.250 » seul : 1 250 ou 1,25 ?). Jamais de troncature silencieuse.
+final List<TextInputFormatter> montantFormatters = [FilteringTextInputFormatter.allow(RegExp('[0-9.,\\s  ]')), _MontantSaisie()];
 
-class _DecimalNormalizer extends TextInputFormatter {
+class _MontantSaisie extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
-    final brut = newValue.text.replaceAll(RegExp('[\\s  ]'), '');
-    final deux = brut.contains(',') && brut.contains('.');
-    final s = deux ? (parseMontant(brut) ?? '') : brut.replaceAll(',', '.');
-    if (deux && s.isEmpty) return oldValue;
-    if (!RegExp(r'^\d{0,12}(\.\d{0,2})?$').hasMatch(s)) {
-      // Collage « 1,250,000 » : on tente la lecture complète avant de refuser.
-      final lu = parseMontant(newValue.text);
-      if (lu == null) return oldValue;
-      return newValue.copyWith(text: lu, selection: TextSelection.collapsed(offset: lu.length));
-    }
-    return newValue.copyWith(text: s, selection: TextSelection.collapsed(offset: s.length));
+    final t = newValue.text;
+    final chiffres = t.replaceAll(RegExp(r'[^0-9]'), '').length;
+    // Bornes larges : 14 chiffres (12 entiers + 2 décimales), pas deux séparateurs collés.
+    if (chiffres > 14 || RegExp(r'[.,][.,]').hasMatch(t) || t.length > 24) return oldValue;
+    return newValue;
   }
 }
 
@@ -713,7 +708,7 @@ class SuValidators {
     return (v) {
       if (v == null || v.trim().isEmpty) return optional ? null : up.fieldRequired;
       final n = parseMontant(v);
-      if (n == null) return up.amountInvalid;
+      if (n == null) return montantAmbigu(v) ? up.ambiguite(v) : up.amountInvalid;
       if (positive && !montantPositif(n)) return up.amountPositive;
       return null;
     };

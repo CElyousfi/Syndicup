@@ -228,5 +228,9 @@ String? parseMontant(String? brut) {
   return dec == null ? entier : '$entier.$dec';
 }
 
+/// « 1.250 » / « 1,250 » seuls : milliers ou décimales ? Illisible sans contexte — l'écran
+/// demande de lever le doute au lieu de deviner.
+bool montantAmbigu(String brut) => RegExp(r'^\d{1,3}[.,]\d{3}$').hasMatch(brut.replaceAll(RegExp('[\\s  ]'), ''));
+
 /// Montant normalisé strictement positif (« 0 », « 0.00 » refusés).
 bool montantPositif(String normalise) => RegExp(r'[1-9]').hasMatch(normalise);

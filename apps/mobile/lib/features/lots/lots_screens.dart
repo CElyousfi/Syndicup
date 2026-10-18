@@ -726,7 +726,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
     final membres = annuaireDepuisLots(ref.watch(lotsProvider).valueOrNull ?? const []);
-    final total = _rows.fold(BigInt.zero, (a, r) => a + versCentimes(r.quote.text.trim().isEmpty ? '0' : r.quote.text.trim()));
+    final total = _rows.fold(BigInt.zero, (a, r) => a + versCentimes(parseMontant(r.quote.text) ?? '0'));
     final ratio100 = total.toInt() / 10000;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -783,7 +783,7 @@ class _ProprietaireFormState extends ConsumerState<_ProprietaireForm> {
     });
     Map<String, dynamic> row(_Copro r) => {
           'utilisateur_id': r.user.text.trim(),
-          'quote_part': r.quote.text.trim(),
+          'quote_part': parseMontant(r.quote.text) ?? r.quote.text.trim(),
           'type_propriete': _type,
           'est_representant_indivision': _type == 'INDIVISION' ? r.rep : false,
           'date_debut': _date.text.trim(),
