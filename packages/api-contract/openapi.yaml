@@ -4904,7 +4904,9 @@ paths:
       summary: >
         Signale un incident (Doc A §5). Rôle autorisé — tous sauf prestataire ("reçoit
         l'assignation, ne crée pas" — Master Spec Partie 4.2). sla_deadline calculé à la création
-        (voir schéma Incident).
+        (voir schéma Incident). Idempotency-Key optionnelle : même clé + même payload = réponse
+        rejouée (aucun second incident après un échec ambigu), payload différent = 409.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       requestBody:
         required: true
         content:
@@ -5530,9 +5532,12 @@ paths:
       description: >
         `storage_path` doit être le chemin renvoyé par POST /documents/upload-url : il commence
         par `<copropriete_id>/documents/` (tenant de l'appelant), sans segment vide, `.` ni `..` —
-        sinon 400 VALIDATION_ERROR et aucune ligne n'est créée.
+        sinon 400 VALIDATION_ERROR et aucune ligne n'est créée. Idempotency-Key optionnelle :
+        même clé + même payload = réponse rejouée (aucun doublon), payload différent = 409.
+      parameters: [{ $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "201": { description: Créé. }
+        "409": { description: Idempotency-Key déjà utilisée avec un autre payload. }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
 

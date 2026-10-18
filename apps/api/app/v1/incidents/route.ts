@@ -15,6 +15,7 @@ import {
 } from "../../../lib/incidents/incidents";
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
+import { readIdempotencyKeyOptionnelle } from "../../../lib/http/idempotency";
 
 async function handleGET(req: Request) {
   try {
@@ -48,7 +49,8 @@ async function handlePOST(req: Request) {
     const body = await req.json().catch(() => null);
     const parsed = incidentCreateSchema.safeParse(body);
     if (!parsed.success) return failZod(parsed.error);
-    const incident = await creerIncident(ctx, parsed.data);
+    // Idempotency-Key optionnelle (anciens clients sans clé : comportement inchangé).
+    const incident = await creerIncident(ctx, parsed.data, readIdempotencyKeyOptionnelle(req));
     return ok(incident, { status: 201 });
   } catch (e) {
     const mapped = mapAuthError(e);

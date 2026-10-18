@@ -7,6 +7,7 @@ import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
 import { pousserActivite, etatIncident } from "../notifications/activites";
 import { withTenant } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import type { TenantDb } from "../tenant/db";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
@@ -79,7 +80,12 @@ export async function preparerUploadPhoto(ctx: TenantContext, input: IncidentUpl
   return { storage_path: storagePath, upload_url: url, token };
 }
 
-export async function creerIncident(ctx: TenantContext, input: IncidentCreateInput) {
+/**
+ * `idempotencyKey` OPTIONNELLE : un retry après un échec ambigu (réseau coupé après le commit)
+ * avec la même clé + le même payload rejoue la réponse au lieu de créer un second incident ;
+ * même clé + payload différent → 409. Sans clé : comportement inchangé.
+ */
+export async function creerIncident(ctx: TenantContext, input: IncidentCreateInput, idempotencyKey?: string) {
   if (can("incidents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Rôle non autorisé à créer un incident (Doc A §5).");
   }
@@ -91,7 +97,7 @@ export async function creerIncident(ctx: TenantContext, input: IncidentCreateInp
       throw new PermissionRefuseeError("Photo hors du périmètre de la copropriété.");
     }
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: "POST /incidents", payload: input }, async (db) => {
     if (input.lot_id) {
       const lot = await db.lot.findUnique({ where: { id: input.lot_id } });
       if (!lot) throw new IncidentIntrouvableError("Lot introuvable.");

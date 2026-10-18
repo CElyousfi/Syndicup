@@ -4,6 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { can } from "../auth/permissions";
 import { withTenant } from "../tenant/db";
+import { withTenantIdempotent } from "../http/idempotency";
 import { creerUrlSignee, creerUrlUploadSignee, supprimerObjet } from "../storage/supabase-storage";
 import type { TenantContext } from "../tenant/context";
 import { ecrireAuditLog } from "../audit/audit";
@@ -37,7 +38,7 @@ export async function preparerUpload(ctx: TenantContext, input: DocumentUploadUr
   return { storage_path: storagePath, upload_url: url, token };
 }
 
-export async function creerDocument(ctx: TenantContext, input: DocumentCreateInput) {
+export async function creerDocument(ctx: TenantContext, input: DocumentCreateInput, idempotencyKey?: string) {
   if (can("documents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ajouter un document.");
   }
@@ -49,7 +50,9 @@ export async function creerDocument(ctx: TenantContext, input: DocumentCreateInp
   if (reste === null || reste.length === 0 || reste.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
     throw new CheminDocumentInvalideError(`storage_path doit commencer par « ${prefixe} » (chemin renvoyé par POST /documents/upload-url).`);
   }
-  return withTenant(ctx, async (db) => {
+  // Idempotency-Key OPTIONNELLE : même clé + même payload → réponse rejouée (pas de doublon
+  // après un échec ambigu) ; payload différent → 409 ; sans clé, comportement inchangé.
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: "POST /documents", payload: input }, async (db) => {
     const document = await db.document.create({
       data: {
         coproprieteId: ctx.coproprieteId,
