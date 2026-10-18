@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:syndicup/core/crash.dart';
 import 'package:syndicup/core/i18n/mobile_dict.dart';
