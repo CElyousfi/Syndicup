@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -33,7 +34,7 @@ class _MembresScreenState extends ConsumerState<MembresScreen> {
     return SuPage(
       title: d.membres.annuaire,
       subtitle: d.membres.annuaireSubtitle,
-      onRefresh: () async => ref.invalidate(membresProvider),
+      onRefresh: () => refreshing(ref, [membresProvider]),
       actions: [CircleIconButton(onTap: () => context.push('/invitations?nouvelle=1'), icon: Icons.person_add_alt_1_rounded, tooltip: d.membres.inviter)],
       children: [
         SuSearchField(hint: d.membres.rechercher, onChanged: (v) => setState(() => _q = v.toLowerCase())),
@@ -87,6 +88,7 @@ class MembreDetailScreen extends ConsumerWidget {
     final annuaire = (ref.watch(membresProvider).valueOrNull ?? const <Membre>[]).where((m) => m.id == id).firstOrNull;
     return SuPage(
       title: d.membres.titre,
+      onRefresh: () => refreshing(ref, [membreProvider(id), membresProvider]),
       children: [
         AsyncView(membre, onRetry: () => ref.invalidate(membreProvider(id)), data: (p) {
           final nom = nomComplet(p.prenom, p.nom) ?? p.email ?? '—';

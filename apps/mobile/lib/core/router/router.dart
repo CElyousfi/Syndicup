@@ -43,6 +43,7 @@ import '../../features/profil/sensations_section.dart';
 import '../../features/profil/sensations_test_screen.dart';
 import '../../features/shell/app_shell.dart';
 import '../../features/visites/visites_screens.dart';
+import '../api/refresh.dart';
 import '../auth/app_state.dart';
 import '../auth/session_events.dart';
 import '../deeplinks/deeplinks.dart';
@@ -288,9 +289,6 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
-/// Rafraîchit une lecture après une mutation et attend la nouvelle valeur.
-Future<void> refreshAll(WidgetRef ref, List<ProviderOrFamily> providers) async {
-  for (final p in providers) {
-    ref.invalidate(p);
-  }
-}
+/// Rafraîchit des lectures après une mutation et attend VRAIMENT la nouvelle valeur
+/// (voir core/api/refresh.dart) — l'ancienne version invalidait sans attendre.
+Future<void> refreshAll(WidgetRef ref, List<ProviderOrFamily> providers) => refreshing(ref, providers);

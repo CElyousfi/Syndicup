@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -50,8 +51,7 @@ class _DepensesScreenState extends ConsumerState<DepensesScreen> {
       title: d.depenses.titre,
       subtitle: d.depenses.subtitle,
       onRefresh: () async {
-        ref.invalidate(depensesProvider);
-        ref.invalidate(budgetVsRealiseProvider);
+        await refreshing(ref, [depensesProvider, budgetVsRealiseProvider]);
       },
       children: [
         if (rapport != null) ...[
@@ -122,12 +122,7 @@ class DepenseDetailScreen extends ConsumerWidget {
   const DepenseDetailScreen({super.key, required this.id});
   final String id;
 
-  void _refresh(WidgetRef ref) {
-    ref.invalidate(depenseProvider(id));
-    ref.invalidate(depenseDocumentsProvider(id));
-    ref.invalidate(depensesProvider);
-    ref.invalidate(budgetVsRealiseProvider);
-  }
+  Future<void> _refresh(WidgetRef ref) => refreshing(ref, [depenseProvider(id), depenseDocumentsProvider(id), depensesProvider, budgetVsRealiseProvider]);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -141,7 +136,7 @@ class DepenseDetailScreen extends ConsumerWidget {
     return SuPage(
       title: dep.valueOrNull?.libelle ?? d.depenses.titre,
       subtitle: dep.valueOrNull == null ? null : d.enumsDepenses.categorieDepense[dep.valueOrNull!.categorie],
-      onRefresh: () async => _refresh(ref),
+      onRefresh: () => _refresh(ref),
       children: [
         AsyncView(dep, onRetry: () => ref.invalidate(depenseProvider(id)), data: (x) {
           final niveauConseil = x.niveauApprobationRequis == 'CONSEIL';

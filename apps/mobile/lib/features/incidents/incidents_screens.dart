@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -53,7 +54,7 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final titre = ctx.isPrestataire ? d.incidents.mesTickets : ctx.isResident ? d.incidents.mesSignalements : d.incidents.titre;
     final racine = !context.canPop();
     final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
-    Future<void> refresh() async => ref.invalidate(incidentsProvider);
+    Future<void> refresh() => refreshing(ref, [incidentsProvider]);
     final contenu = <Widget>[
       FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? v, onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 16),
@@ -429,8 +430,7 @@ class IncidentDetailScreen extends ConsumerWidget {
       title: inc.valueOrNull?.sousCategorie ?? d.incidents.titre,
       subtitle: inc.valueOrNull == null ? null : d.enums.categorieIncident[inc.valueOrNull!.categorie],
       onRefresh: () async {
-        ref.invalidate(incidentProvider(id));
-        ref.invalidate(incidentPhotosProvider(id));
+        await refreshing(ref, [incidentProvider(id), incidentPhotosProvider(id)]);
       },
       children: [
         AsyncView(inc, onRetry: () => ref.invalidate(incidentProvider(id)), data: (i) {
@@ -765,7 +765,7 @@ class PrestatairesScreen extends ConsumerWidget {
     return SuPage(
       title: d.incidents.prestataires,
       subtitle: d.incidents.prestatairesSubtitle,
-      onRefresh: () async => ref.invalidate(prestatairesProvider),
+      onRefresh: () => refreshing(ref, [prestatairesProvider]),
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.incidents.nouveauPrestataire, builder: (_) => const _PrestataireForm()), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.nouveauPrestataire)) : null,
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(prestatairesProvider), data: (ps) {

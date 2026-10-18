@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -41,7 +42,7 @@ class MonDossierScreen extends ConsumerWidget {
     final list = ref.watch(personnelProvider);
     return list.when(
       loading: () => SuPage(title: d.personnel.monDossier, children: const [LoadingList()]),
-      error: (e, _) => SuPage(title: d.personnel.monDossier, children: [ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider))]),
+      error: (e, _) => SuPage(title: d.personnel.monDossier, onRefresh: () => refreshing(ref, [personnelProvider]), children: [ErrorState(error: e, onRetry: () => ref.invalidate(personnelProvider))]),
       data: (ps) {
         final mienne = ps.where((p) => p.utilisateurId == ctx.profil.id).firstOrNull;
         if (mienne == null) return SuPage(title: d.personnel.monDossier, children: [EmptyState(title: d.personnel.aucuneFiche, icon: Icons.badge_outlined, illustration: 'empty-personnel')]);
@@ -226,7 +227,7 @@ class _PaieTab extends ConsumerWidget {
     final nonConfigure = gestion && detail.paie != null && detail.paie!['parametres_configures'] == false;
     final t = Theme.of(context).textTheme;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(fichesPaieProvider(detail.fiche.id)),
+      onRefresh: () => refreshing(ref, [fichesPaieProvider(detail.fiche.id)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -283,11 +284,7 @@ class _CongesTab extends ConsumerWidget {
     final id = detail.fiche.id;
     final conges = ref.watch(congesProvider(id));
     final solde = detail.soldeConges;
-    void rafraichir() {
-      ref.invalidate(congesProvider(id));
-      ref.invalidate(personnelDetailProvider(id));
-      ref.invalidate(congesEnAttenteProvider);
-    }
+    Future<void> rafraichir() => refreshing(ref, [congesProvider(id), personnelDetailProvider(id), congesEnAttenteProvider]);
     final t = Theme.of(context).textTheme;
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -299,7 +296,7 @@ class _CongesTab extends ConsumerWidget {
             )
           : null,
       body: SuRefresh(
-        onRefresh: () async => rafraichir(),
+        onRefresh: rafraichir,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
           children: [
@@ -571,7 +568,7 @@ class _PresencesTabState extends ConsumerState<_PresencesTab> {
     final nbJours = DateTime(a, m + 1, 0).day;
     final t = Theme.of(context).textTheme;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(presencesProvider(cle)),
+      onRefresh: () => refreshing(ref, [presencesProvider(cle)]),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
         children: [
@@ -665,7 +662,7 @@ class _PlanningScreenState extends ConsumerState<PlanningScreen> {
     return SuPage(
       title: d.personnel.planning,
       subtitle: x == null ? d.personnel.planningSubtitle : '${formatJourAnnee(x.jours.first, l)} → ${formatJourAnnee(x.jours.last, l)}',
-      onRefresh: () async => ref.invalidate(planningProvider(_semaine)),
+      onRefresh: () => refreshing(ref, [planningProvider(_semaine)]),
       children: [
         // Navigation de semaine Wise : boutons ronds (miroir RTL) de part et d'autre du lien « Aujourd'hui ».
         Row(children: [

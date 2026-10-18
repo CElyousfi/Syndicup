@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -200,9 +201,7 @@ class _LcdScreenState extends ConsumerState<LcdScreen> {
     final titre = d.lcd.titre;
     final fab = peutDeclarerSejour ? FloatingActionButton.extended(onPressed: () => context.push('/location-courte-duree/sejours/nouveau'), icon: const Icon(Icons.luggage_rounded), label: Text(d.lcd.declarerSejour)) : null;
     Future<void> refresh() async {
-      ref.invalidate(lcdReglementProvider);
-      ref.invalidate(lcdDeclarationsProvider);
-      ref.invalidate(lcdSejoursProvider);
+      await refreshing(ref, [lcdReglementProvider, lcdDeclarationsProvider, lcdSejoursProvider]);
       if (terrain) ref.invalidate(lcdDuJourProvider);
       await ref.read(lcdSyncProvider.notifier).flush();
     }
@@ -565,7 +564,7 @@ class _LcdDeclarationScreenState extends ConsumerState<LcdDeclarationScreen> {
     return SuPage(
       title: d.lcd.declarations,
       subtitle: decl.valueOrNull == null ? null : fill(md.lcdDeclarationDeLot, {'lot': decl.valueOrNull!.lotNumero}),
-      onRefresh: () async => ref.invalidate(lcdDeclarationProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [lcdDeclarationProvider(widget.id)]),
       children: [
         AsyncView(decl, onRetry: () => ref.invalidate(lcdDeclarationProvider(widget.id)), data: (x) {
           final estProprio = x.declareParId == me || lots.any((lt) => lt.id == x.lotId && lt.estProprietaire(me));

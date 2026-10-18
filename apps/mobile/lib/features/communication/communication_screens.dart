@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -29,12 +30,7 @@ String texteAnnonce(String md) => md
     .replaceAllMapped(RegExp(r'^\s*[-+*]\s+', multiLine: true), (_) => '• ')
     .replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&amp;', '&').replaceAll('&quot;', '"').replaceAll('&#39;', "'");
 
-void _rafraichirAffichage(WidgetRef ref) {
-  ref.invalidate(annoncesProvider);
-  ref.invalidate(annoncesNonLuesProvider);
-  ref.invalidate(sondagesProvider);
-  ref.invalidate(contactsUtilesProvider);
-}
+Future<void> _rafraichirAffichage(WidgetRef ref) => refreshing(ref, [annoncesProvider, annoncesNonLuesProvider, sondagesProvider, contactsUtilesProvider]);
 
 /// Tableau d'affichage — annonces (épinglées d'abord, filtre catégorie), sondages, contacts utiles.
 class AffichageScreen extends ConsumerStatefulWidget {
@@ -61,7 +57,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
     return SuPage(
       title: c.titre,
       subtitle: nonLues > 0 ? fill(c.nonLues, {'n': '$nonLues'}) : c.subtitle,
-      onRefresh: () async => _rafraichirAffichage(ref),
+      onRefresh: () => _rafraichirAffichage(ref),
       fab: gestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))), icon: const Icon(Icons.campaign_rounded), label: Text(c.nouvelle)) : null,
       children: [
         FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? v), onChanged: (v) => setState(() => _categorie = v)),
@@ -236,7 +232,7 @@ class _AnnonceDetailScreenState extends ConsumerState<AnnonceDetailScreen> {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: annonce.valueOrNull?.titre ?? c.titre,
-      onRefresh: () async => ref.invalidate(annonceProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [annonceProvider(widget.id)]),
       children: [
         AsyncView(
           annonce,
@@ -476,7 +472,7 @@ class _SondageScreenState extends ConsumerState<SondageScreen> {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: c.sondage,
-      onRefresh: () async => ref.invalidate(sondageProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [sondageProvider(widget.id)]),
       children: [
         AsyncView(
           sondage,

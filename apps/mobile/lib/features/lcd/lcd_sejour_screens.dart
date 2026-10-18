@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -628,7 +629,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
       title: d.lcd.sejours,
       subtitle: sejour.valueOrNull == null ? null : fill(md.lcdSejourDe, {'lot': sejour.valueOrNull!.lotNumero}),
       onRefresh: () async {
-        ref.invalidate(lcdSejourProvider(widget.id));
+        await refreshing(ref, [lcdSejourProvider(widget.id)]);
         await ref.read(lcdSyncProvider.notifier).flush();
       },
       children: [

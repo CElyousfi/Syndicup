@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -34,8 +35,7 @@ class PersonnelScreen extends ConsumerWidget {
       subtitle: d.personnel.subtitle,
       actions: [if (ctx.isGestion || ctx.isConseil) CircleIconButton(tooltip: d.personnel.planning, icon: Icons.calendar_view_week_rounded, onTap: () => context.push('/personnel/planning'))],
       onRefresh: () async {
-        ref.invalidate(personnelProvider);
-        ref.invalidate(congesEnAttenteProvider);
+        await refreshing(ref, [personnelProvider, congesEnAttenteProvider]);
       },
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.personnel.nouvelleFiche, builder: (_) => _PersonnelForm(lots: lots)), icon: const Icon(Icons.add_rounded), label: Text(d.personnel.nouvelleFiche)) : null,
       children: [

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -109,8 +110,7 @@ class _PlanTab extends ConsumerWidget {
     final mes = resident ? ref.watch(attributionsProvider('')) : const AsyncValue<List<AttributionEmplacement>>.data([]);
     return SuRefresh(
       onRefresh: () async {
-        ref.invalidate(planEmplacementsProvider);
-        ref.invalidate(attributionsProvider);
+        await refreshing(ref, [planEmplacementsProvider, attributionsProvider]);
       },
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(resident ? t.subtitleResident : t.subtitle, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
@@ -204,7 +204,7 @@ class EmplacementDetailScreen extends ConsumerWidget {
     final emp = ref.watch(emplacementProvider(id));
     return SuPage(
       title: emp.valueOrNull?.code ?? t.titre,
-      onRefresh: () async => ref.invalidate(emplacementProvider(id)),
+      onRefresh: () => refreshing(ref, [emplacementProvider(id)]),
       children: [
         AsyncView(emp, onRetry: () => ref.invalidate(emplacementProvider(id)), data: (x) {
         final c = x.attributionCourante;
@@ -355,7 +355,7 @@ class _VehiculesTabState extends ConsumerState<_VehiculesTab> {
               : StatusBadge(v.actif ? t.actif : t.inactif, variant: v.actif ? BadgeVariant.ok : BadgeVariant.neutral, small: true),
         );
     return SuRefresh(
-      onRefresh: () async { ref.invalidate(vehiculesProvider); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
+      onRefresh: () async { await refreshing(ref, [vehiculesProvider]); if (ctx.isGardien || ctx.isGestion) await _rafraichirCache(); },
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: [
         if (ctx.isGardien || ctx.isGestion) ...[
           // Recherche de plaque : titre de section Wise + tuile greige (champ blanc, pill « Rechercher »).
@@ -486,7 +486,7 @@ class _BadgesTab extends ConsumerWidget {
     final liste = ref.watch(badgesProvider(''));
     final peutSignaler = ctx.isResident || ctx.isGestion;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(badgesProvider),
+      onRefresh: () => refreshing(ref, [badgesProvider]),
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 0, 16, 32), children: [
         SectionHeader(ctx.isResident ? t.mesBadges : t.badges),
         AsyncView(liste, onRetry: () => ref.invalidate(badgesProvider), data: (rows) => rows.isEmpty
@@ -519,7 +519,7 @@ class _VisiteursTab extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final jour = ref.watch(visiteursAujourdhuiProvider);
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(visiteursAujourdhuiProvider),
+      onRefresh: () => refreshing(ref, [visiteursAujourdhuiProvider]),
       child: ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [
         Text(t.visiteursJourAide, style: tt.bodyLarge?.copyWith(color: SuColors.soft)),
         AsyncView(jour, onRetry: () => ref.invalidate(visiteursAujourdhuiProvider), data: (j) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [

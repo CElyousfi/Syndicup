@@ -5,6 +5,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -44,7 +45,7 @@ class _InvitationsScreenState extends ConsumerState<InvitationsScreen> {
     return SuPage(
       title: d.invitations.titre,
       subtitle: d.invitations.subtitle,
-      onRefresh: () async => ref.invalidate(invitationsProvider),
+      onRefresh: () => refreshing(ref, [invitationsProvider]),
       fab: FloatingActionButton.extended(onPressed: _nouvelle, icon: const Icon(Icons.add_rounded), label: Text(d.invitations.nouvelle)),
       children: [
         SuBanner(tone: BannerTone.info, body: d.invitations.envoiManuel),

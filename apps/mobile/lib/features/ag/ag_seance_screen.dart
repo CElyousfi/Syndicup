@@ -20,6 +20,7 @@ import '../../core/live/live_activities.dart';
 import '../../core/theme/motion.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/util/status.dart';
+import '../../core/api/refresh.dart';
 import '../../core/widgets/widgets.dart';
 import 'ag_screens.dart';
 
@@ -71,7 +72,7 @@ class _AgSeanceScreenState extends ConsumerState<AgSeanceScreen> {
     });
     return ag.when(
       loading: () => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: const [LoadingList(count: 3, height: 150)]),
-      error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
+      error: (e, _) => SuPage(title: ctx.isGestion ? d.ag.pupitre : d.ag.seance, onRefresh: () => refreshing(ref, [agProvider(widget.id)]), children: [ErrorState(error: e, onRetry: () => ref.invalidate(agProvider(widget.id)))]),
       data: (a) => ctx.isGestion ? _Pupitre(ag: a) : _VueVotant(ag: a),
     );
   }
@@ -428,6 +429,7 @@ class _PupitreState extends ConsumerState<_Pupitre> {
     return SuPage(
       title: d.ag.pupitre,
       subtitle: '${md.seanceEnCours} · ${d.enums.typeAg[ag.type] ?? ''}',
+      onRefresh: () => refreshing(ref, [agProvider(ag.id)]),
       children: [
         if (ag.statut == 'CLOTUREE') ...[
           SuBanner(tone: BannerTone.ok, title: d.ag.cloturee, body: d.ag.toutesFinalisees),

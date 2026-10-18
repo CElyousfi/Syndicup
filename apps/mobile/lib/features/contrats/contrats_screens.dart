@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/format/centimes.dart';
@@ -43,9 +44,7 @@ class _ContratsScreenState extends ConsumerState<ContratsScreen> {
       title: d.contrats.titre,
       subtitle: d.contrats.subtitle,
       onRefresh: () async {
-        ref.invalidate(contratsProvider);
-        ref.invalidate(assuranceProvider);
-        ref.invalidate(echeancierProchainProvider);
+        await refreshing(ref, [contratsProvider, assuranceProvider, echeancierProchainProvider]);
       },
       children: [
         if (assurance != null && !assurance.immeubleActive) ...[
@@ -157,7 +156,7 @@ class ContratDetailScreen extends ConsumerWidget {
     return SuPage(
       title: contrat.valueOrNull?.libelle ?? d.contrats.titre,
       subtitle: contrat.valueOrNull == null ? null : d.enumsContrats.typeContrat[contrat.valueOrNull!.type],
-      onRefresh: () async => ref.invalidate(contratProvider(id)),
+      onRefresh: () => refreshing(ref, [contratProvider(id)]),
       children: [
         AsyncView(contrat, onRetry: () => ref.invalidate(contratProvider(id)), data: (c) {
           final det = c.detailsAssurance;

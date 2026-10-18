@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -25,7 +26,7 @@ class LitigesScreen extends ConsumerWidget {
     final gestion = ctx.isGestion || ctx.isConseil;
     return SuPage(
       title: gestion ? d.litiges.titre : d.litiges.mesLitiges,
-      onRefresh: () async => ref.invalidate(litigesProvider),
+      onRefresh: () => refreshing(ref, [litigesProvider]),
       fab: ctx.isPrestataire || ctx.isGardien ? null : FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.litiges.declarer, builder: (_) => const _LitigeForm()), icon: const Icon(Icons.add_rounded), label: Text(d.litiges.declarer)),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(litigesProvider), data: (ls) {

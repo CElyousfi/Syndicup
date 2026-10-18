@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -47,8 +48,7 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
       floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null,
       body: SuRefresh(
         onRefresh: () async {
-          ref.invalidate(lotsProvider);
-          ref.invalidate(syntheseProvider);
+          await refreshing(ref, [lotsProvider, syntheseProvider]);
         },
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
@@ -316,8 +316,7 @@ class _Finances extends ConsumerWidget {
     final peutContester = lot.estProprietaire(ctx.profil.id) && !ctx.isGestion;
     return SuRefresh(
       onRefresh: () async {
-        ref.invalidate(soldeLotProvider(lot.id));
-        ref.invalidate(syntheseProvider);
+        await refreshing(ref, [soldeLotProvider(lot.id), syntheseProvider]);
       },
       child: ListView(
         padding: const EdgeInsets.all(16),

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -81,7 +82,7 @@ class _ParametresScreenState extends ConsumerState<ParametresScreen> {
     return SuPage(
       title: p.titre,
       subtitle: ctx.copropriete?.nom,
-      onRefresh: () async => ref.invalidate(coproprieteProvider(ctx.coproprieteId)),
+      onRefresh: () => refreshing(ref, [coproprieteProvider(ctx.coproprieteId)]),
       children: [
         AsyncView(copro, onRetry: () => ref.invalidate(coproprieteProvider(ctx.coproprieteId)), data: (c) => Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

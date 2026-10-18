@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -46,8 +47,7 @@ class _TachesScreenState extends ConsumerState<TachesScreen> {
       title: gardien ? t.mesTaches : t.titre,
       subtitle: gardien ? t.mesTachesSubtitle : t.subtitle,
       onRefresh: () async {
-        ref.invalidate(mesTachesProvider);
-        ref.invalidate(tachesProvider);
+        await refreshing(ref, [mesTachesProvider, tachesProvider]);
       },
       children: [
         SuQueueSyncFlash(pending: file.length),
@@ -155,7 +155,7 @@ class _TacheDetailScreenState extends ConsumerState<TacheDetailScreen> {
     final tache = ref.watch(tacheProvider(widget.id));
     return SuPage(
       title: tache.valueOrNull?.titre ?? t.titre,
-      onRefresh: () async => ref.invalidate(tacheProvider(widget.id)),
+      onRefresh: () => refreshing(ref, [tacheProvider(widget.id)]),
       children: [
         AsyncView(
           tache,

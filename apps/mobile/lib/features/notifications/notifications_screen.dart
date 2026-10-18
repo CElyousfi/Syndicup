@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/auth/session.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
@@ -36,7 +37,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
     final notifs = ref.watch(notificationsProvider);
     return SuPage(
       title: d.notifs.titre,
-      onRefresh: () async => ref.invalidate(notificationsProvider),
+      onRefresh: () => refreshing(ref, [notificationsProvider]),
       actions: [
         SuButton(
           variant: SuButtonVariant.ghost,

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/feel/feel.dart';
@@ -251,8 +252,7 @@ class RapportsScreen extends ConsumerWidget {
       title: d.rapports.titre,
       subtitle: d.rapports.subtitle,
       onRefresh: () async {
-        ref.invalidate(tableauDeBordProvider);
-        ref.invalidate(rapportsGestionProvider);
+        await refreshing(ref, [tableauDeBordProvider, rapportsGestionProvider]);
       },
       children: [
         SuBanner(tone: BannerTone.info, body: d.rapports.compteCourantAide),
@@ -361,7 +361,7 @@ class _TransparenceScreenState extends ConsumerState<TransparenceScreen> {
     return SuPage(
       title: d.rapports.transparenceTitre,
       subtitle: d.rapports.transparenceSubtitle,
-      onRefresh: () async => ref.invalidate(transparenceProvider),
+      onRefresh: () => refreshing(ref, [transparenceProvider]),
       children: [
         Segmented<String>(value: _exercice, options: exercices, labelOf: (x) => x, onChanged: (v) => setState(() => _exercice = v)),
         const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/format/centimes.dart';
@@ -166,13 +167,7 @@ class _DashSyndic extends ConsumerWidget {
     final documents = ref.watch(documentsProvider);
 
     Future<void> refresh() async {
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(incidentsProvider);
-      ref.invalidate(agListProvider);
-      ref.invalidate(reservationsProvider);
-      ref.invalidate(lotsProvider);
-      ref.invalidate(litigesProvider);
-      ref.invalidate(documentsProvider);
+      await refreshing(ref, [syntheseProvider, incidentsProvider, agListProvider, reservationsProvider, lotsProvider, litigesProvider, documentsProvider]);
     }
 
     final s = synthese.valueOrNull ?? const SyntheseFinanciere();
@@ -383,17 +378,9 @@ class _DashResident extends ConsumerWidget {
     final sejoursLcd = ctx.declareSejoursLcd ? (ref.watch(lcdSejoursProvider).valueOrNull ?? const <LcdSejour>[]) : const <LcdSejour>[];
 
     Future<void> refresh() async {
-      ref.invalidate(lotsProvider);
+      await refreshing(ref, [lotsProvider]);
       if (ctx.declareSejoursLcd) ref.invalidate(lcdSejoursProvider);
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(agListProvider);
-      ref.invalidate(incidentsProvider);
-      ref.invalidate(reservationsProvider);
-      ref.invalidate(visitesProvider);
-      ref.invalidate(notificationsProvider);
-      ref.invalidate(documentsProvider);
-      ref.invalidate(annoncesProvider);
-      ref.invalidate(annoncesNonLuesProvider);
+      await refreshing(ref, [syntheseProvider, agListProvider, incidentsProvider, reservationsProvider, visitesProvider, notificationsProvider, documentsProvider, annoncesProvider, annoncesNonLuesProvider]);
     }
 
     final mesLots = (lots.valueOrNull ?? const <Lot>[]).where((x) => x.concerne(ctx.profil.id)).toList();
@@ -596,8 +583,7 @@ class _DashGardien extends ConsumerWidget {
 
     return SuRefresh(
       onRefresh: () async {
-        ref.invalidate(visitesProvider);
-        ref.invalidate(incidentsProvider);
+        await refreshing(ref, [visitesProvider, incidentsProvider]);
         await ref.read(visitesSyncProvider.notifier).flush();
       },
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
@@ -688,7 +674,7 @@ class _DashPrestataire extends ConsumerWidget {
     final tickets = incidents.valueOrNull ?? const <Incident>[];
     final ouverts = tickets.where((i) => i.ouvert).toList();
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(incidentsProvider),
+      onRefresh: () => refreshing(ref, [incidentsProvider]),
       child: rememberTabScroll(context, '/tableau-de-bord', (key) => ListView(
         key: key,
         padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),

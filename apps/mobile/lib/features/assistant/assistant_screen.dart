@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_client.dart';
 import '../../core/auth/app_state.dart';
 import '../../core/auth/session.dart';
@@ -223,7 +224,7 @@ class _AssistantScreenState extends ConsumerState<AssistantScreen> {
           ),
           Expanded(
             child: SuRefresh(
-              onRefresh: () async => ref.invalidate(assistantEtatProvider),
+              onRefresh: () => refreshing(ref, [assistantEtatProvider]),
               child: ListView(
                 controller: _scroll,
                 padding: const EdgeInsets.fromLTRB(14, 18, 14, 24),

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -103,9 +104,7 @@ class PayerScreen extends ConsumerWidget {
       title: d.justificatifs.payerTitre,
       subtitle: d.justificatifs.payerSubtitle,
       onRefresh: () async {
-        ref.invalidate(justificatifsProvider);
-        ref.invalidate(comptesBancairesProvider);
-        ref.invalidate(lotsProvider);
+        await refreshing(ref, [justificatifsProvider, comptesBancairesProvider, lotsProvider]);
       },
       children: [
         SectionHeader(d.justificatifs.virement, subtitle: d.justificatifs.virementAide),
@@ -316,7 +315,7 @@ class _JustificatifsScreenState extends ConsumerState<JustificatifsScreen> {
     return SuPage(
       title: d.justificatifs.titre,
       subtitle: d.justificatifs.subtitle,
-      onRefresh: () async => ref.invalidate(justificatifsProvider),
+      onRefresh: () => refreshing(ref, [justificatifsProvider]),
       children: [
         FilterChips<String>(value: _onglet, options: const ['EN_ATTENTE', 'VALIDE', 'REJETE', 'TOUS'], labelOf: (s) => s == 'TOUS' ? d.justificatifs.tous : (d.enumsJustificatifs.statutJustificatif[s] ?? s), onChanged: (v) => setState(() => _onglet = v)),
         const SizedBox(height: 12),
@@ -337,7 +336,7 @@ class EspecesScreen extends ConsumerWidget {
     return SuPage(
       title: d.justificatifs.especesTitre,
       subtitle: d.justificatifs.especesSubtitle,
-      onRefresh: () async => ref.invalidate(justificatifsProvider),
+      onRefresh: () => refreshing(ref, [justificatifsProvider]),
       children: [
         SubmitButton(label: d.justificatifs.especesSaisir, icon: Icons.payments_rounded, onPressed: lots.isEmpty ? null : () => showFormSheet<void>(context, title: d.justificatifs.especesSaisir, builder: (_) => DeclarationForm(lots: lots, comptes: const [], mode: 'especes', onDone: () => ref.invalidate(justificatifsProvider)))),
         SectionHeader(d.justificatifs.mesSaisies),
@@ -352,11 +351,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
   const JustificatifDetailScreen({super.key, required this.id});
   final String id;
 
-  void _refresh(WidgetRef ref) {
-    ref.invalidate(justificatifProvider(id));
-    ref.invalidate(justificatifsProvider);
-    ref.invalidate(soldeLotProvider);
-  }
+  Future<void> _refresh(WidgetRef ref) => refreshing(ref, [justificatifProvider(id), justificatifsProvider, soldeLotProvider]);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -368,7 +363,7 @@ class JustificatifDetailScreen extends ConsumerWidget {
     final x = ref.watch(justificatifProvider(id));
     return SuPage(
       title: x.valueOrNull == null ? j.titre : '${x.valueOrNull!.lotNumero ?? ''} · ${formatMAD(x.valueOrNull!.montant, l)}',
-      onRefresh: () async => _refresh(ref),
+      onRefresh: () => _refresh(ref),
       children: [
         AsyncView(x, onRetry: () => ref.invalidate(justificatifProvider(id)), data: (y) {
           final affectations = (y.details['affectations'] as List?)?.whereType<Map>().toList() ?? const [];

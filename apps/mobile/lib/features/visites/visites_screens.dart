@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_result.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
 import '../../core/auth/app_state.dart';
@@ -100,7 +101,7 @@ class _VisitesScreenState extends ConsumerState<VisitesScreen> {
     final titre = resident ? d.visites.mesVisites : d.visites.titre;
     final fab = (gardien || gestion) ? FloatingActionButton.extended(onPressed: _enregistrer, icon: const Icon(Icons.person_add_alt_1_rounded), label: Text(d.visites.enregistrer)) : null;
     Future<void> refresh() async {
-      ref.invalidate(visitesProvider);
+      await refreshing(ref, [visitesProvider]);
       await ref.read(visitesSyncProvider.notifier).flush();
     }
 

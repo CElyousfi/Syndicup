@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/models.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/providers.dart';
 import '../../core/format/format.dart';
 import '../../core/i18n/i18n.dart';
@@ -60,7 +61,7 @@ class _PortefeuilleTab extends ConsumerWidget {
     final lignes = ref.watch(portefeuilleProvider(cabinet.id));
     Color couleurTaux(double? x) => x == null ? SuColors.faint : x >= 80 ? SuColors.ok : x >= 60 ? SuColors.warn : SuColors.danger;
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(portefeuilleProvider(cabinet.id)),
+      onRefresh: () => refreshing(ref, [portefeuilleProvider(cabinet.id)]),
       child: AsyncView(lignes, onRetry: () => ref.invalidate(portefeuilleProvider(cabinet.id)), data: (rows) {
         if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, hint: t.aucuneCoproprieteAide, icon: Icons.apartment_rounded, illustration: 'empty-lots')]);
         final alertes = rows.fold<int>(0, (a, r) => a + r.alertes.length);
@@ -117,7 +118,7 @@ class _AlertesTab extends ConsumerWidget {
     final liste = ref.watch(alertesCabinetProvider(cabinetId));
     String libelle(AlerteCabinet a) => fill(t.codesAlerte[a.code] ?? a.code, {'v': a.valeur ?? ''});
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(alertesCabinetProvider(cabinetId)),
+      onRefresh: () => refreshing(ref, [alertesCabinetProvider(cabinetId)]),
       child: AsyncView(liste, onRetry: () => ref.invalidate(alertesCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
           ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneAlerte, icon: Icons.check_circle_outline_rounded, tone: Tone.ok, illustration: 'empty-notifications')])
           : ListView(padding: const EdgeInsets.fromLTRB(16, 12, 16, 32), children: [CardList([for (final a in rows) ListRow(key: ValueKey('${a.coproprieteId}-${a.code}-${a.valeur}'), leading: IconCircle(a.niveau == 'danger' ? Icons.error_outline_rounded : Icons.warning_amber_rounded, tone: a.niveau == 'danger' ? Tone.danger : Tone.warn), title: libelle(a), subtitle: a.copropriete)])])),
@@ -134,7 +135,7 @@ class _AgendaTab extends ConsumerWidget {
     final l = context.locale;
     final liste = ref.watch(agendaCabinetProvider(cabinetId));
     return SuRefresh(
-      onRefresh: () async => ref.invalidate(agendaCabinetProvider(cabinetId)),
+      onRefresh: () => refreshing(ref, [agendaCabinetProvider(cabinetId)]),
       child: AsyncView(liste, onRetry: () => ref.invalidate(agendaCabinetProvider(cabinetId)), data: (rows) => rows.isEmpty
           ? ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucunEvenement, hint: t.agendaAide, icon: Icons.event_note_rounded, illustration: 'empty-ag')])
           : ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [

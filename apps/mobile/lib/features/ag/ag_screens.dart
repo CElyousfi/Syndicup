@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -31,7 +32,7 @@ class AgListScreen extends ConsumerWidget {
     final ags = ref.watch(agListProvider);
     return SuPage(
       title: d.ag.titre,
-      onRefresh: () async => ref.invalidate(agListProvider),
+      onRefresh: () => refreshing(ref, [agListProvider]),
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/ag/nouvelle'), icon: const Icon(Icons.add_rounded), label: Text(d.ag.creer)) : null,
       children: [
         PhotoBanner('salle', title: ctx.copropriete?.nom),
@@ -149,16 +150,12 @@ class AgDetailScreen extends ConsumerWidget {
     final procurations = ref.watch(agProcurationsProvider(id));
     final lots = ref.watch(lotsProvider).valueOrNull ?? const <Lot>[];
     final membres = annuaireDepuisLots(lots);
-    void refresh() {
-      ref.invalidate(agProvider(id));
-      ref.invalidate(agProcurationsProvider(id));
-      ref.invalidate(agListProvider);
-    }
+    Future<void> refresh() => refreshing(ref, [agProvider(id), agProcurationsProvider(id), agListProvider]);
 
     return SuPage(
       title: ag.valueOrNull == null ? d.ag.titre : (d.enums.typeAg[ag.valueOrNull!.type] ?? ag.valueOrNull!.type),
       subtitle: ag.valueOrNull == null ? null : formatDateLongue(ag.valueOrNull!.dateAg, l),
-      onRefresh: () async => refresh(),
+      onRefresh: refresh,
       children: [
         AsyncView(ag, onRetry: refresh, data: (a) {
           final procs = (procurations.valueOrNull ?? const <AgProcuration>[]).where((p) => p.active).toList();
@@ -703,6 +700,7 @@ class AgPvScreen extends ConsumerWidget {
     final pv = ref.watch(agPvProvider(id));
     return SuPage(
       title: d.ag.pvTitre,
+      onRefresh: () => refreshing(ref, [agPvProvider(id)]),
       children: [
         AsyncView(pv, onRetry: () => ref.invalidate(agPvProvider(id)), data: (p) {
           return Column(
@@ -800,6 +798,7 @@ class AgVotesScreen extends ConsumerWidget {
     final membres = annuaireDepuisLots(lots);
     return SuPage(
       title: d.ag.detailVotes,
+      onRefresh: () => refreshing(ref, [agVotesProvider((agId: agId, resolutionId: resolutionId))]),
       children: [
         SuBanner(tone: BannerTone.warn, body: d.ag.detailVotesBandeau),
         const SizedBox(height: 12),

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -40,7 +41,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
     return SuPage(
       title: d.documents.titre,
       subtitle: d.documents.subtitle,
-      onRefresh: () async => ref.invalidate(documentsProvider),
+      onRefresh: () => refreshing(ref, [documentsProvider]),
       actions: [if (ctx.isGestion) CircleIconButton(icon: Icons.upload_file_rounded, tooltip: d.documents.televerser, onTap: () => _upload(context))],
       children: [
         PhotoBanner('cour', title: ctx.copropriete?.nom),

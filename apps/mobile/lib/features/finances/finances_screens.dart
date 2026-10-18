@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/idempotency.dart';
 import '../../core/api/models.dart';
@@ -98,7 +99,7 @@ class BudgetsScreen extends ConsumerWidget {
     return SuPage(
       title: d.finances.budgets,
       subtitle: d.finances.budgetsSubtitle,
-      onRefresh: () async => ref.invalidate(budgetsProvider),
+      onRefresh: () => refreshing(ref, [budgetsProvider]),
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => _form(context, ref, null), icon: const Icon(Icons.add_rounded), label: Text(d.finances.creerBudget)) : null,
       children: [
         SuBanner(tone: BannerTone.info, body: d.finances.budgetActifRequis),
@@ -264,7 +265,7 @@ class _AppelsScreenState extends ConsumerState<AppelsScreen> {
     final t = Theme.of(context).textTheme;
     final synthese = ref.watch(syntheseProvider);
     final racine = !context.canPop();
-    Future<void> refresh() async => ref.invalidate(syntheseProvider);
+    Future<void> refresh() => refreshing(ref, [syntheseProvider]);
     final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: _generer, icon: const Icon(Icons.add_rounded), label: Text(d.finances.genererAppel)) : null;
     final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {
       if (s.appels.isEmpty) return EmptyState(title: d.finances.aucunAppel, hint: ctx.isGestion ? d.finances.aucunAppelAide : null, icon: Icons.request_quote_rounded, illustration: 'empty-appels', actionLabel: ctx.isGestion ? d.finances.genererAppel : null, onAction: _generer);
@@ -405,8 +406,7 @@ class AppelDetailScreen extends ConsumerWidget {
       title: appel.valueOrNull == null ? d.finances.appels : formatPeriode(appel.valueOrNull!.periode, l),
       subtitle: appel.valueOrNull == null ? null : d.enums.typeAppel[appel.valueOrNull!.type],
       onRefresh: () async {
-        ref.invalidate(appelProvider(id));
-        ref.invalidate(syntheseProvider);
+        await refreshing(ref, [appelProvider(id), syntheseProvider]);
       },
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showPaiementSheet(context, ref, appel: appel.valueOrNull), icon: const Icon(Icons.payments_rounded), label: Text(d.finances.enregistrerPaiement)) : null,
       children: [
@@ -608,6 +608,7 @@ class QuittanceScreen extends ConsumerWidget {
     final paiements = ref.watch(paiementsProvider).valueOrNull ?? const <Paiement>[];
     return SuPage(
       title: d.finances.quittance,
+      onRefresh: () => refreshing(ref, [quittanceProvider(id), paiementsProvider]),
       children: [
         AsyncView(q, onRetry: () => ref.invalidate(quittanceProvider(id)), data: (qt) {
           final ligne = synthese.lignes.where((x) => x.id == qt.appelDeFondsLotId).firstOrNull;
@@ -687,7 +688,7 @@ class ContestationsScreen extends ConsumerWidget {
     return SuPage(
       title: d.finances.contestations,
       subtitle: d.finances.contestationsSubtitle,
-      onRefresh: () async => ref.invalidate(contestationsProvider),
+      onRefresh: () => refreshing(ref, [contestationsProvider]),
       children: [
         AsyncView(list, onRetry: () => ref.invalidate(contestationsProvider), data: (cs) {
           if (cs.isEmpty) return EmptyState(title: d.finances.aucuneContestation, icon: Icons.balance_rounded, illustration: 'empty-litiges');
@@ -814,9 +815,7 @@ class _ComptabiliteScreenState extends ConsumerState<ComptabiliteScreen> {
     final titre = resident ? c.monReleve : c.titre;
     final sousTitre = resident ? c.monReleveSubtitle : c.subtitle;
     Future<void> refresh() async {
-      ref.invalidate(syntheseProvider);
-      ref.invalidate(paiementsProvider);
-      ref.invalidate(budgetsProvider);
+      await refreshing(ref, [syntheseProvider, paiementsProvider, budgetsProvider]);
     }
 
     final contenu = AsyncView(synthese, onRetry: () => ref.invalidate(syntheseProvider), data: (s) {

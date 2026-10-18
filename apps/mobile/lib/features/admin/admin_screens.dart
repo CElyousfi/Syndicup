@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -35,7 +36,7 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
       appBar: ShellHeader(title: d.admin.titre),
       floatingActionButton: FloatingActionButton.extended(onPressed: () => context.push('/admin/coproprietes/nouvelle'), icon: const Icon(Icons.add_rounded), label: Text(d.admin.creer)),
       body: SuRefresh(
-        onRefresh: () async => ref.invalidate(coproprietesProvider),
+        onRefresh: () => refreshing(ref, [coproprietesProvider]),
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
           children: [
@@ -207,8 +208,7 @@ class AdminCoproDetailScreen extends ConsumerWidget {
       title: copro.valueOrNull?.nom ?? d.admin.ficheClient,
       subtitle: copro.valueOrNull?.ville,
       onRefresh: () async {
-        ref.invalidate(coproprieteProvider(id));
-        ref.invalidate(adminSyntheseProvider(id));
+        await refreshing(ref, [coproprieteProvider(id), adminSyntheseProvider(id)]);
       },
       children: [
         AsyncView(synthese, onRetry: () => ref.invalidate(adminSyntheseProvider(id)), data: (s) => Column(

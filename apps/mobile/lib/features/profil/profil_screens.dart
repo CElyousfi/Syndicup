@@ -81,6 +81,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     final nom = nomCompletProfil(ctx);
     return SuPage(
       title: d.profil.titre,
+      // Profil = contexte de session : rechargé depuis /users/me (rôles, statut, langue).
+      onRefresh: () => ref.read(appStateProvider.notifier).reload(),
       children: [
         // En-tête « Account » de Wise : grand avatar centré, nom en gras, rôle, statut du compte.
         SuEnter(

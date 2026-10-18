@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/api/api_client.dart';
+import '../../core/api/refresh.dart';
 import '../../core/api/api_result.dart';
 import '../../core/api/models.dart';
 import '../../core/api/providers.dart';
@@ -39,7 +40,7 @@ class EspacesScreen extends ConsumerWidget {
     final racine = !context.canPop();
     final peutReserver = ctx.isResident && !(ctx.isLocataire && (ctx.copropriete?.reservationProprietairesSeulement ?? false));
     final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: d.espaces.nouveau, builder: (_) => const _EspaceForm()), icon: const Icon(Icons.add_rounded), label: Text(d.espaces.nouveau)) : null;
-    Future<void> refresh() async => ref.invalidate(espacesProvider);
+    Future<void> refresh() => refreshing(ref, [espacesProvider]);
     final liste = AsyncView(espaces, onRetry: () => ref.invalidate(espacesProvider), skeletonCount: 2, loading: const LoadingList(count: 2, height: 260), data: (list) {
       if (list.isEmpty) return EmptyState(title: d.espaces.aucunEspace, hint: ctx.isGestion ? d.espaces.aucunEspaceAide : null, icon: Icons.deck_rounded, illustration: 'empty-reservations');
       return Column(
@@ -391,7 +392,7 @@ class ReservationsScreen extends ConsumerWidget {
     }
 
     final titre = gestion ? d.espaces.reservations : d.espaces.mesReservations;
-    Future<void> refresh() async => ref.invalidate(reservationsProvider);
+    Future<void> refresh() => refreshing(ref, [reservationsProvider]);
     final liste = AsyncView(resas, onRetry: () => ref.invalidate(reservationsProvider), data: (list) {
       if (list.isEmpty) return EmptyState(title: d.espaces.aucuneReservation, hint: d.espaces.aucuneReservationAide, icon: Icons.calendar_month_rounded, illustration: 'empty-reservations');
       final sorted = [...list]..sort((a, b) => b.dateDebut.compareTo(a.dateDebut));
