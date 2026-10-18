@@ -13,7 +13,9 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { FadeImg } from "../ui/motion/fade-img";
-import { IconDownload, IconEye } from "../ui/icons";
+import { IconAlert, IconDownload, IconEye } from "../ui/icons";
+import { errorActionsFr, viewerFr } from "../../lib/i18n/errors-fr";
+import { errorActionsAr, viewerAr } from "../../lib/i18n/errors-ar";
 
 export interface ViewerLabels {
   see: string;
@@ -97,7 +99,16 @@ type Apercu =
   | { etat: "chargement" }
   | { etat: "pdf" }
   | { etat: "image"; url: string }
-  | { etat: "autre" };
+  /** Type de fichier sans aperçu intégré : on propose de le télécharger. */
+  | { etat: "autre" }
+  /** Le document n'a pas pu être récupéré (réseau, droits, stockage) : on le DIT. */
+  | { etat: "erreur" };
+
+/** Textes de la visionneuse — importés pièce par pièce (jamais le dictionnaire complet). */
+function textesVisionneuse() {
+  const ar = typeof document !== "undefined" && document.documentElement.lang === "ar";
+  return ar ? { v: viewerAr, a: errorActionsAr } : { v: viewerFr, a: errorActionsFr };
+}
 
 function DocumentPreview({
   src,
@@ -109,12 +120,14 @@ function DocumentPreview({
   downloadLabel: string;
 }) {
   const [apercu, setApercu] = useState<Apercu>({ etat: "chargement" });
+  const [essai, setEssai] = useState(0);
   const conteneurRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let annule = false;
     let urlObjet: string | null = null;
 
+    setApercu({ etat: "chargement" });
     (async () => {
       try {
         const res = await fetch(src);
@@ -167,8 +180,11 @@ function DocumentPreview({
         } else {
           setApercu({ etat: "autre" });
         }
-      } catch {
-        if (!annule) setApercu({ etat: "autre" });
+      } catch (e) {
+        // Échec de récupération ou de rendu : « Document indisponible » + Réessayer — jamais
+        // confondu avec un type de fichier sans aperçu.
+        console.warn(JSON.stringify({ niveau: "warn", message: "apercu de document impossible", erreur: String(e) }));
+        if (!annule) setApercu({ etat: "erreur" });
       }
     })();
 
@@ -176,7 +192,21 @@ function DocumentPreview({
       annule = true;
       if (urlObjet) URL.revokeObjectURL(urlObjet);
     };
-  }, [src, nom]);
+  }, [src, nom, essai]);
+
+  if (apercu.etat === "erreur") {
+    const t = textesVisionneuse();
+    return (
+      <div role="alert" className="flex h-[40vh] flex-col items-center justify-center gap-3 rounded-2xl bg-tile px-6 text-center">
+        <IconAlert width={28} height={28} className="text-warn" />
+        <p className="text-[16px] font-bold text-ink">{t.v.unavailable}</p>
+        <p className="max-w-xs text-sm text-soft">{t.v.unavailableBody}</p>
+        <Button type="button" size="sm" onClick={() => setEssai((n) => n + 1)}>
+          {t.a.retry}
+        </Button>
+      </div>
+    );
+  }
 
   if (apercu.etat === "chargement") {
     return (
@@ -198,7 +228,8 @@ function DocumentPreview({
   if (apercu.etat === "autre") {
     return (
       <div className="flex h-[40vh] flex-col items-center justify-center gap-3 rounded-2xl bg-tile px-6 text-center">
-        <p className="text-sm text-soft">{nom}</p>
+        <p className="text-sm font-semibold text-ink-strong">{nom}</p>
+        <p className="max-w-xs text-[13px] text-soft">{textesVisionneuse().v.unknownType}</p>
         <a
           href={`${src}${src.includes("?") ? "&" : "?"}download=1`}
           className="inline-flex h-11 items-center gap-2 rounded-full bg-cta px-5 text-[15px] font-semibold text-ink transition-colors hover:bg-lime-hover"
