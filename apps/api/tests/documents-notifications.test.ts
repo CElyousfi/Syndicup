@@ -11,6 +11,7 @@ import {
   creerDocument,
   listerDocuments,
   PermissionRefuseeError as DocPermissionRefuseeError,
+  CheminDocumentInvalideError,
 } from "../lib/documents/documents";
 import {
   envoyerNotification,
@@ -83,6 +84,22 @@ describe("Documents — visibilité par rôle (Doc A §12.3)", () => {
         storage_path: `${coproA}/documents/reglement/1.pdf`,
       })
     ).rejects.toBeInstanceOf(DocPermissionRefuseeError);
+  });
+
+  it("storage_path hors de `<copropriete>/documents/` est refusé (400 VALIDATION_ERROR), aucune ligne créée", async () => {
+    const autreCopro = "00000000-0000-4000-8000-0000000000aa";
+    for (const storage_path of [
+      `${autreCopro}/documents/vole.pdf`, // autre tenant
+      `${coproA}/personnel/contrat.pdf`, // autre module
+      `${coproA}/documents/`, // vide
+      `${coproA}/documents/../${autreCopro}/documents/x.pdf`, // traversée
+      `documents/${coproA}/x.pdf`,
+    ]) {
+      await expect(
+        creerDocument(ctxSyndicA(), { type: "reglement_interieur", nom: "Hors périmètre", visibilite: "PUBLIC_COPROPRIETE", storage_path })
+      ).rejects.toBeInstanceOf(CheminDocumentInvalideError);
+    }
+    expect(await admin.document.count({ where: { coproprieteId: coproA, nom: "Hors périmètre" } })).toBe(0);
   });
 
   it("un document PUBLIC_COPROPRIETE est visible par tous les rôles du tenant", async () => {

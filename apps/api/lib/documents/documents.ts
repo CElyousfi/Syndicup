@@ -13,6 +13,8 @@ import type { DocumentCreateInput, DocumentUploadUrlInput } from "./schemas";
 export class PermissionRefuseeError extends Error {}
 export class IntrouvableError extends Error {}
 export class ContrainteMetierError extends Error {}
+/** storage_path hors du périmètre `<copropriete>/documents/` du tenant → 400 VALIDATION_ERROR. */
+export class CheminDocumentInvalideError extends Error {}
 
 /**
  * POST /documents/upload-url — prépare un téléversement : chemin canonique dans le périmètre du
@@ -38,6 +40,14 @@ export async function preparerUpload(ctx: TenantContext, input: DocumentUploadUr
 export async function creerDocument(ctx: TenantContext, input: DocumentCreateInput) {
   if (can("documents.creer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ajouter un document.");
+  }
+  // Le chemin doit être celui préparé par POST /documents/upload-url pour CE tenant : jamais un
+  // objet d'une autre copropriété ni d'un autre module (download-url refuserait ensuite de le
+  // servir, mais la ligne ne doit même pas exister). Aucun segment `..` / vide toléré.
+  const prefixe = `${ctx.coproprieteId}/documents/`;
+  const reste = input.storage_path.startsWith(prefixe) ? input.storage_path.slice(prefixe.length) : null;
+  if (reste === null || reste.length === 0 || reste.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) {
+    throw new CheminDocumentInvalideError(`storage_path doit commencer par « ${prefixe} » (chemin renvoyé par POST /documents/upload-url).`);
   }
   return withTenant(ctx, async (db) => {
     const document = await db.document.create({

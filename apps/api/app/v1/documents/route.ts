@@ -8,6 +8,7 @@ import {
   creerDocument,
   listerDocuments,
   PermissionRefuseeError,
+  CheminDocumentInvalideError,
 } from "../../../lib/documents/documents";
 import { tenantFromRequest, mapAuthError } from "../../../lib/http/request-context";
 import { ok, fail, failZod } from "../../../lib/http/respond";
@@ -37,6 +38,7 @@ async function handlePOST(req: Request) {
     const mapped = mapAuthError(e);
     if (mapped) return mapped;
     if (e instanceof PermissionRefuseeError) return fail("FORBIDDEN", e.message);
+    if (e instanceof CheminDocumentInvalideError) return fail("VALIDATION_ERROR", e.message);
     throw e;
   }
 }
