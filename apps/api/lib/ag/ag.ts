@@ -100,11 +100,16 @@ export async function obtenirAg(ctx: TenantContext, agId: string) {
 
 const JOUR_MS = 24 * 60 * 60 * 1000;
 
-export async function convoquerAg(ctx: TenantContext, agId: string) {
+/**
+ * Convocation = action probante (ag_notification_log). `idempotencyKey` OPTIONNELLE : même clé +
+ * même AG → réponse rejouée, les convocations ne partent qu'une fois ; sans clé, comportement
+ * inchangé (la transition unique PLANIFIEE → CONVOQUEE refuse un second envoi en 422).
+ */
+export async function convoquerAg(ctx: TenantContext, agId: string, idempotencyKey?: string) {
   if (can("ag.convoquer", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut convoquer une AG.");
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: `POST /ag/${agId}/convoquer`, payload: { agId } }, async (db) => {
     const [ag, copropriete] = await Promise.all([
       db.assembleeGenerale.findUnique({ where: { id: agId } }),
       db.copropriete.findUnique({ where: { id: ctx.coproprieteId } }),
@@ -169,11 +174,12 @@ export async function convoquerAg(ctx: TenantContext, agId: string) {
   });
 }
 
-export async function ouvrirAg(ctx: TenantContext, agId: string) {
+/** Ouverture (notifie AG_OUVERTE) — `idempotencyKey` OPTIONNELLE, même règle que la convocation. */
+export async function ouvrirAg(ctx: TenantContext, agId: string, idempotencyKey?: string) {
   if (can("ag.ouvrir", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ouvrir une AG.");
   }
-  return withTenant(ctx, async (db) => {
+  return withTenantIdempotent(ctx, { cle: idempotencyKey, endpoint: `POST /ag/${agId}/ouvrir`, payload: { agId } }, async (db) => {
     const [ag, copropriete] = await Promise.all([
       db.assembleeGenerale.findUnique({ where: { id: agId } }),
       db.copropriete.findUnique({ where: { id: ctx.coproprieteId } }),

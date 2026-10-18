@@ -3559,10 +3559,16 @@ paths:
   /lots:
     get:
       tags: [Lots]
+      description: >
+        Filtres serveur optionnels (Zod, valeur invalide → 400) — exactement ceux de l'écran Lots ;
+        ils restreignent ce que la RLS laisse voir et `meta.total` compte le résultat filtré.
       parameters:
         - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
         - $ref: "#/components/parameters/Page"
         - $ref: "#/components/parameters/Limit"
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 }, description: "Numéro du lot, ou nom / prénom (« prénom nom », « nom prénom ») d'un propriétaire rattaché — « contient », insensible à la casse, `%` et `_` cherchés tels quels." }
+        - { name: type, in: query, schema: { type: string, enum: [APPARTEMENT, PARKING, CAVE, LOCAL, TOIT_TERRASSE, VILLA, COMMERCIAL, BUREAU, LOGE_GARDIEN] }, description: type_lot }
+        - { name: statut, in: query, schema: { type: string, enum: [OCCUPE, VACANT, ORPHELIN, EN_SUCCESSION, SINISTRE, TANTIEME_A_REGULARISER] } }
       responses:
         "200":
           description: OK
@@ -4612,7 +4618,8 @@ paths:
     post:
       tags: [Assemblées Générales]
       summary: Envoie la convocation. Génère une ligne ag_notification_log par destinataire (Master Spec Partie 8.2).
-      parameters: [{ $ref: "#/components/parameters/AgId" }]
+      description: Idempotency-Key optionnelle — même clé → réponse rejouée, convocations envoyées une seule fois ; sans clé, la transition unique PLANIFIEE → CONVOQUEE refuse un second envoi (422).
+      parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "200":
           description: "Convoquée, statut → CONVOQUEE."
@@ -4629,8 +4636,9 @@ paths:
       tags: [Assemblées Générales]
       summary: >
         Ajout nécessaire (Doc A §6.4) : bascule CONVOQUEE→EN_COURS après la date prévue. Rôle
-        autorisé — syndic.
-      parameters: [{ $ref: "#/components/parameters/AgId" }]
+        autorisé — syndic. Idempotency-Key optionnelle (même clé → réponse rejouée, AG_OUVERTE
+        envoyée une seule fois).
+      parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "200":
           description: "Ouverte, statut → EN_COURS, quorum_requis fixé (snapshot copropriete)."
@@ -4882,10 +4890,22 @@ paths:
       summary: >
         Liste des incidents. Confidentialité RLS (Doc A §12.3) : syndic/conseil syndical/gardien
         voient tout ; un résident ne voit que les incidents qu'il a créés ; un prestataire ne voit
-        que les incidents qui lui sont assignés.
-      parameters: [{ $ref: "#/components/parameters/Page" }, { $ref: "#/components/parameters/Limit" }]
+        que les incidents qui lui sont assignés. Filtres serveur optionnels (Zod, valeur invalide
+        → 400) : ils ne font que restreindre ce que la RLS laisse voir, et `meta.total` compte le
+        résultat filtré.
       parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/Limit"
         - { name: format, in: query, schema: { type: string, enum: [csv, xlsx] }, description: "M18 — export journalisé (export_log)." }
+        - { name: sejour_id, in: query, schema: { type: string, format: uuid }, description: "M15 — incidents liés à un séjour LCD." }
+        - name: statut
+          in: query
+          description: "Un ou plusieurs statuts, séparés par des virgules (`statut=OUVERT,EN_COURS`) ou paramètre répété."
+          schema: { type: string, example: "OUVERT,EN_COURS" }
+        - { name: urgence, in: query, schema: { type: string, enum: [NORMALE, URGENTE, URGENCE_MAXIMALE] } }
+        - { name: categorie, in: query, schema: { type: string, enum: [PLOMBERIE, ELECTRICITE, ASCENSEUR, NETTOYAGE, SECURITE, STRUCTURE, JARDINS_ESPACES_VERTS, NUISANCES, PARKING, EQUIPEMENTS_COLLECTIFS, ADMINISTRATIF] } }
+        - { name: lot_id, in: query, schema: { type: string, format: uuid } }
+        - { name: q, in: query, schema: { type: string, minLength: 1, maxLength: 100 }, description: "Recherche « contient » (insensible à la casse) dans sous-catégorie et description ; `%` et `_` cherchés tels quels." }
       responses:
         "200":
           description: OK
@@ -4898,6 +4918,7 @@ paths:
                     type: array
                     items: { $ref: "#/components/schemas/Incident" }
                   meta: { $ref: "#/components/schemas/Meta" }
+        "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Incidents]
@@ -4924,6 +4945,34 @@ paths:
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /incidents/compteurs:
+    get:
+      tags: [Incidents]
+      summary: "Cartes de synthèse : nombre d'incidents par statut et ouverts / en cours au SLA dépassé, sur tout le périmètre visible de l'appelant (RLS)."
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [par_statut, total, sla_depasses]
+                    properties:
+                      par_statut:
+                        type: object
+                        required: [OUVERT, EN_COURS, RESOLU, FERME]
+                        properties:
+                          OUVERT: { type: integer }
+                          EN_COURS: { type: integer }
+                          RESOLU: { type: integer }
+                          FERME: { type: integer }
+                      total: { type: integer }
+                      sla_depasses: { type: integer, description: "OUVERT ou EN_COURS dont sla_deadline est passée." }
+        "403": { $ref: "#/components/responses/Forbidden" }
 
   /incidents/{id}:
     get:

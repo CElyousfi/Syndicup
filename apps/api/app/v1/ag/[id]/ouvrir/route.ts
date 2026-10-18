@@ -10,12 +10,14 @@ import {
 } from "../../../../../lib/ag/ag";
 import { tenantFromRequest, mapAuthError } from "../../../../../lib/http/request-context";
 import { ok, fail } from "../../../../../lib/http/respond";
+import { readIdempotencyKeyOptionnelle } from "../../../../../lib/http/idempotency";
 
 async function handlePOST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
     const ctx = await tenantFromRequest(req);
     const { id } = await params;
-    const ag = await ouvrirAg(ctx, id);
+    // Idempotency-Key optionnelle (anciens clients sans clé : comportement inchangé).
+    const ag = await ouvrirAg(ctx, id, readIdempotencyKeyOptionnelle(req));
     return ok(ag);
   } catch (e) {
     const mapped = mapAuthError(e);
