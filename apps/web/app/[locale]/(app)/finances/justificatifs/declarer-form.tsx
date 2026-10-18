@@ -67,7 +67,7 @@ export function DeclarerForm({ dict, locale, lots, lignes, comptes, mode, auNom 
             </Select>
           </Field>
           <Field label={`${j.montant} (${dict.common.mad})`} htmlFor="montant" required error={fieldError(state, "montant")}>
-            <MoneyInput id="montant" name="montant" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant")} />
+            <MoneyInput id="montant" name="montant" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant")} />
           </Field>
           <Field label={j.datePaiement} htmlFor="date_paiement" required error={fieldError(state, "date_paiement")}>
             <Input id="date_paiement" name="date_paiement" type="date" dir="ltr" required defaultValue={formValue(state, "date_paiement", aujourdhui)} className="tnum text-start" />

@@ -214,7 +214,7 @@ export function AjouterFactureModal({ dict, locale, depense }: Props) {
               <Input id="f_numero" name="numero" dir="ltr" maxLength={80} className="text-start" defaultValue={formValue(state, "numero")} />
             </Field>
             <Field label={`${d.montantTtc} (${dict.common.mad})`} htmlFor="f_montant" required error={fieldError(state, "montant_ttc")}>
-              <MoneyInput id="f_montant" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_ttc", depense.montantTtc)} />
+              <MoneyInput id="f_montant" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_ttc", depense.montantTtc)} />
             </Field>
             <Field label={d.dateFacture} htmlFor="f_date" required error={fieldError(state, "date_facture")}>
               <Input id="f_date" name="date_facture" type="date" required dir="ltr" defaultValue={formValue(state, "date_facture", depense.dateDepense.slice(0, 10))} className="tnum text-start" />

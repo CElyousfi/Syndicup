@@ -69,7 +69,7 @@ export function CreerBudgetModal({
               required
               error={fieldError(state, "montant_total")}
             >
-              <MoneyInput id="montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_total")} />
+              <MoneyInput id="montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_total")} />
             </Field>
           </div>
           <Field label={f.agLiee} htmlFor="ag_id" optionalLabel={dict.common.optional} error={fieldError(state, "ag_id")}>
@@ -120,7 +120,7 @@ export function ModifierBudgetModal({
           <input type="hidden" name="locale" value={locale} />
           <input type="hidden" name="budget_id" value={budget.id} />
           <Field label={`${f.montantVote} (${dict.common.mad})`} htmlFor="m_montant_total" required error={fieldError(state, "montant_total")}>
-            <MoneyInput id="m_montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_total", budget.montantTotal)} />
+            <MoneyInput id="m_montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_total", budget.montantTotal)} />
           </Field>
           <Field label={f.agLiee} htmlFor="m_ag_id" optionalLabel={dict.common.optional} error={fieldError(state, "ag_id")}>
             <Select key={formKey(state, "ag_id")} id="m_ag_id" name="ag_id" defaultValue={formValue(state, "ag_id", budget.agId ?? "")}>

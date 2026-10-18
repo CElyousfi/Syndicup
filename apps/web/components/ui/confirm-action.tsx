@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { ActionModal, type ActionModalSuccess } from "./action-modal";
 import { IrreversibleNotice } from "./irreversible-notice";
 import { Button, type ButtonVariant } from "./button";
@@ -44,6 +44,7 @@ export function ConfirmAction({
   onSuccess,
   legalGateTitle,
   legalGateAction,
+  idempotent = false,
   children,
 }: {
   action: Action;
@@ -73,6 +74,8 @@ export function ConfirmAction({
   onSuccess?: (state: Extract<FormState, { status: "success" }>) => void;
   legalGateTitle?: string;
   legalGateAction?: ReactNode;
+  /** Envoie `idempotency_key` (UUID tiré une fois par ouverture) : « Réessayer » rejoue la même clé. */
+  idempotent?: boolean;
   /** Champs supplémentaires (motif…), placés avant la conséquence. */
   children?: ReactNode;
 }) {
@@ -99,11 +102,12 @@ export function ConfirmAction({
         </Button>
       )}
     >
-      {({ state, formAction, close }) => (
+      {({ state, formAction, close, pending }) => (
         <form action={formAction} className="space-y-4">
           {Object.entries(fields).map(([k, v]) => (
             <input key={k} type="hidden" name={k} value={v} />
           ))}
+          {idempotent ? <CleIdempotence /> : null}
           {question ? <p className="text-[16px] font-bold leading-snug text-ink">{question}</p> : null}
           {children}
           {irreversible ? (
@@ -113,7 +117,8 @@ export function ConfirmAction({
           )}
           <FormAlert state={state} legalGateTitle={legalGateTitle} legalGateAction={legalGateAction} />
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button type="button" variant="secondary" onClick={close}>
+            {/* Pendant l'envoi, on ne ferme pas : le résultat doit rester visible. */}
+            <Button type="button" variant="secondary" onClick={close} disabled={pending}>
               {dismissLabel ?? closeLabel}
             </Button>
             <SubmitButton variant={tone === "danger" ? "danger" : "primary"}>{confirmLabel}</SubmitButton>
@@ -122,4 +127,12 @@ export function ConfirmAction({
       )}
     </ActionModal>
   );
+}
+
+/** Clé d'idempotence tirée au montage — le corps de la modale est remonté à chaque ouverture. */
+function CleIdempotence() {
+  // Tirée après l'hydratation (jamais au rendu serveur : aucune différence serveur/client).
+  const [cle, setCle] = useState("");
+  useEffect(() => setCle(crypto.randomUUID()), []);
+  return <input type="hidden" name="idempotency_key" value={cle} />;
 }

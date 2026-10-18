@@ -75,7 +75,7 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
             </Select>
           </Field>
           <Field label={`${c.montantPeriode} (${dict.common.mad})`} htmlFor="montant_periode" hint={c.montantPeriodeAide} optionalLabel={dict.common.optional} error={fieldError(state, "montant_periode")}>
-            <MoneyInput id="montant_periode" name="montant_periode" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_periode", contrat?.montantPeriode ?? "")} />
+            <MoneyInput id="montant_periode" name="montant_periode" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_periode", contrat?.montantPeriode ?? "")} />
           </Field>
           <Field label={c.preavis} htmlFor="preavis_jours" hint={c.preavisAide} optionalLabel={dict.common.optional} error={fieldError(state, "preavis_jours")}>
             <Input id="preavis_jours" name="preavis_jours" type="number" min={0} max={730} dir="ltr" defaultValue={formValue(state, "preavis_jours", contrat?.preavisJours ?? "")} className="tnum text-start" />
@@ -115,10 +115,10 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
               <Input id="numero_police" name="numero_police" required maxLength={100} dir="ltr" defaultValue={formValue(state, "numero_police", det?.numero_police ?? "")} className="text-start" />
             </Field>
             <Field label={`${c.franchise} (${dict.common.mad})`} htmlFor="franchise" optionalLabel={dict.common.optional} error={fieldError(state, "details_assurance.franchise")}>
-              <MoneyInput id="franchise" name="franchise" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "franchise", det?.franchise ?? "")} />
+              <MoneyInput id="franchise" name="franchise" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "franchise", det?.franchise ?? "")} />
             </Field>
             <Field label={`${c.capitalAssure} (${dict.common.mad})`} htmlFor="capital_assure" optionalLabel={dict.common.optional} error={fieldError(state, "details_assurance.capital_assure")}>
-              <MoneyInput id="capital_assure" name="capital_assure" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "capital_assure", det?.capital_assure ?? "")} />
+              <MoneyInput id="capital_assure" name="capital_assure" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "capital_assure", det?.capital_assure ?? "")} />
             </Field>
           </div>
           <div className="mt-4">

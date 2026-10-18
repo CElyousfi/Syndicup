@@ -2713,6 +2713,8 @@ export const ar: DeepDict<typeof fr> = {
   formulaires: {
     montantInvalide: "أدخلوا مبلغًا صحيحًا، مثلًا 1 250,50 (رقمان بعد الفاصلة على الأكثر).",
     montantAide: "تُقبل الفاصلة أو النقطة: 1 250,50",
+    montantAmbigu: "مبلغ ملتبس: {choix}؟",
+    ou: " أو ",
     fait: "تمّ ذلك.",
     confirmer: {
       justificatifAnnulerTitre: "إلغاء التصريح بالأداء",
@@ -2747,7 +2749,7 @@ export const ar: DeepDict<typeof fr> = {
       photoRetirerConfirmer: "إزالة الصورة",
       pieceRetirerTitre: "إزالة المرفق",
       pieceRetirerQuestion: "هل تريدون إزالة « {nom} » من ملف الإقامة؟",
-      pieceRetirerConsequence: "يُحذف الملف من الملف: سيلزم رفعه من جديد إذا احتاجه الحارس.",
+      pieceRetirerConsequence: "يُحذف الملف من ملف الإقامة: سيلزم رفعه من جديد إذا احتاجه الحارس.",
       pieceRetirerConfirmer: "إزالة المرفق",
       annonceSupprimerTitre: "حذف الإعلان",
       annonceSupprimerQuestion: "هل تريدون حذف « {titre} »؟",
@@ -2767,9 +2769,7 @@ export const ar: DeepDict<typeof fr> = {
       convoquerTitre: "إرسال الاستدعاءات",
       convoquerQuestion: "هل تريدون استدعاء الجمع العام المقرر في {date}؟",
       convoquerConsequence:
-        "تُرسل الاستدعاءات إلى {n} من الملاك (إشعار وبريد إلكتروني ورسالة نصية حسب تفضيلاتهم). لا يمكن التراجع عن هذا الإجراء: يُؤرَّخ الإرسال ويبدأ معه احتساب الأجل القانوني.",
-      convoquerConsequenceSansNombre:
-        "تُرسل الاستدعاءات إلى جميع الملاك (إشعار وبريد إلكتروني ورسالة نصية حسب تفضيلاتهم). لا يمكن التراجع عن هذا الإجراء: يُؤرَّخ الإرسال ويبدأ معه احتساب الأجل القانوني.",
+        "تُرسل الاستدعاءات عبر البريد الإلكتروني إلى أعضاء الإقامة، حسب إعدادات الملكية المشتركة. لا يمكن التراجع عن هذا الإجراء: يُؤرَّخ الإرسال ويبدأ معه احتساب الأجل القانوني.",
       convoquerConfirmer: "إرسال الاستدعاءات",
       convoquerSucces: "أُرسلت الاستدعاءات.",
       ouvrirTitre: "افتتاح الجلسة",

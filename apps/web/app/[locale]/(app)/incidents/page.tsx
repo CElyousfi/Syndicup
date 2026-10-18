@@ -52,38 +52,39 @@ export default async function IncidentsPage({
   const peutSignaler = !prestataire;
 
   const page = Math.max(1, Number(sp.page) || 1);
-  // GET /incidents n'accepte que page + limit (aucun filtre statut / urgence / catégorie côté
-  // API) : filtres et compteurs portent sur les 500 signalements les plus récents, lus en
-  // pages de 100 — jamais sur la seule page affichée. Au-delà, les compteurs disent « n+ ».
-  const [incidentsRes, prestatairesRes] = await Promise.all([
-    collectPages<Incident>("/incidents", { limit: 100, maxPages: 5 }),
+  // GET /incidents n'accepte que page + limit (filtres serveur à venir, API #18). Sans filtre :
+  // pagination de l'API (?page). Filtre actif : lecture des 500 signalements les plus récents
+  // (pages de 100 en parallèle) puis filtre et pagination ici ; au-delà, « n+ » + bandeau.
+  const filtre = Boolean(sp.statut || sp.urgence || sp.categorie);
+  const PAR_PAGE = 50;
+  const [listeRes, collecteRes, prestatairesRes] = await Promise.all([
+    filtre ? Promise.resolve(null) : apiFetch<Incident[]>("/incidents", { searchParams: { page, limit: PAR_PAGE } }),
+    filtre ? collectPages<Incident>("/incidents", { limit: 100, maxPages: 5 }) : Promise.resolve(null),
     gestion && ctx.role !== "GARDIEN"
       ? apiFetch<Prestataire[]>("/prestataires")
       : Promise.resolve(null),
   ]);
-  const tous = incidentsRes.ok ? incidentsRes.data.rows : [];
-  const complet = incidentsRes.ok ? incidentsRes.data.complete : true;
-  const filtre = Boolean(sp.statut || sp.urgence || sp.categorie);
+  const incidentsRes = (collecteRes ?? listeRes)!;
+  const tous = collecteRes?.ok ? collecteRes.data.rows : listeRes?.ok ? listeRes.data : [];
+  // Lecture complète : tout a été lu (filtre) ou la page 1 contient tout (sans filtre).
+  const complet = collecteRes?.ok ? collecteRes.data.complete : listeRes?.ok ? page === 1 && !listeRes.meta.has_more : true;
   const filtres = tous.filter((inc) => {
     if (sp.statut && inc.statut !== sp.statut) return false;
     if (sp.urgence && inc.urgence !== sp.urgence) return false;
     if (sp.categorie && inc.categorie !== sp.categorie) return false;
     return true;
   });
-  // Pagination des résultats filtrés (50 par page).
-  const PAR_PAGE = 50;
-  const incidents = filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
-  const metaPage = {
-    request_id: "",
-    page,
-    has_more: page * PAR_PAGE < filtres.length,
-    total: complet ? filtres.length : undefined,
-  };
+  const incidents = filtre ? filtres.slice((page - 1) * PAR_PAGE, page * PAR_PAGE) : filtres;
+  const metaPage = filtre
+    ? { request_id: "", page, has_more: page * PAR_PAGE < filtres.length, total: complet ? filtres.length : undefined }
+    : listeRes?.ok
+      ? listeRes.meta
+      : { request_id: "" };
   const prestataireParId = new Map(
     (prestatairesRes?.ok ? prestatairesRes.data : []).map((p) => [p.id, p.nom])
   );
 
-  // Indicateurs sur toutes les lignes lues (pas seulement la page affichée).
+  // Indicateurs sur les lignes lues — « n+ » dès que la lecture ne couvre pas tout.
   const ouverts = tous.filter((x) => x.statut === "OUVERT" || x.statut === "EN_COURS");
   const slaDepassesNb = ouverts.filter(
     (x) => x.slaDeadline && new Date(x.slaDeadline).getTime() < Date.now()
@@ -134,7 +135,7 @@ export default async function IncidentsPage({
           />
         </div>
       ) : null}
-      {!complet ? <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner> : null}
+      {filtre && !complet ? <Banner variant="info" className="mb-4">{fill(dict.formulaires.filtres.compteurPartiel, { n: tous.length })}</Banner> : null}
 
       <form className="filters mb-4 flex flex-wrap items-center gap-2" method="GET">
         <Select name="statut" defaultValue={sp.statut ?? ""} className="h-10 w-full sm:w-44">

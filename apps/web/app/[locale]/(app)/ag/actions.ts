@@ -1,5 +1,6 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
@@ -15,6 +16,12 @@ import type {
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
+}
+
+/** Clé d'idempotence du geste (champ caché `idempotency_key`, UUID) ; sinon une clé neuve. */
+function cleIdempotence(fd: FormData): string {
+  const cle = champ(fd, "idempotency_key");
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cle) ? cle : randomUUID();
 }
 
 export async function creerAg(_prev: FormState, fd: FormData): Promise<FormState> {
@@ -51,9 +58,10 @@ export async function ajouterResolution(_prev: FormState, fd: FormData): Promise
 export async function convoquerAg(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const agId = champ(fd, "ag_id");
-  // Envoi probant (convocations horodatées) : une clé d'idempotence par geste — un double clic
-  // ou un renvoi après coupure ne doit jamais convoquer deux fois.
-  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/convoquer`, { method: "POST", idempotent: true });
+  // Envoi probant (convocations horodatées) : la clé d'idempotence est tirée UNE fois par
+  // ouverture de la modale (champ caché) — « Réessayer » rejoue la même clé, l'API (#18) ne
+  // convoque donc jamais deux fois ; à défaut de clé valide, une clé neuve par appel.
+  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/convoquer`, { method: "POST", idempotencyKey: cleIdempotence(fd) });
   if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
   return succes((d) => d.formulaires.confirmer.convoquerSucces);
@@ -62,8 +70,8 @@ export async function convoquerAg(_prev: FormState, fd: FormData): Promise<FormS
 export async function ouvrirAg(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
   const agId = champ(fd, "ag_id");
-  // Ouverture horodatée au PV (quorum constaté) : même protection contre le double envoi.
-  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/ouvrir`, { method: "POST", idempotent: true });
+  // Ouverture horodatée au PV (quorum constaté) : même clé par ouverture de modale.
+  const res = await apiFetch<AssembleeGenerale>(`/ag/${agId}/ouvrir`, { method: "POST", idempotencyKey: cleIdempotence(fd) });
   if (!res.ok) return fromApiError(res, fd);
   revalidatePath(`/${locale}/ag/${agId}`);
   redirect(`/${locale}/ag/${agId}/seance?ouverte=1`);

@@ -24,7 +24,7 @@ export async function connexionEmail(_prev: FormState, formData: FormData): Prom
     method: "POST",
     body: { email, mot_de_passe: motDePasse },
   });
-  if (!res.ok) return fromApiError(res, formData);
+  if (!res.ok) return fromApiError(res);
   await writeTokens(res.data, { rester });
   const next = nextSur(formData);
   const loc = isLocale(locale) ? locale : "fr";
@@ -39,7 +39,7 @@ export async function motDePasseOublie(_prev: FormState, formData: FormData): Pr
     method: "POST",
     body: { email, langue: isLocale(locale) ? locale : "fr" },
   });
-  if (!res.ok) return fromApiError(res, formData);
+  if (!res.ok) return fromApiError(res);
   return success(undefined, { email });
 }
 
@@ -60,7 +60,7 @@ export async function reinitialiserMotDePasse(_prev: FormState, formData: FormDa
     method: "POST",
     body: { token_hash: tokenHash, mot_de_passe: mdp },
   });
-  if (!res.ok) return fromApiError(res, formData);
+  if (!res.ok) return fromApiError(res);
   await writeTokens(res.data, { rester: true });
   const loc = isLocale(locale) ? locale : "fr";
   redirect(await destinationApresConnexion(loc, res.data.access_token));

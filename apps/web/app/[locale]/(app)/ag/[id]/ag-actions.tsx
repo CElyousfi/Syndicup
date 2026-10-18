@@ -29,22 +29,21 @@ function LienParametres({ dict, locale }: { dict: Dict; locale: Locale }) {
 }
 
 /**
- * « Convoquer » — envoi probant et définitif : confirmation qui dit à qui partent les
- * convocations. L'état gaté légal (422) s'affiche en bannière dans la modale, jamais en erreur.
- * `nbCoproprietaires` absent (liste des lots tronquée ou indisponible) : phrase sans nombre.
+ * « Convoquer » — envoi probant et définitif : confirmation explicite (e-mail aux membres de la
+ * résidence, selon la configuration — ce que fait l'API). Une clé d'idempotence par ouverture de
+ * la modale : « Réessayer » dans la même modale ne convoque jamais deux fois. L'état gaté légal
+ * (422) s'affiche en bannière dans la modale, jamais en erreur.
  */
 export function ConvoquerForm({
   dict,
   locale,
   agId,
   dateAg,
-  nbCoproprietaires,
 }: {
   dict: Dict;
   locale: Locale;
   agId: string;
   dateAg: string;
-  nbCoproprietaires?: number;
 }) {
   const f = dict.formulaires.confirmer;
   return (
@@ -58,12 +57,9 @@ export function ConvoquerForm({
       triggerIcon={<IconSend width={16} height={16} />}
       title={f.convoquerTitre}
       question={fill(f.convoquerQuestion, { date: dateAg })}
-      consequence={
-        nbCoproprietaires && nbCoproprietaires > 0
-          ? fill(f.convoquerConsequence, { n: nbCoproprietaires })
-          : f.convoquerConsequenceSansNombre
-      }
+      consequence={f.convoquerConsequence}
       irreversible
+      idempotent
       tone="primary"
       confirmLabel={f.convoquerConfirmer}
       closeLabel={dict.common.close}
@@ -97,6 +93,7 @@ export function OuvrirForm({
       question={f.ouvrirQuestion}
       consequence={f.ouvrirConsequence}
       irreversible
+      idempotent
       tone="primary"
       confirmLabel={f.ouvrirConfirmer}
       closeLabel={dict.common.close}

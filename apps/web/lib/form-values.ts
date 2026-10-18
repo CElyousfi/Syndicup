@@ -12,8 +12,17 @@
  */
 import type { FormState, FormValues } from "./forms";
 
-/** Noms jamais renvoyés au navigateur : secrets, identifiants bancaires et pièces d'identité. */
-const SENSIBLE = /(mot_de_passe|password|passe|secret|token|jeton|otp|rib|cnss|piece_identite|cin\b|carte)/i;
+/**
+ * Noms EXACTS jamais renvoyés au navigateur (secrets, identifiants bancaires, CNSS, pièce
+ * d'identité) — liste fermée, pas de sous-chaîne : « taux_cnss_salarial » ou « attribuable »
+ * sont des champs ordinaires et doivent survivre à un échec.
+ */
+const SENSIBLES = new Set(["mot_de_passe", "confirmation", "password", "token_hash", "rib", "iban", "numero_cnss", "cin", "otp", "code_otp"]);
+const PREFIXES_SENSIBLES = ["piece_identite_"];
+
+function estSensible(nom: string): boolean {
+  return SENSIBLES.has(nom) || PREFIXES_SENSIBLES.some((p) => nom.startsWith(p));
+}
 /** Au-delà, la saisie n'est pas renvoyée (texte collé par erreur) — l'erreur reste affichée. */
 const LONGUEUR_MAX = 10_000;
 
@@ -25,7 +34,7 @@ export function collectValues(fd: FormData): FormValues {
   const out: FormValues = {};
   for (const [nom, valeur] of fd.entries()) {
     if (typeof valeur !== "string") continue;
-    if (nom.startsWith("$") || SENSIBLE.test(nom)) continue;
+    if (nom.startsWith("$") || estSensible(nom)) continue;
     if (valeur.length > LONGUEUR_MAX) continue;
     const deja = out[nom];
     if (deja === undefined) out[nom] = valeur;

@@ -29,7 +29,7 @@ function Champs({ dict, state, prefix, poste }: { dict: Dict; state: FormState; 
         <Input id={`${prefix}_lib`} name="libelle" required maxLength={120} defaultValue={formValue(state, "libelle", poste?.libelle ?? "")} />
       </Field>
       <Field label={`${d.montantPrevu} (${dict.common.mad})`} htmlFor={`${prefix}_mt`} required error={fieldError(state, "montant_prevu")}>
-        <MoneyInput id={`${prefix}_mt`} name="montant_prevu" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_prevu", poste?.montantPrevu ?? "")} />
+        <MoneyInput id={`${prefix}_mt`} name="montant_prevu" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_prevu", poste?.montantPrevu ?? "")} />
       </Field>
     </>
   );

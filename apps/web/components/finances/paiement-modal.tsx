@@ -244,7 +244,7 @@ function PaiementBody({
                   name="montant"
                   placeholder="0,00"
                   required
-                  invalidMessage={dict.formulaires.montantInvalide}
+                  invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou}
                   defaultValue={formValue(state, "montant")}
                 />
               </Field>

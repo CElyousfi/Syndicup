@@ -2,18 +2,21 @@
 
 import type { ComponentProps } from "react";
 import { Input } from "./field";
-import { parseMontant } from "../../lib/centimes";
+import { lecturesAmbigues, montantAmbigu, parseMontant } from "../../lib/centimes";
 
 /**
- * Champ de montant en MAD — accepte la saisie naturelle au Maroc : « 1 250,50 », « 1250.50 »,
- * « 1250 ». Plus de 2 décimales (ou toute autre saisie) est refusé AVANT l'envoi, avec le
- * message localisé `invalidMessage` ; la Server Action renormalise de son côté (`montantSaisi`,
- * lib/centimes.ts) — le serveur ne fait jamais confiance au navigateur.
+ * Champ de montant en MAD — accepte la saisie naturelle au Maroc : « 1 250,50 », « 1.250,50 »,
+ * « 1,250.50 », « 1250 ». Une saisie invalide est refusée AVANT l'envoi avec `invalidMessage` ;
+ * une saisie AMBIGUË (« 1.250 » : 1 250 ou 1,25 ?) avec `ambiguousMessage` (« {choix} »). Même
+ * spécification que le mobile (lib/centimes.ts `parseMontant`). La Server Action renormalise
+ * de son côté (`montantSaisi`) — le serveur ne fait jamais confiance au navigateur.
  *
  * Non contrôlé par défaut (`defaultValue`) ; `value`/`onChange` restent possibles.
  */
 export function MoneyInput({
   invalidMessage,
+  ambiguousMessage,
+  orLabel,
   className = "",
   onInput,
   onInvalid,
@@ -21,10 +24,15 @@ export function MoneyInput({
 }: Omit<ComponentProps<"input">, "type" | "inputMode" | "pattern"> & {
   /** Message affiché par le navigateur quand la saisie n'est pas un montant. */
   invalidMessage: string;
+  /** « Montant ambigu : {choix} ? » — {choix} = lectures possibles séparées par `orLabel`. */
+  ambiguousMessage: string;
+  orLabel: string;
 }) {
   const verifier = (el: HTMLInputElement) => {
     const v = el.value.trim();
-    el.setCustomValidity(v === "" || parseMontant(v) !== null ? "" : invalidMessage);
+    if (v === "" || parseMontant(v) !== null) el.setCustomValidity("");
+    else if (montantAmbigu(v)) el.setCustomValidity(ambiguousMessage.replace("{choix}", lecturesAmbigues(v).map((x) => `\u2066${x}\u2069`).join(orLabel)));
+    else el.setCustomValidity(invalidMessage);
   };
   return (
     <Input

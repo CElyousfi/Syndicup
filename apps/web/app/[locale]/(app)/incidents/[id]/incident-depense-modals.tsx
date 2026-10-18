@@ -35,13 +35,13 @@ export function CreerDepenseIncidentModal({ dict, locale, incidentId, postes }: 
           </Field>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label={`${d.montantHt} (${dict.common.mad})`} htmlFor="di_ht" optionalLabel={dict.common.optional} error={fieldError(state, "montant_ht")}>
-              <MoneyInput id="di_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_ht")} />
+              <MoneyInput id="di_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_ht")} />
             </Field>
             <Field label={`${d.tva} (${dict.common.mad})`} htmlFor="di_tva" optionalLabel={dict.common.optional} error={fieldError(state, "tva")}>
-              <MoneyInput id="di_tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "tva")} />
+              <MoneyInput id="di_tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "tva")} />
             </Field>
             <Field label={`${d.montantTtc} (${dict.common.mad})`} htmlFor="di_ttc" required error={fieldError(state, "montant_ttc")}>
-              <MoneyInput id="di_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_ttc")} />
+              <MoneyInput id="di_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_ttc")} />
             </Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">

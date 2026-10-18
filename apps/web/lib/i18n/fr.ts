@@ -2738,6 +2738,8 @@ export const fr = {
   formulaires: {
     montantInvalide: "Saisissez un montant valide, par exemple 1 250,50 (2 décimales au plus).",
     montantAide: "Virgule ou point acceptés : 1 250,50",
+    montantAmbigu: "Montant ambigu : {choix} ?",
+    ou: " ou ",
     fait: "C'est fait.",
     confirmer: {
       justificatifAnnulerTitre: "Annuler la déclaration de paiement",
@@ -2792,9 +2794,7 @@ export const fr = {
       convoquerTitre: "Envoyer les convocations",
       convoquerQuestion: "Convoquer l'assemblée du {date} ?",
       convoquerConsequence:
-        "Les convocations partent à {n} copropriétaires (notification, e-mail et SMS selon leurs préférences). Cette action ne peut pas être annulée : l'envoi est horodaté et fait courir le délai légal.",
-      convoquerConsequenceSansNombre:
-        "Les convocations partent à tous les copropriétaires (notification, e-mail et SMS selon leurs préférences). Cette action ne peut pas être annulée : l'envoi est horodaté et fait courir le délai légal.",
+        "Les convocations sont envoyées par e-mail aux membres de la résidence, selon la configuration de la copropriété. Cette action ne peut pas être annulée : l'envoi est horodaté et fait courir le délai légal.",
       convoquerConfirmer: "Envoyer les convocations",
       convoquerSucces: "Convocations envoyées.",
       ouvrirTitre: "Ouvrir la séance",

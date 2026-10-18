@@ -80,7 +80,7 @@ export function GenererAppelModal({
               </Select>
             </Field>
             <Field label={`${f.montantTotal} (${dict.common.mad})`} htmlFor="montant_total" required hint={dict.formulaires.montantAide} error={fieldError(state, "montant_total")}>
-              <MoneyInput id="montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_total")} />
+              <MoneyInput id="montant_total" name="montant_total" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} defaultValue={formValue(state, "montant_total")} />
             </Field>
             <Field label={f.echeance} htmlFor="date_echeance" required error={fieldError(state, "date_echeance")}>
               <Input id="date_echeance" name="date_echeance" type="date" dir="ltr" required defaultValue={formValue(state, "date_echeance")} className="tnum text-start" />

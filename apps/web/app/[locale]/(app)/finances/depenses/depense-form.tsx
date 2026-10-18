@@ -112,13 +112,13 @@ export function DepenseForm({
         <SectionHeader title={d.montantTtc} subtitle={d.montantsAide} />
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <Field label={`${d.montantHt} (${dict.common.mad})`} htmlFor="montant_ht" optionalLabel={dict.common.optional} error={fieldError(state, "montant_ht")}>
-            <MoneyInput id="montant_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} value={ht} onChange={(ev) => setHt(ev.target.value)} onBlur={proposerTva} />
+            <MoneyInput id="montant_ht" name="montant_ht" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} value={ht} onChange={(ev) => setHt(ev.target.value)} onBlur={proposerTva} />
           </Field>
           <Field label={`${d.tva} (${dict.common.mad})`} htmlFor="tva" hint={tvaDefaut ? fill(d.tvaDefaut, { taux: tvaDefaut }) : undefined} optionalLabel={dict.common.optional} error={fieldError(state, "tva")}>
-            <MoneyInput id="tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} value={tva} onChange={(ev) => setTva(ev.target.value)} />
+            <MoneyInput id="tva" name="tva" invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} value={tva} onChange={(ev) => setTva(ev.target.value)} />
           </Field>
           <Field label={`${d.montantTtc} (${dict.common.mad})`} htmlFor="montant_ttc" required error={fieldError(state, "montant_ttc")}>
-            <MoneyInput id="montant_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} key={`${ttcSuggere ?? "libre"}:${formKey(state, "montant_ttc")}`} defaultValue={formValue(state, "montant_ttc", ttcSuggere ?? depense?.montantTtc ?? "")} />
+            <MoneyInput id="montant_ttc" name="montant_ttc" required invalidMessage={dict.formulaires.montantInvalide} ambiguousMessage={dict.formulaires.montantAmbigu} orLabel={dict.formulaires.ou} key={`${ttcSuggere ?? "libre"}:${formKey(state, "montant_ttc")}`} defaultValue={formValue(state, "montant_ttc", ttcSuggere ?? depense?.montantTtc ?? "")} />
           </Field>
         </div>
       </Card>

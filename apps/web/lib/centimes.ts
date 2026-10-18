@@ -28,24 +28,50 @@ export function sommeCentimes(montants: Array<string | null | undefined>): bigin
 }
 
 /**
- * Montant SAISI → format API. Accepte la virgule ou le point décimal et les espaces de
- * groupement (« 1 250,50 », « 1250.50 », « 1250 », espaces insécables compris) ; refuse plus de
- * 2 décimales, plus de 12 chiffres entiers, un signe, une lettre ou deux séparateurs décimaux.
- * Retour : « 1250.50 » (toujours 2 décimales), ou `null` si la saisie n'est pas un montant.
+ * Montant SAISI → format API (« 1250.50 », toujours 2 décimales). MÊME SPÉCIFICATION que le
+ * mobile (apps/mobile/lib/core/format/format.dart `parseMontant`, table de tests identique) :
+ *  - chiffres, décimales facultatives (1 ou 2) après « , » ou « . » : « 1250 », « 12,5 » ;
+ *  - groupement des milliers par espace, U+00A0, U+202F, « . » ou « , » SEULEMENT si chaque
+ *    groupe après le premier a exactement 3 chiffres, le même séparateur partout, et un
+ *    séparateur décimal différent : « 1 250,50 », « 1.250,50 », « 1,250.50 », « 1 250 000 » ;
+ *  - AMBIGU : un seul « . » ou « , » suivi d'exactement 3 chiffres (« 1.250 », « 1,250 ») —
+ *    milliers ou décimales ? `null` ici, `montantAmbigu()` permet de le dire à l'utilisateur ;
+ *  - refusé : « 12 50 », groupes mélangés, plus de 2 décimales, signe, vide, 13 chiffres et +.
  * Arithmétique sur chaînes uniquement — jamais de float.
  */
 export function parseMontant(saisie: string | null | undefined): string | null {
   if (saisie === null || saisie === undefined) return null;
-  const brut = saisie.trim();
-  if (brut === "") return null;
-  // Groupement : espaces ordinaires, insécables (U+00A0), fines insécables (U+202F, U+2009) —
-  // seulement par paquets de 3 chiffres (« 1 250 » oui, « 12 50 » non).
-  const m = brut.match(/^(\d{1,3}(?:[ \u00a0\u202f\u2009]\d{3})+|\d+)(?:[.,](\d*))?$/);
-  if (!m) return null;
-  const entier = m[1]!.replace(/[ \u00a0\u202f\u2009]/g, "").replace(/^0+(?=\d)/, "");
-  const dec = m[2] ?? "";
-  if (entier.length > 12 || dec.length > 2) return null;
+  const s = saisie.trim();
+  if (s === "" || montantAmbigu(s)) return null;
+  let entier: string;
+  let dec: string;
+  const simple = s.match(/^(\d+)(?:[.,](\d{1,2}))?$/);
+  if (simple) {
+    entier = simple[1]!;
+    dec = simple[2] ?? "";
+  } else {
+    const groupe = s.match(/^(\d{1,3})([ \u00a0\u202f.,])(\d{3}(?:\2\d{3})*)(?:([.,])(\d{1,2}))?$/);
+    if (!groupe || (groupe[4] !== undefined && groupe[4] === groupe[2])) return null;
+    entier = groupe[1]! + groupe[3]!.split(groupe[2]!).join("");
+    dec = groupe[5] ?? "";
+  }
+  entier = entier.replace(/^0+(?=\d)/, "");
+  if (entier.length > 12) return null;
   return `${entier}.${(dec + "00").slice(0, 2)}`;
+}
+
+/** « 1.250 » / « 1,250 » seuls : 1 250 ou 1,25 ? Illisible sans contexte — on demande. */
+export function montantAmbigu(saisie: string | null | undefined): boolean {
+  return /^\d{1,3}[.,]\d{3}$/.test((saisie ?? "").trim());
+}
+
+/** Lectures possibles d'une saisie ambiguë : « 1 250 » et, si elle a un sens, « 1,25 ». */
+export function lecturesAmbigues(saisie: string): string[] {
+  const t = saisie.trim();
+  const i = t.search(/[.,]/);
+  const entier = t.slice(0, i);
+  const reste = t.slice(i + 1);
+  return [`${entier} ${reste}`, ...(reste.endsWith("0") ? [`${entier},${reste.slice(0, 2)}`] : [])];
 }
 
 /**
