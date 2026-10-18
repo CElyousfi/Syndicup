@@ -674,7 +674,7 @@ class _LcdSejourScreenState extends ConsumerState<LcdSejourScreen> {
                 ),
               ),
               if (enFile) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.warn, body: '${md.pendingSend} — ${md.queueHint}')],
-              if (queue.any((q) => q.definitif)) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, body: queue.firstWhere((q) => q.definitif).derniereErreur ?? md.failedDefinitive)],
+              if (queue.any((q) => q.definitif)) ...[const SizedBox(height: 12), SuBanner(tone: BannerTone.danger, body: erreurFile(context, queue.firstWhere((q) => q.definitif).derniereErreur) ?? md.failedDefinitive)],
               const SizedBox(height: 20),
               if (peutConfirmer && s.statut == 'PREVU' && !enFile)
                 SubmitButton(label: d.lcd.confirmerArrivee, icon: Icons.login_rounded, loading: _loading, onPressed: () => confirmerSejour(context, ref, s, 'arrivee')),

@@ -136,3 +136,14 @@ extension ApiFailText on ApiFail<dynamic> {
 extension ApiExceptionText on ApiException {
   ErrorText text(BuildContext context) => errorText(context, error, status, requestId: requestId);
 }
+
+/// Erreur mémorisée par une file hors-ligne (« CODE: message ») → texte dans la langue de
+/// l'utilisateur ; `null` si rien n'est mémorisé.
+String? erreurFile(BuildContext context, String? stockee) {
+  if (stockee == null || stockee.isEmpty) return null;
+  final i = stockee.indexOf(':');
+  final code = (i < 0 ? stockee : stockee.substring(0, i)).trim();
+  final message = i < 0 ? '' : stockee.substring(i + 1).trim();
+  if (!RegExp(r'^[A-Z][A-Z0-9_]*$').hasMatch(code)) return null;
+  return errorText(context, ApiError(code: code, message: message), 422).body;
+}
