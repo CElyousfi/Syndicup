@@ -1009,7 +1009,7 @@ class MobileUp {
     final i = t.indexOf(RegExp('[.,]'));
     final entier = t.substring(0, i), reste = t.substring(i + 1);
     final mille = '$entier $reste';
-    final choix = [mille, if (reste.endsWith('0')) '$entier,${reste.substring(0, 2)}'].map((x) => '⁦$x⁩').join(or);
+    final choix = [mille, if (reste.endsWith('0')) '$entier,${reste.substring(0, 2)}'].map((x) => '\u2066$x\u2069').join(or);
     return fill(amountAmbiguous, {'choix': choix});
   }
 
@@ -1084,12 +1084,12 @@ class MobileUp {
     photoVideo: 'صورة أو فيديو',
     fichier: 'ملف (PDF أو Word أو Excel…)',
     fieldRequired: 'حقل إلزامي',
-    amountInvalid: 'مبلغ غير صالح — مثال: ⁦1 250,50⁩',
+    amountInvalid: 'مبلغ غير صالح — مثال: \u20661 250,50\u2069',
     amountPositive: 'يجب أن يكون المبلغ أكبر من 0',
-    phoneInvalid: 'رقم غير صالح — مثال: ⁦+212 6 12 34 56 78⁩',
+    phoneInvalid: 'رقم غير صالح — مثال: \u2066+212 6 12 34 56 78\u2069',
     integerInvalid: 'أدخلوا عددًا صحيحًا',
-    periodInvalid: 'الصيغة المطلوبة: ⁦YYYY-MM⁩ (مثال: ⁦2026-10⁩)',
-    numberInvalid: 'عدد غير صالح — مثال: ⁦125,5⁩',
+    periodInvalid: 'الصيغة المطلوبة: \u2066YYYY-MM\u2069 (مثال: \u20662026-10\u2069)',
+    numberInvalid: 'عدد غير صالح — مثال: \u2066125,5\u2069',
     valuePositive: 'يجب أن تكون القيمة أكبر من 0',
     endAfterStart: 'يجب أن تكون ساعة النهاية بعد ساعة البداية',
     amountAmbiguous: 'مبلغ ملتبس: {choix}؟',

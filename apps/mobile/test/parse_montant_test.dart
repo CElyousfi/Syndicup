@@ -78,8 +78,8 @@ void main() {
       expect(montantAmbigu('1,250'), isTrue);
       expect(montantAmbigu('12,50'), isFalse);
       expect(montantAmbigu('1.250,50'), isFalse);
-      expect(MobileUp.fr.ambiguite('1.250'), 'Montant ambigu : ⁦1 250⁩ ou ⁦1,25⁩ ?');
-      expect(MobileUp.fr.ambiguite('2.505'), 'Montant ambigu : ⁦2 505⁩ ?');
+      expect(MobileUp.fr.ambiguite('1.250'), 'Montant ambigu : \u20661 250\u2069 ou \u20661,25\u2069 ?');
+      expect(MobileUp.fr.ambiguite('2.505'), 'Montant ambigu : \u20662 505\u2069 ?');
     });
   });
 
