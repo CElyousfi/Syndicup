@@ -7,9 +7,11 @@ import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { MoneyInput } from "../../../../components/ui/money-input";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { BudgetPoste, ContratDetail, Periodicite, TypeContrat } from "../../../../lib/api/types";
 import { creerContrat, modifierContrat } from "./actions";
+import { formChecked, formKey, formValue } from "../../../../lib/form-values";
 
 export interface OptionRef { id: string; libelle: string }
 const TYPES: TypeContrat[] = ["ASSURANCE_IMMEUBLE", "ASSURANCE_RC", "ASCENSEUR", "NETTOYAGE", "GARDIENNAGE", "JARDINAGE", "DERATISATION", "EAU", "ELECTRICITE", "INTERNET", "SYNDIC_PROFESSIONNEL", "TRAVAUX", "AUTRE"];
@@ -39,13 +41,13 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
             </Select>
           </Field>
           <Field label={c.libelle} htmlFor="libelle" required error={fieldError(state, "libelle")}>
-            <Input id="libelle" name="libelle" required maxLength={200} defaultValue={contrat?.libelle ?? ""} />
+            <Input id="libelle" name="libelle" required maxLength={200} defaultValue={formValue(state, "libelle", contrat?.libelle ?? "")} />
           </Field>
           <Field label={c.reference} htmlFor="reference" hint={c.referenceAide} optionalLabel={dict.common.optional} error={fieldError(state, "reference")}>
-            <Input id="reference" name="reference" maxLength={120} dir="ltr" defaultValue={contrat?.reference ?? ""} className="text-start" />
+            <Input id="reference" name="reference" maxLength={120} dir="ltr" defaultValue={formValue(state, "reference", contrat?.reference ?? "")} className="text-start" />
           </Field>
           <Field label={c.prestataire} htmlFor="prestataire_id" optionalLabel={dict.common.optional} error={fieldError(state, "prestataire_id")}>
-            <Select id="prestataire_id" name="prestataire_id" defaultValue={contrat?.prestataireId ?? ""}>
+            <Select key={formKey(state, "prestataire_id")} id="prestataire_id" name="prestataire_id" defaultValue={formValue(state, "prestataire_id", contrat?.prestataireId ?? "")}>
               <option value="">{c.aucunPrestataire}</option>
               {prestataires.map((p) => <option key={p.id} value={p.id}>{p.libelle}</option>)}
             </Select>
@@ -53,7 +55,7 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
         </div>
         <div className="mt-4">
           <Field label={c.notes} htmlFor="notes" optionalLabel={dict.common.optional}>
-            <Textarea id="notes" name="notes" rows={3} maxLength={4000} defaultValue={contrat?.notes ?? ""} />
+            <Textarea id="notes" name="notes" rows={3} maxLength={4000} defaultValue={formValue(state, "notes", contrat?.notes ?? "")} />
           </Field>
         </div>
       </Card>
@@ -62,24 +64,24 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
         <SectionHeader title={c.echeancier} subtitle={c.echeancierAide} />
         <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label={c.dateDebut} htmlFor="date_debut" required error={fieldError(state, "date_debut")}>
-            <Input id="date_debut" name="date_debut" type="date" required dir="ltr" defaultValue={contrat?.dateDebut.slice(0, 10) ?? aujourdhui} className="tnum text-start" />
+            <Input id="date_debut" name="date_debut" type="date" required dir="ltr" defaultValue={formValue(state, "date_debut", contrat?.dateDebut.slice(0, 10) ?? aujourdhui)} className="tnum text-start" />
           </Field>
           <Field label={c.dateFin} htmlFor="date_fin" hint={c.dateFinAide} optionalLabel={dict.common.optional} error={fieldError(state, "date_fin")}>
             <Input id="date_fin" name="date_fin" type="date" dir="ltr" value={dateFin} onChange={(ev) => setDateFin(ev.target.value)} className="tnum text-start" />
           </Field>
           <Field label={c.periodicite} htmlFor="periodicite" required error={fieldError(state, "periodicite")}>
-            <Select id="periodicite" name="periodicite" required defaultValue={contrat?.periodicite ?? "MENSUELLE"}>
+            <Select key={formKey(state, "periodicite")} id="periodicite" name="periodicite" required defaultValue={formValue(state, "periodicite", contrat?.periodicite ?? "MENSUELLE")}>
               {PERIODICITES.map((p) => <option key={p} value={p}>{e.periodicite[p]}</option>)}
             </Select>
           </Field>
           <Field label={`${c.montantPeriode} (${dict.common.mad})`} htmlFor="montant_periode" hint={c.montantPeriodeAide} optionalLabel={dict.common.optional} error={fieldError(state, "montant_periode")}>
-            <Input id="montant_periode" name="montant_periode" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" defaultValue={contrat?.montantPeriode ?? ""} className="tnum text-start" />
+            <MoneyInput id="montant_periode" name="montant_periode" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "montant_periode", contrat?.montantPeriode ?? "")} />
           </Field>
           <Field label={c.preavis} htmlFor="preavis_jours" hint={c.preavisAide} optionalLabel={dict.common.optional} error={fieldError(state, "preavis_jours")}>
-            <Input id="preavis_jours" name="preavis_jours" type="number" min={0} max={730} dir="ltr" defaultValue={contrat?.preavisJours ?? ""} className="tnum text-start" />
+            <Input id="preavis_jours" name="preavis_jours" type="number" min={0} max={730} dir="ltr" defaultValue={formValue(state, "preavis_jours", contrat?.preavisJours ?? "")} className="tnum text-start" />
           </Field>
           <div className="flex items-end pb-1">
-            <Checkbox name="tacite" label={c.tacite} hint={c.taciteAide} defaultChecked={contrat?.tacite ?? false} disabled={dateFin === ""} />
+            <Checkbox name="tacite" label={c.tacite} hint={c.taciteAide} defaultChecked={formChecked(state, "tacite", contrat?.tacite ?? false)} disabled={dateFin === ""} />
           </div>
         </div>
       </Card>
@@ -88,13 +90,13 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
         <SectionHeader title={c.poste} subtitle={c.posteAide} />
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <Field label={c.poste} htmlFor="budget_poste_id" optionalLabel={dict.common.optional} error={fieldError(state, "budget_poste_id")}>
-            <Select id="budget_poste_id" name="budget_poste_id" defaultValue={contrat?.budgetPosteId ?? ""}>
+            <Select key={formKey(state, "budget_poste_id")} id="budget_poste_id" name="budget_poste_id" defaultValue={formValue(state, "budget_poste_id", contrat?.budgetPosteId ?? "")}>
               <option value="">{c.horsPoste}</option>
               {postesTries.map((p) => <option key={p.id} value={p.id}>{p.libelle}</option>)}
             </Select>
           </Field>
           <Field label={c.resolutionAg} htmlFor="resolution_ag_id" hint={seuilAg ? `${c.seuilAg} : ${seuilAg} ${dict.common.mad}` : c.seuilNonConfigure} optionalLabel={dict.common.optional} error={fieldError(state, "resolution_ag_id")}>
-            <Select id="resolution_ag_id" name="resolution_ag_id" defaultValue={contrat?.resolutionAgId ?? ""}>
+            <Select key={formKey(state, "resolution_ag_id")} id="resolution_ag_id" name="resolution_ag_id" defaultValue={formValue(state, "resolution_ag_id", contrat?.resolutionAgId ?? "")}>
               <option value="">{dict.common.none}</option>
               {resolutions.map((r) => <option key={r.id} value={r.id}>{r.libelle}</option>)}
             </Select>
@@ -107,21 +109,21 @@ export function ContratForm({ dict, locale, postes, prestataires, resolutions, s
           <SectionHeader title={c.assurance} />
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <Field label={c.assureur} htmlFor="assureur" required error={fieldError(state, "details_assurance")}>
-              <Input id="assureur" name="assureur" required maxLength={200} defaultValue={det?.assureur ?? ""} />
+              <Input id="assureur" name="assureur" required maxLength={200} defaultValue={formValue(state, "assureur", det?.assureur ?? "")} />
             </Field>
             <Field label={c.numeroPolice} htmlFor="numero_police" required>
-              <Input id="numero_police" name="numero_police" required maxLength={100} dir="ltr" defaultValue={det?.numero_police ?? ""} className="text-start" />
+              <Input id="numero_police" name="numero_police" required maxLength={100} dir="ltr" defaultValue={formValue(state, "numero_police", det?.numero_police ?? "")} className="text-start" />
             </Field>
-            <Field label={`${c.franchise} (${dict.common.mad})`} htmlFor="franchise" optionalLabel={dict.common.optional}>
-              <Input id="franchise" name="franchise" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" defaultValue={det?.franchise ?? ""} className="tnum text-start" />
+            <Field label={`${c.franchise} (${dict.common.mad})`} htmlFor="franchise" optionalLabel={dict.common.optional} error={fieldError(state, "details_assurance.franchise")}>
+              <MoneyInput id="franchise" name="franchise" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "franchise", det?.franchise ?? "")} />
             </Field>
-            <Field label={`${c.capitalAssure} (${dict.common.mad})`} htmlFor="capital_assure" optionalLabel={dict.common.optional}>
-              <Input id="capital_assure" name="capital_assure" inputMode="decimal" dir="ltr" pattern="\d{1,12}([.]\d{1,2})?" defaultValue={det?.capital_assure ?? ""} className="tnum text-start" />
+            <Field label={`${c.capitalAssure} (${dict.common.mad})`} htmlFor="capital_assure" optionalLabel={dict.common.optional} error={fieldError(state, "details_assurance.capital_assure")}>
+              <MoneyInput id="capital_assure" name="capital_assure" invalidMessage={dict.formulaires.montantInvalide} defaultValue={formValue(state, "capital_assure", det?.capital_assure ?? "")} />
             </Field>
           </div>
           <div className="mt-4">
             <Field label={c.garanties} htmlFor="garanties" hint={c.garantiesAide} optionalLabel={dict.common.optional}>
-              <Textarea id="garanties" name="garanties" rows={3} defaultValue={(det?.garanties ?? []).join("\n")} />
+              <Textarea id="garanties" name="garanties" rows={3} defaultValue={formValue(state, "garanties", (det?.garanties ?? []).join("\n"))} />
             </Field>
           </div>
           <div className="mt-4">

@@ -11,6 +11,7 @@ import type { VisibiliteDocument } from "../../../../lib/api/types";
 import { televerserFichierDocument } from "./actions";
 import { IconFile, IconPlus } from "../../../../components/ui/icons";
 import { IconCircle } from "../../../../components/ui/color-icons";
+import { formValue } from "../../../../lib/form-values";
 
 export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) {
   const [open, setOpen] = useState(false);
@@ -70,11 +71,10 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
                 id="d_nom"
                 name="nom"
                 maxLength={200}
-                placeholder={nomFichier ?? undefined}
-              />
+                placeholder={nomFichier ?? undefined} defaultValue={formValue(state, "nom")} />
             </Field>
             <Field label={d.type} htmlFor="d_type" hint={d.typeHint} required>
-              <Input id="d_type" name="type" required maxLength={80} />
+              <Input id="d_type" name="type" required maxLength={80} defaultValue={formValue(state, "type")} />
             </Field>
             <Field label={d.visibilite} htmlFor="d_visibilite" hint={d.visibiliteAide[visibilite]} required>
               <Select

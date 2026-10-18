@@ -232,7 +232,7 @@ export function LegauxForm({
             name="quorum_premiere_convocation"
             inputMode="decimal"
             dir="ltr"
-            pattern="(0[.]\d{1,3}|1([.]0{1,3})?)"
+            pattern="(0[.,]\d{1,3}|1([.,]0{1,3})?)"
             defaultValue={formValue(state, "quorum_premiere_convocation", copro.quorumPremiereConvocation ?? "")}
             placeholder={pa.nonConfigure}
             className="tnum text-start"

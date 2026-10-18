@@ -14,6 +14,7 @@ import type { AssembleeGenerale, BudgetAg, RapportGestion } from "../../../../li
 import { formatDate } from "../../../../lib/format";
 import { IconDownload, IconPlus } from "../../../../components/ui/icons";
 import { genererRapport, soumettreRapportAg, definirFacturesVisibles } from "./actions";
+import { formKey, formValue } from "../../../../lib/form-values";
 
 function Pied({ dict, onCancel, label }: { dict: Dict; onCancel: () => void; label: string }) {
   return <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onCancel}>{dict.common.cancel}</Button><SubmitButton>{label}</SubmitButton></div>;
@@ -51,7 +52,7 @@ export function GenererModal({ dict, locale, budgets, exerciceDefaut }: { dict: 
               <Input id="exercice" name="exercice" inputMode="numeric" pattern="\d{4}" dir="ltr" required value={exercice} onChange={(e) => setExercice(e.target.value)} className="tnum text-start" />
             </Field>
             <Field label={dict.rapports.budget} htmlFor="budget_ag_id" optionalLabel={dict.common.optional} error={fieldError(state, "budget_ag_id")}>
-              <Select id="budget_ag_id" name="budget_ag_id" defaultValue="">
+              <Select key={formKey(state, "budget_ag_id")} id="budget_ag_id" name="budget_ag_id" defaultValue={formValue(state, "budget_ag_id", "")}>
                 <option value="">{dict.common.optional}</option>
                 {budgets.filter((b) => b.exercice === exercice).map((b) => <option key={b.id} value={b.id}>{b.exercice} · {dict.enums.statutBudget[b.statut]}</option>)}
               </Select>
@@ -88,12 +89,12 @@ export function SoumettreModal({ dict, locale, rapport, ags }: { dict: Dict; loc
             <input type="hidden" name="locale" value={locale} /><input type="hidden" name="rapport_id" value={rapport.id} />
             <p className="text-sm text-body">{r.soumettreAide}</p>
             <Field label={r.agCible} htmlFor="ag_id" required error={fieldError(state, "ag_id")}>
-              <Select id="ag_id" name="ag_id" required defaultValue={eligibles[0]!.id}>
+              <Select key={formKey(state, "ag_id")} id="ag_id" name="ag_id" required defaultValue={formValue(state, "ag_id", eligibles[0]!.id)}>
                 {eligibles.map((a) => <option key={a.id} value={a.id}>{dict.enums.typeAg[a.type]} · {formatDate(a.dateAg, locale)} · {dict.enums.statutAg[a.statut]}</option>)}
               </Select>
             </Field>
             <Field label={r.typeMajorite} htmlFor="type_majorite" hint={r.typeMajoriteAide} optionalLabel={dict.common.optional} error={fieldError(state, "type_majorite")}>
-              <Select id="type_majorite" name="type_majorite" defaultValue="">
+              <Select key={formKey(state, "type_majorite")} id="type_majorite" name="type_majorite" defaultValue={formValue(state, "type_majorite", "")}>
                 <option value="">{dict.common.optional}</option>
                 {(["SIMPLE", "DOUBLE", "UNANIMITE"] as const).map((m) => <option key={m} value={m}>{dict.enumsRapports.typeMajorite[m]}</option>)}
               </Select>

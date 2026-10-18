@@ -67,7 +67,7 @@ export async function ajouterProprietaire(_prev: FormState, fd: FormData): Promi
   const dateDebut = champ(fd, "date_debut");
   const representant = champ(fd, "representant_index");
   const ids = fd.getAll("utilisateur_id").map((v) => String(v).trim());
-  const quotes = fd.getAll("quote_part").map((v) => String(v).trim());
+  const quotes = fd.getAll("quote_part").map((v) => String(v).trim().replace(",", "."));
   const proprietaires = ids.map((utilisateur_id, i) => ({
     utilisateur_id,
     quote_part: quotes[i] ?? "0",

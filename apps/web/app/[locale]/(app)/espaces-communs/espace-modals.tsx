@@ -13,59 +13,52 @@ import { fill, type Dict, type Locale } from "../../../../lib/i18n";
 import { creerEspace, modifierEspace, reserverEspace } from "./actions";
 import type { EspaceCommun } from "../../../../lib/api/types";
 import { IconPlus, IconCalendar } from "../../../../components/ui/icons";
+import { ActionModal } from "../../../../components/ui/action-modal";
+import { formChecked, formKey, formValue } from "../../../../lib/form-values";
 
 export function CreerEspaceModal({ dict, locale }: { dict: Dict; locale: Locale }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(creerEspace, IDLE);
   const e = dict.espaces;
 
   return (
-    <>
-      <Button onClick={() => setOpen(true)}>
+    <ActionModal
+        action={creerEspace}
+        title={e.nouveau}
+        closeLabel={dict.common.close}
+        success={{ message: dict.common.updated }}
+        trigger={(open) => <Button onClick={open}>
         <IconPlus width={16} height={16} />
         {e.nouveau}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={e.nouveau} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{dict.common.updated}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <Field label={e.nom} htmlFor="e_nom" required error={fieldError(state, "nom")}>
-              <Input id="e_nom" name="nom" required maxLength={200} />
+              <Input id="e_nom" name="nom" required maxLength={200} defaultValue={formValue(state, "nom")} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={e.type} htmlFor="e_type" hint={e.typeHint} required>
-                <Input id="e_type" name="type" required maxLength={80} />
+                <Input id="e_type" name="type" required maxLength={80} defaultValue={formValue(state, "type")} />
               </Field>
               <Field label={e.capacite} htmlFor="e_capacite" optionalLabel={dict.common.optional}>
-                <Input id="e_capacite" name="capacite" type="number" min={1} className="tnum" />
+                <Input id="e_capacite" name="capacite" type="number" min={1} className="tnum" defaultValue={formValue(state, "capacite")} />
               </Field>
             </div>
-            <Switch name="reservable" label={e.reservable} defaultChecked />
+            <Switch name="reservable" label={e.reservable} defaultChecked={formChecked(state, "reservable", true)} />
             <Switch
               name="validation_automatique"
               label={e.validationAuto}
-              hint={e.validationManuelle}
-            />
+              hint={e.validationManuelle} defaultChecked={formChecked(state, "validation_automatique", false)} />
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={close}>
                 {dict.common.cancel}
               </Button>
               <SubmitButton>{dict.common.create}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }
 
@@ -129,7 +122,7 @@ export function ReserverModal({
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="espace_id" value={espaceId} />
             <Field label={e.pourLot} htmlFor="r_lot" required>
-              <Select id="r_lot" name="lot_id" required defaultValue={mesLots[0]?.id ?? ""}>
+              <Select key={formKey(state, "lot_id")} id="r_lot" name="lot_id" required defaultValue={formValue(state, "lot_id", mesLots[0]?.id ?? "")}>
                 {mesLots.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.numero}
@@ -144,7 +137,7 @@ export function ReserverModal({
                 required
                 error={fieldError(state, "date_debut")}
               >
-                <Input id="r_debut" name="date_debut" type="datetime-local" required />
+                <Input id="r_debut" name="date_debut" type="datetime-local" required defaultValue={formValue(state, "date_debut")} />
               </Field>
               <Field
                 label={e.dateFin}
@@ -152,11 +145,11 @@ export function ReserverModal({
                 required
                 error={fieldError(state, "date_fin")}
               >
-                <Input id="r_fin" name="date_fin" type="datetime-local" required />
+                <Input id="r_fin" name="date_fin" type="datetime-local" required defaultValue={formValue(state, "date_fin")} />
               </Field>
             </div>
             <Field label={e.nombreInvites} htmlFor="r_invites" optionalLabel={dict.common.optional}>
-              <Input id="r_invites" name="nombre_invites" type="number" min={0} className="tnum" />
+              <Input id="r_invites" name="nombre_invites" type="number" min={0} className="tnum" defaultValue={formValue(state, "nombre_invites")} />
             </Field>
             {state.status === "error" && state.code === "UNPROCESSABLE_ENTITY" ? (
               <Banner variant="warn">{e.creneauPris}</Banner>
@@ -185,36 +178,30 @@ export function ModifierEspaceModal({
   locale: Locale;
   espace: Pick<EspaceCommun, "id" | "nom" | "type" | "capacite" | "reservable" | "validationAutomatique">;
 }) {
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(modifierEspace, IDLE);
   const e = dict.espaces;
   const g = dict.gestion;
 
   return (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={modifierEspace}
+        title={g.espaceModifier}
+        subtitle={espace.nom}
+        closeLabel={dict.common.close}
+        success={{ message: dict.common.updated }}
+        trigger={(open) => <Button variant="secondary" size="sm" onClick={open}>
         {g.modifier}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={g.espaceModifier} subtitle={espace.nom} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{dict.common.updated}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="espace_id" value={espace.id} />
             <Field label={e.nom} htmlFor={`m_nom_${espace.id}`} required error={fieldError(state, "nom")}>
-              <Input id={`m_nom_${espace.id}`} name="nom" required maxLength={200} defaultValue={espace.nom} />
+              <Input id={`m_nom_${espace.id}`} name="nom" required maxLength={200} defaultValue={formValue(state, "nom", espace.nom)} />
             </Field>
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={e.type} htmlFor={`m_type_${espace.id}`} hint={e.typeHint} required>
-                <Input id={`m_type_${espace.id}`} name="type" required maxLength={80} defaultValue={espace.type} />
+                <Input id={`m_type_${espace.id}`} name="type" required maxLength={80} defaultValue={formValue(state, "type", espace.type)} />
               </Field>
               <Field label={e.capacite} htmlFor={`m_cap_${espace.id}`} optionalLabel={dict.common.optional}>
                 <Input
@@ -223,27 +210,26 @@ export function ModifierEspaceModal({
                   type="number"
                   min={1}
                   className="tnum"
-                  defaultValue={espace.capacite ?? ""}
+                  defaultValue={formValue(state, "capacite", espace.capacite ?? "")}
                 />
               </Field>
             </div>
-            <Switch name="reservable" label={e.reservable} defaultChecked={espace.reservable} />
+            <Switch name="reservable" label={e.reservable} defaultChecked={formChecked(state, "reservable", espace.reservable)} />
             <Switch
               name="validation_automatique"
               label={e.validationAuto}
               hint={e.validationManuelle}
-              defaultChecked={espace.validationAutomatique}
+              defaultChecked={formChecked(state, "validation_automatique", espace.validationAutomatique)}
             />
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={close}>
                 {dict.common.cancel}
               </Button>
               <SubmitButton>{dict.common.save}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }

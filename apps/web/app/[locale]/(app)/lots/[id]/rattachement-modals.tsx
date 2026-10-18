@@ -11,6 +11,7 @@ import { IDLE } from "../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import { ajouterProprietaire, ajouterOccupant } from "../actions";
 import { IconPlus } from "../../../../../components/ui/icons";
+import { formChecked, formKey, formValue } from "../../../../../lib/form-values";
 
 interface MembreOption {
   id: string;
@@ -93,7 +94,7 @@ export function AjouterProprietaireModal({
   ]);
   const [state, action] = useActionState(ajouterProprietaire, IDLE);
 
-  const somme = lignes.reduce((acc, l) => acc + (Number.parseFloat(l.quote) || 0), 0);
+  const somme = lignes.reduce((acc, l) => acc + (Number.parseFloat(l.quote.replace(",", ".")) || 0), 0);
   const total = quotePartExistante + somme;
   const totalOk = Math.abs(total - 100) < 0.005;
 
@@ -146,7 +147,7 @@ export function AjouterProprietaireModal({
                 </Select>
               </Field>
               <Field label={dict.lots.dateDebut} htmlFor="date_debut" required>
-                <Input id="date_debut" name="date_debut" type="date" required />
+                <Input id="date_debut" name="date_debut" type="date" required defaultValue={formValue(state, "date_debut")} />
               </Field>
             </div>
 
@@ -200,7 +201,7 @@ export function AjouterProprietaireModal({
                         name="quote_part"
                         inputMode="decimal"
                         dir="ltr"
-                        pattern="\d{1,3}([.]\d{1,2})?"
+                        pattern="\d{1,3}([.,]\d{1,2})?"
                         value={l.quote}
                         onChange={(e) => maj(l.cle, { quote: e.target.value })}
                         required
@@ -299,7 +300,7 @@ export function AjouterOccupantModal({
             <SelecteurUtilisateur dict={dict} membres={membres} name="utilisateur_id" />
 
             <Field label={dict.lots.onglets.occupation} htmlFor="type_occupation" required>
-              <Select id="type_occupation" name="type_occupation" defaultValue="LOCATAIRE" required>
+              <Select key={formKey(state, "type_occupation")} id="type_occupation" name="type_occupation" defaultValue={formValue(state, "type_occupation", "LOCATAIRE")} required>
                 {(["PROPRIETAIRE_OCCUPANT", "LOCATAIRE"] as const).map((t) => (
                   <option key={t} value={t}>
                     {dict.enums.typeOccupation[t]}
@@ -310,19 +311,18 @@ export function AjouterOccupantModal({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label={dict.lots.dateDebut} htmlFor="occ_date_debut" required>
-                <Input id="occ_date_debut" name="date_debut" type="date" required />
+                <Input id="occ_date_debut" name="date_debut" type="date" required defaultValue={formValue(state, "date_debut")} />
               </Field>
               <Field label={dict.lots.dateFin} htmlFor="occ_date_fin" optionalLabel={dict.common.optional}>
-                <Input id="occ_date_fin" name="date_fin" type="date" />
+                <Input id="occ_date_fin" name="date_fin" type="date" defaultValue={formValue(state, "date_fin")} />
               </Field>
             </div>
 
             <Checkbox
               name="acces_finances_accorde"
               label={dict.lots.accesFinances}
-              hint={dict.lots.accesFinancesAide}
-            />
-            <Checkbox name="recoit_convocations" label={dict.lots.recoitConvocations} />
+              hint={dict.lots.accesFinancesAide} defaultChecked={formChecked(state, "acces_finances_accorde", false)} />
+            <Checkbox name="recoit_convocations" label={dict.lots.recoitConvocations} defaultChecked={formChecked(state, "recoit_convocations", false)} />
 
             <FormAlert state={state} />
             <PiedFormulaire dict={dict} onCancel={() => setOpen(false)} />

@@ -11,6 +11,7 @@ import { celebrate } from "../../../../lib/success";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import { enregistrerVisite, repondreVisite } from "./actions";
 import { IconDoor } from "../../../../components/ui/icons";
+import { formKey, formValue } from "../../../../lib/form-values";
 
 /** H2 — l'action primaire du gardien : énorme, deux champs, zéro friction. */
 export function EnregistrerVisiteModal({
@@ -62,10 +63,10 @@ export function EnregistrerVisiteModal({
               required
               error={fieldError(state, "visiteur_nom")}
             >
-              <Input id="visiteur_nom" name="visiteur_nom" required maxLength={200} autoFocus />
+              <Input id="visiteur_nom" name="visiteur_nom" required maxLength={200} autoFocus defaultValue={formValue(state, "visiteur_nom")} />
             </Field>
             <Field label={v.lotVisite} htmlFor="v_lot" required>
-              <Select id="v_lot" name="lot_id" required>
+              <Select key={formKey(state, "lot_id")} id="v_lot" name="lot_id" required defaultValue={formValue(state, "lot_id")}>
                 {lots.map((l) => (
                   <option key={l.id} value={l.id}>
                     {l.numero}

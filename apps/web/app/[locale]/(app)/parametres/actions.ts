@@ -84,7 +84,7 @@ export async function modifierRecouvrement(_prev: FormState, fd: FormData): Prom
  */
 export async function modifierLegaux(_prev: FormState, fd: FormData): Promise<FormState> {
   const delai = champ(fd, "delai_convocation_jours");
-  const quorum = champ(fd, "quorum_premiere_convocation");
+  const quorum = champ(fd, "quorum_premiere_convocation").replace(",", ".");
   const limite = champ(fd, "limite_procurations_mandataire");
   const retention = champ(fd, "retention_desactivation_mois");
   const delaiExec = champ(fd, "delai_execution_resolution_jours");

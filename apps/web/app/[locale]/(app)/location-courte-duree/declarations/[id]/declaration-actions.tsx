@@ -12,13 +12,9 @@ import { CopyButton } from "../../../../../../components/ui/copy";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
 import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
 import type { CanalInvitation, LcdDeclaration, StatutDeclarationLcd } from "../../../../../../lib/api/types";
-import {
-  cloturerDeclaration,
-  deciderDeclaration,
-  designerGestionnaire,
-  modifierDeclaration,
-} from "../../actions";
+import { cloturerDeclaration, deciderDeclaration, designerGestionnaire, modifierDeclaration } from "../../actions";
 import { formKey, formValue } from "../../../../../../lib/form-values";
+import { ActionModal } from "../../../../../../components/ui/action-modal";
 
 type Decision = "VALIDEE" | "REFUSEE" | "SUSPENDUE";
 
@@ -212,26 +208,19 @@ export function ModifierContactsModal({
   declaration: LcdDeclaration;
 }) {
   const l = dict.lcd;
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(modifierDeclaration, IDLE);
 
   return (
-    <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={modifierDeclaration}
+        title={l.modifierContacts}
+        closeLabel={dict.common.close}
+        success={{ message: l.contactsModifies }}
+        trigger={(open) => <Button variant="secondary" size="sm" onClick={open}>
         {l.modifierContacts}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={l.modifierContacts} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{l.contactsModifies}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="declaration_id" value={declaration.id} />
             <Field label={l.plateformes} htmlFor="m_plateformes" hint={l.plateformesAide} optionalLabel={dict.common.optional} error={fieldError(state, "plateformes")}>
@@ -245,15 +234,14 @@ export function ModifierContactsModal({
             </Field>
             <FormAlert state={state} />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={close}>
                 {dict.common.cancel}
               </Button>
               <SubmitButton>{dict.common.save}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }
 
@@ -270,26 +258,19 @@ export function CloturerModal({
   lotNumero: string;
 }) {
   const l = dict.lcd;
-  const [open, setOpen] = useState(false);
-  const [state, action] = useActionState(cloturerDeclaration, IDLE);
 
   return (
-    <>
-      <Button variant="dangerGhost" size="sm" onClick={() => setOpen(true)}>
+    <ActionModal
+        action={cloturerDeclaration}
+        title={l.cloturer}
+        closeLabel={dict.common.close}
+        success={{ message: l.cloturee }}
+        trigger={(open) => <Button variant="dangerGhost" size="sm" onClick={open}>
         {l.cloturer}
-      </Button>
-      <Modal open={open} onClose={() => setOpen(false)} title={l.cloturer} closeLabel={dict.common.close}>
-        {state.status === "success" ? (
-          <div className="space-y-4">
-            <Banner variant="ok">{l.cloturee}</Banner>
-            <div className="flex justify-end">
-              <Button variant="secondary" onClick={() => setOpen(false)}>
-                {dict.common.close}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <form action={action} className="space-y-4">
+      </Button>}
+      >
+        {({ state, formAction, close }) => (
+          <form action={formAction} className="space-y-4">
             <input type="hidden" name="locale" value={locale} />
             <input type="hidden" name="declaration_id" value={declarationId} />
             <p className="text-[15px] font-semibold text-ink">{fill(l.cloturerQuestion, { lot: lotNumero })}</p>
@@ -299,14 +280,13 @@ export function CloturerModal({
             <IrreversibleNotice>{l.cloturerAide}</IrreversibleNotice>
             <FormAlert state={state} />
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+              <Button type="button" variant="secondary" onClick={close}>
                 {dict.common.cancel}
               </Button>
               <SubmitButton variant="danger">{l.cloturer}</SubmitButton>
             </div>
           </form>
         )}
-      </Modal>
-    </>
+      </ActionModal>
   );
 }
