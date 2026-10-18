@@ -4618,9 +4618,16 @@ paths:
     post:
       tags: [Assemblées Générales]
       summary: Envoie la convocation. Génère une ligne ag_notification_log par destinataire (Master Spec Partie 8.2).
-      description: Idempotency-Key optionnelle — même clé → réponse rejouée, convocations envoyées une seule fois ; sans clé, la transition unique PLANIFIEE → CONVOQUEE refuse un second envoi (422).
+      description: >
+        Idempotency-Key optionnelle. Garantie exacte : le rejeu (même clé) d'une convocation dont
+        la transaction a été COMMITTÉE renvoie la réponse stockée sans rien renvoyer. Les envois
+        partent pendant la transaction (délai porté à 60 s pour cette opération) : si elle échoue
+        ou expire AVANT le commit, rien n'est enregistré (journal, statut, clé) et un nouvel essai
+        peut ré-émettre. Sans clé, la transition unique PLANIFIEE → CONVOQUEE refuse un second
+        appel committé (422).
       parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "200":
           description: "Convoquée, statut → CONVOQUEE."
           content:
@@ -4636,10 +4643,12 @@ paths:
       tags: [Assemblées Générales]
       summary: >
         Ajout nécessaire (Doc A §6.4) : bascule CONVOQUEE→EN_COURS après la date prévue. Rôle
-        autorisé — syndic. Idempotency-Key optionnelle (même clé → réponse rejouée, AG_OUVERTE
-        envoyée une seule fois).
+        autorisé — syndic. Idempotency-Key optionnelle : le rejeu d'une ouverture COMMITTÉE ne
+        renvoie aucun AG_OUVERTE ; un échec ou un délai dépassé avant le commit (transaction
+        portée à 60 s) n'enregistre rien et un nouvel essai peut ré-émettre les push.
       parameters: [{ $ref: "#/components/parameters/AgId" }, { $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "200":
           description: "Ouverte, statut → EN_COURS, quorum_requis fixé (snapshot copropriete)."
           content:
@@ -4934,6 +4943,7 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/IncidentCreate" }
       responses:
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "201":
           description: Créé, statut OUVERT.
           content:
@@ -5586,7 +5596,7 @@ paths:
       parameters: [{ $ref: "#/components/parameters/IdempotencyKeyOptionnelle" }]
       responses:
         "201": { description: Créé. }
-        "409": { description: Idempotency-Key déjà utilisée avec un autre payload. }
+        "409": { description: "Idempotency-Key déjà utilisée avec un autre payload, ou requête identique encore en cours de traitement." }
         "400": { $ref: "#/components/responses/ValidationError" }
         "403": { $ref: "#/components/responses/Forbidden" }
 

@@ -101,9 +101,20 @@ export async function obtenirAg(ctx: TenantContext, agId: string) {
 const JOUR_MS = 24 * 60 * 60 * 1000;
 
 /**
- * Convocation = action probante (ag_notification_log). `idempotencyKey` OPTIONNELLE : même clé +
- * même AG → réponse rejouée, les convocations ne partent qu'une fois ; sans clé, comportement
- * inchangé (la transition unique PLANIFIEE → CONVOQUEE refuse un second envoi en 422).
+ * Fan-out synchrone de la convocation / de l'ouverture (envoyerNotification appelle les
+ * transports DANS la transaction) : délai de transaction allongé pour ces deux opérations
+ * seulement (défauts Prisma 5 s ailleurs). ⚠️ Suivi à valider : envoi après commit (outbox /
+ * Inngest, notification.id comme id d'événement) — voir PR #18.
+ */
+const TX_FAN_OUT_AG = { maxWait: 10_000, timeout: 60_000 } as const;
+
+/**
+ * Convocation = action probante (ag_notification_log). `idempotencyKey` OPTIONNELLE.
+ * Garantie EXACTE : le rejeu (même clé) d'une convocation dont la transaction a été COMMITTÉE
+ * renvoie la réponse stockée et ne renvoie jamais rien. En revanche, si la transaction échoue
+ * ou expire AVANT le commit alors que des transports ont déjà émis, tout est annulé (journal,
+ * statut, clé) et un nouvel essai ré-émet : l'envoi n'est pas encore découplé du commit.
+ * Sans clé : la transition unique PLANIFIEE → CONVOQUEE refuse un second appel committé (422).
  */
 export async function convoquerAg(ctx: TenantContext, agId: string, idempotencyKey?: string) {
   if (can("ag.convoquer", ctx.role) !== true) {
@@ -171,10 +182,14 @@ export async function convoquerAg(ctx: TenantContext, agId: string, idempotencyK
       }),
     ]);
     return updated;
-  });
+  }, TX_FAN_OUT_AG);
 }
 
-/** Ouverture (notifie AG_OUVERTE) — `idempotencyKey` OPTIONNELLE, même règle que la convocation. */
+/**
+ * Ouverture (notifie AG_OUVERTE) — `idempotencyKey` OPTIONNELLE, même garantie que la
+ * convocation : rejeu d'une ouverture committée = aucun renvoi ; échec / délai avant commit =
+ * un nouvel essai peut ré-émettre les push.
+ */
 export async function ouvrirAg(ctx: TenantContext, agId: string, idempotencyKey?: string) {
   if (can("ag.ouvrir", ctx.role) !== true) {
     throw new PermissionRefuseeError("Seul le syndic peut ouvrir une AG.");
@@ -217,7 +232,7 @@ export async function ouvrirAg(ctx: TenantContext, agId: string, idempotencyKey?
       ),
     ]);
     return updated;
-  });
+  }, TX_FAN_OUT_AG);
 }
 
 export async function annulerAg(ctx: TenantContext, agId: string, motif: string) {

@@ -20,7 +20,7 @@
 import { createHash } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import type { TenantContext } from "../tenant/context";
-import { withTenant, type TenantDb } from "../tenant/db";
+import { withTenant, type TenantDb, type TenantTxOptions } from "../tenant/db";
 import { codePrisma } from "./prisma-errors";
 import { marquerRejeuIdempotent } from "./request-context-storage";
 
@@ -147,10 +147,12 @@ export async function withIdempotency<T>(
 export async function withTenantIdempotent<T>(
   ctx: TenantContext,
   opts: { cle: string | undefined; endpoint: string; payload: unknown },
-  cb: (db: Db) => Promise<T>
+  cb: (db: Db) => Promise<T>,
+  /** Délais de transaction (facultatif, défauts Prisma sinon) — voir withTenant. */
+  txOptions?: TenantTxOptions
 ): Promise<T> {
   try {
-    return await withTenant(ctx, (db) => withIdempotency(ctx, db, opts, () => cb(db)));
+    return await withTenant(ctx, (db) => withIdempotency(ctx, db, opts, () => cb(db)), txOptions);
   } catch (e) {
     if (!(e instanceof IdempotencyCourseError) || !opts.cle) throw e;
     return reprendreApresCourse<T>(ctx, { ...opts, cle: opts.cle });
