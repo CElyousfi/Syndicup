@@ -133,6 +133,10 @@ describe("stripSpecRefs", () => {
     ["Le syndic doit renseigner les paramètres du règlement (PUT /lcd/reglement).", "Le syndic doit renseigner les paramètres du règlement."],
     ["Décaissement lié à une résolution (Doc A §3.6) — ou urgence autorisée.", "Décaissement lié à une résolution — ou urgence autorisée."],
     ["Message sans référence.", "Message sans référence."],
+    // Vocabulaire métier : « Partie » / « § » seuls restent (même règle que l'API, #15).
+    ["Partie 2 non attribuée à un lot.", "Partie 2 non attribuée à un lot."],
+    ["Article 12 § 3 du règlement.", "Article 12 § 3 du règlement."],
+    ["Quota atteint — Master Spec Partie 4.2.", "Quota atteint."],
   ])("%s", (entree, attendu) => {
     expect(stripSpecRefs(entree)).toBe(attendu);
   });

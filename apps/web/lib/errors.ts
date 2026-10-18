@@ -62,19 +62,24 @@ export function shortRef(requestId?: string | null): string | undefined {
 /**
  * Retire d'un message serveur les références internes de spécification — « (Partie 2.4) »,
  * « (Doc A §8, brief §10) », « — LEGAL_QUESTIONS_BRIEF §9 », « (PUT /lcd/reglement) »… — qui
- * ne veulent rien dire pour un résident.
+ * ne veulent rien dire pour un résident. Filet de sécurité : l'API les retire déjà (respond.ts,
+ * #15) ; même prudence qu'elle — « Partie 2 » ou « § 3 » SEULS sont du vocabulaire métier
+ * (« Partie 2 non attribuée ») et restent ; seules les formes préfixées (Doc A, Master Spec,
+ * brief, LEGAL_QUESTIONS_BRIEF, CLAUDE.md) et une parenthèse « (Partie n) » sont retirées.
  */
 export function stripSpecRefs(message: string): string {
   return (
     message
-      // Parenthèses qui contiennent une référence (Partie, Doc A, §, brief, Master Spec, LEGAL_…, chemin d'API).
-      .replace(/\s*\((?:[^()]*?(?:Partie\s+\d|Doc\s*A|§|brief|Master\s*Spec|LEGAL_QUESTIONS|config_json|(?:GET|POST|PUT|PATCH|DELETE)\s+\/)[^()]*)\)/gi, "")
-      // Références en incise après un tiret ou un point-virgule.
-      .replace(/\s*[—–-]\s*(?:LEGAL_QUESTIONS_BRIEF|Doc\s*A|Master\s*Spec|Partie\s+\d)[^.;:]*?(?=\s*[.;:]|$)/gi, "")
-      // Références nues restantes.
-      .replace(/\s*(?:Doc\s*A\s*)?§\s*\d+(?:\.\d+)*/g, "")
-      .replace(/\s*Partie\s+\d+(?:\.\d+)*/gi, "")
-      .replace(/\s*LEGAL_QUESTIONS_BRIEF/g, "")
+      // Parenthèses de référence : formes préfixées, « (Partie n[, n]) » seule, champ ou chemin d'API.
+      .replace(/\s*\((?:[^()]*?(?:Doc\s*A\b|brief\s*§|Master\s*Spec|LEGAL_QUESTIONS|CLAUDE\.md|config_json|(?:GET|POST|PUT|PATCH|DELETE)\s+\/)[^()]*)\)/gi, "")
+      .replace(/\s*\(\s*Partie\s+\d+(?:\.\d+)*(?:\s*[,/]\s*(?:Partie\s+)?\d+(?:\.\d+)*)*\s*\)/g, "")
+      // Références en incise après un tiret.
+      // (un point suivi d'un chiffre fait partie du numéro : « Partie 4.2 », pas une fin de phrase)
+      .replace(/\s*[—–-]\s*(?:LEGAL_QUESTIONS_BRIEF|Doc\s*A\b|Master\s*Spec)(?:[^.;:]|\.(?=\d))*?(?=\s*[.;:](?!\d)|$)/gi, "")
+      // Formes préfixées nues restantes.
+      .replace(/\s*Doc\s*A\s*§\s*\d+(?:\.\d+)*/g, "")
+      .replace(/\s*Master\s+Spec(?:\s+Partie\s+\d+(?:\.\d+)*)?/g, "")
+      .replace(/\s*(?:docs\/)?LEGAL_QUESTIONS_BRIEF(?:\.md)?(?:\s*§\s*\d+(?:\.\d+)*)?/g, "")
       // Typographie française : espace avant ; : ! ? conservée, jamais avant . ou ,
       .replace(/\s+([.,])/g, "$1")
       .replace(/\s{2,}/g, " ")
