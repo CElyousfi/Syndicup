@@ -1,11 +1,11 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
+
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, succes } from "../../../../lib/forms-server";
+import { cleIdempotence, fromApiError, succes } from "../../../../lib/forms-server";
 import type {
   AgProcuration,
   AgResolution,
@@ -18,11 +18,7 @@ function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
 }
 
-/** Clé d'idempotence du geste (champ caché `idempotency_key`, UUID) ; sinon une clé neuve. */
-function cleIdempotence(fd: FormData): string {
-  const cle = champ(fd, "idempotency_key");
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cle) ? cle : randomUUID();
-}
+
 
 export async function creerAg(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");

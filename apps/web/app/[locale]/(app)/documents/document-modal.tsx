@@ -6,6 +6,7 @@ import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
+import { IdempotencyField } from "../../../../components/ui/idempotency-field";
 import type { Dict, Locale } from "../../../../lib/i18n";
 import type { VisibiliteDocument } from "../../../../lib/api/types";
 import { televerserFichierDocument } from "./actions";
@@ -38,6 +39,7 @@ export function DocumentModal({ dict, locale }: { dict: Dict; locale: Locale }) 
           </div>
         ) : (
           <form action={action} className="space-y-4">
+            <IdempotencyField state={state} />
             <input type="hidden" name="locale" value={locale} />
 
             {/* Fichier — zone de dépôt cliquable */}

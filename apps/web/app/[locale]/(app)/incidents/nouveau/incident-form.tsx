@@ -6,6 +6,7 @@ import { Field, Input, Select, Textarea } from "../../../../../components/ui/fie
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
+import { IdempotencyField } from "../../../../../components/ui/idempotency-field";
 import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
 import { PhotoPicker } from "../../../../../components/incidents/photo-picker";
 import { CategorieGlyphe } from "../../../../../components/incidents/categorie-icon";
@@ -51,6 +52,7 @@ export function IncidentForm({
 
   return (
     <form action={action} className="max-w-2xl space-y-8">
+      <IdempotencyField state={state} />
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="categorie" value={categorie} />
       <input type="hidden" name="partie" value={partie} />

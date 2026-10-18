@@ -3,6 +3,7 @@
  * chemin de la requête). Chaque échec devient un FormState déjà localisé : titre, message,
  * prochaine étape, référence. Les Server Actions n'écrivent plus jamais de texte d'erreur.
  */
+import { randomUUID } from "node:crypto";
 import type { ApiError } from "./api/types";
 import { describeError, isLegalGateError } from "./errors";
 import { success, type FormErrorState, type FormState } from "./forms";
@@ -65,6 +66,15 @@ export async function fromApiError(
  */
 export async function succes(pick: (d: Dict) => string, data?: unknown): Promise<FormState> {
   return success(pick(await requestDict()), data);
+}
+
+/**
+ * Clé d'idempotence du geste : le champ caché `idempotency_key` (UUID, tiré une fois par
+ * montage du formulaire — <IdempotencyField>) ; à défaut d'une clé valide, une clé neuve.
+ */
+export function cleIdempotence(fd: FormData): string {
+  const cle = String(fd.get("idempotency_key") ?? "").trim();
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cle) ? cle : randomUUID();
 }
 
 /** Joint la saisie soumise à un état d'erreur (aucun effet sans FormData). */

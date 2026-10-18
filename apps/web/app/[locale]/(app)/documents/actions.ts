@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, uploadRefused, localError } from "../../../../lib/forms-server";
+import { cleIdempotence, fromApiError, uploadRefused, localError } from "../../../../lib/forms-server";
 import type { DocumentCopro, Notification } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -85,8 +85,10 @@ export async function televerserFichierDocument(
     return await uploadRefused(upload.status, fd);
   }
 
+  // Une clé par ouverture de la modale (<IdempotencyField>) : jamais deux documents pour un geste.
   const res = await apiFetch<DocumentCopro>("/documents", {
     method: "POST",
+    idempotencyKey: cleIdempotence(fd),
     body: {
       type: champ(fd, "type"),
       nom: champ(fd, "nom") || fichier.name,

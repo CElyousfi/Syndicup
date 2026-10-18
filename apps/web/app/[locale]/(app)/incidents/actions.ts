@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
-import { fromApiError, uploadRefused } from "../../../../lib/forms-server";
+import { cleIdempotence, fromApiError, uploadRefused } from "../../../../lib/forms-server";
 import type { Incident, IncidentLog, Prestataire } from "../../../../lib/api/types";
 
 function champ(fd: FormData, name: string): string {
@@ -61,8 +61,10 @@ export async function signalerIncident(_prev: FormState, fd: FormData): Promise<
   const photos = await televerserPhotos(fd);
   if (!Array.isArray(photos)) return photos.erreur;
 
+  // Une clé par formulaire monté (<IdempotencyField>) : double envoi / « Réessayer » = un seul signalement.
   const res = await apiFetch<Incident>("/incidents", {
     method: "POST",
+    idempotencyKey: cleIdempotence(fd),
     body: {
       lot_id: lotId === "" ? null : lotId,
       categorie: champ(fd, "categorie"),

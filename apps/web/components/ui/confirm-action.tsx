@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { IdempotencyField } from "./idempotency-field";
 import { ActionModal, type ActionModalSuccess } from "./action-modal";
 import { IrreversibleNotice } from "./irreversible-notice";
 import { Button, type ButtonVariant } from "./button";
@@ -107,7 +108,7 @@ export function ConfirmAction({
           {Object.entries(fields).map(([k, v]) => (
             <input key={k} type="hidden" name={k} value={v} />
           ))}
-          {idempotent ? <CleIdempotence /> : null}
+          {idempotent ? <IdempotencyField state={state} /> : null}
           {question ? <p className="text-[16px] font-bold leading-snug text-ink">{question}</p> : null}
           {children}
           {irreversible ? (
@@ -127,12 +128,4 @@ export function ConfirmAction({
       )}
     </ActionModal>
   );
-}
-
-/** Clé d'idempotence tirée au montage — le corps de la modale est remonté à chaque ouverture. */
-function CleIdempotence() {
-  // Tirée après l'hydratation (jamais au rendu serveur : aucune différence serveur/client).
-  const [cle, setCle] = useState("");
-  useEffect(() => setCle(crypto.randomUUID()), []);
-  return <input type="hidden" name="idempotency_key" value={cle} />;
 }
