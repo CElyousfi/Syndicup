@@ -51,6 +51,10 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> with 
   void didChangeAppLifecycleState(AppLifecycleState state) {
     // Pas `inactive` (centre de contrôle, appel entrant, sélecteur d'apps) : l'utilisateur est
     // encore là et peut toucher « Annuler ».
+    // Compromis ACCEPTÉ : une app tuée depuis le sélecteur iOS (sans passer par `paused`) ou par
+    // le système peut perdre les lectures en attente — elles restent simplement « non lues »
+    // côté serveur. Sans conséquence : l'état « lu » n'a aucune valeur probante (la preuve
+    // d'envoi est la ligne notification elle-même) et l'utilisateur les retrouvera non lues.
     if (state == AppLifecycleState.paused || state == AppLifecycleState.hidden || state == AppLifecycleState.detached) {
       _differe.vider();
     }
