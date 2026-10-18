@@ -34,6 +34,8 @@ export type FailDecision =
 export function decideFailure(res: { status: number; error: { code: string } }): FailDecision {
   if (res.status === 404 || res.error.code === "NOT_FOUND") return { kind: "notFound" };
   if (res.status === 401 || res.error.code === "UNAUTHENTICATED") return { kind: "login" };
+  // 402 : l'API ne le renvoie pas encore — elle le fera une fois la PR abonnements (#14)
+  // fusionnée (copropriété à l'abonnement suspendu). Branche gardée pour être prête ce jour-là.
   if (res.status === 402) return { kind: "forbidden", motif: "abonnement" };
   if (res.status === 403 || res.error.code === "FORBIDDEN") return { kind: "forbidden" };
   return { kind: "throw" };

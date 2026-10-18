@@ -83,9 +83,20 @@ export function useLive(unreadInitial: number, locale: string) {
       if (document.visibilityState !== "visible") return;
       try {
         const r = await fetch(`/api/notifications-live?locale=${locale}`, { cache: "no-store" });
+        if (r.status === 401) {
+          // Session expirée : ce n'est pas « connexion perdue ». On relit la page : le
+          // middleware (ou getAppContext) renvoie vers /connexion?next=<page courante>.
+          router.refresh();
+          return;
+        }
+        if (r.status === 403) {
+          // Refus PAR CONCEPTION (rôle sans notifications.lire : SYNDIC_COMPTABLE,
+          // PERSONNE_MORALE_REPRESENTANT) : rien à suivre, ce n'est pas une panne.
+          staleOk();
+          return;
+        }
         if (!r.ok) {
-          // Session expirée (401) : la prochaine navigation renvoie à la connexion ; autre :
-          // données en direct figées — signalées par la pastille de la coque.
+          // Données en direct figées — signalées par la pastille de la coque.
           staleFail();
           return;
         }
