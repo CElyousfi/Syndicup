@@ -5,7 +5,7 @@ import { withApiHandler } from "../../../lib/http/handler";
 import { formatDemande, reponseExport } from "../../../lib/http/export";
 import { exporterIncidents } from "../../../lib/rapports/exports";
 import { mapErreurRapports } from "../../../lib/rapports/http";
-import { incidentCreateSchema } from "../../../lib/incidents/schemas";
+import { incidentCreateSchema, incidentsFiltresSchema } from "../../../lib/incidents/schemas";
 import {
   creerIncident,
   listerIncidents,
@@ -31,7 +31,18 @@ async function handleGET(req: Request) {
       const { entetes, lignes } = await exporterIncidents(ctx, { sejour_id: sejourValide }, format);
       return reponseExport(format, "incidents", entetes, lignes);
     }
-    const { total, rows } = await listerIncidents(ctx, page, limit, { sejourId: sejourValide });
+    // Filtres serveur (Zod) : statut (multi, virgules ou paramètre répété), urgence, categorie,
+    // lot_id, q — `meta.total` reflète le filtre. Valeur invalide → 400, jamais ignorée.
+    const brut: Record<string, string> = {};
+    const statuts = url.searchParams.getAll("statut").join(",");
+    if (statuts) brut.statut = statuts;
+    for (const k of ["urgence", "categorie", "lot_id", "q"] as const) {
+      const v = url.searchParams.get(k);
+      if (v !== null && v !== "") brut[k] = v;
+    }
+    const filtres = incidentsFiltresSchema.safeParse(brut);
+    if (!filtres.success) return failZod(filtres.error);
+    const { total, rows } = await listerIncidents(ctx, page, limit, { sejourId: sejourValide, ...filtres.data });
     return ok(rows, { meta: { total, page, has_more: page * limit < total } });
   } catch (e) {
     const rapports = mapErreurRapports(e);

@@ -25,6 +25,27 @@ export const URGENCES_INCIDENT = ["NORMALE", "URGENTE", "URGENCE_MAXIMALE"] as c
 export const STATUTS_INCIDENT = ["OUVERT", "EN_COURS", "RESOLU", "FERME"] as const;
 
 /**
+ * GET /incidents — filtres serveur (`meta.total` reflète le filtre). Tous optionnels ; une valeur
+ * inconnue est REJETÉE (400), jamais ignorée. `statut` accepte plusieurs valeurs séparées par des
+ * virgules (`statut=OUVERT,EN_COURS`). `q` cherche dans sous-catégorie et description (ILIKE,
+ * jokers échappés).
+ */
+export const incidentsFiltresSchema = z
+  .object({
+    statut: z
+      .preprocess(
+        (v) => (typeof v === "string" ? [...new Set(v.split(",").map((x) => x.trim()).filter(Boolean))] : v),
+        z.array(z.enum(STATUTS_INCIDENT)).min(1)
+      )
+      .optional(),
+    urgence: z.enum(URGENCES_INCIDENT).optional(),
+    categorie: z.enum(CATEGORIES_INCIDENT).optional(),
+    lot_id: z.string().uuid().optional(),
+    q: z.string().trim().min(1).max(100).optional(),
+  });
+export type IncidentsFiltres = z.infer<typeof incidentsFiltresSchema>;
+
+/**
  * Chemin storage d'une photo d'incident : `<uuid copropriété>/incidents/<nom assaini>`.
  * L'appartenance au tenant courant est re-vérifiée dans le service (défense en profondeur).
  */

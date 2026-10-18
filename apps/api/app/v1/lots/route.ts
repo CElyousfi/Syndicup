@@ -2,7 +2,7 @@
  * GET/POST /v1/lots — liste et création de lots (Master Spec Partie 2.2, Doc A §1 — M3).
  */
 import { withApiHandler } from "../../../lib/http/handler";
-import { lotCreateSchema } from "../../../lib/lots/schemas";
+import { lotCreateSchema, lotsFiltresSchema } from "../../../lib/lots/schemas";
 import {
   creerLot,
   listerLots,
@@ -27,7 +27,15 @@ async function handleGET(req: Request) {
     }
     const page = Math.max(1, Number(url.searchParams.get("page") ?? 1) || 1);
     const limit = Math.min(100, Math.max(1, Number(url.searchParams.get("limit") ?? 20) || 20));
-    const { total, rows } = await listerLots(ctx, page, limit);
+    // Filtres serveur (Zod) : q, type, statut — `meta.total` reflète le filtre ; invalide → 400.
+    const brut: Record<string, string> = {};
+    for (const k of ["q", "type", "statut"] as const) {
+      const v = url.searchParams.get(k);
+      if (v !== null && v !== "") brut[k] = v;
+    }
+    const filtres = lotsFiltresSchema.safeParse(brut);
+    if (!filtres.success) return failZod(filtres.error);
+    const { total, rows } = await listerLots(ctx, page, limit, filtres.data);
     return ok(rows, { meta: { total, page, has_more: page * limit < total } });
   } catch (e) {
     const rapports = mapErreurRapports(e);

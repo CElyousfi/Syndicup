@@ -15,6 +15,8 @@ import { money, toApiString } from "../money";
 import { genererCode, expiration } from "../auth/invitations";
 import { ecrireAuditLog } from "../audit/audit";
 import { envoyerNotification } from "../notifications/notifications";
+import { motifContient } from "../http/recherche";
+import type { LotsFiltres } from "./schemas";
 import type {
   LotCreateInput,
   LotUpdateInput,
@@ -111,15 +113,46 @@ async function chargerRattachements(db: TenantDb, lotIds: string[]) {
   };
 }
 
-export async function listerLots(ctx: TenantContext, page: number, limit: number) {
+/**
+ * Filtres (Zod en amont : lotsFiltresSchema) — restreignent seulement ce que la RLS laisse voir ;
+ * `total` compte le résultat filtré. `q` : numéro du lot OU nom / prénom (ou « prénom nom »,
+ * « nom prénom ») d'un propriétaire rattaché visible — ILIKE, jokers échappés.
+ */
+export async function listerLots(ctx: TenantContext, page: number, limit: number, filtres: LotsFiltres = {}) {
   if (can("lots.lire", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les lots.");
   }
   return withTenant(ctx, async (db) => {
+    const where: Prisma.LotWhereInput = {
+      coproprieteId: ctx.coproprieteId,
+      ...(filtres.type ? { typeLot: filtres.type } : {}),
+      ...(filtres.statut ? { statut: filtres.statut } : {}),
+    };
+    if (filtres.q) {
+      const motif = motifContient(filtres.q);
+      const ids = await db.$queryRaw<{ id: string }[]>`
+        SELECT l.id FROM lot l
+        WHERE l.copropriete_id = ${ctx.coproprieteId}::uuid
+          AND (
+            l.numero ILIKE ${motif} ESCAPE '!'
+            OR EXISTS (
+              SELECT 1 FROM lot_proprietaire lp
+              JOIN utilisateur u ON u.id = lp.utilisateur_id
+              WHERE lp.lot_id = l.id
+                AND (
+                  u.nom ILIKE ${motif} ESCAPE '!'
+                  OR u.prenom ILIKE ${motif} ESCAPE '!'
+                  OR (coalesce(u.prenom, '') || ' ' || coalesce(u.nom, '')) ILIKE ${motif} ESCAPE '!'
+                  OR (coalesce(u.nom, '') || ' ' || coalesce(u.prenom, '')) ILIKE ${motif} ESCAPE '!'
+                )
+            )
+          )`;
+      where.id = { in: ids.map((r) => r.id) };
+    }
     const [total, rows] = await Promise.all([
-      db.lot.count({ where: { coproprieteId: ctx.coproprieteId } }),
+      db.lot.count({ where }),
       db.lot.findMany({
-        where: { coproprieteId: ctx.coproprieteId },
+        where,
         orderBy: { numero: "asc" },
         skip: (page - 1) * limit,
         take: limit,

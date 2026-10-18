@@ -37,6 +37,18 @@ export const STATUTS_LOT = [
 
 export const TYPES_USAGE_LOT = ["HABITATION", "BUREAU", "MIXTE", "COMMERCIAL"] as const;
 
+/**
+ * GET /lots — filtres serveur, exactement ceux de l'écran web Lots (`meta.total` reflète le
+ * filtre) : `q` (numéro du lot ou nom / prénom d'un propriétaire rattaché, ILIKE échappé),
+ * `type` (type_lot), `statut`. Valeur inconnue → 400.
+ */
+export const lotsFiltresSchema = z.object({
+  q: z.string().trim().min(1).max(100).optional(),
+  type: z.enum(TYPES_LOT).optional(),
+  statut: z.enum(STATUTS_LOT).optional(),
+});
+export type LotsFiltres = z.infer<typeof lotsFiltresSchema>;
+
 export const lotCreateSchema = z.object({
   type_lot: z.enum(TYPES_LOT),
   type_usage: z.enum(TYPES_USAGE_LOT).nullish(),

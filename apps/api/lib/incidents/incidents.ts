@@ -25,6 +25,9 @@ import type {
   PrestataireUpdateInput,
 } from "./schemas";
 import type { IncidentEvaluationInput } from "../depenses/schemas";
+import { STATUTS_INCIDENT, type IncidentsFiltres } from "./schemas";
+import { motifContient } from "../http/recherche";
+import type { Prisma } from "@prisma/client";
 
 export class PermissionRefuseeError extends Error {}
 export class IncidentIntrouvableError extends Error {}
@@ -194,12 +197,38 @@ async function notifierNouveauSignalement(
 }
 
 
-export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: { sejourId?: string } = {}) {
+/**
+ * Filtres serveur (Zod en amont : incidentsFiltresSchema) — la RLS reste la seule source de
+ * visibilité (un résident ne filtre que ses signalements, un prestataire ses tickets) ; les
+ * filtres ne font que restreindre, `total` compte le résultat filtré.
+ */
+async function whereIncidents(db: TenantDb, ctx: TenantContext, filtres: { sejourId?: string } & Partial<IncidentsFiltres>): Promise<Prisma.IncidentWhereInput> {
+  const where: Prisma.IncidentWhereInput = {
+    coproprieteId: ctx.coproprieteId,
+    ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}),
+    ...(filtres.statut?.length ? { statut: { in: filtres.statut } } : {}),
+    ...(filtres.urgence ? { urgence: filtres.urgence } : {}),
+    ...(filtres.categorie ? { categorie: filtres.categorie } : {}),
+    ...(filtres.lot_id ? { lotId: filtres.lot_id } : {}),
+  };
+  if (filtres.q) {
+    // ILIKE explicite (jokers échappés, ESCAPE '!') — requête sous la même transaction RLS.
+    const motif = motifContient(filtres.q);
+    const ids = await db.$queryRaw<{ id: string }[]>`
+      SELECT id FROM incident
+      WHERE copropriete_id = ${ctx.coproprieteId}::uuid
+        AND (sous_categorie ILIKE ${motif} ESCAPE '!' OR description ILIKE ${motif} ESCAPE '!')`;
+    where.id = { in: ids.map((r) => r.id) };
+  }
+  return where;
+}
+
+export async function listerIncidents(ctx: TenantContext, page: number, limit: number, filtres: { sejourId?: string } & Partial<IncidentsFiltres> = {}) {
   if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
     throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
   }
-  const where = { coproprieteId: ctx.coproprieteId, ...(filtres.sejourId ? { sejourId: filtres.sejourId } : {}) };
   return withTenant(ctx, async (db) => {
+    const where = await whereIncidents(db, ctx, filtres);
     const [total, rows] = await Promise.all([
       db.incident.count({ where }),
       db.incident.findMany({
@@ -210,6 +239,27 @@ export async function listerIncidents(ctx: TenantContext, page: number, limit: n
       }),
     ]);
     return { total, rows };
+  });
+}
+
+/**
+ * GET /incidents/compteurs — cartes de synthèse de l'écran Incidents : nombre par statut et
+ * signalements ouverts / en cours dont le SLA est dépassé. Même périmètre RLS que la liste ;
+ * aucun filtre (les cartes décrivent tout ce que l'appelant voit).
+ */
+export async function compteursIncidents(ctx: TenantContext, now = new Date()) {
+  if (can("incidents.voir_tous_copropriete", ctx.role) === false) {
+    throw new PermissionRefuseeError("Rôle non autorisé à lister les incidents.");
+  }
+  return withTenant(ctx, async (db) => {
+    const [groupes, slaDepasses] = await Promise.all([
+      db.incident.groupBy({ by: ["statut"], where: { coproprieteId: ctx.coproprieteId }, _count: { _all: true } }),
+      db.incident.count({ where: { coproprieteId: ctx.coproprieteId, statut: { in: ["OUVERT", "EN_COURS"] }, slaDeadline: { lt: now } } }),
+    ]);
+    const parStatut = Object.fromEntries(STATUTS_INCIDENT.map((s) => [s, 0])) as Record<(typeof STATUTS_INCIDENT)[number], number>;
+    for (const g of groupes) parStatut[g.statut] = g._count._all;
+    const total = Object.values(parStatut).reduce((a, b) => a + b, 0);
+    return { par_statut: parStatut, total, sla_depasses: slaDepasses };
   });
 }
 
