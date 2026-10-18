@@ -33,6 +33,7 @@ class AgListScreen extends ConsumerWidget {
     return SuPage(
       title: d.ag.titre,
       onRefresh: () => refreshing(ref, [agListProvider]),
+      staleKeys: const ['/ag'],
       fab: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/ag/nouvelle'), icon: const Icon(Icons.add_rounded), label: Text(d.ag.creer)) : null,
       children: [
         PhotoBanner('salle', title: ctx.copropriete?.nom),

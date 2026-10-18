@@ -43,16 +43,12 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
     final synthese = ctx.voitFinancesGlobales || ctx.isProprietaire ? ref.watch(syntheseProvider) : null;
     final soldes = synthese?.valueOrNull == null ? <String, BigInt>{} : soldeParLot(synthese!.valueOrNull!);
     final racine = !context.canPop();
-    return Scaffold(
-      appBar: racine ? ShellHeader(title: ctx.isResident ? d.lots.mesLots : d.lots.title) : AppBar(title: Text(ctx.isResident ? d.lots.mesLots : d.lots.title)),
-      floatingActionButton: ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null,
-      body: SuRefresh(
-        onRefresh: () async {
-          await refreshing(ref, [lotsProvider, syntheseProvider]);
-        },
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 96),
-          children: [
+    final titre = ctx.isResident ? d.lots.mesLots : d.lots.title;
+    final fab = ctx.isGestion ? FloatingActionButton.extended(onPressed: () => context.push('/lots/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.lots.nouveau)) : null;
+    Future<void> refresh() => refreshing(ref, [lotsProvider, syntheseProvider]);
+    final contenu = <Widget>[
+            // Copie du téléphone affichée faute de serveur : on le dit (swr.dart).
+            StaleBanner(const ['/lots'], onRetry: refresh),
             PhotoBanner('entree', title: ctx.copropriete?.nom, subtitle: ctx.copropriete?.adresse),
             if (ctx.copropriete != null && !ctx.isResident) Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(fill(d.lots.subtitle, {'count': lots.valueOrNull?.length ?? '…', 'tantiemes': formatEntier(ctx.copropriete!.totalTantiemes)}), style: t.bodyMedium?.copyWith(color: SuColors.soft))),
             SuSearchField(hint: d.common.search, onChanged: (v) => setState(() => _q = v.toLowerCase())),
@@ -85,8 +81,16 @@ class _LotsScreenState extends ConsumerState<LotsScreen> {
                   ),
               ]);
             })),
-          ],
-        ),
+    ];
+    // Ouverte depuis « Plus » / un lien : page standard (grand titre, retour rond) ; racine
+    // d'onglet : en-tête du shell (avatar, résidence, cloche) avec le titre de l'onglet.
+    if (!racine) return SuPage(title: titre, onRefresh: refresh, fab: fab, padding: const EdgeInsets.fromLTRB(16, 0, 16, 96), children: contenu);
+    return Scaffold(
+      appBar: ShellHeader(title: titre),
+      floatingActionButton: fab,
+      body: SuRefresh(
+        onRefresh: refresh,
+        child: ListView(padding: const EdgeInsets.fromLTRB(16, 4, 16, 96), children: contenu),
       ),
     );
   }

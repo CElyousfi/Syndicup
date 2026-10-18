@@ -38,6 +38,7 @@ class _DocumentsScreenState extends ConsumerState<DocumentsScreen> {
       title: d.documents.titre,
       subtitle: d.documents.subtitle,
       onRefresh: () => refreshing(ref, [documentsProvider]),
+      staleKeys: const ['/documents'],
       actions: [if (ctx.isGestion) CircleIconButton(icon: Icons.upload_file_rounded, tooltip: d.documents.televerser, onTap: () => _upload(context))],
       children: [
         PhotoBanner('cour', title: ctx.copropriete?.nom),

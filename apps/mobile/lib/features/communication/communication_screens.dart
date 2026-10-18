@@ -59,6 +59,7 @@ class _AffichageScreenState extends ConsumerState<AffichageScreen> {
       title: c.titre,
       subtitle: nonLues > 0 ? fill(c.nonLues, {'n': '$nonLues'}) : c.subtitle,
       onRefresh: () => _rafraichirAffichage(ref),
+      staleKeys: const ['/annonces'],
       fab: gestion ? FloatingActionButton.extended(onPressed: () => showFormSheet<void>(context, title: c.nouvelle, builder: (_) => AnnonceComposer(onDone: () => _rafraichirAffichage(ref))), icon: const Icon(Icons.campaign_rounded), label: Text(c.nouvelle)) : null,
       children: [
         FilterChips<String?>(value: _categorie, options: [null, ..._categories], labelOf: (v) => v == null ? c.toutes : (e.categorieAnnonce[v] ?? humanizeCode(v)), onChanged: (v) => setState(() => _categorie = v)),

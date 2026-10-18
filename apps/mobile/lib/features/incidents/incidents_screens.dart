@@ -57,6 +57,8 @@ class _IncidentsScreenState extends ConsumerState<IncidentsScreen> {
     final fab = ctx.isPrestataire ? null : FloatingActionButton.extended(onPressed: () => context.push('/incidents/nouveau'), icon: const Icon(Icons.add_rounded), label: Text(d.incidents.signaler));
     Future<void> refresh() => refreshing(ref, [incidentsProvider]);
     final contenu = <Widget>[
+      // Copie du téléphone affichée faute de serveur : on le dit (swr.dart).
+      StaleBanner(const ['/incidents'], onRetry: refresh),
       FilterChips<String>(value: _statut, options: const ['OUVERTS', 'TOUS', 'OUVERT', 'EN_COURS', 'RESOLU', 'FERME'], labelOf: (v) => v == 'OUVERTS' ? d.dash.incidentsOuverts : v == 'TOUS' ? d.common.all : d.enums.statutIncident[v] ?? humanizeCode(v), onChanged: (v) => setState(() => _statut = v)),
       const SizedBox(height: 16),
       AsyncView(incidents, onRetry: () => ref.invalidate(incidentsProvider), data: (list) {
