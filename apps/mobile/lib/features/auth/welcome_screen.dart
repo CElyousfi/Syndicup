@@ -106,7 +106,9 @@ class WelcomeScreen extends StatelessWidget {
         // d'écraser l'illustration pour tout faire tenir.
         child: LayoutBuilder(builder: (context, page) {
           final compact = page.maxHeight < 620;
-          Widget video(double art) => SuVideoArt('welcome-hero', size: art, radius: 32, fallback: SuIllustration('welcome-hero', size: art, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: art * 0.87)));
+          // Set d'illustrations v1 : la scène A01 (Amina devant la résidence) remplace la vidéo
+          // d'accueil (décision du 26/10) ; la vidéo reste le repli tant que la planche manque.
+          Widget video(double art) => SuArtImage(SuArt.a01, cutout: false, width: art, height: art, radius: 32, fallback: SuVideoArt('welcome-hero', size: art, radius: 32, fallback: SuIllustration('welcome-hero', size: art, fallback: PhotoSphere(asset: 'assets/images/residence-hero.jpg', size: art * 0.87))));
           final column = Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           child: Column(
