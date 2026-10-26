@@ -2,6 +2,7 @@
 
 import { useRef, useState, type ReactNode } from "react";
 import { useLottieArt } from "../../lib/feel/lottie-art";
+import { suArtFor, suArtSrc } from "../../lib/su-art";
 
 /**
  * Illustration de marque (public/illustrations/<nom>.png + <nom>.json, mêmes fichiers que le
@@ -31,7 +32,17 @@ export function Illustration({
 }) {
   const [png, setPng] = useState<"loading" | "ok" | "absent">("loading");
   const box = useRef<HTMLSpanElement>(null);
-  const phase = useLottieArt(box, name, { idle: idle && !name.startsWith("quick-") });
+  // Planche du set de marque (lib/su-art.ts) livrée pour ce nom : image fixe, pas de Lottie.
+  const art = suArtFor(name);
+  const phase = useLottieArt(box, art ? "" : name, { idle: idle && !name.startsWith("quick-") });
+  if (art) {
+    const { src, srcSet } = suArtSrc(art);
+    return (
+      <span className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>
+        <img src={src} srcSet={srcSet} alt="" width={size} height={size} decoding="async" className="size-full object-contain" />
+      </span>
+    );
+  }
   const showPng = png === "ok" && phase === "rest";
   return (
     <span className={`relative inline-flex items-center justify-center ${className}`} style={{ width: size, height: size }}>

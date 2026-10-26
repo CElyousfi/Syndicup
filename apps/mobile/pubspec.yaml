@@ -64,6 +64,7 @@ flutter:
   assets:
     - assets/images/
     - assets/illustrations/
+    - assets/illustrations/su/
     - assets/videos/
     - assets/sounds/
     - assets/dari/
