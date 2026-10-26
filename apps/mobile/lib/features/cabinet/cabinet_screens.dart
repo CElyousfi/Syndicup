@@ -64,7 +64,7 @@ class _PortefeuilleTab extends ConsumerWidget {
     return SuRefresh(
       onRefresh: () => refreshing(ref, [portefeuilleProvider(cabinet.id)]),
       child: AsyncView(lignes, onRetry: () => ref.invalidate(portefeuilleProvider(cabinet.id)), data: (rows) {
-        if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, hint: t.aucuneCoproprieteAide, icon: Icons.apartment_rounded, illustration: 'empty-lots')]);
+        if (rows.isEmpty) return ListView(padding: const EdgeInsets.all(16), children: [EmptyState(title: t.aucuneCopropriete, hint: t.aucuneCoproprieteAide, icon: Icons.apartment_rounded, illustration: 'empty-residences')]);
         final alertes = rows.fold<int>(0, (a, r) => a + r.alertes.length);
         return ListView(padding: const EdgeInsets.fromLTRB(16, 16, 16, 32), children: [
           Text('${cabinet.nom}${cabinet.monRole != null ? ' · ${t.roles[cabinet.monRole!] ?? humanizeCode(cabinet.monRole!)}' : ''}', style: tt.bodyMedium?.copyWith(color: SuColors.soft)),

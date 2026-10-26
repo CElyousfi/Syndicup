@@ -15,6 +15,7 @@ import '../feel/feel.dart';
 import 'alive.dart';
 import 'cards.dart';
 import 'illustration.dart';
+import 'su_art.dart';
 import 'motion.dart';
 import 'toast.dart';
 
@@ -212,9 +213,14 @@ class ErrorState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
       child: Column(
         children: [
-          offline
-              ? const SuIllustration('offline', size: 150, fallback: IconCircle(Icons.wifi_off_rounded, tone: Tone.warn, size: 64))
-              : IconCircle(action == ErrorAction.none && e is ApiException && e.status == 403 ? Icons.lock_rounded : (action == ErrorAction.backToList ? Icons.search_off_rounded : Icons.priority_high_rounded), tone: Tone.warn, size: 64),
+          // Planches du set (D01 hors ligne, D04 réservé, D05 erreur) quand livrées ; sinon pictogramme.
+          Builder(builder: (context) {
+            final forbidden = action == ErrorAction.none && e is ApiException && e.status == 403;
+            final icon = IconCircle(forbidden ? Icons.lock_rounded : (action == ErrorAction.backToList ? Icons.search_off_rounded : Icons.priority_high_rounded), tone: Tone.warn, size: 64);
+            if (offline) return const SuIllustration('offline', size: 170, fallback: IconCircle(Icons.wifi_off_rounded, tone: Tone.warn, size: 64));
+            if (action == ErrorAction.backToList) return icon;
+            return SuArtImage(forbidden ? SuArt.d04 : SuArt.d05, width: 170, height: 170, fallback: icon);
+          }),
           const SizedBox(height: 16),
           Text(title, style: t.headlineSmall, textAlign: TextAlign.center),
           const SizedBox(height: 6),

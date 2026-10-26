@@ -12,6 +12,7 @@ import { describeError } from "../../lib/errors";
 import { fill, getDict, type Locale } from "../../lib/i18n";
 import type { LoadFailure } from "../../lib/api/unwrap";
 import { Illustration } from "./illustration";
+import { SuArt } from "./su-art";
 import { IconCircle, CAlert, CShield } from "./color-icons";
 import { ReferenceChip, RefreshButton } from "./error-parts";
 
@@ -38,9 +39,16 @@ export function LoadError({
     if (variant === "inline") return null;
     return (
       <div role="status" className={`flex flex-col items-center px-6 py-12 text-center ${className}`}>
-        <IconCircle tone="sand" size={64} className="mb-5">
-          <CShield width={28} height={28} />
-        </IconCircle>
+        <SuArt
+          id="D04"
+          size={140}
+          className="mb-5"
+          fallback={
+            <IconCircle tone="sand" size={64} className="mb-5">
+              <CShield width={28} height={28} />
+            </IconCircle>
+          }
+        />
         <h3 className="text-[19px] font-bold tracking-tight text-ink">{e.forbidden.title}</h3>
         <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-soft">{e.forbidden.body}</p>
       </div>

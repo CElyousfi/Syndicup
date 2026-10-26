@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:lottie/lottie.dart';
 
 import '../feel/feel.dart';
+import 'su_art.dart';
 
 /// Illustrations de marque VIVANTES (scripts/illustrations → docs/ALIVE_ILLUSTRATIONS.md).
 ///
@@ -32,6 +33,8 @@ class SuIllustration extends StatelessWidget {
   static Future<void> init() async {
     try {
       final m = await AssetManifest.loadFromAssetBundle(rootBundle);
+      // `2.0x/` et autres variantes de densité ne figurent pas dans listAssets() : le chemin
+      // logique suffit, Flutter choisit la densité au rendu.
       _assets = m.listAssets().where((a) => a.startsWith('assets/illustrations/') || a.startsWith('assets/videos/')).toSet();
     } catch (_) {
       _assets = const {}; // manifeste illisible (tests) : replis partout
@@ -41,8 +44,14 @@ class SuIllustration extends StatelessWidget {
   static String path(String name) => 'assets/illustrations/$name.png';
   static String animPath(String name) => 'assets/illustrations/$name.json';
 
-  /// L'illustration a été livrée.
-  static bool has(String name) => _assets.contains(path(name));
+  /// Planche du set de marque (su_art.dart) qui remplace ce nom historique, si livrée.
+  static SuArt? setArt(String name) {
+    final a = SuArt.legacy[name];
+    return a != null && a.has() ? a : null;
+  }
+
+  /// L'illustration a été livrée (planche du set ou PNG historique).
+  static bool has(String name) => setArt(name) != null || _assets.contains(path(name));
 
   /// Son animation aussi.
   static bool hasAnim(String name) => _assets.contains(animPath(name));
@@ -55,6 +64,8 @@ class SuIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final art = setArt(name);
+    if (art != null) return SuArtImage(art, width: size, height: size, fit: fit, fallback: fallback);
     if (!has(name)) return fallback;
     return SizedBox(
       width: size,
