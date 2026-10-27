@@ -11,4 +11,4 @@ et le site vitrine : `su_<ID>_<slug>_<S|C>.webp`.
   démarrage) ; les noms historiques (`offline`, `empty-lots`, `ok-paiement`…) basculent seuls
   (`SuArt.legacy`).
 
-Livrées : A01 welcome · E01 no-residences · D01 offline.
+Livrées : A01 welcome · E01 no-residences · D01 offline · P03 poster-onboarding.

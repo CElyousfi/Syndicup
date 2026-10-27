@@ -35,7 +35,7 @@ export const SU_ART: Record<SuArtId, string> = {
 };
 
 /** Planches livrées dans public/illustrations/su (scène S + découpe C, 1x + @2x). */
-export const SU_ART_AVAILABLE: ReadonlySet<SuArtId> = new Set<SuArtId>(["A01", "E01", "D01"]);
+export const SU_ART_AVAILABLE: ReadonlySet<SuArtId> = new Set<SuArtId>(["A01", "E01", "D01", "P03"]);
 
 export function suArtAvailable(id: SuArtId): boolean {
   return SU_ART_AVAILABLE.has(id);
