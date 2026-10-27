@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { SuArt } from "../../../components/ui/su-art";
+import Image from "next/image";
 import { Brand } from "../../../components/brand";
 import { LocaleSwitch } from "../../../components/locale-switch";
 import { RevealText } from "../../../components/ui/reveal-text";
@@ -36,13 +36,29 @@ export default async function PublicLayout({
         </footer>
       </main>
 
-      {/* Panneau de marque — scène A01 du set d'illustrations (Amina devant la résidence),
-          même visuel que l'accueil mobile. Fixe, sans JavaScript ; la vidéo d'avant reste
-          dans public/videos pour un éventuel retour. */}
+      {/* Panneau de marque — illustration éditoriale de la résidence, animée en vidéo (boucle muette,
+          ≈ 400 Ko, sans JavaScript : décision D5 respectée), même visuel que l'accueil mobile. La
+          première image s'affiche d'emblée ; la vidéo est masquée (image fixe) si le mouvement est
+          réduit, l'appareil modeste ou alive_v1 coupé (app/motion.css, .su-ambient-video).
+          Gardée telle quelle le 27/10 (décision Charaf) ; le set d'illustrations vit ailleurs. */}
       <aside className="relative m-3 hidden w-[44%] flex-col overflow-hidden rounded-[28px] bg-tile lg:flex">
         <div className="hero-zoom flex flex-1 items-center justify-center px-10 pt-10">
           <div className="relative aspect-square w-full max-w-[460px] overflow-hidden rounded-[28px]">
-            <SuArt id="A01" variant="S" priority className="size-full" />
+            <Image src="/videos/welcome-hero.jpg" alt="" fill priority sizes="40vw" className="object-cover" />
+            <video
+              className="su-ambient-video absolute inset-0 size-full object-cover"
+              poster="/videos/welcome-hero.jpg"
+              autoPlay
+              muted
+              loop
+              playsInline
+              preload="auto"
+              aria-hidden
+            >
+              {/* WebM (VP9) d'abord, plus léger ; MP4 (H.264) pour Safari et les navigateurs sans VP9. */}
+              <source src="/videos/welcome-hero.webm" type="video/webm" />
+              <source src="/videos/welcome-hero.mp4" type="video/mp4" />
+            </video>
           </div>
         </div>
         <div className="px-10 pb-10 xl:px-12 xl:pb-12">

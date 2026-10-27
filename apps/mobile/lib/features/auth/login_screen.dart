@@ -115,9 +115,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final d = context.dict;
     final t = Theme.of(context).textTheme;
     final invalid = _fail?.error.code == 'UNAUTHENTICATED';
+    final tall = MediaQuery.sizeOf(context).height >= 700;
     return PublicScaffold(
       showBack: true,
       children: [
+        // Amina devant la résidence (set d'illustrations, A01) : l'accueil de la personne qui
+        // revient ; rien sur un écran court pour garder le formulaire visible avec le clavier.
+        if (tall) Padding(padding: const EdgeInsets.only(bottom: 20), child: Center(child: SuArtImage(SuArt.a01, height: 170))),
         Text(d.auth.loginTitle, style: t.displayMedium),
         const SizedBox(height: 8),
         Text(d.auth.loginSubtitle, style: t.bodyLarge?.copyWith(color: SuColors.soft)),
