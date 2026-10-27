@@ -17,6 +17,33 @@ void main() {
     expect(SuArt.values.map((a) => a.slug).toSet().length, SuArt.values.length);
   });
 
+  test('chaque emplacement de l\'ancien set a sa planche dans le nouveau', () {
+    // Les noms que les écrans demandent encore (assets/illustrations/README.md) : aucun ne doit
+    // rester sans correspondance, sinon l'app mélange deux styles.
+    const anciens = [
+      'welcome-hero', 'offline', 'ob-1-residence', 'ob-2-charges', 'ob-3-incident', 'ob-4-ag',
+      'empty-incidents', 'empty-appels', 'empty-documents', 'empty-reservations', 'empty-visites', 'empty-notifications',
+      'empty-ag', 'empty-annonces', 'empty-lots', 'empty-taches', 'empty-parkings', 'empty-lcd', 'empty-personnel',
+      'empty-litiges', 'empty-search',
+      'ok-paiement', 'ok-incident', 'ok-vote', 'ok-reservation', 'ok-invitation', 'ok-visiteur', 'ok-general',
+      'poster-ag', 'poster-onboarding', 'poster-transparence', 'poster-annonce', 'poster-securite',
+      'quick-paiement', 'quick-appel', 'quick-invitation', 'quick-incident', 'quick-sejour', 'quick-reservation',
+      'quick-ag', 'quick-visiteur', 'quick-copropriete', 'quick-payer',
+    ];
+    for (final n in anciens) {
+      expect(SuArt.legacy[n], isNotNull, reason: n);
+    }
+    expect(SuArt.p01.path(), 'assets/illustrations/su/su_P01_poster-ag_P.webp');
+    expect(SuArt.w01.defaultCutout, isFalse);
+    expect(SuArt.e01.defaultCutout, isTrue);
+  });
+
+  testWidgets('planche livrée : plus jamais l\'animation Lottie de l\'ancien style', (t) async {
+    SuIllustration.debugSetAssets({SuArt.d01.path(), SuIllustration.animPath('offline'), SuIllustration.legacyPath('offline')});
+    expect(SuIllustration.hasAnim('offline'), isFalse);
+    expect(SuIllustration.path('offline'), SuArt.d01.path());
+  });
+
   testWidgets('planche absente : le repli, jamais un trou', (t) async {
     SuIllustration.debugSetAssets(const {});
     expect(SuArt.available, isEmpty);

@@ -41,20 +41,27 @@ class SuIllustration extends StatelessWidget {
     }
   }
 
-  static String path(String name) => 'assets/illustrations/$name.png';
+  /// Image de repos : la planche du set quand elle remplace ce nom, sinon le PNG historique.
+  static String path(String name) {
+    final art = setArt(name);
+    return art != null ? art.path(cutout: art.defaultCutout) : legacyPath(name);
+  }
+
+  static String legacyPath(String name) => 'assets/illustrations/$name.png';
   static String animPath(String name) => 'assets/illustrations/$name.json';
 
   /// Planche du set de marque (su_art.dart) qui remplace ce nom historique, si livrée.
   static SuArt? setArt(String name) {
     final a = SuArt.legacy[name];
-    return a != null && a.has() ? a : null;
+    return a != null && a.hasAny ? a : null;
   }
 
   /// L'illustration a été livrée (planche du set ou PNG historique).
-  static bool has(String name) => setArt(name) != null || _assets.contains(path(name));
+  static bool has(String name) => setArt(name) != null || _assets.contains(legacyPath(name));
 
-  /// Son animation aussi.
-  static bool hasAnim(String name) => _assets.contains(animPath(name));
+  /// Son animation aussi — jamais pour une planche du set : l'animation Lottie est celle de
+  /// l'ancien style, l'image fixe du set la remplace entièrement.
+  static bool hasAnim(String name) => setArt(name) == null && _assets.contains(animPath(name));
 
   /// Un fichier précis du manifeste (illustrations, vidéos).
   static bool hasAsset(String path) => _assets.contains(path);
@@ -65,7 +72,7 @@ class SuIllustration extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final art = setArt(name);
-    if (art != null) return SuArtImage(art, width: size, height: size, fit: fit, fallback: fallback);
+    if (art != null) return SuArtImage(art, cutout: art.defaultCutout, width: size, height: size, fit: fit, fallback: fallback);
     if (!has(name)) return fallback;
     return SizedBox(
       width: size,

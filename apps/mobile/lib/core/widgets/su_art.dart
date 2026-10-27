@@ -41,6 +41,9 @@ enum SuArt {
   e16('E16', 'no-tasks', 'Aucune tâche'),
   e17('E17', 'no-budget', 'Aucun budget proposé'),
   e18('E18', 'no-residents-connected', 'Aucun résident connecté'),
+  e19('E19', 'no-stays', 'Aucun séjour (location courte durée)'),
+  e20('E20', 'no-disputes', 'Aucun litige'),
+  e21('E21', 'no-parking', 'Aucun emplacement de parking'),
   // S — Succès
   s01('S01', 'payment-recorded', 'Paiement enregistré'),
   s02('S02', 'vote-cast', 'Vote enregistré'),
@@ -52,6 +55,9 @@ enum SuArt {
   s08('S08', 'annexes-generated', 'Annexes générées'),
   s09('S09', 'migration-done', 'Import terminé'),
   s10('S10', 'trial-started', 'Essai démarré'),
+  s11('S11', 'done-general', 'Succès générique'),
+  s12('S12', 'reservation-confirmed', 'Réservation confirmée'),
+  s13('S13', 'visitor-registered', 'Visiteur enregistré'),
   // D — Moments difficiles
   d01('D01', 'offline', 'Serveur injoignable / hors ligne'),
   d02('D02', 'session-expired', 'Session expirée'),
@@ -107,7 +113,24 @@ enum SuArt {
   n07('N07', 'glyph-morning', 'Verre de thé'),
   n08('N08', 'glyph-reminder', 'Enveloppe à point'),
   n09('N09', 'glyph-residence', 'Résidence'),
-  n10('N10', 'glyph-lift', 'Porte d\'ascenseur');
+  n10('N10', 'glyph-lift', 'Porte d\'ascenseur'),
+  // P — Affiches (bande 1600×1000, visuel sur la partie de fin, fond uni prolongé par l'app)
+  p01('P01', 'poster-ag', 'Affiche AG : urne et chaises, fond vert'),
+  p02('P02', 'poster-announcement', 'Affiche annonce : panneau d\'affichage, fond nuit'),
+  p03('P03', 'poster-onboarding', 'Affiche bienvenue : résidence de nuit, fond nuit'),
+  p04('P04', 'poster-security', 'Affiche sécurité : coffre et registre, fond vert'),
+  p05('P05', 'poster-transparency', 'Affiche transparence : registre ouvert, fond vert'),
+  // Q — Pictogrammes d'actions rapides (512², découpe seule, un objet)
+  q01('Q01', 'quick-payment', 'Déclarer un paiement : enveloppe'),
+  q02('Q02', 'quick-fund-call', 'Appel de fonds : registre + pièces'),
+  q03('Q03', 'quick-invitation', 'Inviter : enveloppe ouverte'),
+  q04('Q04', 'quick-incident', 'Signaler : boîte à outils'),
+  q05('Q05', 'quick-stay', 'Déclarer un séjour : clé + valise'),
+  q06('Q06', 'quick-reservation', 'Réserver : piscine'),
+  q07('Q07', 'quick-ag', 'Convoquer : urne'),
+  q08('Q08', 'quick-visitor', 'Visiteur : clé'),
+  q09('Q09', 'quick-residence', 'Nouvelle résidence : résidence'),
+  q10('Q10', 'quick-pay', 'Payer : téléphone + enveloppe');
 
   const SuArt(this.id, this.slug, this.description);
   final String id;
@@ -116,20 +139,37 @@ enum SuArt {
 
   static const String dir = 'assets/illustrations/su';
 
-  /// Chemin de la scène (`S`) ou de la découpe (`C`).
-  String path({bool cutout = true}) => '$dir/su_${id}_${slug}_${cutout ? 'C' : 'S'}.webp';
+  /// Affiche (`P…`) : un seul fichier `_P` 1600×1000 ; pictogramme et glyphe : découpe seule.
+  bool get isPoster => id.startsWith('P');
+
+  /// Variante par défaut quand un écran demande l'illustration par son nom historique :
+  /// scènes pour l'onboarding et les folds (W, F), affiche pour P, découpe pour le reste.
+  bool get defaultCutout => !(id.startsWith('W') || id.startsWith('F') || isPoster);
+
+  /// Chemin de la scène (`S`), de la découpe (`C`) ou de l'affiche (`P`).
+  String path({bool cutout = true}) => isPoster ? '$dir/su_${id}_${slug}_P.webp' : '$dir/su_${id}_${slug}_${cutout ? 'C' : 'S'}.webp';
 
   /// Livrée dans ce build (manifeste lu par `SuIllustration.init`).
   bool has({bool cutout = true}) => SuIllustration.hasAsset(path(cutout: cutout));
 
+  /// Livrée dans au moins une variante.
+  bool get hasAny => has() || has(cutout: false);
+
   /// Tout ce qui est en place, pour le journal de démarrage et les tests.
-  static List<SuArt> get available => values.where((a) => a.has() || a.has(cutout: false)).toList();
+  static List<SuArt> get available => values.where((a) => a.hasAny).toList();
 
   /// Noms historiques de `SuIllustration` → planche du set. Les écrans qui demandent
   /// `'welcome-hero'` ou `'offline'` reçoivent la nouvelle illustration sans changer de code.
   static const Map<String, SuArt> legacy = {
+    // Accueil, hors ligne
     'welcome-hero': SuArt.a01,
     'offline': SuArt.d01,
+    // Onboarding (scènes)
+    'ob-1-residence': SuArt.w01,
+    'ob-2-charges': SuArt.f01,
+    'ob-3-incident': SuArt.f04,
+    'ob-4-ag': SuArt.f03,
+    // États vides
     'empty-residences': SuArt.e01,
     'empty-lots': SuArt.e02,
     'empty-incidents': SuArt.e03,
@@ -138,15 +178,39 @@ enum SuArt {
     'empty-notifications': SuArt.e06,
     'empty-visites': SuArt.e07,
     'empty-reservations': SuArt.e08,
+    'empty-personnel': SuArt.e11,
     'empty-appels': SuArt.e12,
     'empty-annonces': SuArt.e13,
     'empty-search': SuArt.e14,
     'empty-taches': SuArt.e16,
-    'empty-personnel': SuArt.e11,
+    'empty-lcd': SuArt.e19,
+    'empty-litiges': SuArt.e20,
+    'empty-parkings': SuArt.e21,
+    // Succès
     'ok-paiement': SuArt.s01,
     'ok-vote': SuArt.s02,
     'ok-incident': SuArt.s04,
     'ok-invitation': SuArt.s06,
+    'ok-general': SuArt.s11,
+    'ok-reservation': SuArt.s12,
+    'ok-visiteur': SuArt.s13,
+    // Affiches
+    'poster-ag': SuArt.p01,
+    'poster-annonce': SuArt.p02,
+    'poster-onboarding': SuArt.p03,
+    'poster-securite': SuArt.p04,
+    'poster-transparence': SuArt.p05,
+    // Actions rapides
+    'quick-paiement': SuArt.q01,
+    'quick-appel': SuArt.q02,
+    'quick-invitation': SuArt.q03,
+    'quick-incident': SuArt.q04,
+    'quick-sejour': SuArt.q05,
+    'quick-reservation': SuArt.q06,
+    'quick-ag': SuArt.q07,
+    'quick-visiteur': SuArt.q08,
+    'quick-copropriete': SuArt.q09,
+    'quick-payer': SuArt.q10,
   };
 }
 

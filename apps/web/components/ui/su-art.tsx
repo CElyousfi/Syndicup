@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { suArtAvailable, suArtSrc, type SuArtId } from "../../lib/su-art";
+import { suArtAvailable, suArtSrc, type SuArtId, type SuArtVariant } from "../../lib/su-art";
 
 /**
  * Une planche du set de marque (lib/su-art.ts). Découpe par défaut, scène avec `variant="S"`.
@@ -16,7 +16,7 @@ export function SuArt({
   priority = false,
 }: {
   id: SuArtId;
-  variant?: "C" | "S";
+  variant?: SuArtVariant;
   /** Carré (largeur = hauteur). */
   size?: number;
   width?: number;
