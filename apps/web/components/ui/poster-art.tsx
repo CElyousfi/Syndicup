@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useLottieArt } from "../../lib/feel/lottie-art";
+import { suArtFor, suArtSrc } from "../../lib/su-art";
 
 /**
  * Affiche animée (public/illustrations/poster-*.png + .json, 1600×1000, art à droite) cadrée
@@ -12,7 +13,16 @@ import { useLottieArt } from "../../lib/feel/lottie-art";
 export function PosterArt({ name, className = "", ratio = false }: { name: string; className?: string; ratio?: boolean }) {
   const [ok, setOk] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
-  const phase = useLottieArt(box, name, { fit: "cover-end" });
+  // Affiche du set de marque (lib/su-art.ts, variante P 1600×1000) : image fixe, sans Lottie.
+  const art = suArtFor(name);
+  const phase = useLottieArt(box, art ? "" : name, { fit: "cover-end" });
+  if (art) {
+    return (
+      <span aria-hidden className={`overflow-hidden ${ratio ? "aspect-[8/5]" : ""} ${className}`}>
+        <img src={suArtSrc(art, "P").src} alt="" className="absolute inset-0 size-full object-cover object-right rtl:-scale-x-100" />
+      </span>
+    );
+  }
   return (
     <span aria-hidden className={`overflow-hidden ${ratio ? "aspect-[8/5]" : ""} ${className}`}>
       <img
