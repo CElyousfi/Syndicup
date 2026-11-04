@@ -37,7 +37,8 @@ jobs:
       - run: flutter pub get
       - name: Version
         id: v
-        run: echo "name=$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')" >> "$GITHUB_OUTPUT"
+        run: |
+          echo "name=$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')" >> "$GITHUB_OUTPUT"
       - name: Bundle release (AAB)
         run: |
           flutter build appbundle --release --obfuscate --split-debug-info=build/symbols \
