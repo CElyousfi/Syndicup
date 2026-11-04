@@ -1,0 +1,67 @@
+# Bundle Android de release (AAB) + APK release pour les captures.
+#
+# Le bundle sort signé avec la clé debug (pas de key.properties en CI) : il est re-signé hors CI
+# avec la clé d'upload (jarsigner), qui ne quitte jamais le poste de l'opérateur.
+# Les artefacts GitHub n'étant pas téléchargeables depuis l'espace de travail de l'agent,
+# les fichiers sont poussés sur la branche orpheline `ci-out/android` (écrasée à chaque run).
+name: android-release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["release/android"]
+
+concurrency:
+  group: android-release
+  cancel-in-progress: true
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    defaults:
+      run:
+        working-directory: apps/mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.29.2"
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Version
+        id: v
+        run: echo "name=$(grep -E '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')" >> "$GITHUB_OUTPUT"
+      - name: Bundle release (AAB)
+        run: |
+          flutter build appbundle --release --obfuscate --split-debug-info=build/symbols \
+            --dart-define=API_BASE_URL=https://api.syndicup.pro/v1 \
+            --dart-define=WEB_BASE_URL=https://app.syndicup.pro \
+            --dart-define=APP_VERSION=${{ steps.v.outputs.name }}
+      - name: APK release (captures d'écran)
+        run: |
+          flutter build apk --release --target-platform android-x64 \
+            --dart-define=API_BASE_URL=https://api.syndicup.pro/v1 \
+            --dart-define=WEB_BASE_URL=https://app.syndicup.pro \
+            --dart-define=APP_VERSION=${{ steps.v.outputs.name }}
+      - name: Publier sur ci-out/android
+        run: |
+          set -e
+          OUT=$(mktemp -d)
+          cp build/app/outputs/bundle/release/app-release.aab "$OUT/"
+          cp build/app/outputs/flutter-apk/app-release.apk "$OUT/app-release-x64.apk"
+          (cd build && tar czf "$OUT/symbols.tgz" symbols)
+          echo "${GITHUB_SHA}" > "$OUT/SOURCE_SHA"
+          cd "$OUT"
+          git init -q -b ci-out/android
+          git config user.name "github-actions"
+          git config user.email "github-actions@users.noreply.github.com"
+          git add -A
+          git commit -q -m "android build ${GITHUB_SHA}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" ci-out/android
