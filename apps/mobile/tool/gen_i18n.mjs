@@ -92,12 +92,12 @@ const rootExpr = genClass("Dict", fr, langs);
 const constName = (c) => `dict${pascal(c)}`;
 const header = `// GÉNÉRÉ — ne pas modifier à la main. Source : apps/web/lib/i18n/{fr,ar}.ts + locales/*.json
 // Régénérer : node apps/mobile/tool/gen_i18n.mjs (ou python3 scripts/i18n/build.py)
-// ignore_for_file: lines_longer_than_80_chars, prefer_single_quotes, text_direction_code_point_in_literal
+// ignore_for_file: lines_longer_than_80_chars, prefer_single_quotes, text_direction_code_point_in_literal, non_constant_identifier_names
 
 `;
 const body = `${classes.join("\n")}
 ${codes.map((c) => `const Dict ${constName(c)} = ${rootExpr[c]};\n`).join("\n")}
-/** Toutes les langues du dictionnaire, par code (fr, ar, en…). */
+/// Toutes les langues du dictionnaire, par code (fr, ar, en…).
 const Map<String, Dict> dictByLang = {${codes.map((c) => `'${c}': ${constName(c)}`).join(", ")}};
 `;
 writeFileSync(resolve(out, "dict.dart"), header + body);

@@ -107,6 +107,8 @@ def pascal(code):
 
 
 classes = parse(MOBILE_DICT)
+# Classes seulement imbriquées (ex. MobileUx dans MobileDict.ux) : pas de table par langue.
+nested = {v['ref'] for langs in classes.values() for _, v in langs['fr'] if isinstance(v, dict) and 'ref' in v}
 dart = ['// GÉNÉRÉ par scripts/i18n/build.py — ne pas modifier à la main.',
         '// Source : mobile_dict.dart (FR) + scripts/i18n/translations/<langue>.json ; texte non traduit = français.',
         '// ignore_for_file: lines_longer_than_80_chars, prefer_single_quotes',
@@ -126,7 +128,8 @@ for cls, langs in classes.items():
             else:
                 args.append(f"{name}: _{lower(v['ref'])}{pascal(code)}")
         dart.append(f'const {cls} _{lower(cls)}{pascal(code)} = {cls}(' + ', '.join(args) + ');')
-    dart.append(f'const Map<String, {cls}> _{lower(cls)}L10n = {{' + ', '.join(f"'{c}': _{lower(cls)}{pascal(c)}" for c in loaded) + '};')
+    if cls not in nested:
+        dart.append(f'const Map<String, {cls}> _{lower(cls)}L10n = {{' + ', '.join(f"'{c}': _{lower(cls)}{pascal(c)}" for c in loaded) + '};')
     dart.append('')
 open(os.path.join(MOBILE_I18N, 'mobile_dict_l10n.dart'), 'w', encoding='utf-8').write('\n'.join(dart))
 

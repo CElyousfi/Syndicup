@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { IconCheck, IconChevronDown, IconGlobe } from "./ui/icons";
+import { Pressable } from "./ui/pressable";
 import { LANG_FLAGS, LANG_NAMES, LANG_TAGS, LOCALES, dirFor, type Locale } from "../lib/i18n/core";
 
 const SEGMENT = new RegExp(`^/(${LOCALES.join("|")})(?=/|$)`);
@@ -38,8 +39,7 @@ export function LocaleSwitch({ locale, subtle = false, up = false }: { locale: L
 
   return (
     <div ref={box} className="relative">
-      <button
-        type="button"
+      <Pressable
         aria-haspopup="menu"
         aria-expanded={open}
         aria-controls={menuId}
@@ -56,7 +56,7 @@ export function LocaleSwitch({ locale, subtle = false, up = false }: { locale: L
           {LANG_NAMES[locale]}
         </span>
         <IconChevronDown width={14} height={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+      </Pressable>
       {open ? (
         <ul
           id={menuId}
