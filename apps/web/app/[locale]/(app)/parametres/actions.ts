@@ -5,7 +5,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { readSession } from "../../../../lib/session";
 import { type FormState } from "../../../../lib/forms";
 import { fromApiError, sessionExpired, fileTooLarge, uploadRefused, localError, succes } from "../../../../lib/forms-server";
-import type { Dict } from "../../../../lib/i18n";
+import type { Dict } from "../../../../lib/i18n/core";
 import type { Copropriete } from "../../../../lib/api/types";
 import { montantSaisi } from "../../../../lib/centimes";
 

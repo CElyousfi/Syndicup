@@ -13,14 +13,14 @@ import { Button } from "./button";
 import { IconCircle, CAlert } from "./color-icons";
 import { Illustration } from "./illustration";
 import { ReferenceChip } from "./error-parts";
-import { boundaryFr, errorActionsFr, referenceFr } from "../../lib/i18n/errors-ui-fr";
-import { boundaryAr, errorActionsAr, referenceAr } from "../../lib/i18n/errors-ui-ar";
+import { errorsUi } from "../../lib/i18n/errors-ui";
+import type { Locale } from "../../lib/i18n/core";
 
 /** Textes importés pièce par pièce : jamais le dictionnaire complet dans le bundle client. */
-const TEXTES = {
-  fr: { b: boundaryFr, a: errorActionsFr, r: referenceFr },
-  ar: { b: boundaryAr, a: errorActionsAr, r: referenceAr },
-} as const;
+function textes(locale: Locale) {
+  const u = errorsUi(locale);
+  return { b: u.boundary, a: u.actions, r: u.reference };
+}
 
 export function useStaleDeployReload(error: Error & { digest?: string }) {
   useEffect(() => {
@@ -48,14 +48,14 @@ export function ErrorScreen({
 }: {
   error: Error & { digest?: string };
   reset: () => void;
-  locale: "fr" | "ar";
+  locale: Locale;
   /** Hors coque (frontière racine) : occupe tout l'écran. */
   fullScreen?: boolean;
 }) {
   useStaleDeployReload(error);
   const router = useRouter();
   const [pending, start] = useTransition();
-  const t = TEXTES[locale];
+  const t = textes(locale);
   const digest = error.digest;
   const ref = digest ? digest.replace(/[^0-9a-zA-Z]/g, "").slice(0, 8) : null;
   useEffect(() => {

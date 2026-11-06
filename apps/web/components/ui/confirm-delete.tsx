@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import type React from "react";
 import { ConfirmAction } from "./confirm-action";
 import type { FormState } from "../../lib/forms";
-import { fill, type Dict, type Locale } from "../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../lib/i18n/core";
 
 function IconTrash(props: React.SVGProps<SVGSVGElement>) {
   return (

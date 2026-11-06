@@ -1,5 +1,5 @@
 import { seDeconnecter } from "../lib/actions/session-actions";
-import type { Locale } from "../lib/i18n";
+import type { Locale } from "../lib/i18n/core";
 import { Button } from "./ui/button";
 
 /** Écran pleine page d'état de compte bloquant (A5) : suspendu, en validation… */

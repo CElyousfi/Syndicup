@@ -12,7 +12,7 @@ import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { CopyButton } from "../../../../../../components/ui/copy";
 import { IconKey } from "../../../../../../components/ui/icons";
 import { IDLE } from "../../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import { formatDateHeure } from "../../../../../../lib/format";
 import type { CanalInvitation } from "../../../../../../lib/api/types";
 import { inviterSyndicAdmin } from "../../actions";

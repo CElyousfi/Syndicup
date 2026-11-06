@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Input, Select } from "../../../../../components/ui/field";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 
 /** Filtres de liste (état dans l'URL — partageable, pagination cohérente). */
 export function FiltresDepenses({

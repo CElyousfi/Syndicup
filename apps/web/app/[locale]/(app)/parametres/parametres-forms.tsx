@@ -7,7 +7,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
 import { Button } from "../../../../components/ui/button";
 import { IDLE } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { Copropriete, TypeResidence } from "../../../../lib/api/types";
 import {
   modifierIdentite,

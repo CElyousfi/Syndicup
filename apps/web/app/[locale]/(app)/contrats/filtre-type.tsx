@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Select } from "../../../../components/ui/field";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { TypeContrat } from "../../../../lib/api/types";
 
 export function FiltreType({ dict, locale, statut, type }: { dict: Dict; locale: Locale; statut: string; type: string }) {

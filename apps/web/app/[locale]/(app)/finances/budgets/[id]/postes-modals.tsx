@@ -8,7 +8,7 @@ import { Button } from "../../../../../../components/ui/button";
 import { ConfirmDelete } from "../../../../../../components/ui/confirm-delete";
 import { fieldError, type FormState } from "../../../../../../lib/forms";
 import { formKey, formValue } from "../../../../../../lib/form-values";
-import type { Dict, Locale } from "../../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../../lib/i18n/core";
 import type { BudgetPoste, CategorieDepense } from "../../../../../../lib/api/types";
 import { IconPlus } from "../../../../../../components/ui/icons";
 import { creerPoste, modifierPoste, supprimerPoste } from "../../depenses/actions";

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Pagar mis cuotas</string>
+    <string name="sc_signaler">Avisar de una incidencia</string>
+    <string name="sc_ag">Juntas</string>
+    <string name="sc_affichage">Tablón de anuncios</string>
+    <string-array name="sc_payer_synonymes">
+        <item>pagar mis cuotas</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>avisar de una incidencia</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>juntas</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>tablón de anuncios</item>
+    </string-array>
+</resources>

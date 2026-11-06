@@ -11,7 +11,7 @@ import { IconButton, Pressable } from "../ui/pressable";
 import { Figure } from "../ui/amount";
 import { FadeImg } from "../ui/motion/fade-img";
 import { IconChevronEnd } from "../ui/icons";
-import { fill } from "../../lib/i18n";
+import { fill } from "../../lib/i18n/core";
 
 export function PhotoGallery({
   photos,

@@ -10,7 +10,7 @@ import { Field, Input } from "../../../../../components/ui/field";
 import { Segmented } from "../../../../../components/ui/tabs";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { inscrireParInvitation } from "../../../../../lib/actions/session-actions";
 
 export function InscriptionForm({

@@ -20,7 +20,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { DariAvatar, DariMotion, preloadDari } from "../assistant/dari";
 import { Button } from "../ui/button";
-import { fill } from "../../lib/i18n";
+import { fill } from "../../lib/i18n/core";
+import type { Locale } from "../../lib/i18n/core";
 
 const CLE_STOCKAGE = "syndicup:onboarding:v2";
 
@@ -97,7 +98,7 @@ export function GuidedTour({
   labels,
   onDrawer,
 }: {
-  locale: "fr" | "ar";
+  locale: Locale;
   labels: TourLabels;
   onDrawer: (open: boolean) => void;
 }) {

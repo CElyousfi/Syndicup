@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Paga le mie spese</string>
+    <string name="sc_signaler">Segnala un guasto</string>
+    <string name="sc_ag">Assemblee</string>
+    <string name="sc_affichage">Bacheca</string>
+    <string-array name="sc_payer_synonymes">
+        <item>paga le mie spese</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>segnala un guasto</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>assemblee</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>bacheca</item>
+    </string-array>
+</resources>

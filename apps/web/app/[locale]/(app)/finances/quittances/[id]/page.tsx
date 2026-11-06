@@ -2,7 +2,7 @@ import { getAppContext } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, Quittance } from "../../../../../../lib/api/types";
 import { getLots, getSynthese, SYNTHESE_VIDE } from "../../../../../../lib/finances-data";
-import { fill } from "../../../../../../lib/i18n";
+import { fill } from "../../../../../../lib/i18n/core";
 import { formatDate, formatPeriode } from "../../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";

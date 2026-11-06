@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { Lot, StatutLot, TypeLot } from "../../../../lib/api/types";
 import { creerLot, modifierLot } from "./actions";
 import { formKey, formValue } from "../../../../lib/form-values";

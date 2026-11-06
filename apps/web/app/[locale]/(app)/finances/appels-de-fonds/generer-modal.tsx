@@ -9,7 +9,7 @@ import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { Banner } from "../../../../../components/ui/banner";
 import { fieldError } from "../../../../../lib/forms";
 import { formKey, formValue } from "../../../../../lib/form-values";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { TypeAppelDeFonds } from "../../../../../lib/api/types";
 import { genererAppelDeFonds } from "../actions";
 import { IconCoins } from "../../../../../components/ui/icons";

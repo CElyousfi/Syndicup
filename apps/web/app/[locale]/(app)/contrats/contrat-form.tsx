@@ -8,7 +8,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { MoneyInput } from "../../../../components/ui/money-input";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { BudgetPoste, ContratDetail, Periodicite, TypeContrat } from "../../../../lib/api/types";
 import { creerContrat, modifierContrat } from "./actions";
 import { formChecked, formKey, formValue } from "../../../../lib/form-values";

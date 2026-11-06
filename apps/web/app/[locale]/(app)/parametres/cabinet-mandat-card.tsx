@@ -1,7 +1,7 @@
 /** Paramètres → Cabinet de syndic (M25) : mandat proposé / actif sur la copropriété, confirmation de la passation par le syndic en place. */
 import { apiFetch } from "../../../../lib/api/client";
 import type { MandatCopropriete } from "../../../../lib/api/types";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { formatDate, nomComplet } from "../../../../lib/format";
 import { Badge } from "../../../../components/ui/badge";
 import { Amount } from "../../../../components/ui/amount";

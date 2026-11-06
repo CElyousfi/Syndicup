@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">My charges</string>
+    <string name="w_charges_desc">Balance, next due date and Pay button.</string>
+    <string name="w_ag_label">General meeting</string>
+    <string name="w_ag_desc">Next GM, countdown, voting in session.</string>
+    <string name="w_residence_label">My residence</string>
+    <string name="w_residence_desc">Collection, arrears, incidents, bookings to approve.</string>
+    <string name="w_affichage_label">Notice board</string>
+    <string name="w_affichage_desc">The residence\'s latest announcements.</string>
+    <string name="w_gardien_label">Lodge</string>
+    <string name="w_gardien_desc">Waiting visitors, today\'s arrivals, reporting.</string>
+    <string name="w_sign_in">Open SyndicUp to sign in.</string>
+    <string name="w_open">Open</string>
+    <string name="w_toggle_amounts">Hide or show amounts</string>
+</resources>

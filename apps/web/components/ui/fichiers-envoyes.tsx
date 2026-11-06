@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import type { FormState } from "../../lib/forms";
-import { fill } from "../../lib/i18n";
+import { fill } from "../../lib/i18n/core";
 import { Button } from "./button";
 import { IconCheck } from "./icons";
 

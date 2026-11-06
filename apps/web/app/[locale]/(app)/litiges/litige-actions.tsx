@@ -7,7 +7,7 @@ import { Field, Input, Select, Textarea } from "../../../../components/ui/field"
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { cloturerLitige, declarerLitige, escaladerLitige } from "./actions";
 import { celebrate } from "../../../../lib/success";
 import { IconPlus } from "../../../../components/ui/icons";

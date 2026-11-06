@@ -1,0 +1,11 @@
+"w_charges_label" = "Mijn kosten";
+"w_charges_desc" = "Saldo, volgende vervaldatum en knop Betalen.";
+"w_ag_label" = "Vergadering";
+"w_ag_desc" = "Volgende AV, aftellen, stemmen tijdens de zitting.";
+"w_residence_label" = "Mijn residentie";
+"w_residence_desc" = "Inning, achterstallen, storingen, te bevestigen reserveringen.";
+"w_affichage_label" = "Prikbord";
+"w_affichage_desc" = "De laatste mededelingen van de residentie.";
+"w_gardien_label" = "Portiersloge";
+"w_gardien_desc" = "Wachtende bezoekers, aankomsten van vandaag, meldingen.";
+"w_sign_in" = "Open SyndicUp om in te loggen.";

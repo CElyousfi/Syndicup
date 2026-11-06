@@ -8,7 +8,7 @@ import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { CopyButton } from "../../../../components/ui/copy";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { CanalInvitation, RoleType } from "../../../../lib/api/types";
 import { creerInvitation, regenererInvitation } from "./actions";
 import { IconPlus } from "../../../../components/ui/icons";

@@ -10,7 +10,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { formKey, formValue } from "../../../../lib/form-values";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { ContratDetail, ContratEcheance, TypeEcheance } from "../../../../lib/api/types";
 import { formatDate, formatMAD } from "../../../../lib/format";
 import { IconPlus } from "../../../../components/ui/icons";

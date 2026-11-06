@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Meine Kosten bezahlen</string>
+    <string name="sc_signaler">Störung melden</string>
+    <string name="sc_ag">Versammlungen</string>
+    <string name="sc_affichage">Aushang</string>
+    <string-array name="sc_payer_synonymes">
+        <item>meine Kosten bezahlen</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>störung melden</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>versammlungen</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>aushang</item>
+    </string-array>
+</resources>

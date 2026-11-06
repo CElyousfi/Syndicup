@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">缴纳费用</string>
+    <string name="sc_signaler">报修</string>
+    <string name="sc_ag">业主大会</string>
+    <string name="sc_affichage">公告栏</string>
+    <string-array name="sc_payer_synonymes">
+        <item>缴纳费用</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>报修</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>业主大会</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>公告栏</item>
+    </string-array>
+</resources>

@@ -68,7 +68,6 @@ export default async function ProfilPage({
               locale={ctx.locale}
               nom={profil.nom ?? ""}
               prenom={profil.prenom ?? ""}
-              langue={profil.langue_preferee}
             />
           </Card>
 

@@ -8,14 +8,15 @@ import type { ApiError } from "./api/types";
 import { describeError, isLegalGateError } from "./errors";
 import { ISSUES_INCONNUES, success, type FichierEnvoye, type FormErrorState, type FormState } from "./forms";
 import { collectValues } from "./form-values";
-import { fill, type Dict } from "./i18n";
+import { fill, type Dict } from "./i18n/core";
 import { loginHref, requestDict, requestLocale } from "./request-info";
 import { readSession } from "./session";
+import type { Locale } from "./i18n/core";
 
 export function buildErrorState(
   e: { error: ApiError; status?: number; requestId?: string; retryAfter?: number },
   dict: Dict,
-  locale: "fr" | "ar",
+  locale: Locale,
   reloginHref?: string
 ): FormErrorState {
   const d = describeError(

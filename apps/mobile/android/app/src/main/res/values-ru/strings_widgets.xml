@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">Мои взносы</string>
+    <string name="w_charges_desc">Баланс, ближайший платёж и кнопка «Оплатить».</string>
+    <string name="w_ag_label">Собрание</string>
+    <string name="w_ag_desc">Ближайшее собрание, обратный отсчёт, голосование.</string>
+    <string name="w_residence_label">Мой жилой комплекс</string>
+    <string name="w_residence_desc">Сборы, задолженности, неисправности, брони на подтверждение.</string>
+    <string name="w_affichage_label">Доска объявлений</string>
+    <string name="w_affichage_desc">Последние объявления жилого комплекса.</string>
+    <string name="w_gardien_label">Пост охраны</string>
+    <string name="w_gardien_desc">Ожидающие посетители, приезды за день, сообщения.</string>
+    <string name="w_sign_in">Откройте SyndicUp, чтобы войти.</string>
+    <string name="w_open">Открыть</string>
+    <string name="w_toggle_amounts">Скрыть или показать суммы</string>
+</resources>

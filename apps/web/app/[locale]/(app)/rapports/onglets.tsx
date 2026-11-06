@@ -1,5 +1,5 @@
 import { LinkTabs } from "../../../../components/ui/link-tabs";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 
 export type OngletRapports = "tableau" | "grandLivre" | "gestion" | "impayes" | "exports";
 const HREFS: Record<OngletRapports, string> = { tableau: "/rapports", grandLivre: "/rapports/grand-livre", gestion: "/rapports/gestion", impayes: "/rapports/impayes", exports: "/rapports/exports" };

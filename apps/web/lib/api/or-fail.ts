@@ -10,7 +10,7 @@
  */
 import { notFound, redirect } from "next/navigation";
 import type { ApiResult } from "./types";
-import type { Locale } from "../i18n";
+import type { Locale } from "../i18n/core";
 import { currentPathWithoutLocale } from "../request-info";
 
 export class ApiLoadError extends Error {

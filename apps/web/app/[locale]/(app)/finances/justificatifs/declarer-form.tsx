@@ -8,7 +8,7 @@ import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import { formKey, formValue } from "../../../../../lib/form-values";
 import { MoneyInput } from "../../../../../components/ui/money-input";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { CompteBancaire } from "../../../../../lib/api/types";
 import { formatMAD, formatPeriode } from "../../../../../lib/format";
 import { IconCamera, IconPlus } from "../../../../../components/ui/icons";

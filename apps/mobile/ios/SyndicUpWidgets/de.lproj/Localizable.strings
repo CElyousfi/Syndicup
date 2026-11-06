@@ -1,0 +1,11 @@
+"w_charges_label" = "Meine Kosten";
+"w_charges_desc" = "Saldo, nächste Fälligkeit und Bezahlen-Taste.";
+"w_ag_label" = "Versammlung";
+"w_ag_desc" = "Nächste Versammlung, Countdown, Abstimmung in der Sitzung.";
+"w_residence_label" = "Meine Wohnanlage";
+"w_residence_desc" = "Einzug, Rückstände, Störungen, zu bestätigende Reservierungen.";
+"w_affichage_label" = "Aushang";
+"w_affichage_desc" = "Die neuesten Mitteilungen der Wohnanlage.";
+"w_gardien_label" = "Pforte";
+"w_gardien_desc" = "Wartende Besucher, Ankünfte des Tages, Meldungen.";
+"w_sign_in" = "Öffnen Sie SyndicUp, um sich anzumelden.";

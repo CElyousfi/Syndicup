@@ -1,0 +1,11 @@
+"w_charges_label" = "My charges";
+"w_charges_desc" = "Balance, next due date and Pay button.";
+"w_ag_label" = "General meeting";
+"w_ag_desc" = "Next GM, countdown, voting in session.";
+"w_residence_label" = "My residence";
+"w_residence_desc" = "Collection, arrears, incidents, bookings to approve.";
+"w_affichage_label" = "Notice board";
+"w_affichage_desc" = "The residence's latest announcements.";
+"w_gardien_label" = "Lodge";
+"w_gardien_desc" = "Waiting visitors, today's arrivals, reporting.";
+"w_sign_in" = "Open SyndicUp to sign in.";

@@ -10,7 +10,7 @@ import { Figure } from "../../../../../../components/ui/amount";
 import { LiveList } from "../../../../../../components/ui/live-list";
 import { Donut } from "../../../../../../components/ui/charts";
 
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import type {
   AgResolution,
   AgResultatLigne,

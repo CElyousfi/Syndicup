@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
+import { isLocale } from "../../lib/i18n/core";
 
 /**
  * Erreur hors de l'espace connecté (pages publiques, sélection de copropriété, coque qui n'a pas
@@ -16,5 +17,5 @@ const ErrorScreen = dynamic(() => import("../../components/ui/error-screen").the
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const params = useParams<{ locale?: string }>();
-  return <ErrorScreen error={error} reset={reset} locale={params?.locale === "ar" ? "ar" : "fr"} fullScreen />;
+  return <ErrorScreen error={error} reset={reset} locale={isLocale(params?.locale) ? params.locale : "fr"} fullScreen />;
 }

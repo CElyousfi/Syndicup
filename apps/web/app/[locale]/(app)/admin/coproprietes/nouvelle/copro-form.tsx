@@ -16,7 +16,7 @@ import { CopyButton } from "../../../../../../components/ui/copy";
 import { IconCircle, CHandshake } from "../../../../../../components/ui/color-icons";
 import { IconCheck } from "../../../../../../components/ui/icons";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import { formatDateHeure } from "../../../../../../lib/format";
 import type { CanalInvitation, TypeResidence } from "../../../../../../lib/api/types";
 import { creerCopropriete, inviterSyndicAdmin } from "../../actions";

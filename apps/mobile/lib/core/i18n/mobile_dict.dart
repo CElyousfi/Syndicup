@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import 'i18n.dart';
 
+part 'mobile_dict_l10n.dart';
+
 /// Chaînes propres au mobile (hors-ligne, file de sync, accueil, push) — absentes du
 /// dictionnaire web. FR + AR, même discipline de ton (vouvoiement, langage courant).
 class MobileDict {
@@ -549,7 +551,7 @@ class MobileDict {
     lcdConseilLecture: 'قراءة فقط: يطّلع مجلس السنديك على التصريحات والإقامات.',
   );
 
-  static MobileDict of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+  static MobileDict of(Locale l) => switch (l.languageCode) {'fr' => fr, 'ar' => ar, final c => _mobileDictL10n[c] ?? fr};
 }
 
 extension MobileDictContext on BuildContext {
@@ -965,7 +967,7 @@ class DariDict {
     ],
   );
 
-  static DariDict of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+  static DariDict of(Locale l) => switch (l.languageCode) {'fr' => fr, 'ar' => ar, final c => _dariDictL10n[c] ?? fr};
 }
 
 extension DariDictContext on BuildContext {
@@ -1132,7 +1134,7 @@ class MobileUp {
     logoutBody: 'سيتعيّن عليكم تسجيل الدخول من جديد للوصول إلى إقامتكم. ستُمحى الصفحات المحفوظة على هذا الهاتف.',
   );
 
-  static MobileUp of(Locale l) => l.languageCode == 'ar' ? ar : fr;
+  static MobileUp of(Locale l) => switch (l.languageCode) {'fr' => fr, 'ar' => ar, final c => _mobileUpL10n[c] ?? fr};
 }
 
 extension MobileUpContext on BuildContext {

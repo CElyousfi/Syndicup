@@ -10,7 +10,7 @@ import { Button } from "../../../../../../components/ui/button";
 import { EmptyState } from "../../../../../../components/ui/empty-state";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
 import { formValue } from "../../../../../../lib/form-values";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import { annulerSejour, ajouterPiecesJointes, retirerPieceJointe } from "../../actions";
 import { Card, SectionHeader } from "../../../../../../components/ui/card";
 import { FileViewerButton } from "../../../../../../components/documents/document-viewer";

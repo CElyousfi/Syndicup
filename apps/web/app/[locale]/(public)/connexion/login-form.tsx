@@ -6,7 +6,7 @@ import { Field, Input } from "../../../../components/ui/field";
 import { Checkbox } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { connexionEmail } from "./actions";
 import { QrScannerButton } from "../../../../components/auth/qr-scanner";
 

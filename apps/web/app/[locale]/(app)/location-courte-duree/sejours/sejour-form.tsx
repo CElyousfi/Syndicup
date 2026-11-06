@@ -5,7 +5,7 @@ import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n/core";
 import type { LcdSejour, TypePieceIdentite } from "../../../../../lib/api/types";
 import { dateInput } from "../../../../../lib/lcd";
 import { declarerSejour, modifierSejour } from "../actions";

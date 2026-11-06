@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Field, Input } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { motDePasseOublie } from "../connexion/actions";
 
 export function ForgotForm({ dict, locale }: { dict: Dict; locale: Locale }) {

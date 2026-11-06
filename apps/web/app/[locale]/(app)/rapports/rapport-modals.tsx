@@ -9,7 +9,7 @@ import { celebrate } from "../../../../lib/success";
 import { Banner } from "../../../../components/ui/banner";
 import { FileViewerButton } from "../../../../components/documents/document-viewer";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { AssembleeGenerale, BudgetAg, RapportGestion } from "../../../../lib/api/types";
 import { formatDate } from "../../../../lib/format";
 import { IconDownload, IconPlus } from "../../../../components/ui/icons";

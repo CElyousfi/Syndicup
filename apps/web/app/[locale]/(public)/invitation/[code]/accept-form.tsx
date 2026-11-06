@@ -11,7 +11,7 @@ import { Segmented } from "../../../../../components/ui/tabs";
 import { SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { accepterInvitation } from "../../../../../lib/actions/session-actions";
 
 export function AcceptForm({

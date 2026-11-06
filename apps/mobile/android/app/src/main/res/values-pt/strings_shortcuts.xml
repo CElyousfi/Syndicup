@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Pagar os meus encargos</string>
+    <string name="sc_signaler">Comunicar uma avaria</string>
+    <string name="sc_ag">Assembleias</string>
+    <string name="sc_affichage">Quadro de avisos</string>
+    <string-array name="sc_payer_synonymes">
+        <item>pagar os meus encargos</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>comunicar uma avaria</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>assembleias</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>quadro de avisos</item>
+    </string-array>
+</resources>

@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { IconCircle, CBuilding } from "../../../../components/ui/color-icons";
 import { retirerLogo, televerserLogo } from "./actions";
 import { FadeImg } from "../../../../components/ui/motion/fade-img";

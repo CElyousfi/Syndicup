@@ -1,0 +1,11 @@
+"w_charges_label" = "我的费用";
+"w_charges_desc" = "余额、下次到期日和“支付”按钮。";
+"w_ag_label" = "业主大会";
+"w_ag_desc" = "下次大会、倒计时、会上投票。";
+"w_residence_label" = "我的小区";
+"w_residence_desc" = "收缴率、欠费、故障、待确认预订。";
+"w_affichage_label" = "公告栏";
+"w_affichage_desc" = "小区最新公告。";
+"w_gardien_label" = "门岗";
+"w_gardien_desc" = "等候访客、今日到访、报修。";
+"w_sign_in" = "打开 SyndicUp 登录。";

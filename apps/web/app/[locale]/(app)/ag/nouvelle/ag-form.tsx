@@ -5,7 +5,7 @@ import { Field, Input, Select } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import { formKey, formValue } from "../../../../../lib/form-values";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { TypeAg } from "../../../../../lib/api/types";
 import { creerAg } from "../actions";
 

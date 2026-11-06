@@ -9,7 +9,7 @@ import { Banner } from "../../../../../../components/ui/banner";
 import { IrreversibleNotice } from "../../../../../../components/ui/irreversible-notice";
 import { CopyButton } from "../../../../../../components/ui/copy";
 import { IDLE } from "../../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import { formatMAD } from "../../../../../../lib/format";
 import { transfererPropriete } from "../../actions";
 import { IconCheck } from "../../../../../../components/ui/icons";

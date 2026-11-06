@@ -10,7 +10,7 @@ import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Button } from "../../../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
 import { formValue } from "../../../../../../lib/form-values";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import type { DepenseDetail, StatutFacture } from "../../../../../../lib/api/types";
 import { formatMAD } from "../../../../../../lib/format";
 import { IconCamera, IconPlus } from "../../../../../../components/ui/icons";

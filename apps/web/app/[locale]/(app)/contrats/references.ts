@@ -2,7 +2,7 @@
 import { cache } from "react";
 import { apiFetch } from "../../../../lib/api/client";
 import type { Copropriete } from "../../../../lib/api/types";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { referencesDepense } from "../finances/depenses/references";
 
 export const referencesContrat = cache(async (dict: Dict, locale: Locale, coproprieteId: string | null) => {

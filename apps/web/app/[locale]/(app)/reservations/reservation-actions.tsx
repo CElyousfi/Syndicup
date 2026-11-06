@@ -5,7 +5,7 @@ import { Field, Textarea } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { IDLE } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { annulerReservation, rejeterReservation, validerReservation } from "../espaces-communs/actions";
 import { ActionModal } from "../../../../components/ui/action-modal";
 import { formValue } from "../../../../lib/form-values";

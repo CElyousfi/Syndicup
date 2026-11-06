@@ -12,6 +12,7 @@ import { formatDateHeure, formatPeriode } from "../../../lib/format";
 import type { Paiement } from "../../../lib/api/types";
 import { getLotsResult, getSynthese } from "../../../lib/finances-data";
 import { csv, exercice, journalPaiements, montantCsv, parLot, parMois } from "../../../lib/comptabilite";
+import type { Locale } from "../../../lib/i18n/core";
 
 export async function GET(req: NextRequest) {
   const session = await readSession();
@@ -20,7 +21,7 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams;
   const type = sp.get("type") ?? "mois";
   const annee = sp.get("exercice") ?? "";
-  const locale = isLocale(sp.get("locale") ?? "") ? (sp.get("locale") as "fr" | "ar") : "fr";
+  const locale = isLocale(sp.get("locale") ?? "") ? (sp.get("locale") as Locale) : "fr";
   if (!/^\d{4}$/.test(annee) || !["mois", "lots", "paiements"].includes(type)) {
     return NextResponse.json({ error: "paramètres invalides" }, { status: 400 });
   }

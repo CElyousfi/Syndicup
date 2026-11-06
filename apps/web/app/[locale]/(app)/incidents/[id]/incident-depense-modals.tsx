@@ -7,7 +7,7 @@ import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
 import { IconButton } from "../../../../../components/ui/pressable";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { BudgetPoste } from "../../../../../lib/api/types";
 import { IconPlus } from "../../../../../components/ui/icons";
 import { creerDepenseDepuisIncident, evaluerPrestataire } from "../../finances/depenses/actions";

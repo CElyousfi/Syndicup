@@ -3,7 +3,7 @@
 import { Field, Select, Textarea } from "../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { repondreContestation } from "../actions";
 import { ActionModal } from "../../../../../components/ui/action-modal";
 import { formKey, formValue } from "../../../../../lib/form-values";

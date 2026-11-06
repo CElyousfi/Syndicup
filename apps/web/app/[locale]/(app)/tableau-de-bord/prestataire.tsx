@@ -1,7 +1,7 @@
 import { apiFetch } from "../../../../lib/api/client";
 import type { AppContext } from "../../../../lib/app-context";
 import type { Incident } from "../../../../lib/api/types";
-import { fill } from "../../../../lib/i18n";
+import { fill } from "../../../../lib/i18n/core";
 import { formatDateHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";

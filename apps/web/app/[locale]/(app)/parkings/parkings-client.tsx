@@ -11,7 +11,7 @@ import { Button } from "../../../../components/ui/button";
 import { Badge } from "../../../../components/ui/badge";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError, type FormState } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { BadgeAcces, Emplacement, RechercheVehicule, StatutEmplacement, TypeAttributionEmplacement, TypeBadge, TypeEmplacement, TypeVehicule, Vehicule, Visite } from "../../../../lib/api/types";
 import { IconPlus, IconSearch } from "../../../../components/ui/icons";
 import { attribuerEmplacement, badgeDesactiver, badgePerdu, badgeRestituer, creerBadge, creerEmplacement, creerVehicule, libererEmplacement, modifierBadge, modifierEmplacement, modifierVehicule, notifierVehicule, placeVisiteur, rechercherVehicule, retirerVehicule, supprimerEmplacement } from "./actions";

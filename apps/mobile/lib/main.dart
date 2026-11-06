@@ -20,7 +20,7 @@ Future<void> main() async {
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(statusBarColor: Colors.transparent, statusBarIconBrightness: Brightness.dark));
 
-  await Future.wait([initializeDateFormatting('fr'), initializeDateFormatting('ar')]);
+  await Future.wait([for (final l in appLanguages) initializeDateFormatting(l)]);
   final prefs = await SharedPreferences.getInstance();
   await Feel.init(prefs);
   installFrameStats();

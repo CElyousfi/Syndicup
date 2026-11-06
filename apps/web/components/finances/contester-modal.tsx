@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Banner } from "../ui/banner";
 import { fieldError } from "../../lib/forms";
 import { formValue } from "../../lib/form-values";
-import type { Dict, Locale } from "../../lib/i18n";
+import type { Dict, Locale } from "../../lib/i18n/core";
 import { contesterLigne } from "../../app/[locale]/(app)/finances/actions";
 
 /** D6 côté résident — contester une ligne de son solde. Le montant reste dû (mention légale). */
