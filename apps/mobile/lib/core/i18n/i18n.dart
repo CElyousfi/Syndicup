@@ -85,18 +85,21 @@ final sharedPrefsProvider = Provider<SharedPreferences>((ref) {
   throw UnimplementedError('sharedPrefsProvider doit être surchargé dans main.dart');
 });
 
+/// Dernière langue d'interface connue — pour ce qui s'affiche hors de MaterialApp (carte
+/// d'erreur d'affichage, isolate de notifications) ; français tant que rien n'est chargé.
+Locale lastAppLocale = const Locale('fr');
+
 class LocaleController extends Notifier<Locale> {
   static const _key = 'locale';
 
   @override
   Locale build() {
     final saved = ref.read(sharedPrefsProvider).getString(_key);
-    if (saved != null && appLanguages.contains(saved)) return localeOf(saved);
-    return deviceLocale();
+    return lastAppLocale = saved != null && appLanguages.contains(saved) ? localeOf(saved) : deviceLocale();
   }
 
   Future<void> set(Locale locale) async {
-    state = localeOf(locale.languageCode);
+    state = lastAppLocale = localeOf(locale.languageCode);
     await ref.read(sharedPrefsProvider).setString(_key, state.languageCode);
   }
 
