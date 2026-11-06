@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Mijn kosten betalen</string>
+    <string name="sc_signaler">Storing melden</string>
+    <string name="sc_ag">Vergaderingen</string>
+    <string name="sc_affichage">Prikbord</string>
+    <string-array name="sc_payer_synonymes">
+        <item>mijn kosten betalen</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>storing melden</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>vergaderingen</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>prikbord</item>
+    </string-array>
+</resources>

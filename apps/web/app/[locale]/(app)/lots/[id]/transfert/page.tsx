@@ -1,7 +1,7 @@
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot, SoldeLot } from "../../../../../../lib/api/types";
-import { fill } from "../../../../../../lib/i18n";
+import { fill } from "../../../../../../lib/i18n/core";
 import { versCentimes } from "../../../../../../lib/centimes";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { TransfertWizard } from "./transfert-wizard";

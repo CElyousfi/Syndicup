@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { GeistMono } from "geist/font/mono";
 import localFont from "next/font/local";
 import { notFound } from "next/navigation";
-import { isLocale, dirFor } from "../../lib/i18n";
+import { isLocale, dirFor, LANG_TAGS } from "../../lib/i18n/core";
 import { getClientFlags } from "../../lib/feel/flags";
 import { feelBootScript } from "../../lib/feel/boot";
 import "../globals.css";
@@ -73,7 +73,7 @@ export default async function RootLayout({
 
   return (
     <html
-      lang={locale}
+      lang={LANG_TAGS[locale]}
       dir={dirFor(locale)}
       data-alive={flags.alive_v1 ? "1" : "0"}
       data-alive-src={source}

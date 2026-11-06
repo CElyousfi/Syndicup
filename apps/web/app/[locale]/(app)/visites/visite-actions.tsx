@@ -8,7 +8,7 @@ import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { celebrate } from "../../../../lib/success";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { enregistrerVisite, repondreVisite } from "./actions";
 import { IconDoor } from "../../../../components/ui/icons";
 import { formKey, formValue } from "../../../../lib/form-values";

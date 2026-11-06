@@ -155,20 +155,24 @@ class WelcomeScreen extends StatelessWidget {
   }
 }
 
-/// Bascule FR/AR (locale-switch du web) : pill secondaire.
+/// Sélecteur de langue (locale-switch du web) : pill secondaire, ouvre la liste des langues.
 class LocaleSwitch extends StatelessWidget {
   const LocaleSwitch({super.key, this.light = false});
   final bool light;
   @override
   Widget build(BuildContext context) {
-    final isAr = context.isRtl;
-    // Pill greige Wise : globe + langue cible.
+    final current = context.locale;
+    // Pill greige Wise : globe + langue courante.
     return Material(
       color: SuColors.tile,
       shape: const StadiumBorder(),
       child: SuTap(
         customBorder: const StadiumBorder(),
-        onTap: () => LocaleSwitchScope.of(context)?.call(isAr ? const Locale('fr') : const Locale('ar')),
+        onTap: () async {
+          final change = LocaleSwitchScope.of(context);
+          final l = await showLanguagePicker(context, current: current);
+          if (l != null) change?.call(l);
+        },
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           child: Row(
@@ -176,7 +180,9 @@ class LocaleSwitch extends StatelessWidget {
             children: [
               const Icon(Icons.language_rounded, size: 17, color: SuColors.link),
               const SizedBox(width: 6),
-              Text(isAr ? 'Français' : 'العربية', style: const TextStyle(color: SuColors.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+              Text(languageNames[current.languageCode] ?? current.languageCode, style: const TextStyle(color: SuColors.ink, fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(width: 2),
+              const Icon(Icons.expand_more_rounded, size: 18, color: SuColors.soft),
             ],
           ),
         ),

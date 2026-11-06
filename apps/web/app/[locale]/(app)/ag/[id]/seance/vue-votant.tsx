@@ -9,7 +9,7 @@ import { Field, Select } from "../../../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../../../components/ui/form";
 import { Modal } from "../../../../../../components/ui/modal";
 import { IDLE } from "../../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import type { AgResolution, ValeurVote } from "../../../../../../lib/api/types";
 import { voter } from "../../actions";
 import { IconCheck, IconX } from "../../../../../../components/ui/icons";

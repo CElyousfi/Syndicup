@@ -17,11 +17,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { AssistantEcran, AssistantEtat, AssistantInsight } from "../../lib/api/types";
-import type { Dict } from "../../lib/i18n";
-import { fill } from "../../lib/i18n";
+import type { Dict } from "../../lib/i18n/core";
+import { fill } from "../../lib/i18n/core";
 import { IconButton, Pressable } from "../ui/pressable";
 import { Textarea } from "../ui/field";
 import { DariAvatar, DariMotion, preloadDari, type DariClip } from "./dari";
+import type { Locale } from "../../lib/i18n/core";
 
 export const ASK_DARI = "su:ask-dari";
 const CLE_INTRO = "syndicup:dari:intro";
@@ -72,7 +73,7 @@ const TON: Record<AssistantInsight["niveau"], string> = {
   succes: "bg-ok",
 };
 
-export function DariAssistant({ locale, labels, prenom, roleLabel }: { locale: "fr" | "ar"; labels: Labels; prenom: string; roleLabel: string }) {
+export function DariAssistant({ locale, labels, prenom, roleLabel }: { locale: Locale; labels: Labels; prenom: string; roleLabel: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ouvert, setOuvert] = useState(false);

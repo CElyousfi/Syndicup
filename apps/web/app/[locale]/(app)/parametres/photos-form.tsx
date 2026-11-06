@@ -5,7 +5,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { Badge } from "../../../../components/ui/badge";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { CLES_PHOTO, PHOTOS_DEFAUT, type ClePhoto } from "../../../../lib/photos";
 import { retirerPhoto, televerserPhoto } from "./actions";
 import { FadeImg } from "../../../../components/ui/motion/fade-img";

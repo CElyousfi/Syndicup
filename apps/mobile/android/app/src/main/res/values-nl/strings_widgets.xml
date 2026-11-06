@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">Mijn kosten</string>
+    <string name="w_charges_desc">Saldo, volgende vervaldatum en knop Betalen.</string>
+    <string name="w_ag_label">Vergadering</string>
+    <string name="w_ag_desc">Volgende AV, aftellen, stemmen tijdens de zitting.</string>
+    <string name="w_residence_label">Mijn residentie</string>
+    <string name="w_residence_desc">Inning, achterstallen, storingen, te bevestigen reserveringen.</string>
+    <string name="w_affichage_label">Prikbord</string>
+    <string name="w_affichage_desc">De laatste mededelingen van de residentie.</string>
+    <string name="w_gardien_label">Portiersloge</string>
+    <string name="w_gardien_desc">Wachtende bezoekers, aankomsten van vandaag, meldingen.</string>
+    <string name="w_sign_in">Open SyndicUp om in te loggen.</string>
+    <string name="w_open">Openen</string>
+    <string name="w_toggle_amounts">Bedragen verbergen of tonen</string>
+</resources>

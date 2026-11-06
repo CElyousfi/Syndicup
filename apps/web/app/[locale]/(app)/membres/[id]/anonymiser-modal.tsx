@@ -7,7 +7,7 @@ import { Checkbox } from "../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
 import { IDLE } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { anonymiserCompte } from "../../profil/actions";
 
 /** J3 — anonymisation CNDP : double confirmation, texte légal explicite. */

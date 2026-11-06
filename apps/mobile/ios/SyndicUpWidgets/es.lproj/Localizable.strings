@@ -1,0 +1,11 @@
+"w_charges_label" = "Mis cuotas";
+"w_charges_desc" = "Saldo, próximo vencimiento y botón Pagar.";
+"w_ag_label" = "Junta";
+"w_ag_desc" = "Próxima junta, cuenta atrás, voto en sesión.";
+"w_residence_label" = "Mi residencia";
+"w_residence_desc" = "Cobro, impagos, incidencias, reservas por validar.";
+"w_affichage_label" = "Tablón";
+"w_affichage_desc" = "Los últimos anuncios de la residencia.";
+"w_gardien_label" = "Conserjería";
+"w_gardien_desc" = "Visitantes en espera, llegadas del día, avisos.";
+"w_sign_in" = "Abra SyndicUp para iniciar sesión.";

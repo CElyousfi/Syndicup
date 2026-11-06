@@ -8,7 +8,7 @@ import { Button } from "../../../../components/ui/button";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { IdempotencyField } from "../../../../components/ui/idempotency-field";
 import { FichiersEnvoyes } from "../../../../components/ui/fichiers-envoyes";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { VisibiliteDocument } from "../../../../lib/api/types";
 import { televerserFichierDocument } from "./actions";
 import { IconFile, IconPlus } from "../../../../components/ui/icons";

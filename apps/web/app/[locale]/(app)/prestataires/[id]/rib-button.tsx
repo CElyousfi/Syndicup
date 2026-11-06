@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Button } from "../../../../../components/ui/button";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { IDLE } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { lireRib } from "../../finances/depenses/actions";
 
 /** Affiche le RIB complet à la demande (syndic) — chaque lecture est auditée côté API. */

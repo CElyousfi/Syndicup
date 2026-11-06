@@ -1320,6 +1320,7 @@ export const fr = {
     prenom: "Prénom",
     langue: "Langue de l'interface",
     langueAide: "Change toute l'interface, y compris le sens de lecture.",
+    langueDocuments: "Les documents officiels, e-mails et notifications restent en français ou en arabe.",
     identifiants: "Identifiants de connexion",
     identifiantsAide: "Votre email et votre téléphone servent à vous connecter — ils ne sont pas modifiables ici.",
     mesRoles: "Mes rôles",

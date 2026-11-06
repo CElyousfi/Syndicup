@@ -10,7 +10,7 @@ import { Banner } from "../../../../../../components/ui/banner";
 import { Segmented } from "../../../../../../components/ui/tabs";
 import { CopyButton } from "../../../../../../components/ui/copy";
 import { IDLE, fieldError } from "../../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../../lib/i18n/core";
 import type { CanalInvitation, LcdDeclaration, StatutDeclarationLcd } from "../../../../../../lib/api/types";
 import { cloturerDeclaration, deciderDeclaration, designerGestionnaire, modifierDeclaration } from "../../actions";
 import { formKey, formValue } from "../../../../../../lib/form-values";

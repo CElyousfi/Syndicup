@@ -14,7 +14,7 @@ import { formChecked, formKey, formValue } from "../../lib/form-values";
 import { parseMontant } from "../../lib/centimes";
 import { MoneyInput } from "../ui/money-input";
 import { celebrate } from "../../lib/success";
-import type { Dict, Locale } from "../../lib/i18n";
+import type { Dict, Locale } from "../../lib/i18n/core";
 import type { MethodePaiement, StatutLigneAppel } from "../../lib/api/types";
 import { formatMAD } from "../../lib/format";
 import { ligneAppelVariant } from "../../lib/status";

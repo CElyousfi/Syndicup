@@ -2,8 +2,8 @@
 import Link from "next/link";
 import { apiFetch } from "../../../../lib/api/client";
 import type { OnboardingChecklist } from "../../../../lib/api/types";
-import type { Dict, Locale } from "../../../../lib/i18n";
-import { fill } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
+import { fill } from "../../../../lib/i18n/core";
 import { Card, SectionHeader } from "../../../../components/ui/card";
 import { ProgressBar } from "../../../../components/ui/progress";
 import { Badge } from "../../../../components/ui/badge";

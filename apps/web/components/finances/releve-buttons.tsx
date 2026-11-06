@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { FileViewerButton } from "../documents/document-viewer";
 import { Select } from "../ui/field";
-import type { Dict } from "../../lib/i18n";
+import type { Dict } from "../../lib/i18n/core";
 
 export function ReleveButtons({ dict, lotId, lotNumero }: { dict: Dict; lotId: string; lotNumero: string }) {
   const courant = new Date().getFullYear();

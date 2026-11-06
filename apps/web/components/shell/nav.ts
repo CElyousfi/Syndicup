@@ -3,7 +3,7 @@
  * des entrées grisées. Les icônes voyagent par clé (composants non sérialisables).
  */
 import type { RoleApp } from "../../lib/app-context";
-import type { Dict, Locale } from "../../lib/i18n";
+import type { Dict, Locale } from "../../lib/i18n/core";
 
 export type IconKey =
   | "grid"

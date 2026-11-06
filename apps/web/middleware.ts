@@ -1,16 +1,16 @@
 /**
  * Middleware — trois responsabilités, dans l'ordre :
- *  1. Localisation : toute URL vit sous /fr/** ou /ar/** ; sinon redirection vers la locale
- *     préférée (cookie su_locale, défaut fr).
+ *  1. Localisation : toute URL vit sous /{locale}/** (fr, ar, en, es… — lib/i18n/core.ts) ;
+ *     sinon redirection vers la locale préférée (cookie su_locale, puis langue du navigateur,
+ *     défaut fr).
  *  2. Garde d'authentification : les pages privées exigent le cookie de session.
  *  3. Rafraîchissement silencieux du JWT : si l'access token expire sous 60 s, on le renouvelle
  *     via POST /auth/refresh et on repose les cookies sur la réponse.
  */
 import { NextResponse, type NextRequest } from "next/server";
 
-const LOCALES = ["fr", "ar"] as const;
-const DEFAULT_LOCALE = "fr";
 import { API_BASE_URL as API_BASE } from "./lib/config/env";
+import { DEFAULT_LOCALE, isLocale, matchAcceptLanguage } from "./lib/i18n/core";
 
 const COOKIE_ACCESS = "su_access";
 const COOKIE_REFRESH = "su_refresh";
@@ -58,11 +58,11 @@ export async function middleware(req: NextRequest) {
 
   // 1. Locale
   const seg = pathname.split("/")[1] ?? "";
-  if (!LOCALES.includes(seg as (typeof LOCALES)[number])) {
+  if (!isLocale(seg)) {
     const preferred = req.cookies.get(COOKIE_LOCALE)?.value;
-    const locale = LOCALES.includes(preferred as (typeof LOCALES)[number])
+    const locale = isLocale(preferred)
       ? preferred
-      : DEFAULT_LOCALE;
+      : matchAcceptLanguage(req.headers.get("accept-language")) ?? DEFAULT_LOCALE;
     const url = req.nextUrl.clone();
     url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
     return NextResponse.redirect(url);

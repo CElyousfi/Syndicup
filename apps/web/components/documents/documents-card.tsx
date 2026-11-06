@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import type { DocumentCopro } from "../../lib/api/types";
-import type { Dict, Locale } from "../../lib/i18n";
+import type { Dict, Locale } from "../../lib/i18n/core";
 import { formatDate } from "../../lib/format";
 import { Card, SectionHeader } from "../ui/card";
 import { CFile, IconCircle } from "../ui/color-icons";

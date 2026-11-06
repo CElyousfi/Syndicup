@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { LcdSejour } from "../../lib/api/types";
-import { fill, type Dict, type Locale } from "../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../lib/i18n/core";
 import { formatDateCourte } from "../../lib/format";
 import { nbNuits } from "../../lib/lcd";
 import { sejourVariant } from "../../lib/status";

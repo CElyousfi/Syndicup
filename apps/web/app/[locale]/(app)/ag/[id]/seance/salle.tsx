@@ -3,7 +3,7 @@
 import { Badge } from "../../../../../../components/ui/badge";
 import { Figure } from "../../../../../../components/ui/amount";
 import { IconButton, Pressable } from "../../../../../../components/ui/pressable";
-import type { Dict } from "../../../../../../lib/i18n";
+import type { Dict } from "../../../../../../lib/i18n/core";
 import type { AgResolution } from "../../../../../../lib/api/types";
 import { resolutionVariant } from "../../../../../../lib/status";
 

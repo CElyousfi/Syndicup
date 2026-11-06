@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Field, Input } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { reinitialiserMotDePasse } from "../connexion/actions";
 
 export function ResetForm({ dict, locale, tokenHash }: { dict: Dict; locale: Locale; tokenHash: string }) {

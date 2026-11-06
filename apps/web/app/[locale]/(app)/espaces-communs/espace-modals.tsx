@@ -9,7 +9,7 @@ import { Button } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { celebrate } from "../../../../lib/success";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { creerEspace, modifierEspace, reserverEspace } from "./actions";
 import type { EspaceCommun } from "../../../../lib/api/types";
 import { IconPlus, IconCalendar } from "../../../../components/ui/icons";

@@ -17,7 +17,7 @@ import { formChecked, formKey, formValue } from "../../../../lib/form-values";
 import { ActionModal } from "../../../../components/ui/action-modal";
 import { ConfirmAction } from "../../../../components/ui/confirm-action";
 import { celebrate } from "../../../../lib/success";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { AnnonceDetail, AudienceCommunication, CategorieAnnonce, ContactUtile, PreferencesNotification, Sondage } from "../../../../lib/api/types";
 import { IconPlus } from "../../../../components/ui/icons";
 import { archiverAnnonce, cloreSondage, commenter, creerAnnonce, desarchiverAnnonce, creerSondage, enregistrerContact, enregistrerPreferences, marquerLue, masquerCommentaire, modifierAnnonce, ouvrirSondage, publierAnnonce, repondreSondage, supprimerAnnonce, supprimerContact, supprimerSondage } from "./actions";

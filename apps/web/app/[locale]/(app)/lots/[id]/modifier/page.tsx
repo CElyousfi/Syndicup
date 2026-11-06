@@ -1,7 +1,7 @@
 import { getAppContext, exigerRole } from "../../../../../../lib/app-context";
 import { apiFetch } from "../../../../../../lib/api/client";
 import type { Lot } from "../../../../../../lib/api/types";
-import { fill } from "../../../../../../lib/i18n";
+import { fill } from "../../../../../../lib/i18n/core";
 import { PageHeader, BackLink } from "../../../../../../components/page-header";
 import { LotForm } from "../../lot-form";
 import { failWith } from "../../../../../../lib/api/or-fail";

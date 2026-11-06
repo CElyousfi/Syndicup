@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Оплатить взносы</string>
+    <string name="sc_signaler">Сообщить о неисправности</string>
+    <string name="sc_ag">Собрания</string>
+    <string name="sc_affichage">Доска объявлений</string>
+    <string-array name="sc_payer_synonymes">
+        <item>оплатить взносы</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>сообщить о неисправности</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>собрания</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>доска объявлений</item>
+    </string-array>
+</resources>

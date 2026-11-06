@@ -10,7 +10,7 @@ import { IDLE, fieldError } from "../../../../../lib/forms";
 import { formKey, formValue } from "../../../../../lib/form-values";
 import { parseMontant, versCentimes, versChaine } from "../../../../../lib/centimes";
 import { MoneyInput } from "../../../../../components/ui/money-input";
-import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n/core";
 import type { BudgetPoste, Depense, CategorieDepense, SourceFinancement } from "../../../../../lib/api/types";
 import { postesPourCategorie } from "../../../../../lib/depenses";
 import { creerDepense, modifierDepense } from "./actions";

@@ -14,8 +14,7 @@ import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { FadeImg } from "../ui/motion/fade-img";
 import { IconAlert, IconDownload, IconEye } from "../ui/icons";
-import { errorActionsFr, viewerFr } from "../../lib/i18n/errors-ui-fr";
-import { errorActionsAr, viewerAr } from "../../lib/i18n/errors-ui-ar";
+import { errorsUi, localeDuDocument } from "../../lib/i18n/errors-ui";
 
 export interface ViewerLabels {
   see: string;
@@ -106,8 +105,8 @@ type Apercu =
 
 /** Textes de la visionneuse — importés pièce par pièce (jamais le dictionnaire complet). */
 function textesVisionneuse() {
-  const ar = typeof document !== "undefined" && document.documentElement.lang === "ar";
-  return ar ? { v: viewerAr, a: errorActionsAr } : { v: viewerFr, a: errorActionsFr };
+  const u = errorsUi(localeDuDocument());
+  return { v: u.viewer, a: u.actions };
 }
 
 function DocumentPreview({

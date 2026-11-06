@@ -308,7 +308,8 @@ class _InvitationCodeScreenState extends ConsumerState<InvitationCodeScreen> {
       return;
     }
     final data = (res as ApiOk<InviteInscriptionResult>).data;
-    await ref.read(localeProvider.notifier).set(Locale(_langue == 'AR' ? 'ar' : 'fr'));
+    // Interface déjà dans une autre langue que FR/AR : on la garde (le profil ne retient que FR | AR).
+    if (languePrefereeOf(ref.read(localeProvider)) != null) await ref.read(localeProvider.notifier).set(Locale(_langue == 'AR' ? 'ar' : 'fr'));
     await ref.read(sessionProvider.notifier).signIn(data.tokens, coproprieteId: data.coproprieteId);
     // Succès dans la langue choisie à l'inscription.
     await _succes(Locale(_langue == 'AR' ? 'ar' : 'fr').dict, racine, conteneur, nom, data.statutCompte);

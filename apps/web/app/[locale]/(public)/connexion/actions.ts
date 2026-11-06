@@ -6,7 +6,7 @@ import { writeTokens } from "../../../../lib/session";
 import { destinationApresConnexion } from "../../../../lib/bootstrap";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError } from "../../../../lib/forms-server";
-import { getDict, isLocale } from "../../../../lib/i18n";
+import { getDict, isLocale, langueServeur } from "../../../../lib/i18n";
 import type { SessionTokens } from "../../../../lib/api/types";
 
 /** Chemin de retour sûr (même origine) après connexion — ex. /invitation/{code}. */
@@ -41,7 +41,7 @@ export async function motDePasseOublie(_prev: FormState, formData: FormData): Pr
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const res = await apiPublic("/auth/password/forgot", {
     method: "POST",
-    body: { email, langue: isLocale(locale) ? locale : "fr" },
+    body: { email, langue: langueServeur(isLocale(locale) ? locale : "fr") },
   });
   if (!res.ok) return fromApiError(res);
   return success(undefined, { email });

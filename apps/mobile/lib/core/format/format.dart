@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
+import '../i18n/i18n.dart';
+
 /// Formatage d'affichage — AUCUN calcul monétaire ici (CLAUDE.md §1.1). Port de
 /// apps/web/lib/format.ts pour un rendu identique sur les deux clients.
 
@@ -55,7 +57,8 @@ String formatPourcent(double? r) {
   return '$s$_nbsp%';
 }
 
-String _intlLocale(Locale l) => l.languageCode == 'ar' ? 'ar' : 'fr';
+/// Locale intl des dates : celle de l'interface (données de dates chargées dans main.dart).
+String _intlLocale(Locale l) => appLanguages.contains(l.languageCode) ? l.languageCode : 'fr';
 
 /// intl rend les chiffres arabes-indiens en `ar` ; le produit garde les chiffres latins
 /// (parité web `numberingSystem: latn`).

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">Aidatlarım</string>
+    <string name="w_charges_desc">Bakiye, sonraki vade ve Öde düğmesi.</string>
+    <string name="w_ag_label">Genel kurul</string>
+    <string name="w_ag_desc">Sonraki genel kurul, geri sayım, oturumda oylama.</string>
+    <string name="w_residence_label">Sitem</string>
+    <string name="w_residence_desc">Tahsilat, ödenmeyenler, arızalar, onay bekleyen rezervasyonlar.</string>
+    <string name="w_affichage_label">İlan panosu</string>
+    <string name="w_affichage_desc">Sitenin son duyuruları.</string>
+    <string name="w_gardien_label">Güvenlik</string>
+    <string name="w_gardien_desc">Bekleyen ziyaretçiler, günün gelişleri, bildirim.</string>
+    <string name="w_sign_in">Giriş yapmak için SyndicUp\'ı açın.</string>
+    <string name="w_open">Aç</string>
+    <string name="w_toggle_amounts">Tutarları gizle veya göster</string>
+</resources>

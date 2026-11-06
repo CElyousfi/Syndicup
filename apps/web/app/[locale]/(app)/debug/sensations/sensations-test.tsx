@@ -1,6 +1,6 @@
 "use client";
 
-import type { Dict } from "../../../../../lib/i18n";
+import type { Dict } from "../../../../../lib/i18n/core";
 import { Card, SectionHeader } from "../../../../../components/ui/card";
 import { Button } from "../../../../../components/ui/button";
 import { SOUND_NAMES, haptic, playSound, type HapticIntent } from "../../../../../lib/feel";

@@ -1,6 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { isLocale } from "../../../lib/i18n/core";
 import { ErrorScreen } from "../../../components/ui/error-screen";
 
 /**
@@ -10,5 +11,5 @@ import { ErrorScreen } from "../../../components/ui/error-screen";
  */
 export default function AppError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const params = useParams<{ locale?: string }>();
-  return <ErrorScreen error={error} reset={reset} locale={params?.locale === "ar" ? "ar" : "fr"} />;
+  return <ErrorScreen error={error} reset={reset} locale={isLocale(params?.locale) ? params.locale : "fr"} />;
 }

@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import { Modal } from "../ui/modal";
 import { IconQr } from "../ui/icons";
+import type { Locale } from "../../lib/i18n/core";
 
 /** Extrait le code d'invitation d'un contenu de QR (URL SyndicUp ou code brut). */
 export function extraireCodeInvitation(texte: string): string | null {
@@ -29,7 +30,7 @@ export function QrScannerButton({
   size = "md",
   className = "",
 }: {
-  locale: "fr" | "ar";
+  locale: Locale;
   labels: {
     scan: string;
     hint: string;

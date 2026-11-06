@@ -1,0 +1,11 @@
+"w_charges_label" = "Le mie spese";
+"w_charges_desc" = "Saldo, prossima scadenza e pulsante Paga.";
+"w_ag_label" = "Assemblea";
+"w_ag_desc" = "Prossima assemblea, conto alla rovescia, voto in seduta.";
+"w_residence_label" = "La mia residenza";
+"w_residence_desc" = "Riscossione, morosità, guasti, prenotazioni da approvare.";
+"w_affichage_label" = "Bacheca";
+"w_affichage_desc" = "Gli ultimi avvisi della residenza.";
+"w_gardien_label" = "Portineria";
+"w_gardien_desc" = "Visitatori in attesa, arrivi del giorno, segnalazioni.";
+"w_sign_in" = "Apri SyndicUp per accedere.";

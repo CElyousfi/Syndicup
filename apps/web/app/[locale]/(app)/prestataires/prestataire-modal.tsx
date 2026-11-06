@@ -5,7 +5,7 @@ import { Switch } from "../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { fieldError, type FormState } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import { creerPrestataire } from "../incidents/actions";
 import { modifierPrestataire } from "./actions";
 import type { Prestataire } from "../../../../lib/api/types";

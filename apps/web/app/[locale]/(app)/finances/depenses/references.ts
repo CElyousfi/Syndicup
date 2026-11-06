@@ -6,7 +6,7 @@ import { cache } from "react";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { AssembleeGenerale, BudgetAg, BudgetPoste, Copropriete, Prestataire } from "../../../../../lib/api/types";
 import { formatDate } from "../../../../../lib/format";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { OptionRef } from "./depense-form";
 
 export const referencesDepense = cache(async (dict: Dict, locale: Locale, coproprieteId: string | null, exercice: string) => {

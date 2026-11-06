@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { apiFetch } from "../../lib/api/client";
 import type { LcdSynthese } from "../../lib/api/types";
-import { fill, type Dict, type Locale } from "../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../lib/i18n/core";
 import { declarationLcdVariant, regimeLcdVariant } from "../../lib/status";
 import { Badge } from "../ui/badge";
 import { Card, SectionHeader } from "../ui/card";

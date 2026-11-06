@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { apiFetch } from "../../../../../lib/api/client";
 import type { AttributionEmplacement, BadgeAcces, Lot, Vehicule } from "../../../../../lib/api/types";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import { formatDate, formatMontant } from "../../../../../lib/format";
 import { Badge } from "../../../../../components/ui/badge";
 import { SectionHeader } from "../../../../../components/ui/card";

@@ -8,7 +8,7 @@ import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
 import { IdempotencyField } from "../../../../../components/ui/idempotency-field";
 import { FichiersEnvoyes } from "../../../../../components/ui/fichiers-envoyes";
-import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n/core";
 import { PhotoPicker } from "../../../../../components/incidents/photo-picker";
 import { CategorieGlyphe } from "../../../../../components/incidents/categorie-icon";
 import type { CategorieIncident, PartieIncident, UrgenceIncident } from "../../../../../lib/api/types";

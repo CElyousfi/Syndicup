@@ -11,7 +11,7 @@ import { Button, ButtonLink } from "../../../../components/ui/button";
 import { Banner } from "../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../lib/forms";
 import { formKey, formValue } from "../../../../lib/form-values";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { Conge, FichePaie, PersonnelRh, PostePersonnel, StatutPersonnel, StatutPresence, TypeConge, TypeContratTravail } from "../../../../lib/api/types";
 import { formatDate, formatMAD } from "../../../../lib/format";
 import { IconPlus } from "../../../../components/ui/icons";

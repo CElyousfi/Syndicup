@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">我的费用</string>
+    <string name="w_charges_desc">余额、下次到期日和“支付”按钮。</string>
+    <string name="w_ag_label">业主大会</string>
+    <string name="w_ag_desc">下次大会、倒计时、会上投票。</string>
+    <string name="w_residence_label">我的小区</string>
+    <string name="w_residence_desc">收缴率、欠费、故障、待确认预订。</string>
+    <string name="w_affichage_label">公告栏</string>
+    <string name="w_affichage_desc">小区最新公告。</string>
+    <string name="w_gardien_label">门岗</string>
+    <string name="w_gardien_desc">等候访客、今日到访、报修。</string>
+    <string name="w_sign_in">打开 SyndicUp 登录。</string>
+    <string name="w_open">打开</string>
+    <string name="w_toggle_amounts">隐藏或显示金额</string>
+</resources>

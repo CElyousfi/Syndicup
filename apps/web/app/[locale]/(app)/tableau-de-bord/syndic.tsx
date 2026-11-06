@@ -17,7 +17,7 @@ import type {
   Reservation,
 } from "../../../../lib/api/types";
 import { DocumentsCard } from "../../../../components/documents/documents-card";
-import { fill } from "../../../../lib/i18n";
+import { fill } from "../../../../lib/i18n/core";
 import {
   formatDate,
   formatDateHeure,

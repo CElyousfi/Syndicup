@@ -6,7 +6,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { fieldError } from "../../../../lib/forms";
 import { formKey, formValue } from "../../../../lib/form-values";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../lib/i18n/core";
 import type { StatutPersonnel } from "../../../../lib/api/types";
 import { changerStatutPersonnel, creerPersonnel } from "../visites/actions";
 import { IconPlus } from "../../../../components/ui/icons";

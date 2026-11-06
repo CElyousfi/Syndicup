@@ -16,7 +16,7 @@ import { IrreversibleNotice } from "../../../../components/ui/irreversible-notic
 import { ProgressBar } from "../../../../components/ui/progress";
 import { CopyButton } from "../../../../components/ui/copy";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { ImportJob, TypeImport } from "../../../../lib/api/types";
 import { annulerImport, creerDemo, creerImport, envoyerInvitationsMasse, etatImport, executerImport, modifierMapping } from "./actions";
 import { formChecked, formKey, formValue } from "../../../../lib/form-values";

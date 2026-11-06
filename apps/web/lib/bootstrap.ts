@@ -5,7 +5,7 @@
 import { apiFetch } from "./api/client";
 import { writeCoproprieteId } from "./session";
 import type { Profil } from "./api/types";
-import type { Locale } from "./i18n";
+import type { Locale } from "./i18n/core";
 
 export async function destinationApresConnexion(
   locale: Locale,

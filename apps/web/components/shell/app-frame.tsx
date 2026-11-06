@@ -21,7 +21,7 @@ import { useBadgePop } from "./badge-pop";
 import { ConnectivityBanner, OnlineOnly, useScrollReveal } from "./ambient";
 import { StaleIndicator, type StaleLabels } from "../ui/stale-indicator";
 import { SignatureOverlay } from "./signature-overlay";
-import type { Dict } from "../../lib/i18n";
+import type { Dict } from "../../lib/i18n/core";
 import type { NavSection, NavItem, IconKey, QuickAction } from "./nav";
 import {
   IconBell,
@@ -48,6 +48,7 @@ import {
   IconSuitcase,
   IconWrench,
   IconX, IconReceipt, IconPie, IconHandshake, IconMegaphone, IconTasks, IconCar, IconDownload } from "../ui/icons";
+import type { Locale } from "../../lib/i18n/core";
 
 const loadMotionFeatures = () => import("../../lib/motion-features").then((mod) => mod.default);
 
@@ -126,7 +127,7 @@ export function AppFrame({
   staleLabels,
   children,
 }: {
-  locale: "fr" | "ar";
+  locale: Locale;
   nav: NavSection[];
   tabs: NavItem[];
   coproId: string | null;
@@ -465,7 +466,7 @@ function MobileSheet({
   isActive,
   onClose,
 }: {
-  locale: "fr" | "ar";
+  locale: Locale;
   nav: NavSection[];
   logo: string | null;
   coproNom: string | null;
@@ -585,7 +586,7 @@ function MobileSheet({
                 <p className="truncate text-[14px] font-semibold text-ink">{userNom}</p>
                 <p className="truncate text-[12px] text-soft">{userRole}</p>
               </div>
-              <LocaleSwitch locale={locale} subtle />
+              <LocaleSwitch locale={locale} subtle up />
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Link

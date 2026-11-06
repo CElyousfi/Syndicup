@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 
+import 'i18n/i18n.dart';
 import 'i18n/mobile_dict.dart';
 import 'theme/tokens.dart';
 
@@ -64,7 +65,7 @@ class CalmErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // ErrorWidget peut être construit hors de MaterialApp / Localizations : tout est autonome.
-    final locale = Localizations.maybeLocaleOf(context) ?? PlatformDispatcher.instance.locale;
+    final locale = Localizations.maybeLocaleOf(context) ?? lastAppLocale;
     final ux = MobileDict.of(locale).ux;
     final rtl = locale.languageCode == 'ar';
     return Directionality(

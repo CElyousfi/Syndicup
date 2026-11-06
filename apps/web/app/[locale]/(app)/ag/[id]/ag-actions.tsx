@@ -9,7 +9,7 @@ import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button, ButtonLink } from "../../../../../components/ui/button";
 import { fieldError, type FormState } from "../../../../../lib/forms";
 import { formChecked, formKey, formValue } from "../../../../../lib/form-values";
-import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n/core";
 import {
   ajouterResolution,
   annulerAg,

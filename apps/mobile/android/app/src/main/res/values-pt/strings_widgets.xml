@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Généré à partir de values/strings_widgets.xml (traduction). -->
+<resources>
+    <string name="w_charges_label">Os meus encargos</string>
+    <string name="w_charges_desc">Saldo, próximo vencimento e botão Pagar.</string>
+    <string name="w_ag_label">Assembleia</string>
+    <string name="w_ag_desc">Próxima assembleia, contagem decrescente, votação em sessão.</string>
+    <string name="w_residence_label">A minha residência</string>
+    <string name="w_residence_desc">Cobrança, dívidas, avarias, reservas a validar.</string>
+    <string name="w_affichage_label">Quadro de avisos</string>
+    <string name="w_affichage_desc">Os últimos avisos da residência.</string>
+    <string name="w_gardien_label">Portaria</string>
+    <string name="w_gardien_desc">Visitantes em espera, chegadas do dia, ocorrências.</string>
+    <string name="w_sign_in">Abra o SyndicUp para iniciar sessão.</string>
+    <string name="w_open">Abrir</string>
+    <string name="w_toggle_amounts">Ocultar ou mostrar os montantes</string>
+</resources>

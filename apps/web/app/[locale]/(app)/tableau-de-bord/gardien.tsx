@@ -3,7 +3,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import type { AppContext } from "../../../../lib/app-context";
 import type { DocumentCopro, Incident, Visite } from "../../../../lib/api/types";
 import { DocumentsCard } from "../../../../components/documents/documents-card";
-import { fill } from "../../../../lib/i18n";
+import { fill } from "../../../../lib/i18n/core";
 import { formatHeure, nomComplet } from "../../../../lib/format";
 import { photoSrc } from "../../../../lib/photos";
 import { PhotoBanner } from "../../../../components/ui/photo-banner";

@@ -3,7 +3,7 @@
  * qui alimentent tout le reste (budget → appel → paiements), avec l'état réel de chacun et le
  * bouton qui mène directement à la bonne page. Disparaît de lui-même quand tout est en place.
  */
-import type { Dict } from "../../lib/i18n";
+import type { Dict } from "../../lib/i18n/core";
 import { Card, SectionHeader } from "../ui/card";
 import { ButtonLink } from "../ui/button";
 import { Badge } from "../ui/badge";

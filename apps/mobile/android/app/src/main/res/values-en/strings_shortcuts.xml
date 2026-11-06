@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Pay my charges</string>
+    <string name="sc_signaler">Report an incident</string>
+    <string name="sc_ag">Meetings</string>
+    <string name="sc_affichage">Notice board</string>
+    <string-array name="sc_payer_synonymes">
+        <item>pay my charges</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>report an incident</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>meetings</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>notice board</item>
+    </string-array>
+</resources>

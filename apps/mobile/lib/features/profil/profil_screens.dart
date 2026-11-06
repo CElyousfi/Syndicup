@@ -43,7 +43,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
     final p = ref.read(appContextProvider).profil;
     _prenom = TextEditingController(text: p.prenom ?? '');
     _nom = TextEditingController(text: p.nom ?? '');
-    _langue = p.languePreferee == 'AR' ? 'AR' : 'FR';
+    // Langue de l'interface (toutes) ; le profil ne retient que FR | AR (documents, e-mails).
+    _langue = ref.read(localeProvider).languageCode;
   }
 
   Future<void> _save() async {
@@ -51,7 +52,8 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       _loading = true;
       _fail = null;
     });
-    final r = await ref.read(apiClientProvider).patch<dynamic>('/users/me', body: {'prenom': _prenom.text.trim(), 'nom': _nom.text.trim(), 'langue_preferee': _langue});
+    final choisie = localeOf(_langue);
+    final r = await ref.read(apiClientProvider).patch<dynamic>('/users/me', body: {'prenom': _prenom.text.trim(), 'nom': _nom.text.trim(), if (languePrefereeOf(choisie) != null) 'langue_preferee': languePrefereeOf(choisie)});
     if (!mounted) return;
     if (r is ApiFail) {
       setState(() {
@@ -60,7 +62,7 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
       });
       return;
     }
-    await ref.read(localeProvider.notifier).set(Locale(_langue == 'AR' ? 'ar' : 'fr'));
+    await ref.read(localeProvider.notifier).set(choisie);
     if (!mounted) return;
     // Toast AVANT le rechargement de session : celui-ci repasse par l'écran de démarrage et
     // démonte cette page (le toast vit dans l'overlay racine, il survit). Texte dans la langue
@@ -116,7 +118,19 @@ class _ProfilScreenState extends ConsumerState<ProfilScreen> {
               const SizedBox(height: 4),
               Text(d.profil.langueAide, style: t.bodySmall),
               const SizedBox(height: 10),
-              Segmented<String>(value: _langue, options: const ['FR', 'AR'], labelOf: (v) => v == 'FR' ? '${d.common.french} · →' : '${d.common.arabic} · ←', onChanged: (v) => setState(() => _langue = v)),
+              Text(d.profil.langueDocuments, style: t.bodySmall),
+              const SizedBox(height: 10),
+              CardList([
+                ListRow(
+                  leading: Text(languageFlags[_langue] ?? '', style: const TextStyle(fontSize: 22)),
+                  title: languageNames[_langue] ?? _langue,
+                  chevron: true,
+                  onTap: () async {
+                    final l = await showLanguagePicker(context, current: localeOf(_langue));
+                    if (l != null && mounted) setState(() => _langue = l.languageCode);
+                  },
+                ),
+              ]),
               const SizedBox(height: 18),
               FormError(_fail),
               if (_fail != null) const SizedBox(height: 12),

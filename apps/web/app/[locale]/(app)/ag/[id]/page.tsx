@@ -9,7 +9,7 @@ import type {
   ExecutionResolution,
   ValeurVote,
 } from "../../../../../lib/api/types";
-import { fill, type Dict } from "../../../../../lib/i18n";
+import { fill, type Dict } from "../../../../../lib/i18n/core";
 import { formatDate, formatEntier, formatHeure, formatPourcent } from "../../../../../lib/format";
 import { PageHeader, BackLink } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";

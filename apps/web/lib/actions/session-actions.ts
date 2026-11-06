@@ -5,7 +5,7 @@ import { apiFetch, apiPublic } from "../api/client";
 import { clearSession, readInvitationJeton, readSession, writeCoproprieteId, writeTokens } from "../session";
 import { type FormState } from "../forms";
 import { fromApiError } from "../forms-server";
-import { isLocale } from "../i18n";
+import { isLocale, languePreferee } from "../i18n/core";
 import type {
   InviteAcceptResult,
   InviteInscriptionResult,
@@ -63,7 +63,9 @@ export async function inscrireParInvitation(_prev: FormState, formData: FormData
   });
   await writeCoproprieteId(res.data.copropriete_id);
 
-  const locFinale = langue === "AR" ? "ar" : "fr";
+  // Interface dans une autre langue que FR/AR : on la garde (le profil ne retient que FR | AR).
+  const locCourante = String(formData.get("locale") ?? "");
+  const locFinale = isLocale(locCourante) && !languePreferee(locCourante) ? locCourante : langue === "AR" ? "ar" : "fr";
   if (res.data.statut_compte === "EN_VALIDATION") redirect(`/${locFinale}/compte/validation`);
   redirect(`/${locFinale}/tableau-de-bord?bienvenue=1`);
 }
@@ -121,7 +123,7 @@ export async function accepterInvitation(_prev: FormState, formData: FormData): 
     });
   }
 
-  const locFinale = langue === "AR" ? "ar" : langue === "FR" ? "fr" : loc;
+  const locFinale = !languePreferee(loc) ? loc : langue === "AR" ? "ar" : langue === "FR" ? "fr" : loc;
   if (res.data.statut_compte === "EN_VALIDATION") redirect(`/${locFinale}/compte/validation`);
   redirect(`/${locFinale}/tableau-de-bord`);
 }

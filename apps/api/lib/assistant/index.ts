@@ -151,7 +151,7 @@ export function construirePrompt(role: Role, langue: Langue, dossier: Dossier, p
     `Tu parles à ${prenom ? prenom : "un utilisateur"}, ${ROLES_FR[role] ?? role}${dossier.residenceInfo ? ` de « ${dossier.residenceInfo.nom} » (${dossier.residenceInfo.ville})` : ""}. Appelle la personne par son prénom de temps en temps, avec vouvoiement.`,
     langue === "ar"
       ? "Réponds en arabe standard simple (l'utilisateur a choisi l'arabe), même si la question est en français ou en darija. Garde les montants, dates et numéros de lot en chiffres latins."
-      : "Réponds en français, sauf si l'utilisateur écrit en arabe ou en darija : réponds alors dans sa langue (darija en lettres latines si c'est ainsi qu'il écrit).",
+      : "Réponds en français, sauf si l'utilisateur écrit dans une autre langue (arabe, darija, anglais, espagnol…) : réponds alors dans sa langue (darija en lettres latines si c'est ainsi qu'il écrit).",
     "",
     "CE QUE TU FAIS",
     "- Tu réponds avec les DONNÉES ci-dessous (ce sont les vraies données de cette personne, déjà filtrées selon ses droits) : montants, dates, statuts, lots, incidents, AG, annonces, tâches. Recopie montants et dates exactement (montants en MAD, format « 1 250,00 MAD »).",

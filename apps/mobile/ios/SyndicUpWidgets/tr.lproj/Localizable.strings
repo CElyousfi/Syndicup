@@ -1,0 +1,11 @@
+"w_charges_label" = "Aidatlarım";
+"w_charges_desc" = "Bakiye, sonraki vade ve Öde düğmesi.";
+"w_ag_label" = "Genel kurul";
+"w_ag_desc" = "Sonraki genel kurul, geri sayım, oturumda oylama.";
+"w_residence_label" = "Sitem";
+"w_residence_desc" = "Tahsilat, ödenmeyenler, arızalar, onay bekleyen rezervasyonlar.";
+"w_affichage_label" = "İlan panosu";
+"w_affichage_desc" = "Sitenin son duyuruları.";
+"w_gardien_label" = "Güvenlik";
+"w_gardien_desc" = "Bekleyen ziyaretçiler, günün gelişleri, bildirim.";
+"w_sign_in" = "Giriş yapmak için SyndicUp'ı açın.";

@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { Field, Input, Select } from "../../../../components/ui/field";
 import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import type { Dict, Locale } from "../../../../lib/i18n";
+import { LANG_FLAGS, LANG_NAMES, LOCALES, type Dict, type Locale } from "../../../../lib/i18n/core";
 import { modifierProfil } from "./actions";
 import { formKey, formValue } from "../../../../lib/form-values";
 
@@ -13,13 +13,11 @@ export function ProfilForm({
   locale,
   nom,
   prenom,
-  langue,
 }: {
   dict: Dict;
   locale: Locale;
   nom: string;
   prenom: string;
-  langue: "FR" | "AR";
 }) {
   const [state, action] = useActionState(modifierProfil, IDLE);
   const pr = dict.profil;
@@ -35,10 +33,14 @@ export function ProfilForm({
           <Input id="nom" name="nom" defaultValue={formValue(state, "nom", nom)} maxLength={100} />
         </Field>
       </div>
-      <Field label={pr.langue} htmlFor="langue_preferee" hint={pr.langueAide}>
-        <Select key={formKey(state, "langue_preferee")} id="langue_preferee" name="langue_preferee" defaultValue={formValue(state, "langue_preferee", langue)}>
-          <option value="FR">{dict.common.french}</option>
-          <option value="AR">{dict.common.arabic}</option>
+      {/* Toutes les langues de l'interface ; documents officiels et envois du serveur : FR ou AR. */}
+      <Field label={pr.langue} htmlFor="langue_interface" hint={`${pr.langueAide} ${pr.langueDocuments}`}>
+        <Select key={formKey(state, "langue_interface")} id="langue_interface" name="langue_interface" defaultValue={formValue(state, "langue_interface", locale)}>
+          {LOCALES.map((l) => (
+            <option key={l} value={l}>
+              {`${LANG_FLAGS[l]} ${LANG_NAMES[l]}`}
+            </option>
+          ))}
         </Select>
       </Field>
       <FormAlert state={state} successRender={() => <p className="text-[13px] font-medium text-ok">{pr.enregistre}</p>} />

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="sc_payer">Aidatlarımı öde</string>
+    <string name="sc_signaler">Arıza bildir</string>
+    <string name="sc_ag">Genel kurullar</string>
+    <string name="sc_affichage">İlan panosu</string>
+    <string-array name="sc_payer_synonymes">
+        <item>aidatlarımı öde</item>
+    </string-array>
+    <string-array name="sc_signaler_synonymes">
+        <item>arıza bildir</item>
+    </string-array>
+    <string-array name="sc_ag_synonymes">
+        <item>genel kurullar</item>
+    </string-array>
+    <string-array name="sc_affichage_synonymes">
+        <item>i̇lan panosu</item>
+    </string-array>
+</resources>

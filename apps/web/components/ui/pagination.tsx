@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ApiMeta } from "../../lib/api/types";
-import type { Dict } from "../../lib/i18n";
-import { fill } from "../../lib/i18n";
+import type { Dict } from "../../lib/i18n/core";
+import { fill } from "../../lib/i18n/core";
 import { IconChevronEnd } from "./icons";
 
 /** Pagination serveur — état dans l'URL (?page=). Rendue seulement si nécessaire.

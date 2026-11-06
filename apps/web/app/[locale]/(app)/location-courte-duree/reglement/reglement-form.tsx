@@ -8,7 +8,7 @@ import { Checkbox } from "../../../../../components/ui/toggle";
 import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Banner } from "../../../../../components/ui/banner";
 import { IDLE, fieldError } from "../../../../../lib/forms";
-import type { Dict, Locale } from "../../../../../lib/i18n";
+import type { Dict, Locale } from "../../../../../lib/i18n/core";
 import type { LcdReglement, RegimeLcd } from "../../../../../lib/api/types";
 import { mettreAJourReglement } from "../actions";
 import { IconCheck } from "../../../../../components/ui/icons";

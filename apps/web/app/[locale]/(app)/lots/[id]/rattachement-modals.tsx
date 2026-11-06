@@ -8,7 +8,7 @@ import { FormAlert, SubmitButton } from "../../../../../components/ui/form";
 import { Button } from "../../../../../components/ui/button";
 import { ProgressBar } from "../../../../../components/ui/progress";
 import { IDLE } from "../../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../../lib/i18n/core";
 import { ajouterProprietaire, ajouterOccupant } from "../actions";
 import { IconPlus } from "../../../../../components/ui/icons";
 import { formChecked, formKey, formValue } from "../../../../../lib/form-values";

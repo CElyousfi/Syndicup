@@ -6,6 +6,7 @@ import { apiFetch } from "../../../../lib/api/client";
 import { success, type FormState } from "../../../../lib/forms";
 import { fromApiError } from "../../../../lib/forms-server";
 import type { Profil } from "../../../../lib/api/types";
+import { isLocale, languePreferee } from "../../../../lib/i18n/core";
 
 function champ(fd: FormData, name: string): string {
   return String(fd.get(name) ?? "").trim();
@@ -13,7 +14,11 @@ function champ(fd: FormData, name: string): string {
 
 export async function modifierProfil(_prev: FormState, fd: FormData): Promise<FormState> {
   const locale = champ(fd, "locale");
-  const langue = champ(fd, "langue_preferee") as "FR" | "AR";
+  const brute = champ(fd, "langue_interface");
+  const interfaceChoisie = isLocale(brute) ? brute : isLocale(locale) ? locale : "fr";
+  // Le profil ne connaît que FR | AR (documents, e-mails, notifications) : une autre langue
+  // d'interface laisse `langue_preferee` inchangée.
+  const langue = languePreferee(interfaceChoisie);
   const res = await apiFetch<Profil>("/users/me", {
     method: "PATCH",
     body: {
@@ -25,7 +30,7 @@ export async function modifierProfil(_prev: FormState, fd: FormData): Promise<Fo
   if (!res.ok) return fromApiError(res, fd);
 
   // La langue choisie change TOUTE l'interface, y compris le sens de lecture (J1).
-  const nouvelleLocale = langue === "AR" ? "ar" : "fr";
+  const nouvelleLocale = interfaceChoisie;
   if (nouvelleLocale !== locale) {
     redirect(`/${nouvelleLocale}/profil?enregistre=1`);
   }

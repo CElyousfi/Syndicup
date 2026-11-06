@@ -8,7 +8,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Segmented } from "../../../../components/ui/tabs";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { Cabinet, CabinetMandat, CabinetMembre, CabinetPrestataire, MandatCopropriete, RoleCabinet } from "../../../../lib/api/types";
 import { IconPlus } from "../../../../components/ui/icons";
 import { ajouterMembre, confirmerMandat, copierPrestataire, creerPrestataireModele, modifierCabinet, modifierMandat, modifierMembre, proposerMandat, terminerMandat } from "./actions";

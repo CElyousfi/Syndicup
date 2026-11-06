@@ -3,7 +3,7 @@
  * côté client). On ne fait que parser des chaînes décimales de l'API pour les présenter :
  * `1 250,00 MAD`, chiffres tabulaires gérés par la classe CSS `.tnum`.
  */
-import type { Locale } from "./i18n";
+import { LANG_TAGS, type Locale } from "./i18n/core";
 
 /** "1250.5" | "1250" | "1250.00" → "1 250,00" (séparateur fin insécable). */
 export function formatMontant(value: string | null | undefined): string {
@@ -38,7 +38,8 @@ export function formatPourcent(ratio: string | number | null | undefined): strin
   return `${String(Math.round(n * 1000) / 10).replace(".", ",")}\u202f%`;
 }
 
-const INTL_LOCALE: Record<Locale, string> = { fr: "fr-MA", ar: "ar-MA" };
+/** Formats de dates : conventions marocaines en français et en arabe, usuelles ailleurs. */
+const INTL_LOCALE: Record<Locale, string> = { ...LANG_TAGS, fr: "fr-MA", ar: "ar-MA" };
 
 export function formatDate(iso: string | null | undefined, locale: Locale): string {
   if (!iso) return "—";

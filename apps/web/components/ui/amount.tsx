@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { formatMAD, formatMontant } from "../../lib/format";
+import type { Locale } from "../../lib/i18n/core";
 
 /**
  * Nombres VIVANTS (couche Alive) — même contrat que le mobile `AnimatedFigureText` :
@@ -117,6 +118,6 @@ export function Amount({
   /** Signe ou libellé collé devant (« − », « + »), déjà localisé. */
   prefix?: string;
 }) {
-  const text = currency ? formatMAD(value ?? null, locale as "fr" | "ar") : formatMontant(value ?? null);
+  const text = currency ? formatMAD(value ?? null, locale as Locale) : formatMontant(value ?? null);
   return <Figure value={`${prefix}${text}`} className={className} upIsGood={upIsGood} />;
 }

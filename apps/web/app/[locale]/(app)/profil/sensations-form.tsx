@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Dict } from "../../../../lib/i18n";
+import type { Dict } from "../../../../lib/i18n/core";
 import { Segmented } from "../../../../components/ui/tabs";
 import { Switch } from "../../../../components/ui/toggle";
 import { Banner } from "../../../../components/ui/banner";

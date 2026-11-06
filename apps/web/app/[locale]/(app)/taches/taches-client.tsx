@@ -8,7 +8,7 @@ import { FormAlert, SubmitButton } from "../../../../components/ui/form";
 import { Button } from "../../../../components/ui/button";
 import { Card } from "../../../../components/ui/card";
 import { IDLE, fieldError } from "../../../../lib/forms";
-import { fill, type Dict, type Locale } from "../../../../lib/i18n";
+import { fill, type Dict, type Locale } from "../../../../lib/i18n/core";
 import type { ChecklistItem, PrioriteTache, StatutTache, TacheDetail } from "../../../../lib/api/types";
 import { IconPlus } from "../../../../components/ui/icons";
 import { assignerTache, basculerEtape, changerStatut, commenterTache, creerTache, modifierTache } from "./actions";

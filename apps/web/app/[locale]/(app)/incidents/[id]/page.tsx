@@ -14,7 +14,7 @@ import type {
   Prestataire,
 } from "../../../../../lib/api/types";
 import { PhotoGallery } from "../../../../../components/incidents/photo-gallery";
-import { fill } from "../../../../../lib/i18n";
+import { fill } from "../../../../../lib/i18n/core";
 import { formatDate, formatDateHeure, formatMAD, formatTelephone, nomComplet } from "../../../../../lib/format";
 import { BackLink, PageHeader } from "../../../../../components/page-header";
 import { Badge } from "../../../../../components/ui/badge";
