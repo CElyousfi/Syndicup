@@ -235,7 +235,7 @@ def write_templates():
     folder.mkdir(exist_ok=True)
     for key,w,h,device,lang,n in FORMATS:
         template=folder/(key.replace('/','-')+'.html')
-        source=f'<!-- SyndicUp {key}, {w} x {h}, {lang} — editable source -->\\n'+HTML_TEMPLATE
+        source=f'<!-- SyndicUp {key}, {w} x {h}, {lang} — editable source -->\n'+HTML_TEMPLATE
         template.write_text(source,encoding='utf-8')
 
 def symbol(odd):
