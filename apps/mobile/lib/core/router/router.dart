@@ -120,7 +120,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: false,
     redirect: (context, state) {
       final st = ref.read(appStateProvider);
-      // Liens de l'app web (https://app.syndicup.pro/fr/…) et schéma syndicup:/// : le préfixe de
+      // Liens de l'app web (https://app.syndicup.ma/fr/…) et schéma syndicup:/// : le préfixe de
       // langue est retiré, la langue reste un état de l'app.
       final sansLangue = DeepLinks.sansLangue(state.uri.path);
       if (sansLangue != state.uri.path) return Uri(path: sansLangue, query: state.uri.hasQuery ? state.uri.query : null).toString();

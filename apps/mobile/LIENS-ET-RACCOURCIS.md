@@ -1,6 +1,6 @@
 # Liens, Siri / Assistant, Spotlight, partage — ce qui reste à faire une fois les comptes actifs
 
-## Android App Links (`https://app.syndicup.pro/fr/…` s'ouvre dans l'app sans demander)
+## Android App Links (`https://app.syndicup.ma/fr/…` s'ouvre dans l'app sans demander)
 `apps/web/public/.well-known/assetlinks.json` contient un espace réservé. Remplace-le par l'empreinte
 SHA-256 de la **clé de signature Play** : Play Console → Configuration → Intégrité de l'application →
 « Certificat de clé de signature d'application » → SHA-256. (Ajoute aussi celle de ta clé d'upload
@@ -10,7 +10,7 @@ si tu installes des builds locaux.) Redéploie le web, puis sur un téléphone :
 ## Universal Links iOS
 `apps/web/public/.well-known/apple-app-site-association` : remplace `TEAMID` par l'identifiant
 d'équipe Apple (developer.apple.com → Membership). Dans Xcode, cible Runner → Signing & Capabilities →
-**Associated Domains** → `applinks:app.syndicup.pro`.
+**Associated Domains** → `applinks:app.syndicup.ma`.
 
 ## Siri / Raccourcis (iOS 16+)
 Déjà dans `ios/Runner/AppShortcuts.swift` : « Payer mes charges avec SyndicUp », « Signaler un

@@ -196,7 +196,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 }
 
 /// Mot de passe oublié : un e-mail, et un lien part (réponse identique que le compte existe ou
-/// non). Le lien ouvre app.syndicup.pro/{langue}/reinitialiser dans le navigateur.
+/// non). Le lien ouvre app.syndicup.ma/{langue}/reinitialiser dans le navigateur.
 class ForgotPasswordScreen extends ConsumerStatefulWidget {
   const ForgotPasswordScreen({super.key, this.email});
   final String? email;
