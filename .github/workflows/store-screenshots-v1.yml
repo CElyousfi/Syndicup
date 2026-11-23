@@ -1,0 +1,60 @@
+name: Build SyndicUp store screenshots v1
+
+on:
+  push:
+    branches: [store/screenshots-v1]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-screenshots:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'feat(store): bootstrap store render pipeline') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: store/screenshots-v1
+          fetch-depth: 0
+      - name: Restore renderer from bootstrapping pack
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64,lzma,shutil
+          folder=Path('store-assets/src/packed')
+          source=Path('store-assets/src/render.py')
+          if folder.exists():
+              items=sorted(folder.glob('*.b64'))
+              assert len(items)==4, f'Expected 4 renderer source pieces, got {len(items)}'
+              encoded=''.join(p.read_text() for p in items)
+              assert len(encoded)==17240, f'Unexpected packed length: {len(encoded)}'
+              source.write_bytes(lzma.decompress(base64.b64decode(encoded)))
+              shutil.rmtree(folder)
+              print('Restored',source,'from packed source')
+          else:
+              assert source.is_file(), 'Missing renderer'
+          PY
+      - name: Install Python and screenshot dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Playwright and Pillow
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pillow playwright
+          python -m playwright install --with-deps chromium
+      - name: Render and verify all 52 PNGs
+        run: python store-assets/src/render.py
+      - name: Commit assets and editable renderer
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add store-assets
+          if ! git diff --cached --quiet; then
+            git commit -m "feat(store): render verified FR/AR store screenshots"
+            git push origin HEAD:store/screenshots-v1
+          fi
