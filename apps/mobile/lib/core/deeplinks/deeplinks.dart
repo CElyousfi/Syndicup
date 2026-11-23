@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
 /// Entrées « système » dans l'app (M26-D) :
-///  - liens : `https://app.syndicup.pro/{fr|ar}/…` et `syndicup:///…` (Assistant, Siri, raccourcis)
+///  - liens : `https://app.syndicup.ma/{fr|ar}/…` et `syndicup:///…` (Assistant, Siri, raccourcis)
 ///    arrivent au routeur comme route initiale — [sansLangue] retire le préfixe de langue ;
 ///  - partage (Android : cible de partage ; iOS : extension à créer) : photo → signalement,
 ///    PDF → preuve de paiement ;

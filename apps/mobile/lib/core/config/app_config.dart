@@ -19,7 +19,7 @@ class AppConfig {
   ///   10.0.2.2, le simulateur iOS via localhost.
   static String get apiBaseUrl {
     if (_apiBaseUrlDefine.isNotEmpty) return _apiBaseUrlDefine;
-    if (kReleaseMode) return 'https://api.syndicup.pro/v1';
+    if (kReleaseMode) return 'https://api.syndicup.ma/v1';
     if (Platform.isAndroid) return 'http://10.0.2.2:3001/v1';
     return 'http://localhost:3001/v1';
   }
@@ -27,7 +27,7 @@ class AppConfig {
   /// Base publique du web (liens d'invitation `/{locale}/invitation/{code}` scannés en QR).
   static const String webBaseUrl = String.fromEnvironment(
     'WEB_BASE_URL',
-    defaultValue: 'https://app.syndicup.pro',
+    defaultValue: 'https://app.syndicup.ma',
   );
 
   /// Push FCM — activé uniquement si un projet Firebase est fourni au build.

@@ -20,7 +20,7 @@ async function handlePOST(req: Request) {
   const limite = await enforceRateLimit(req, "password-forgot", RATE_LIMITS.motDePasseOublie(), email);
   if (limite) return limite;
 
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.syndicup.pro").replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "https://app.syndicup.ma").replace(/\/$/, "");
   const redirectTo = `${base}/${parsed.data.langue}/reinitialiser`;
   const { error } = await createSupabaseAuth().demanderReinitialisation(email, redirectTo);
   if (error) {

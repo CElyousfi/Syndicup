@@ -51,10 +51,10 @@ describe("POST /v1/auth/password/forgot (HTTP)", () => {
 
   it("transmet le lien de retour localisé à GoTrue", async () => {
     mocks.demanderReinitialisation.mockResolvedValue({ error: null });
-    process.env.NEXT_PUBLIC_APP_URL = "https://app.syndicup.pro/";
+    process.env.NEXT_PUBLIC_APP_URL = "https://app.syndicup.ma/";
     try {
       await forgotPOST(req({ email: "A@B.ma", langue: "ar" }), undefined);
-      expect(mocks.demanderReinitialisation).toHaveBeenCalledWith("a@b.ma", "https://app.syndicup.pro/ar/reinitialiser");
+      expect(mocks.demanderReinitialisation).toHaveBeenCalledWith("a@b.ma", "https://app.syndicup.ma/ar/reinitialiser");
     } finally {
       delete process.env.NEXT_PUBLIC_APP_URL;
     }

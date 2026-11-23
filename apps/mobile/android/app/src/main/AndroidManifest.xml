@@ -40,13 +40,15 @@
             <intent-filter>
                 <action android:name="es.antonborri.home_widget.action.LAUNCH"/>
             </intent-filter>
-            <!-- Liens de l'app web (invitation du QR du hall, et toute page) : https://app.syndicup.pro/{fr|ar}/… —
+            <!-- Liens de l'app web (invitation du QR du hall, et toute page) : https://app.syndicup.ma/{fr|ar}/… (et l'ancien app.syndicup.pro) —
                  ouverts dans l'app, le routeur retire le préfixe de langue. Vérification Android App Links :
                  /.well-known/assetlinks.json servi par l'app web (apps/web/public). -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW"/>
                 <category android:name="android.intent.category.DEFAULT"/>
                 <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="app.syndicup.ma" android:pathPrefix="/fr/"/>
+                <data android:scheme="https" android:host="app.syndicup.ma" android:pathPrefix="/ar/"/>
                 <data android:scheme="https" android:host="app.syndicup.pro" android:pathPrefix="/fr/"/>
                 <data android:scheme="https" android:host="app.syndicup.pro" android:pathPrefix="/ar/"/>
             </intent-filter>
