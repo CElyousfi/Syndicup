@@ -26,7 +26,7 @@ android {
     defaultConfig {
         applicationId = "ma.syndicup.app"
         // Android 6.0+ : couvre le parc marocain, requis par mobile_scanner / firebase_messaging.
-        minSdk = 23
+        minSdk = 24
         targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
